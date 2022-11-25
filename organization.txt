@@ -4,6 +4,8 @@ Array Procedures (diff, integration, etc)
 
 Constants (maybe just global in main?)
 
+procedures producing intial conditions 
+
 Charged Particle (object):
     - array of initial logical position
     - array of initial velocity
