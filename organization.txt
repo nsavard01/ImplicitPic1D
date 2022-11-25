@@ -1,0 +1,40 @@
+Should organize using modern OOP capabilities, cleaner code
+
+Array Procedures (diff, integration, etc)
+
+Constants (maybe just global in main?)
+
+Charged Particle (object):
+    - array of initial logical position
+    - array of initial velocity
+    - array (or single real) of weights? Maybe use single scalar for moment
+    - single real of mass
+    - single real of charge
+    - do
+
+Domain (Object):
+    - array logical grid
+    - array map each logical 'cell' to spatial cell
+    - since scalar potential is tied to the grid, should it be contained in domain?
+    - what about current density?
+
+Potential (Object):
+    - array of potential values, with fixed values for dirichlet
+    - use domain to form matrix
+    - store matrix for solver
+    - methods for EField interpolation?
+
+Particle Mover (procedure):
+    - pass list of particles (or method contained in particle?)
+    - substepping procedure
+    - pass current density for substepping 
+
+Solver (Object):
+    - contains list particles objects
+    - contains particle mover function
+    - contains potential object
+    - contains current density array
+    - contains rho array
+    - method for moving single time step
+    - methods for adaptive time step
+
