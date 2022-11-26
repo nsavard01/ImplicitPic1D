@@ -9,6 +9,7 @@ program BoundPlasmaExample
     maxIter = 50
 
     print *, num_grid_nodes
+    print *, numParticles
     
 
 end program BoundPlasmaExample

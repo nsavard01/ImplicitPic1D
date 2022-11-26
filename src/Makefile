@@ -13,5 +13,7 @@ BoundPlasmaExample: BoundPlasmaExample.f90 $(OBJS)
 .f90.o:
 	$(FC) -c $(FCFlags) $<
 
+%.o: %.mod
+
 clean:
-	$(RM) BoundPlasmaExample *.o
+	$(RM) BoundPlasmaExample *.o *.mod
