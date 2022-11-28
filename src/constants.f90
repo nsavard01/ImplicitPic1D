@@ -10,6 +10,7 @@ module constants
     real(real64), parameter :: k_B = 1.380649e-23 ! m^2 kg s^-2 K^-1
     real(real64), parameter :: e = 1.602176634e-19 ! C
     real(real64), parameter :: mu_0 = 1.25663706212e-6 ! m kg s^-2 A^-2
+    real(real64), parameter :: pi = 3.141592653589793
 
 
 end module constants

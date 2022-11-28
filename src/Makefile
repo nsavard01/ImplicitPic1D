@@ -1,6 +1,6 @@
 FC = gfortran
 FCFLAGS= -O3 -Wall
-OBJS = constants.o
+OBJS = constants.o makeGrid.o
 
 .PHONY: all clean
 .SUFFIXES: .f90 .o
