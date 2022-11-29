@@ -1,19 +1,19 @@
 program BoundPlasmaExample
     use constants
     use iso_fortran_env, only: int32, real64, output_unit
+    use mod_domain
     implicit none
 
-    integer(int32) :: i
+    !integer(int32) :: i
     integer(int32), parameter :: num_grid_nodes = 32, numParticles = 10000, maxIter = 50
-    real(real64), parameter :: L_domain = 0.1, n_i = 5e14, T_e = 5
-    integer(int32) :: l_grid(num_grid_nodes)
-    write(output_unit, '(e10.5)') n_i
+    real(real64), parameter :: L_domain = 0.1, n_i = 5e14, T_e = 5, del_l = 0.005
+    type(Domain) :: world
+    world = Domain(num_grid_nodes)
+    call world % constructSineGrid(del_l, L_domain)
+    print *, world%grid
+    print *, world%dx_dl
+    print *, world%nodeVol
 
-    l_grid = (/(i, i=1, num_grid_nodes)/)
-
-    do i = 1, num_grid_nodes
-        print *, l_grid(i)
-    end do
 
     
 
