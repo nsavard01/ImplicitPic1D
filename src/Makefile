@@ -1,6 +1,6 @@
 FC = gfortran
 FCFLAGS= -O3 -Wall
-OBJS = constants.o mod_domain.o
+OBJS = constants.o mod_domain.o mod_particle.o
 
 .PHONY: all clean
 .SUFFIXES: .f90 .o
