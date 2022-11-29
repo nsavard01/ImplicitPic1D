@@ -9,7 +9,7 @@ program BoundPlasmaExample
     real(real64), parameter :: L_domain = 0.1, n_i = 5e14, T_e = 5, del_l = 0.005
     type(Domain) :: world
     world = Domain(num_grid_nodes)
-    call world % constructSineGrid(del_l, L_domain)
+    call world % constructUniformGrid(L_domain)
     print *, world%grid
     print *, world%dx_dl
     print *, world%nodeVol

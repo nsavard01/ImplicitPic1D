@@ -14,6 +14,7 @@ module mod_domain
     contains
         procedure, private, pass(self) :: derive_DxDl_NodeVol
         procedure, public, pass(self) :: constructSineGrid
+        procedure, public, pass(self) :: constructUniformGrid
     end type Domain
 
 
@@ -60,6 +61,17 @@ contains
         end do
         call derive_DxDl_NodeVol(self)
     end subroutine constructSineGrid
+
+    pure subroutine constructUniformGrid(self, L_domain)
+        class(Domain), intent(in out) :: self
+        real(real64), intent(in) :: L_domain
+        self%grid(1) = 0
+        self%grid(self%n_x) = L_domain
+        do concurrent (i = 2:self % n_x-1)
+            self % grid(i) =  (i-1) * L_domain / (self%n_x - 1)
+        end do
+        call derive_DxDl_NodeVol(self)
+    end subroutine constructUniformGrid
 
 
 
