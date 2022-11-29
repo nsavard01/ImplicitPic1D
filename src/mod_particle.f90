@@ -10,12 +10,12 @@ module mod_particle
     ! Particle contains particle properties and stored values in phase space
     type :: Particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
-        real(real64), allocatable :: x(:,:) !positions of particles in m
-        real(real64), allocatable :: v(:, :) !velocities of particles in m/s
+        real(real64), allocatable :: l_p(:,:) !positions of particles in logical space
+        real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
 
-    ! contains
-    !     procedure, private, pass(self) :: derive_DxDl_NodeVol
+    contains
+        procedure, public, pass(self) :: initialize_n_ave
     !     procedure, public, pass(self) :: constructSineGrid
     !     procedure, public, pass(self) :: constructUniformGrid
     end type Particle
@@ -36,10 +36,17 @@ contains
         self % w_p = w_p
         self % N_p = N_p
         self % finalIdx = finalIdx
-        allocate(self%x(self%finalIdx, 3), self%v(self%finalIdx, 3))
-        self%x = 0
-        self%v = 0
+        allocate(self%l_p(self%finalIdx, 3), self%v_p(self%finalIdx, 3))
+        self%l_p = 0
+        self%v_p = 0
 
     end function particle_constructor
+
+    pure subroutine initialize_n_ave(self, n_ave, L_domain)
+        ! initialize w_p based on initial average n (N/m^3) over domain
+        class(Particle), intent(in out) :: self
+        real(real64), intent(in) :: n_ave, L_domain
+        self % w_p = n_ave * L_domain / self % N_p
+    end subroutine initialize_n_ave
 
 end module mod_particle
