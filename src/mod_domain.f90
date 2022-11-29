@@ -1,6 +1,8 @@
 module mod_domain
     use iso_fortran_env, only: int32, real64
     use constants
+    implicit none
+
     private
     public :: Domain
 
@@ -53,6 +55,7 @@ contains
     pure subroutine constructSineGrid(self, del_l, L_domain)
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_l, L_domain
+        integer(int32) :: i
         self%grid(1) = 0
         self%grid(self%n_x) = L_domain
         do concurrent (i = 2:self % n_x-1)
@@ -65,6 +68,7 @@ contains
     pure subroutine constructUniformGrid(self, L_domain)
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: L_domain
+        integer(int32) :: i
         self%grid(1) = 0
         self%grid(self%n_x) = L_domain
         do concurrent (i = 2:self % n_x-1)
