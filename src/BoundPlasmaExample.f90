@@ -20,11 +20,14 @@ program BoundPlasmaExample
     call world % constructSineGrid(del_l, L_domain)
 
     electron = Particle(mass = m_e, q = -e, w_p = w_p, N_p = numParticles, finalIdx = numParticles * particleIdxFactor)
+    call electron % initialize_randUniform(L_domain)
     ion = Particle(mass = m_p, q = e, w_p = w_p, N_p = numParticles, finalIdx = numParticles * particleIdxFactor)
     particleList = [electron, ion]
     do i = 1, 2
         print *, particleList(i) % mass
     end do
+
+    print *, SUM(electron % l_p(1:electron%N_p))/electron%N_p
 
 
     
