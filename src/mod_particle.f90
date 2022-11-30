@@ -48,13 +48,36 @@ contains
         self % w_p = n_ave * L_domain / self % N_p
     end subroutine initialize_n_ave
 
-    subroutine initialize_randUniform(self, L_domain)
-        ! initialize w_p based on initial average n (N/m^3) over domain
+    subroutine initialize_randUniform(self, L_domain, dx_dl, n_x)
+        ! place particles randomly in each dx_dl based on portion of volume it take up
         class(Particle), intent(in out) :: self
-        real(real64), intent(in) :: L_domain
-        real(real64) :: R(self%N_p)
-        call random_number(R)
-        self % l_p = R * L_domain 
+        real(real64), intent(in) :: dx_dl(:), L_domain
+        integer(int32) :: i, numInCell, idxLower, numPerCell(n_x-1)
+        real(real64) :: sumDxDl
+        integer(int32), intent(in):: n_x
+        idxLower = 1
+        sumDxDl = 0
+        do i=1, n_x-1
+            numInCell = NINT(self%N_p * dx_dl(i)/L_domain)
+            if (idxLower + numInCell > self % N_P + 1) then
+                stop "You are putting too many particles for the uniform particle case"
+            end if
+
+            
+            call random_number(self%l_p(idxLower:idxLower + numInCell-1))
+            self%l_p(idxLower:idxLower + numInCell - 1) = self%l_p(idxLower:idxLower + numInCell - 1) + i
+            idxLower = idxLower + numInCell
+            numPerCell(i) = numInCell
+            
+        end do
+        if (idxLower < self%N_p + 1) then
+            call random_number(self%l_p(idxLower:self%N_p))
+            self%l_p(idxLower:self%N_p) = self%l_p(idxLower:self%N_p) * (n_x - 1) + 1
+        end if
+        
+        print *, numPerCell
+        print *, "sum of numPerCell is:", sum(numPerCell)
+        
     end subroutine initialize_randUniform
 
 end module mod_particle

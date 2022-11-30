@@ -15,19 +15,22 @@ program BoundPlasmaExample
     type(Particle) :: ion
     type(Particle) :: particleList(2)
 
-
+    ! create the world the particles live in
     world = Domain(num_grid_nodes)
     call world % constructSineGrid(del_l, L_domain)
 
+    ! initialize the particles in this world
     electron = Particle(mass = m_e, q = -e, w_p = w_p, N_p = numParticles, finalIdx = numParticles * particleIdxFactor)
-    call electron % initialize_randUniform(L_domain)
+    call electron % initialize_randUniform(L_domain, world%dx_dl, world%n_x)
     ion = Particle(mass = m_p, q = e, w_p = w_p, N_p = numParticles, finalIdx = numParticles * particleIdxFactor)
     particleList = [electron, ion]
     do i = 1, 2
         print *, particleList(i) % mass
     end do
 
-    print *, SUM(electron % l_p(1:electron%N_p))/electron%N_p
+    print *, electron%l_p(electron%N_p-10:electron%N_p+1)
+
+    
 
 
     
