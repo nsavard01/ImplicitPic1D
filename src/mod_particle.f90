@@ -9,6 +9,7 @@ module mod_particle
 
     ! Particle contains particle properties and stored values in phase space
     type :: Particle
+        character(:), allocatable :: name !name of the particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
         real(real64), allocatable :: l_p(:) !positions of particles in logical space
         real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s
@@ -26,10 +27,12 @@ module mod_particle
 
 contains
 
-    type(Particle) function particle_constructor(mass, q, w_p, N_p, finalIdx) result(self)
+    type(Particle) function particle_constructor(mass, q, w_p, N_p, finalIdx, particleName) result(self)
         ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
         real(real64), intent(in) :: mass, q, w_p
         integer(int32), intent(in) :: N_p, finalIdx
+        character(*), intent(in) :: particleName
+        self % name = particleName
         self % mass = mass
         self % q = q
         self % w_p = w_p
