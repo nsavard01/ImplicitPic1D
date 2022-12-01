@@ -21,6 +21,8 @@ module mod_particle
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getTemperature
         procedure, public, pass(self) :: getVrms
+        procedure, public, pass(self) :: writeLocation
+        procedure, public, pass(self) :: writeVelocity
     end type Particle
 
 
@@ -113,5 +115,31 @@ contains
         real(real64) :: res
         res = SQRT(SUM(self%v_p(1:self%N_p, :)**2)/ self%N_p)
     end function getVrms
+
+    subroutine writeLocation(self)
+        ! Writes a field into a binary file.
+        class(Particle), intent(in out) :: self
+        integer(int32) :: fileunit, record_length
+        character(100) :: filename
+        filename = 'record_particlePosition.dat'
+        record_length = 8 * size(self%l_p(1:self%N_p))
+        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
+        write(unit=fileunit, rec=1) self%l_p(1:self%N_p)
+        close(fileunit)
+      end subroutine writeLocation
+
+      subroutine writeVelocity(self)
+        ! Writes a field into a binary file.
+        class(Particle), intent(in out) :: self
+        integer(int32) :: fileunit, record_length
+        character(100) :: filename
+        filename = 'record_particleVelocity.dat'
+        record_length = 8 * self%N_p
+        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
+        write(unit=fileunit, rec=1) self%v_p(1:self%N_p, 1)
+        write(unit=fileunit, rec=2) self%v_p(1:self%N_p, 2)
+        write(unit=fileunit, rec=3) self%v_p(1:self%N_p, 3)
+        close(fileunit)
+      end subroutine writeVelocity
 
 end module mod_particle
