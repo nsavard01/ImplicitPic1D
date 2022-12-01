@@ -1,4 +1,4 @@
-FC = gfortran
+FC = ifort
 FCFLAGS= -O3 -Wall
 OBJS = constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o
 

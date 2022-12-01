@@ -6,13 +6,14 @@ program BoundPlasmaExample
     use mod_particle
     implicit none
 
-    integer(int32) :: particleIdxFactor = 2, i
+    integer(int32) :: particleIdxFactor = 2, i, irand = 12345, tclock1, tclock2, clock_rate
     integer(int32), parameter :: num_grid_nodes = 32, numParticles = 10000, maxIter = 50
     real(real64), parameter :: L_domain = 0.1, del_l = 0.005
-    real(real64) :: w_p = 1.0, n_ave = 5e14, T_e = 5.0, T_i = 0.025, T
+    real(real64) :: w_p = 1.0, n_ave = 5e14, T_e = 5.0, T_i = 0.025, T, R_test(100000), t1, t2, elapsed_cpu_time, elapsed_time
     type(Domain) :: world
     type(Particle) :: particleList(2)
 
+    R_test = 0
     ! create the world the particles live in
     world = Domain(num_grid_nodes)
     call world % constructSineGrid(del_l, L_domain)
@@ -38,14 +39,37 @@ program BoundPlasmaExample
     print *, "Mean temperature of electron is:", particleList(1)%getTemperature()
     print *, "Mean temperature of proton is:", particleList(2)%getTemperature()
 
-    call particleList(1)%writeVelocity()
-
-    do i=1, 3
-        print *, particleList(1)%v_p(1:5, i)
+    call cpu_time(t1)
+    call system_clock(tclock1)
+    do i = 1, 100
+        call random_number(R_test)
     end do
-    
+    call system_clock(tclock2, clock_rate)
+    call cpu_time(t2)
+    elapsed_cpu_time = t2 - t1
+    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
 
+    print *, "Fortran random_number took ", elapsed_cpu_time, "CPU seconds"
+    print *, "Fortran random_number took ", elapsed_time, "wall seconds"
+    print *, "First few numbers in array are:"
+    print *, R_test(1:10)
+    print *, R_test(size(R_test)-10:size(R_test))
+    print *, "Average is:", SUM(R_test)/size(R_test)
 
-    
+    call cpu_time(t1)
+    call system_clock(tclock1)
+    do i = 1, 100
+        call getRandom(R_test, irand)
+    end do
+    call system_clock(tclock2, clock_rate)
+    call cpu_time(t2)
+    elapsed_cpu_time = t2 - t1
+    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
+    print *, "Gwenael random_number took ", elapsed_cpu_time, "CPU seconds"
+    print *, "Gwenael random_number took ", elapsed_time, "wall seconds"
+    print *, "First few numbers in array are:"
+    print *, R_test(1:10)
+    print *, R_test(size(R_test)-10:size(R_test))
+    print *, "Average is:", SUM(R_test)/size(R_test)
 
 end program BoundPlasmaExample
