@@ -4,6 +4,7 @@ program BoundPlasmaExample
     use iso_fortran_env, only: int32, real64, output_unit
     use mod_domain
     use mod_particle
+    use mod_TestClass
     implicit none
 
     integer(int32) :: particleIdxFactor = 2, i, irand = 9872364, tclock1, tclock2, clock_rate
@@ -14,6 +15,7 @@ program BoundPlasmaExample
     real(real64), allocatable :: v_test(:,:)
     type(Domain) :: world
     type(Particle) :: particleList(2)
+    type(testClass) :: testing
 
     allocate(v_test(numParticles * particleIdxFactor, 3))
     v_test = 0
@@ -37,10 +39,11 @@ program BoundPlasmaExample
         print *, particleList(i) % w_p * particleList(i) % N_p / L_domain
     end do
 
+    testing = testClass(particleList)
     print *, "Debye length is:", getDebyeLength(T_e, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
-    print *, "Mean temperature of electron is:", particleList(1)%getTemperature(), "should be", 7.5
-    print *, "Mean temperature of proton is:", particleList(2)%getTemperature()
+    print *, "Mean temperature of electron is:", testing%particleList(1)%getTemperature(), "should be", 7.5
+    print *, "Mean temperature of proton is:", testing%particleList(2)%getTemperature()
 
 
     ! Test timing for random number generator
@@ -83,9 +86,7 @@ program BoundPlasmaExample
 
     call cpu_time(t1)
     call system_clock(tclock1)
-    do i = 1, 1000
-        call particleList(1) % generate3DMaxwellian(T_e, irand)
-    end do
+    call testing % testFunction(1, T_e, irand)
     call system_clock(tclock2, clock_rate)
     call cpu_time(t2)
     elapsed_cpu_time = t2 - t1
@@ -93,7 +94,7 @@ program BoundPlasmaExample
 
     print *, "OOP maxwell took ", elapsed_cpu_time, "CPU seconds"
     print *, "OOP maxwell took ", elapsed_time, "wall seconds"
-    print *, "Mean temperature is:", particleList(1)%getTemperature(), "should be ", 7.5
+    print *, "Mean temperature is:", testing%particleList(1)%getTemperature(), "should be ", 7.5
     
     call cpu_time(t1)
     call system_clock(tclock1)
