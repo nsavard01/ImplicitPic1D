@@ -2,6 +2,7 @@ module mod_particle
 
     use iso_fortran_env, only: int32, real64, output_unit
     use constants
+    use mod_BasicFunctions
     implicit none
 
     private
@@ -86,16 +87,17 @@ contains
         
     end subroutine initialize_randUniform
 
-    subroutine generate3DMaxwellian(self, T)
+    subroutine generate3DMaxwellian(self, T, irand)
         ! random velocity generator for the particle for temperature T (eV)
         ! Use box-muller method for random guassian variable, same as gwenael but doesn't have factor 2? Maybe factored into v_th
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: T
+        integer(int32), intent(in out) :: irand
         real(real64) :: U1(self%N_p), U2(self%N_p), U3(self%N_p), U4(self%N_p)
-        call random_number(U1)
-        call random_number(U2)
-        call random_number(U3)
-        call random_number(U4)
+        call getRandom(U1, irand)
+        call getRandom(U2, irand)
+        call getRandom(U3, irand)
+        call getRandom(U4, irand)
         self%v_p(1:self%N_p, 1) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
         self%v_p(1:self%N_p, 2) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
         self%v_p(1:self%N_p, 3) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
