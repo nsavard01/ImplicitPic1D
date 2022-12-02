@@ -12,6 +12,7 @@ module mod_domain
         real(real64), allocatable :: grid(:) !array representing values at grid in m
         real(real64), allocatable :: dx_dl(:) !ratio of grid differences from physical to logical, assume logical separated by 1
         real(real64), allocatable :: nodeVol(:) !node vol, or difference between half grid in physical space
+        real(real64), allocatable :: phi(:), rho(:), J(:) ! array of phi, rho, and J values in space
 
     contains
         procedure, private, pass(self) :: derive_DxDl_NodeVol
@@ -31,10 +32,14 @@ contains
         integer(int32), intent(in) :: num
         integer(int32) :: i
         self % n_x = num
-        allocate(self % grid(num), self % dx_dl(num-1), self % nodeVol(num))
+        allocate(self % grid(num), self % dx_dl(num-1), self % nodeVol(num) &
+        , self % phi(num), self % rho(num), self % J(num-1))
         self % grid = (/(i, i=1, num)/)
         self % dx_dl = 1
         self % nodeVol = 1
+        self % phi = 0
+        self % rho = 0
+        self % J = 0
     end function domain_constructor
 
     pure subroutine derive_DxDl_NodeVol(self)
