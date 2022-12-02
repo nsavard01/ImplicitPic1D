@@ -86,18 +86,6 @@ program BoundPlasmaExample
 
     call cpu_time(t1)
     call system_clock(tclock1)
-    call testing % testFunction(1, T_e, irand)
-    call system_clock(tclock2, clock_rate)
-    call cpu_time(t2)
-    elapsed_cpu_time = t2 - t1
-    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
-
-    print *, "OOP maxwell took ", elapsed_cpu_time, "CPU seconds"
-    print *, "OOP maxwell took ", elapsed_time, "wall seconds"
-    print *, "Mean temperature is:", testing%particleList(1)%getTemperature(), "should be ", 7.5
-    
-    call cpu_time(t1)
-    call system_clock(tclock1)
     do i = 1, 1000
         call test3DMaxwellian(v_test, T_e, irand, numParticles, m_e)
     end do
@@ -109,6 +97,18 @@ program BoundPlasmaExample
     print *, "Functional maxwell took ", elapsed_cpu_time, "CPU seconds"
     print *, "Functional maxwell took ", elapsed_time, "wall seconds"
     print *, "Mean temperature is:", testTemperature(v_test, m_e, numParticles), "should be ", 7.5
+
+    call cpu_time(t1)
+    call system_clock(tclock1)
+    call testing % testFunction(1, T_e, irand)
+    call system_clock(tclock2, clock_rate)
+    call cpu_time(t2)
+    elapsed_cpu_time = t2 - t1
+    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
+
+    print *, "OOP maxwell took ", elapsed_cpu_time, "CPU seconds"
+    print *, "OOP maxwell took ", elapsed_time, "wall seconds"
+    print *, "Mean temperature is:", testing%particleList(1)%getTemperature(), "should be ", 7.5
 
     
 
