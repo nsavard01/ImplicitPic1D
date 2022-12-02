@@ -1,6 +1,7 @@
 module mod_domain
     use iso_fortran_env, only: int32, real64
     use constants
+    use mod_particle
     implicit none
 
     private
@@ -18,6 +19,7 @@ module mod_domain
         procedure, private, pass(self) :: derive_DxDl_NodeVol
         procedure, public, pass(self) :: constructSineGrid
         procedure, public, pass(self) :: constructUniformGrid
+        procedure, public, pass(self) :: depositRho
     end type Domain
 
 
@@ -27,6 +29,7 @@ module mod_domain
 
 contains
 
+    ! Initialization procedures
     type(Domain) function domain_constructor(num) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         integer(int32), intent(in) :: num
@@ -81,6 +84,22 @@ contains
         end do
         call derive_DxDl_NodeVol(self)
     end subroutine constructUniformGrid
+
+    subroutine depositRho(self, particleList) 
+        class(Domain), intent(in out) :: self
+        type(Particle), intent(in) :: particleList(1)
+        integer(int32) :: i, j, l_left
+        real(real64) :: d
+        do i=1, size(particleList)
+            do j = 1, particleList(i)%N_p
+                l_left = INT(particleList(i)%l_p(j))
+                d = MOD(particleList(i)%l_p(j), 1.0)
+                self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1-d)
+                self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
+            end do
+        end do
+        self % rho = self % rho / self % nodeVol
+    end subroutine depositRho
 
 
 

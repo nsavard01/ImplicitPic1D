@@ -39,6 +39,13 @@ program BoundPlasmaExample
     print *, "Mean temperature of electron is:", particleList(1)%getTemperature(), "should be 7.5"
     print *, "Mean temperature of proton is:", particleList(2)%getTemperature(), "should be 0.0375"
 
+    call world % depositRho(particleList(1))
+
+    print *, world % rho
+
+    print *, "Average from rho is:", SUM(world % rho) / world % n_x / e
+    print *, "Average should be:", n_ave
+
 
 
 
