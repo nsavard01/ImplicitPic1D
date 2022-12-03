@@ -3,7 +3,7 @@ program main
     use omp_lib
     implicit none
 
-    integer(int32) :: nproc, i, i_omp
+    integer(int32) :: nproc, i, i_omp, tclock1, tclock2, clock_rate
     real(real64), allocatable :: x(:, :)
     real(real64) :: m = 10.0
 
@@ -13,10 +13,13 @@ program main
         x(:, i) = i
     end do
 
-    !$OMP PARALLEL PRIVATE(i_omp)
-    i_omp = omp_get_thread_num() + 1
-    call testFunc(x, m, i_omp)
-    !$OMP END PARALLEL
+    
+    do i =1, 1000
+        !$OMP PARALLEL PRIVATE(i_omp)
+        i_omp = omp_get_thread_num() + 1
+        call testFunc(x, m, i_omp)
+        !$OMP END PARALLEL
+    end do
     ! do i_omp = 1, nproc
     !     call testFunc(x, m, i_omp)
     ! end do
