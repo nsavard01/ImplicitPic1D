@@ -94,7 +94,7 @@ contains
             do j = 1, particleList(i)%N_p
                 l_left = INT(particleList(i)%l_p(j))
                 d = MOD(particleList(i)%l_p(j), 1.0)
-                self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1-d)
+                self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0-d)
                 self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
             end do
         end do

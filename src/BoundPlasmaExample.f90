@@ -43,7 +43,7 @@ program BoundPlasmaExample
 
     print *, world % rho
 
-    print *, "Average from rho is:", SUM(world % rho) / world % n_x / e
+    print *, "Average from rho is:", SUM(world % rho * world % nodeVol) / L_domain / e
     print *, "Average should be:", n_ave
 
 
