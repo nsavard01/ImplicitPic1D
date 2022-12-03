@@ -1,6 +1,6 @@
 FC = ifort
 FCFLAGS= -qopenmp -O3 -Wall
-OBJS = 
+OBJS = mod_test.o
 
 .PHONY: all clean
 .SUFFIXES: .f90 .o
