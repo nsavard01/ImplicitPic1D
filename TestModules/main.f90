@@ -30,7 +30,7 @@ program main
     print *, "Elapsed time for functional is:", elapsed_time, "seconds"
     print *, x(1:10, 1)
     print *, x(1:10, nproc)
-    
+
     call system_clock(tclock1)
     do i =1, 10000
         !$OMP PARALLEL PRIVATE(i_omp)
@@ -43,8 +43,6 @@ program main
     print *, "Elapsed time for OOP is:", elapsed_time, "seconds"
     print *, object(1)%x(1:10)
     print *, object(nproc)%x(1:10)
-
-    
 
 contains
 
