@@ -7,7 +7,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: particleIdxFactor = 2, i, irand = 9872364
-    integer(int32), parameter :: num_grid_nodes = 32, numParticles = 100000, maxIter = 50
+    integer(int32), parameter :: num_grid_nodes = 64, numParticles = 100000, maxIter = 50
     real(real64), parameter :: L_domain = 0.1, del_l = 0.005
     real(real64) :: w_p = 1.0, n_ave = 5e14, T_e = 5.0, T_i = 0.025, T
     real(real64), allocatable :: v_test(:,:)
@@ -17,7 +17,6 @@ program BoundPlasmaExample
     ! create the world the particles live in
     world = Domain(num_grid_nodes)
     call world % constructSineGrid(del_l, L_domain)
-
     ! initialize the particles in this world
     particleList(1) = Particle(m_e, -e, w_p, numParticles, numParticles * particleIdxFactor, "electron")
     particleList(2) = Particle(m_p, e, w_p, numParticles, numParticles * particleIdxFactor, "proton")
@@ -36,10 +35,10 @@ program BoundPlasmaExample
     
     print *, "Debye length is:", getDebyeLength(T_e, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
-    print *, "Mean temperature of electron is:", particleList(1)%getTemperature(), "should be 7.5"
-    print *, "Mean temperature of proton is:", particleList(2)%getTemperature(), "should be 0.0375"
+    print *, "Mean temperature of electron is:", particleList(1)%getTemperature(), "should be", T_e * 1.5
+    print *, "Mean temperature of proton is:", particleList(2)%getTemperature(), "should be", T_i * 1.5
 
-    call world % depositRho(particleList(1))
+    call world % depositRho(particleList(2:2))
 
     print *, world % rho
 

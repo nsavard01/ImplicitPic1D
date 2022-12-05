@@ -87,7 +87,7 @@ contains
 
     subroutine depositRho(self, particleList) 
         class(Domain), intent(in out) :: self
-        type(Particle), intent(in) :: particleList(1)
+        type(Particle), intent(in) :: particleList(:)
         integer(int32) :: i, j, l_left
         real(real64) :: d
         do i=1, size(particleList)
