@@ -1,6 +1,6 @@
 FC = ifort
-FCFLAGS= -O3 -Wall
-OBJS = constants.o mod_BasicFunctions.o mod_particle.o mod_TestClass.o mod_domain.o
+FCFLAGS= -O3 -no-prec-div -m64 -auto -fp-model fast=2 -unroll-aggressive -xHost #-qmkl -qopenmp
+OBJS = constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o
 
 .PHONY: all clean
 .SUFFIXES: .f90 .o

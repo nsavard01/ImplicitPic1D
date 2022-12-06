@@ -124,7 +124,7 @@ contains
         integer(int32) :: fileunit, record_length
         character(100) :: filename
         filename = 'record_particlePosition.dat'
-        record_length = 8 * size(self%l_p(1:self%N_p))
+        record_length = 2 * size(self%l_p(1:self%N_p))
         open(newunit=fileunit, file=filename, access='direct', recl= record_length)
         write(unit=fileunit, rec=1) self%l_p(1:self%N_p)
         close(fileunit)
@@ -136,7 +136,7 @@ contains
         integer(int32) :: fileunit, record_length
         character(100) :: filename
         filename = 'record_particleVelocity.dat'
-        record_length = 8 * self%N_p
+        record_length = 2 * self%N_p
         open(newunit=fileunit, file=filename, access='direct', recl= record_length)
         write(unit=fileunit, rec=1) self%v_p(1:self%N_p, 1)
         write(unit=fileunit, rec=2) self%v_p(1:self%N_p, 2)
