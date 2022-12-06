@@ -38,12 +38,17 @@ program BoundPlasmaExample
     print *, "Mean temperature of electron is:", particleList(1)%getTemperature(), "should be", T_e * 1.5
     print *, "Mean temperature of proton is:", particleList(2)%getTemperature(), "should be", T_i * 1.5
 
-    call world % depositRho(particleList(2:2))
-
-    print *, world % rho
+    call world % depositRho(particleList(1:1))
+    print *, "rho should be:", n_ave * e
+    print *, size(world % rho)
 
     print *, "Average from rho is:", SUM(world % rho * world % nodeVol) / L_domain / e
     print *, "Average should be:", n_ave
+
+    call world % writeRho()
+    call world % writeGrid()
+    print *, world % grid(world % n_x)
+    print *, particleList(1) % v_p(1:3, 2)
 
 
 

@@ -20,6 +20,8 @@ module mod_domain
         procedure, public, pass(self) :: constructSineGrid
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: depositRho
+        procedure, public, pass(self) :: writeRho
+        procedure, public, pass(self) :: writeGrid
     end type Domain
 
 
@@ -100,6 +102,32 @@ contains
         end do
         self % rho = self % rho / self % nodeVol
     end subroutine depositRho
+
+    ! Write data from rho
+
+    subroutine writeRho(self)
+        ! Writes rho into a binary file.
+        class(Domain), intent(in out) :: self
+        integer(int32) :: fileunit, record_length
+        character(100) :: filename
+        filename = 'record_Rho.dat'
+        record_length = 8 * size(self%rho)
+        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
+        write(unit=fileunit, rec=1) self%rho
+        close(fileunit)
+      end subroutine writeRho
+
+      subroutine writeGrid(self)
+        ! Writes rho into a binary file.
+        class(Domain), intent(in out) :: self
+        integer(int32) :: fileunit, record_length
+        character(100) :: filename
+        filename = 'record_Grid.dat'
+        record_length = 2*size(self%grid)
+        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
+        write(unit=fileunit, rec = 1) self%grid
+        close(fileunit)
+      end subroutine writeGrid
 
 
 
