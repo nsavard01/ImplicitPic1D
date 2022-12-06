@@ -56,8 +56,14 @@ program main
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time for functional is:", elapsed_time, "seconds"
 
+    do i_omp = 1, nproc-1
+        do i = 1, sizek
+            if (b(i, i_omp) /= type_b%x(i, i_omp)) then
+                stop "The final arrays do not match!"
+            end if
+        end do
+    end do
     
-
     
 
 

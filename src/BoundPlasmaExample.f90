@@ -47,8 +47,6 @@ program BoundPlasmaExample
 
     call world % writeRho()
     call world % writeGrid()
-    print *, world % grid(world % n_x)
-    print *, particleList(1) % v_p(1:3, 2)
 
 
 

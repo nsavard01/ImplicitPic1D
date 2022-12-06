@@ -111,7 +111,7 @@ contains
         integer(int32) :: fileunit, record_length
         character(100) :: filename
         filename = 'record_Rho.dat'
-        record_length = 8 * size(self%rho)
+        record_length = 2 * size(self%rho)
         open(newunit=fileunit, file=filename, access='direct', recl= record_length)
         write(unit=fileunit, rec=1) self%rho
         close(fileunit)
