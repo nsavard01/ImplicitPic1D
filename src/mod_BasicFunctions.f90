@@ -62,8 +62,11 @@ contains
         end do
     end subroutine getRandom
 
-    
+    pure real function getArrayMean1D(x) result(res)
+        real(real64), intent(in) :: x(:)
+        res = sum(x)/size(x)
 
+    end function getArrayMean1D
 
 
 
