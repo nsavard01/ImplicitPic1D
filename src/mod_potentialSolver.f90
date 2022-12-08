@@ -132,29 +132,30 @@ contains
 
         loopSpecies: do j = 1, size(particleList)
             loopParticles: do i = 1, particleList(j)%N_p
+                v_sub = particleList(j)%v_p(i, 1)
+                l_sub = particleList(j)%l_p(i)
                 if (subStepNum == 0) then
-
+                    ! subStepNum = 0 means particle hasn't undergone sub-steps yet
                     call particleList(j)%getl_BoundaryInitial(i, l_alongV, l_awayV)
-                    if (MOD(i, 1000) == 0) then
-                        print *, ""
-                        print *, "Particle velocity sign is:", SIGN(1.0, particleList(j)%v_p(i,1))
-                        print *, "partilce position is:", particleList(j)%l_p(i)
-                        print *, "l_alongV is:", l_alongV
-                        print *, "l_awayV is:", l_awayV
-                        print *, ""
-                    end if
-                    ! Particle first between nodes, so solve quadratic for that particle
-                    ! if (self%getEField(particleList(j)%l_p(i), world) == 0.0) then
-                    !     !Free particle drift
-                    !     if (self%particleList(j)%v_p(i,1) > 0) then
-                    !         l_alongV = real(INT(particleList(j)%l_p(i)) + 1, kind = real64)
-                    !     else
-                    !         l_alongV = real(INT(particleList(j)%l_p(i)), kind = real64)
-                    !     end if
-                    ! else
-                    !     a = (particleList(j)%q / particleList(j)%mass / 2) * self%getEField(particleList(j)%l_p(i), world)
+                    a = (particleList(j)%q / particleList(j)%mass / 2) * self%getEField(l_sub, world)
+                    ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+                    if ((a == 0.0) .and. (v_sub /= 0.0)) then
+                        !Free particle drift
+                        del_tau = (l_alongV - l_sub) * world%dx_dl(INT(l_sub))/v_sub
+                        v_f = (l_alongV - l_sub) * world%dx_dl(INT(l_sub)) / del_tau
 
-                    ! end if
+                    else if((v_sub == 0.0) .and. (a /= 0.0)) then
+                        ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
+                        if (a > 0) then
+                            l_alongV = real(INT(particleList(j)%l_p(i)) + 1, kind = real64)
+                        else
+                            l_alongV = real(INT(particleList(j)%l_p(i)), kind = real64)
+                        end if
+                        c = (l_sub - l_alongV) * world%dx_dl(INT(l_sub))
+                        del_tau = SQRT(-c/a)
+
+                    end if
+                    l_sub = 0
                     
 
 

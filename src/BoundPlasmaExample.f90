@@ -8,7 +8,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: particleIdxFactor = 2, i, irand = 9872364!, tclock1, tclock2, clock_rate, j
-    integer(int32), parameter :: num_grid_nodes = 64, numParticles = 10000, maxIter = 50
+    integer(int32), parameter :: num_grid_nodes = 64, numParticles = 20000, maxIter = 50
     real(real64), parameter :: L_domain = 0.1d0, del_l = 0.005d0
     real(real64) :: w_p = 1.0d0, n_ave = 5d14, T_e = 5.0d0, T_i = 0.025d0, T, del_t, fractionFreq = 0.5d0!, elapsed_time
     type(Domain) :: world
