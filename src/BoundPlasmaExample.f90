@@ -46,7 +46,9 @@ program BoundPlasmaExample
     call solver%solve_tridiag_Poisson()
 
     call system_clock(tclock1)
-    call solver%depositJ(particleList(1:1), world, del_t)
+    do i = 1, 10000
+        call solver%depositJ(particleList(1:1), world, del_t)
+    end do
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time is:", elapsed_time, "seconds"
