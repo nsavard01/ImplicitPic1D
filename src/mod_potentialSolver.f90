@@ -128,8 +128,8 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, a, c, l_alongV, l_awayV 
-        integer(int32) :: subStepNum = 0, j, i
-
+        integer(int32) :: subStepNum = 0, j, i, aVoppCounter = 0
+        self%J = 0
         loopSpecies: do j = 1, size(particleList)
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%v_p(i, 1)
@@ -143,6 +143,9 @@ contains
                         !Free particle drift
                         del_tau = (l_alongV - l_sub) * world%dx_dl(INT(l_sub))/v_sub
                         v_f = (l_alongV - l_sub) * world%dx_dl(INT(l_sub)) / del_tau
+                        if (del_tau < 0) then
+                            print *, "Have issue with del_tau for a = 0"
+                        end if
 
                     else if((v_sub == 0.0) .and. (a /= 0.0)) then
                         ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
@@ -153,16 +156,28 @@ contains
                         end if
                         c = (l_sub - l_alongV) * world%dx_dl(INT(l_sub))
                         del_tau = SQRT(-c/a)
+                        if (del_tau < 0) then
+                            print *, "Have issue with del_tau for v = 0"
+                        end if
 
+                    else
+                        if (a*v_sub > 0) then
+                            ! velocity and acceleration in same direction
+                            c = (l_sub - l_alongV) * world%dx_dl(INT(l_sub))
+                            del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
+                            if (del_tau < 0) then
+                                print *, "Have issue with del_tau for v,a in same direction"
+                            end if
+                        else
+                        end if
                     end if
-                    l_sub = 0
+                    
                     
 
 
                 end if
             end do loopParticles
         end do loopSpecies
-
 
 
     end subroutine depositJ
