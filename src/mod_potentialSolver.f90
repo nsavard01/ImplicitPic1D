@@ -22,6 +22,7 @@ module mod_potentialSolver
     contains
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: solve_tridiag_Poisson
+        procedure, public, pass(self) :: getEField
         procedure, private, pass(self) :: construct_diagMatrix
     end type
 
@@ -45,8 +46,6 @@ contains
         self % phi_right = 0
         self % coeff_left = 2/(world%dx_dl(1) + world%dx_dl(2))/world%dx_dl(1)
         self % coeff_right = 2/(world%dx_dl(size(world%dx_dl)-1) + world%dx_dl(size(world%dx_dl)))/world%dx_dl(size(world%dx_dl))
-        print *, self%coeff_left
-        print *, self%coeff_right
 
     end function potSolver_constructor
 
@@ -106,6 +105,15 @@ contains
         self%phi_f = self%phi
 
     end subroutine solve_tridiag_Poisson
+
+    pure function getEField(self, l_p, world) result(EField)
+        !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
+        class(potSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: l_p
+        real(real64) :: EField
+        EField = (self%phi_f(INT(l_p)) + self%phi(INT(l_p)) - self%phi(INT(l_p)+1) - self%phi_f(INT(l_p) + 1)) / world%dx_dl(INT(l_p))/2
+    end function getEField
 
 
 
