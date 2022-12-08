@@ -42,7 +42,7 @@ program BoundPlasmaExample
     solver = potSolver(num_grid_nodes, world)
     call solver%depositRho(particleList(1:1), world)
     call solver%solve_tridiag_Poisson()
-    print *, solver%phi
+    
 
     
 

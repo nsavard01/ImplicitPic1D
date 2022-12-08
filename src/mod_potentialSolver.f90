@@ -103,6 +103,7 @@ contains
         do i = n-1, 1, -1
             self%phi(i+1) = dp(i)-cp(i)*self%phi(i+2)
         end do
+        self%phi_f = self%phi
 
     end subroutine solve_tridiag_Poisson
 
