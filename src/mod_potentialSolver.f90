@@ -23,6 +23,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: getEField
+        procedure, public, pass(self) :: depositJ
         procedure, private, pass(self) :: construct_diagMatrix
     end type
 
@@ -112,8 +113,58 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: l_p
         real(real64) :: EField
-        EField = (self%phi_f(INT(l_p)) + self%phi(INT(l_p)) - self%phi(INT(l_p)+1) - self%phi_f(INT(l_p) + 1)) / world%dx_dl(INT(l_p))/2
+        if (l_p < 1 .or. l_p >= world%n_x) then
+            EField = 0.0
+        else
+            EField = (self%phi_f(INT(l_p)) + self%phi(INT(l_p)) - self%phi(INT(l_p)+1) - self%phi_f(INT(l_p) + 1)) / world%dx_dl(INT(l_p))/2
+        end if
     end function getEField
+
+    subroutine depositJ(self, particleList, world, del_t)
+        ! particle substepping procedure which deposits J
+        class(potSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: particleList(:)
+        real(real64), intent(in) :: del_t
+        !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, a, c, l_alongV, l_awayV 
+        integer(int32) :: subStepNum = 0, j, i
+
+        loopSpecies: do j = 1, size(particleList)
+            loopParticles: do i = 1, particleList(j)%N_p
+                if (subStepNum == 0) then
+
+                    call particleList(j)%getl_BoundaryInitial(i, l_alongV, l_awayV)
+                    if (MOD(i, 1000) == 0) then
+                        print *, ""
+                        print *, "Particle velocity sign is:", SIGN(1.0, particleList(j)%v_p(i,1))
+                        print *, "partilce position is:", particleList(j)%l_p(i)
+                        print *, "l_alongV is:", l_alongV
+                        print *, "l_awayV is:", l_awayV
+                        print *, ""
+                    end if
+                    ! Particle first between nodes, so solve quadratic for that particle
+                    ! if (self%getEField(particleList(j)%l_p(i), world) == 0.0) then
+                    !     !Free particle drift
+                    !     if (self%particleList(j)%v_p(i,1) > 0) then
+                    !         l_alongV = real(INT(particleList(j)%l_p(i)) + 1, kind = real64)
+                    !     else
+                    !         l_alongV = real(INT(particleList(j)%l_p(i)), kind = real64)
+                    !     end if
+                    ! else
+                    !     a = (particleList(j)%q / particleList(j)%mass / 2) * self%getEField(particleList(j)%l_p(i), world)
+
+                    ! end if
+                    
+
+
+                end if
+            end do loopParticles
+        end do loopSpecies
+
+
+
+    end subroutine depositJ
 
 
 

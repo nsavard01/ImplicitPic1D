@@ -10,7 +10,7 @@ program BoundPlasmaExample
     integer(int32) :: particleIdxFactor = 2, i, irand = 9872364!, tclock1, tclock2, clock_rate, j
     integer(int32), parameter :: num_grid_nodes = 64, numParticles = 10000, maxIter = 50
     real(real64), parameter :: L_domain = 0.1d0, del_l = 0.005d0
-    real(real64) :: w_p = 1.0d0, n_ave = 5e14, T_e = 5.0d0, T_i = 0.025d0, T!, elapsed_time
+    real(real64) :: w_p = 1.0d0, n_ave = 5d14, T_e = 5.0d0, T_i = 0.025d0, T, del_t, fractionFreq = 0.5d0!, elapsed_time
     type(Domain) :: world
     type(Particle) :: particleList(2)
     type(potSolver) :: solver
@@ -37,14 +37,14 @@ program BoundPlasmaExample
     
     print *, "Debye length is:", getDebyeLength(T_e, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
+    del_t = fractionFreq/getPlasmaFreq(n_ave)
+    print *, "Time step (sec) is:", del_t
     print *, "Mean temperature of electron is:", particleList(1)%getTemperature(), "should be", T_e * 1.5
     print *, "Mean temperature of proton is:", particleList(2)%getTemperature(), "should be", T_i * 1.5
     solver = potSolver(num_grid_nodes, world)
     call solver%depositRho(particleList(1:1), world)
     call solver%solve_tridiag_Poisson()
-    do i = 1, num_grid_nodes - 1
-        print *, solver%getEField(real(i + 0.5, 8), world)
-    end do
+    call solver%depositJ(particleList(1:1), world, del_t)
     
 
     

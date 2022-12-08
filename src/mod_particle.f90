@@ -13,7 +13,7 @@ module mod_particle
         character(:), allocatable :: name !name of the particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
         real(real64), allocatable :: l_p(:) !positions of particles in logical space
-        real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s
+        real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s, second index corresponds to x,y,z since fortran column-major
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
 
     contains
@@ -22,6 +22,7 @@ module mod_particle
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getTemperature
         procedure, public, pass(self) :: getVrms
+        procedure, public, pass(self) :: getl_BoundaryInitial
         procedure, public, pass(self) :: writeLocation
         procedure, public, pass(self) :: writeVelocity
     end type Particle
@@ -56,6 +57,8 @@ contains
         real(real64), intent(in) :: n_ave, L_domain
         self % w_p = n_ave * L_domain / self % N_p
     end subroutine initialize_n_ave
+
+    ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
     subroutine initialize_randUniform(self, L_domain, dx_dl, n_x)
         ! place particles randomly in each dx_dl based on portion of volume it take up
@@ -117,6 +120,25 @@ contains
         real(real64) :: res
         res = SQRT(SUM(self%v_p(1:self%N_p, :)**2)/ self%N_p)
     end function getVrms
+
+    !-------------------------- Functions used in SubStepping procedure -----------------------------
+
+    subroutine getl_BoundaryInitial(self, idx, l_alongV, l_awayV)
+        ! get point in l-space on boundary which is away or towards boundary, when particle between nodes
+        class(Particle), intent(in) :: self
+        integer(int32), intent(in) :: idx
+        real(real64), intent(in out) :: l_alongV, l_awayV
+        if (self%v_p(idx,1) > 0.0) then
+            l_alongV = real(INT(self%l_p(idx)) + 1, kind = real64)
+            l_awayV = real(INT(self%l_p(idx)), kind = real64)
+        else
+            l_alongV = real(INT(self%l_p(idx)), kind = real64)
+            l_awayV = real(INT(self%l_p(idx)) + 1, kind = real64)
+        end if
+
+    end subroutine getl_BoundaryInitial
+
+    ! --------------------------- Writing Particle Data to File -----------------------------------
 
     subroutine writeLocation(self)
         ! Writes a field into a binary file.
