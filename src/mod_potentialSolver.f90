@@ -14,13 +14,15 @@ module mod_potentialSolver
     public :: potSolver
 
     type :: potSolver
-        real(real64), allocatable :: phi(:), J(:), rho(:)
-        !real(real64) :: phi_left, phi_right
-        real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver
+        real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64) :: phi_left, phi_right
+        real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
+        real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
     contains
         procedure, public, pass(self) :: depositRho
-
+        procedure, public, pass(self) :: solve_tridiag_Poisson
+        procedure, private, pass(self) :: construct_diagMatrix
     end type
 
     interface potSolver
@@ -29,17 +31,22 @@ module mod_potentialSolver
 
 contains
 
-    type(potSolver) function potSolver_constructor(num_nodes) result(self)
+    type(potSolver) function potSolver_constructor(num_nodes, world) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         integer(int32), intent(in) :: num_nodes
-        allocate(self % J(num_nodes-1), self % rho(num_nodes), self % phi(num_nodes), self%a_tri(num_nodes-3), &
+        type(Domain), intent(in) :: world
+        allocate(self % J(num_nodes-1), self % rho(num_nodes), self % phi(num_nodes), self % phi_f(num_nodes), self%a_tri(num_nodes-3), &
         self%b_tri(num_nodes-2), self%c_tri(num_nodes-3))
-        self % a_tri = 0
-        self % b_tri = 0
-        self % c_tri = 0
+        call construct_diagMatrix(self, world)
         self % rho = 0
         self % J = 0
         self % phi = 0
+        self % phi_left = 0
+        self % phi_right = 0
+        self % coeff_left = 2/(world%dx_dl(1) + world%dx_dl(2))/world%dx_dl(1)
+        self % coeff_right = 2/(world%dx_dl(size(world%dx_dl)-1) + world%dx_dl(size(world%dx_dl)))/world%dx_dl(size(world%dx_dl))
+        print *, self%coeff_left
+        print *, self%coeff_right
 
     end function potSolver_constructor
 
@@ -60,6 +67,44 @@ contains
         end do
         self % rho = self % rho / world%nodeVol
     end subroutine depositRho
+
+    subroutine construct_diagMatrix(self, world)
+        ! construct diagonal components for thomas algorithm
+        class(potSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        self % a_tri = 2/(world%dx_dl(2:world%n_x-2) + world%dx_dl(3:)) / world%dx_dl(2:world%n_x-2)
+        self % c_tri = 2/(world%dx_dl(1:world%n_x-3) + world%dx_dl(2:world%n_x-2))/world%dx_dl(2:world%n_x-2)
+        self % b_tri = -2/(world%dx_dl(1:world%n_x-2) + world%dx_dl(2:))/world%dx_dl(1:world%n_x-2) - 2/(world%dx_dl(1:world%n_x-2) + world%dx_dl(2:))/world%dx_dl(2:world%n_x-1)
+
+    end subroutine construct_diagMatrix
+
+    subroutine solve_tridiag_Poisson(self)
+        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+        class(potSolver), intent(in out) :: self
+        integer(int32) :: i, n !n size dependent on how many points are boundary conditions and thus moved to rhs equation
+        real(real64) :: m, d(size(self%phi) - 2), cp(size(self%phi) - 2),dp(size(self%phi) - 2)
+        n = size(self%phi) - 2
+
+        d = -self%rho / eps_0
+        d(1) = d(1) - 2 * self%phi_left * self%coeff_left
+        d(n) = d(n) - 2 * self%phi_right * self%coeff_right
+    ! initialize c-prime and d-prime
+        cp(1) = self%c_tri(1)/self%b_tri(1)
+        dp(1) = d(1)/self%b_tri(1)
+    ! solve for vectors c-prime and d-prime
+        do i = 2,n
+            m = self%b_tri(i)-cp(i-1)*self%a_tri(i-1)
+            cp(i) = self%c_tri(i)/m
+            dp(i) = (d(i)-dp(i-1)*self%a_tri(i-1))/m
+        end do
+    ! initialize x
+        self%phi(2:n+1) = dp(n)
+    ! solve for x from the vectors c-prime and d-prime
+        do i = n-1, 1, -1
+            self%phi(i+1) = dp(i)-cp(i)*self%phi(i+2)
+        end do
+
+    end subroutine solve_tridiag_Poisson
 
 
 

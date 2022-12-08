@@ -75,9 +75,9 @@ contains
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: L_domain
         integer(int32) :: i
-        self%grid(1) = 0
+        self%grid(1) = 0d0
         self%grid(self%n_x) = L_domain
-        do concurrent (i = 2:self % n_x-1)
+        do i = 2, self % n_x-1
             self % grid(i) =  (i-1) * L_domain / (self%n_x - 1)
         end do
         call derive_DxDl_NodeVol(self)
