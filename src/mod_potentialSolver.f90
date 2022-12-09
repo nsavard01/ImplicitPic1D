@@ -174,12 +174,14 @@ contains
                         if (a*v_sub > 0) then
                             ! velocity and acceleration in same direction
                             del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
+                            l_f = l_alongV
                             if (del_tau <= 0) then
                                 stop "Have issue with del_tau for v,a in same direction"
                             end if
                         else if (v_sub**2 - 4*a*c > 0) then
                             ! v and a opposite direction, but particle can still reach boundary along v
                             del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
+                            l_f = l_alongV
                             if (del_tau <= 0) then
                                 stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
                             end if
@@ -187,6 +189,7 @@ contains
                             ! v and a opposite direction, boundary opposite direction of v
                             c = (l_sub - l_awayV) * world%dx_dl(INT(l_sub))
                             del_tau = (ABS(v_sub) + SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
+                            l_f = l_awayV
                             if (del_tau <= 0) then
                                 stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
                             end if
@@ -195,6 +198,7 @@ contains
                         !Free particle drift
                         del_tau = (l_alongV - l_sub) * world%dx_dl(INT(l_sub))/v_sub
                         v_f = (l_alongV - l_sub) * world%dx_dl(INT(l_sub)) / del_tau
+                        l_f = l_alongV
                         if (del_tau <= 0) then
                             stop "Have issue with del_tau for a = 0"
                         end if
@@ -208,6 +212,7 @@ contains
                         end if
                         c = (l_sub - l_alongV) * world%dx_dl(INT(l_sub))
                         del_tau = SQRT(-c/a)
+                        l_f = l_alongV
                         if (del_tau <= 0) then
                             stop "Have issue with del_tau for v = 0"
                         end if
@@ -241,8 +246,24 @@ contains
                             stop "Failed non-substep charge conservation, subStepNum = 0"
                         end if
                         
+                        
                     else
-
+                        v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_tau - v_sub
+                        timePassed = timePassed + del_tau
+                        self%J(INT(l_sub)) = self%J(INT(l_sub)) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_sub))/del_t
+                        rho_i = singleRho(world%n_x, l_sub, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
+                        rho_f = singleRho(world%n_x, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
+                        gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)*del_tau/2/del_t, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
+                        testConserv = 0.0d0
+                        test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
+                        do k = 1, world%n_x - 2
+                            if (test(k) /= 0.0) then
+                                testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
+                            end if
+                        end do
+                        if (SQRT(testConserv) > 1e-8) then
+                            stop "Failed substep charge conservation, subStepNum = 0"
+                        end if
                         
                 
                     end if
