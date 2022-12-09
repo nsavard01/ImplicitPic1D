@@ -2,6 +2,7 @@ module mod_potentialSolver
     use iso_fortran_env, only: int32, real64
     use constants
     use mod_particle
+    use mod_BasicFunctions
     use mod_domain
     implicit none
 
@@ -56,17 +57,43 @@ contains
         type(Domain), intent(in) :: world
         integer(int32) :: i, j, l_left
         real(real64) :: d
-        self % rho = 0
+        self % rho = 0.0d0
         do i=1, size(particleList)
             do j = 1, particleList(i)%N_p
                 l_left = INT(particleList(i)%l_p(j))
-                d = MOD(particleList(i)%l_p(j), 1.0)
-                self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0-d)
+                d = MOD(particleList(i)%l_p(j), 1.0d0)
+                self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                 self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
             end do
         end do
         self % rho = self % rho / world%nodeVol
     end subroutine depositRho
+
+    pure function singleRho(n, l_p, w_p, q, nodeVol) result(rho)
+        ! for diagnostic in substep routine
+        integer(int32), intent(in) :: n
+        real(real64), intent(in) :: l_p, w_p, q, nodeVol(:)
+        real(real64) :: rho(n), d
+        integer(int32) :: l_left
+        rho = 0.0d0
+        l_left = INT(l_p)
+        d = MOD(l_p, 1.0d0)
+        rho(l_left) = q * w_p * (1.0d0-d) / nodeVol(l_left)
+        rho(l_left + 1) =  q * w_p * d / nodeVol(l_left+1)
+    end function singleRho
+
+    pure function singleGradJ(dx_dl, l_half, v_half, w_p, q, nodeVol) result(gradJ)
+        ! for diagnostic in substep routine
+        real(real64), intent(in) :: dx_dl(:), l_half, v_half, w_p, q, nodeVol(:)
+        real(real64) :: gradJ(size(dx_dl)-1), J(size(dx_dl))
+        integer(int32) :: i
+        J = 0.0d0
+        gradJ = 0.0d0
+        J(INT(l_half)) = J(INT(l_half)) + w_p * q * (v_half)/dx_dl(INT(l_half))
+        do i = 1, size(J) -1
+            gradJ(i) = (J(i + 1) - J(i)) / nodeVol(i+1)
+        end do
+    end function singleGradJ
 
     subroutine construct_diagMatrix(self, world)
         ! construct diagonal components for thomas algorithm
@@ -107,6 +134,8 @@ contains
 
     end subroutine solve_tridiag_Poisson
 
+    !----------------- Particle mover/sub-stepping procedures -------------------------------------------------------
+
     pure function getEField(self, l_p, world) result(EField)
         !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
         class(potSolver), intent(in) :: self
@@ -127,9 +156,10 @@ contains
         type(Particle), intent(in) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, a, c, l_alongV, l_awayV, case1 = 0.0, case2 = 0.0, case3 = 0.0
-        integer(int32) :: subStepNum = 0, j, i
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed = 0.0, del_tau, a, c, l_alongV, l_awayV, case1 = 0.0, case2 = 0.0, case3 = 0.0, rho_i(world%n_x), rho_f(world%n_x), gradJ(world%n_x-2), test(world%n_x-2), testConserv
+        integer(int32) :: subStepNum = 0, j, i, k
         self%J = 0
+        del_tau = del_t
         loopSpecies: do j = 1, size(particleList)
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%v_p(i, 1)
@@ -144,29 +174,29 @@ contains
                         if (a*v_sub > 0) then
                             ! velocity and acceleration in same direction
                             del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
-                            if (del_tau < 0) then
-                                print *, "Have issue with del_tau for v,a in same direction"
+                            if (del_tau <= 0) then
+                                stop "Have issue with del_tau for v,a in same direction"
                             end if
                         else if (v_sub**2 - 4*a*c > 0) then
                             ! v and a opposite direction, but particle can still reach boundary along v
                             del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
-                            if (del_tau < 0) then
-                                print *, "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                            if (del_tau <= 0) then
+                                stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
                             end if
                         else
                             ! v and a opposite direction, boundary opposite direction of v
                             c = (l_sub - l_awayV) * world%dx_dl(INT(l_sub))
                             del_tau = (ABS(v_sub) + SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
-                            if (del_tau < 0) then
-                                print *, "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                            if (del_tau <= 0) then
+                                stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
                             end if
                         end if
                     else if ((a == 0.0) .and. (v_sub /= 0.0)) then
                         !Free particle drift
                         del_tau = (l_alongV - l_sub) * world%dx_dl(INT(l_sub))/v_sub
                         v_f = (l_alongV - l_sub) * world%dx_dl(INT(l_sub)) / del_tau
-                        if (del_tau < 0) then
-                            print *, "Have issue with del_tau for a = 0"
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for a = 0"
                         end if
 
                     else
@@ -178,10 +208,47 @@ contains
                         end if
                         c = (l_sub - l_alongV) * world%dx_dl(INT(l_sub))
                         del_tau = SQRT(-c/a)
-                        if (del_tau < 0) then
-                            print *, "Have issue with del_tau for v = 0"
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v = 0"
                         end if
                     end if
+
+                    if (del_tau == del_t) then
+                        stop "Somehow del_tau didn't change in one of the conditions"
+                    end if
+
+                    if (del_tau >= del_t) then
+                        ! Add directly to J with no substep
+                        l_f = v_sub * del_t / world%dx_dl(INT(l_sub)) + (a/ world%dx_dl(INT(l_sub))) * del_t**2 + l_sub
+                        v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_t - v_sub
+                        if (ABS((v_f - 2*a*del_t - v_sub)/v_sub) > 1e-8) then
+                            stop "Kinematic equation doesn't match for no substep"
+                        else if (INT(l_f) /= INT(l_sub)) then
+                            stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
+                        end if
+                        self%J(INT(l_sub)) = self%J(INT(l_sub)) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)/2/world%dx_dl(INT(l_sub))
+                        rho_i = singleRho(world%n_x, l_sub, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
+                        rho_f = singleRho(world%n_x, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
+                        gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)/2, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
+                        testConserv = 0.0d0
+                        test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
+                        do k = 1, world%n_x - 2
+                            if (test(k) /= 0.0) then
+                                testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
+                            end if
+                        end do
+                        if (SQRT(testConserv) > 1e-8) then
+                            stop "Failed non-substep charge conservation, subStepNum = 0"
+                        end if
+                        
+                    else
+
+                        
+                
+                    end if
+
+        
+
                 end if
             end do loopParticles
         end do loopSpecies

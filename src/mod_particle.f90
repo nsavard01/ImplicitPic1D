@@ -124,7 +124,7 @@ contains
     !-------------------------- Functions used in SubStepping procedure -----------------------------
 
     subroutine getl_BoundaryInitial(self, idx, l_alongV, l_awayV)
-        ! get point in l-space on boundary which is away or towards boundary, when particle between nodes
+        ! get point in l-space on boundary which is away or towards boundary based on velocity direction, when particle between nodes
         class(Particle), intent(in) :: self
         integer(int32), intent(in) :: idx
         real(real64), intent(in out) :: l_alongV, l_awayV
