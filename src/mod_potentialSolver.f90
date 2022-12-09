@@ -149,6 +149,21 @@ contains
         end if
     end function getEField
 
+    subroutine getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
+        ! get point in l-space on boundary which is away or towards boundary based on velocity direction, when particle between nodes
+        real(real64), intent(in out) :: l_alongV, l_awayV
+        real(real64), intent(in) :: l_sub, v_sub
+        if (v_sub > 0.0) then
+            l_alongV = real(INT(l_sub) + 1, kind = real64)
+            l_awayV = real(INT(l_sub), kind = real64)
+        else
+            l_alongV = real(INT(l_sub), kind = real64)
+            l_awayV = real(INT(l_sub) + 1, kind = real64)
+        end if
+
+    end subroutine getl_BoundaryInitial
+
+
     subroutine particleSubStepInitial(solver, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
         ! Do initial substep, where particles start between nodes
         type(potSolver), intent(in out) :: solver
@@ -218,6 +233,7 @@ contains
             ! Add directly to J with no substep
             l_f = v_sub * del_t / world%dx_dl(INT(l_sub)) + (a/ world%dx_dl(INT(l_sub))) * del_t**2 + l_sub
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_t - v_sub
+            timePassed = timePassed + del_t
             if (ABS((v_f - 2*a*del_t - v_sub)/v_sub) > 1e-8) then
                 stop "Kinematic equation doesn't match for no substep"
             else if (INT(l_f) /= INT(l_sub)) then
@@ -274,132 +290,34 @@ contains
         type(Particle), intent(in) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed = 0.0, del_tau, l_alongV, l_awayV
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
         integer(int32) :: subStepNum, j, i
         self%J = 0
-        del_tau = del_t
         loopSpecies: do j = 1, size(particleList)
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%v_p(i, 1)
                 l_sub = particleList(j)%l_p(i)
+                timePassed = 0
                 subStepNum = 0
-                if (subStepNum == 0) then
-                    ! subStepNum = 0 means particle hasn't undergone sub-steps yet
-                    call particleList(j)%getl_BoundaryInitial(i, l_alongV, l_awayV)
-                    call particleSubStepInitial(self, world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
-                    ! a = (particleList(j)%q / particleList(j)%mass / 2) * self%getEField(l_sub, world)
-                    ! ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-                    ! if ((a/=0) .and. (v_sub/=0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
-                    !     c = (l_sub - l_alongV) * world%dx_dl(INT(l_sub))
-                    !     if (a*v_sub > 0) then
-                    !         ! velocity and acceleration in same direction
-                    !         del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
-                    !         l_f = l_alongV
-                    !         if (del_tau <= 0) then
-                    !             stop "Have issue with del_tau for v,a in same direction"
-                    !         end if
-                    !     else if (v_sub**2 - 4*a*c > 0) then
-                    !         ! v and a opposite direction, but particle can still reach boundary along v
-                    !         del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
-                    !         l_f = l_alongV
-                    !         if (del_tau <= 0) then
-                    !             stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
-                    !         end if
-                    !     else
-                    !         ! v and a opposite direction, boundary opposite direction of v
-                    !         c = (l_sub - l_awayV) * world%dx_dl(INT(l_sub))
-                    !         del_tau = (ABS(v_sub) + SQRT(v_sub**2 - 4*a*c))/2/ABS(a)
-                    !         l_f = l_awayV
-                    !         if (del_tau <= 0) then
-                    !             stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
-                    !         end if
-                    !     end if
-                    ! else if ((a == 0.0) .and. (v_sub /= 0.0)) then
-                    !     !Free particle drift
-                    !     del_tau = (l_alongV - l_sub) * world%dx_dl(INT(l_sub))/v_sub
-                    !     v_f = (l_alongV - l_sub) * world%dx_dl(INT(l_sub)) / del_tau
-                    !     l_f = l_alongV
-                    !     if (del_tau <= 0) then
-                    !         stop "Have issue with del_tau for a = 0"
-                    !     end if
-
-                    ! else
-                    !     ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
-                    !     if (a > 0) then
-                    !         l_alongV = real(INT(particleList(j)%l_p(i)) + 1, kind = real64)
-                    !     else
-                    !         l_alongV = real(INT(particleList(j)%l_p(i)), kind = real64)
-                    !     end if
-                    !     c = (l_sub - l_alongV) * world%dx_dl(INT(l_sub))
-                    !     del_tau = SQRT(-c/a)
-                    !     l_f = l_alongV
-                    !     if (del_tau <= 0) then
-                    !         stop "Have issue with del_tau for v = 0"
-                    !     end if
-                    ! end if
-
-                    ! if (del_tau == del_t) then
-                    !     stop "Somehow del_tau didn't change in one of the conditions"
-                    ! end if
-
-                    ! if (del_tau >= del_t) then
-                    !     ! Add directly to J with no substep
-                    !     l_f = v_sub * del_t / world%dx_dl(INT(l_sub)) + (a/ world%dx_dl(INT(l_sub))) * del_t**2 + l_sub
-                    !     v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_t - v_sub
-                    !     if (ABS((v_f - 2*a*del_t - v_sub)/v_sub) > 1e-8) then
-                    !         stop "Kinematic equation doesn't match for no substep"
-                    !     else if (INT(l_f) /= INT(l_sub)) then
-                    !         stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
-                    !     end if
-                    !     self%J(INT(l_sub)) = self%J(INT(l_sub)) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)/2/world%dx_dl(INT(l_sub))
-                    !     rho_i = singleRho(world%n_x, l_sub, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
-                    !     rho_f = singleRho(world%n_x, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
-                    !     gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)/2, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
-                    !     testConserv = 0.0d0
-                    !     test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-                    !     do k = 1, world%n_x - 2
-                    !         if (test(k) /= 0.0) then
-                    !             testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-                    !         end if
-                    !     end do
-                    !     if (SQRT(testConserv) > 1e-8) then
-                    !         stop "Failed non-substep charge conservation, subStepNum = 0"
-                    !     end if
-                        
-                        
-                    ! else
-                    !     v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_tau - v_sub
-                    !     timePassed = timePassed + del_tau
-                    !     self%J(INT(l_sub)) = self%J(INT(l_sub)) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_sub))/del_t
-                    !     rho_i = singleRho(world%n_x, l_sub, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
-                    !     rho_f = singleRho(world%n_x, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
-                    !     gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)*del_tau/2/del_t, particleList(j)%w_p, particleList(j)%q, world%nodeVol)
-                    !     testConserv = 0.0d0
-                    !     test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-                    !     do k = 1, world%n_x - 2
-                    !         if (test(k) /= 0.0) then
-                    !             testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-                    !         end if
-                    !     end do
-                    !     if (SQRT(testConserv) > 1e-8) then
-                    !         stop "Failed substep charge conservation, subStepNum = 0"
-                    !     end if
-                    !     if (MOD(l_f, 1.0) /= 0.0) then
-                    !         print *, l_f
-                    !         stop "l_f is not integer after subStep"
-                    !     end if
-                    !     ! now final position/velocity becomes next starting position/velocity
-                    !     l_sub = l_f
-                    !     v_sub = v_f
-                    !     print *, l_sub
-                    !     print *, v_sub
-                    !     stop
-                
-                    ! end if
-                else
-
-                end if
-                subStepNum = subStepNum + 1
+                del_tau = 0
+                print *, i
+                do while((timePassed < del_t) .and. (l_sub /= 1.0) .and. (l_sub /= world%n_x) .and. (subStepNum < 2))
+                    if (subStepNum == 0) then
+                        ! Initial sub-step
+                        print *, "l_sub is:", l_sub
+                        print *, "v_sub is:", v_sub
+                        call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
+                        call particleSubStepInitial(self, world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
+                        print *, "l_f is now:", l_f
+                        print *, "v_f is now::", v_f
+                    else
+                        ! Further sub-steps, particles start on grid nodes
+                        l_alongV = l_sub + SIGN(1.0, v_sub)
+                        print *, "l_sub is:", l_sub
+                        print *, "l_alongV is:", l_alongV
+                    end if
+                    subStepNum = subStepNum + 1
+                end do
 
             end do loopParticles
         end do loopSpecies

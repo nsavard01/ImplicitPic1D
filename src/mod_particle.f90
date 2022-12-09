@@ -22,8 +22,6 @@ module mod_particle
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getTemperature
         procedure, public, pass(self) :: getVrms
-        procedure, public, pass(self) :: getl_BoundaryInitial
-        procedure, public, pass(self) :: getl_alongV
         procedure, public, pass(self) :: writeLocation
         procedure, public, pass(self) :: writeVelocity
     end type Particle
@@ -122,35 +120,7 @@ contains
         res = SQRT(SUM(self%v_p(1:self%N_p, :)**2)/ self%N_p)
     end function getVrms
 
-    !-------------------------- Functions used in SubStepping procedure -----------------------------
-
-    subroutine getl_BoundaryInitial(self, idx, l_alongV, l_awayV)
-        ! get point in l-space on boundary which is away or towards boundary based on velocity direction, when particle between nodes
-        class(Particle), intent(in) :: self
-        integer(int32), intent(in) :: idx
-        real(real64), intent(in out) :: l_alongV, l_awayV
-        if (self%v_p(idx,1) > 0.0) then
-            l_alongV = real(INT(self%l_p(idx)) + 1, kind = real64)
-            l_awayV = real(INT(self%l_p(idx)), kind = real64)
-        else
-            l_alongV = real(INT(self%l_p(idx)), kind = real64)
-            l_awayV = real(INT(self%l_p(idx)) + 1, kind = real64)
-        end if
-
-    end subroutine getl_BoundaryInitial
-
-    subroutine getl_alongV(self, idx, l_alongV)
-        ! get point in l-space on boundary which is alongV, need only along V when at beginning of substep
-        class(Particle), intent(in) :: self
-        integer(int32), intent(in) :: idx
-        real(real64), intent(in out) :: l_alongV
-        if (self%v_p(idx,1) > 0.0) then
-            l_alongV = real(INT(self%l_p(idx)) + 1, kind = real64)
-        else
-            l_alongV = real(INT(self%l_p(idx)), kind = real64)
-        end if
-
-    end subroutine getl_alongV
+    
 
     ! --------------------------- Writing Particle Data to File -----------------------------------
 
