@@ -12,7 +12,7 @@ module mod_particle
     type :: Particle
         character(:), allocatable :: name !name of the particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
-        real(real64), allocatable :: l_p(:) !positions of particles in logical space
+        real(real64), allocatable :: l_p(:), l_f(:) !positions of particles in logical space
         real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s, second index corresponds to x,y,z since fortran column-major
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
 
@@ -46,6 +46,7 @@ contains
         self % finalIdx = finalIdx
         allocate(self%l_p(self%finalIdx), self%v_p(self%finalIdx, 3))
         self%l_p = 0
+        self%l_f = 0
         self%v_p = 0
 
     end function particle_constructor
