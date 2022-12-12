@@ -208,44 +208,55 @@ contains
             l_f = v_sub * del_t / world%dx_dl(INT(l_sub)) + (a/ world%dx_dl(INT(l_sub))) * del_t**2 + l_sub
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_t - v_sub
             timePassed = del_t
-            if (ABS((v_f - 2*a*del_t - v_sub)/v_sub) > 1e-8) then
-                print *, "Particle charge:", part%q
+            if (ABS((v_f - 2.0d0*a*del_t - v_sub)/v_sub) > 1e-6) then
                 stop "Kinematic equation doesn't match for no substep, subStepNum = 0"
             else if (INT(l_f) /= INT(l_sub)) then
                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
             end if
             solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)/2/world%dx_dl(INT(l_sub))
-            rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
-            gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)/2, part%w_p, part%q, world%nodeVol)
-            testConserv = 0.0d0
-            test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            do k = 1, world%n_x - 2
-                if (test(k) /= 0.0) then
-                    testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-                end if
-            end do
-            if (SQRT(testConserv) > 1e-8) then
-                stop "Failed non-substep charge conservation, subStepNum = 0"
-            end if
+            ! rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
+            ! rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
+            ! gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)/2, part%w_p, part%q, world%nodeVol)
+            ! testConserv = 0.0d0
+            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
+            ! do k = 1, world%n_x - 2
+            !     if (test(k) /= 0.0) then
+            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
+            !             stop "ERROR HERE!"
+            !         end if
+            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
+            !     end if
+            ! end do
+            ! if (SQRT(testConserv) > 1e-8) then
+            !     print *, "error is:", SQRT(testConserv)
+            !     print *, "particle l_sub is:", l_sub
+            !     print *, "particle v_sub is:", v_sub
+            !     print *, "particle l_f is:", l_f
+            !     print *, "particle v_f is:", v_f
+            !     print *, "kinematic error is:", ABS((v_f - 2.0d0*a*del_t - v_sub)/v_sub)
+            !     stop "Failed non-substep charge conservation, subStepNum = 0"
+            ! end if
             
         else
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_tau - v_sub
             timePassed = timePassed + del_tau
             solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_sub))/del_t
-            rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
-            gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
-            testConserv = 0.0d0
-            test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            do k = 1, world%n_x - 2
-                if (test(k) /= 0.0) then
-                    testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-                end if
-            end do
-            if (SQRT(testConserv) > 1e-8) then
-                stop "Failed substep charge conservation, subStepNum = 0"
-            end if
+            ! rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
+            ! rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
+            ! gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
+            ! testConserv = 0.0d0
+            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
+            ! do k = 1, world%n_x - 2
+            !     if (test(k) /= 0.0) then
+            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
+            !             stop "ERROR HERE!"
+            !         end if
+            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
+            !     end if
+            ! end do
+            ! if (SQRT(testConserv) > 1e-8) then
+            !     stop "Failed substep charge conservation, subStepNum = 0"
+            ! end if
             if (MOD(l_f, 1.0) /= 0.0) then
                 print *, l_f
                 stop "l_f is not integer after subStep"
@@ -314,44 +325,50 @@ contains
             ! Add directly to J with no substep
             l_f = v_sub * (del_t - timePassed) / world%dx_dl(INT(l_cell)) + (a/ world%dx_dl(INT(l_cell))) * (del_t - timePassed)**2 + l_sub
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_cell)) / (del_t - timePassed) - v_sub
-            if (ABS((v_f - 2*a*(del_t - timePassed) - v_sub)/v_sub) > 1e-8) then
+            if (ABS((v_f - 2*a*(del_t - timePassed) - v_sub)/v_sub) > 1e-6) then
                 stop "Kinematic equation doesn't match for no substep, subStepNum > 0"
             else if (ABS(l_f - l_sub) >= 1) then
                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
             end if
             solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2/world%dx_dl(INT(l_cell))/del_t
-            rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
-            gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*(del_t - timePassed)/2/del_t, part%w_p, part%q, world%nodeVol)
-            testConserv = 0.0d0
-            test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            do k = 1, world%n_x - 2
-                if (test(k) /= 0.0) then
-                    testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-                end if
-            end do
-            if (SQRT(testConserv) > 1e-8) then
-                stop "Failed non-substep charge conservation, subStepNum > 0"
-            end if
+            ! rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
+            ! rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
+            ! gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*(del_t - timePassed)/2/del_t, part%w_p, part%q, world%nodeVol)
+            ! testConserv = 0.0d0
+            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
+            ! do k = 1, world%n_x - 2
+            !     if (test(k) /= 0.0) then
+            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
+            !             stop "ERROR HERE!"
+            !         end if
+            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
+            !     end if
+            ! end do
+            ! if (SQRT(testConserv) > 1e-8) then
+            !     stop "Failed non-substep charge conservation, subStepNum > 0"
+            ! end if
             timePassed = del_t
             
         else
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_cell)) / del_tau - v_sub
             timePassed = timePassed + del_tau
             solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_cell))/del_t
-            rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
-            gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
-            testConserv = 0.0d0
-            test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            do k = 1, world%n_x - 2
-                if (test(k) /= 0.0) then
-                    testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-                end if
-            end do
-            if (SQRT(testConserv) > 1e-8) then
-                stop "Failed substep charge conservation, subStepNum > 0"
-            end if
+            ! rho_i = singleRho(world%n_x, l_sub, part%w_p, part%q, world%nodeVol)
+            ! rho_f = singleRho(world%n_x, l_f, part%w_p, part%q, world%nodeVol)
+            ! gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
+            ! testConserv = 0.0d0
+            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
+            ! do k = 1, world%n_x - 2
+            !     if (test(k) /= 0.0) then
+            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
+            !             stop "ERROR HERE!"
+            !         end if
+            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
+            !     end if
+            ! end do
+            ! if (SQRT(testConserv) > 1e-8) then
+            !     stop "Failed substep charge conservation, subStepNum > 0"
+            ! end if
             if (MOD(l_f, 1.0) /= 0.0) then
                 print *, l_f
                 stop "l_f is not integer after subStep"
@@ -376,6 +393,7 @@ contains
         self%J = 0
         rho_f = 0
         loopSpecies: do j = 1, size(particleList)
+            print *, "Going through particle:", particleList(j)%name
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%v_p(i, 1)
                 l_sub = particleList(j)%l_p(i)
