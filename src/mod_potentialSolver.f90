@@ -25,6 +25,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: getEField
         procedure, public, pass(self) :: depositJ
+        procedure, public, pass(self) :: construct_diagMatrix_Ampere
         procedure, private, pass(self) :: construct_diagMatrix
     end type
 
@@ -72,11 +73,21 @@ contains
         ! construct diagonal components for thomas algorithm
         class(potSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        self % a_tri = 2/(world%dx_dl(2:world%n_x-2) + world%dx_dl(3:)) / world%dx_dl(2:world%n_x-2)
-        self % c_tri = 2/(world%dx_dl(1:world%n_x-3) + world%dx_dl(2:world%n_x-2))/world%dx_dl(2:world%n_x-2)
-        self % b_tri = -2/(world%dx_dl(1:world%n_x-2) + world%dx_dl(2:))/world%dx_dl(1:world%n_x-2) - 2/(world%dx_dl(1:world%n_x-2) + world%dx_dl(2:))/world%dx_dl(2:world%n_x-1)
+        self % a_tri = 2.0d0/(world%dx_dl(2:world%n_x-2) + world%dx_dl(3:)) / world%dx_dl(2:world%n_x-2)
+        self % c_tri = 2.0d0/(world%dx_dl(1:world%n_x-3) + world%dx_dl(2:world%n_x-2))/world%dx_dl(2:world%n_x-2)
+        self % b_tri = -2.0d0/(world%dx_dl(1:world%n_x-2) + world%dx_dl(2:))/world%dx_dl(1:world%n_x-2) - 2.0d0/(world%dx_dl(1:world%n_x-2) + world%dx_dl(2:))/world%dx_dl(2:world%n_x-1)
 
     end subroutine construct_diagMatrix
+
+    subroutine construct_diagMatrix_Ampere(self, world)
+        ! construct diagonal components for thomas algorithm, for Ampere (after initial Poisson)
+        class(potSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        self % a_tri = -1.0d0/world%dx_dl(2:world%n_x-2)
+        self % c_tri = -1.0d0/world%dx_dl(2:world%n_x-2)
+        self % b_tri = (world%dx_dl(1:world%n_x-2) + world%dx_dl(2:world%n_x-1))/ (world%dx_dl(1:world%n_x-2) * world%dx_dl(2:world%n_x-1))
+
+    end subroutine construct_diagMatrix_Ampere
 
     subroutine solve_tridiag_Poisson(self)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson

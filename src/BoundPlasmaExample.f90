@@ -51,6 +51,7 @@ program BoundPlasmaExample
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time is:", elapsed_time, "seconds"
+
     
     
 
