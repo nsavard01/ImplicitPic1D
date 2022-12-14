@@ -6,9 +6,9 @@ DEBUG= $(BASE) -traceback -CB -fp-stack-check -warn all -check uninit -check poi
 OBJ= constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o BoundPlasmaExample.o
 RM = rm -f
 
+all: clean BoundPlasmaExample
 
 BoundPlasmaExample: $(OBJ)
-	@echo $(OBJ)
 	$(FC) $(DEBUG) -o $@ $(OBJ)
 
 BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o

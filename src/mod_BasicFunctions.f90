@@ -91,7 +91,9 @@ contains
         l_left = INT(l_p)
         d = MOD(l_p, 1.0d0)
         rho(l_left) = rho(l_left) + q * w_p * (1.0d0-d) / nodeVol(l_left)
-        rho(l_left + 1) =  rho(l_left + 1) + q * w_p * d / nodeVol(l_left+1)
+        if (l_left < size(rho)) then
+            rho(l_left + 1) =  rho(l_left + 1) + q * w_p * d / nodeVol(l_left+1)
+        end if
     end subroutine singleRhoPass
 
     pure function singleGradJ(dx_dl, l_half, v_half, w_p, q, nodeVol) result(gradJ)
