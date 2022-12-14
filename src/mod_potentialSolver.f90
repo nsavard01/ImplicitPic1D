@@ -34,12 +34,11 @@ module mod_potentialSolver
 
 contains
 
-    type(potSolver) function potSolver_constructor(num_nodes, world) result(self)
+    type(potSolver) function potSolver_constructor(world) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
-        integer(int32), intent(in) :: num_nodes
         type(Domain), intent(in) :: world
-        allocate(self % J(num_nodes-1), self % rho(num_nodes), self % phi(num_nodes), self % phi_f(num_nodes), self%a_tri(num_nodes-3), &
-        self%b_tri(num_nodes-2), self%c_tri(num_nodes-3))
+        allocate(self % J(world%n_x-1), self % rho(world%n_x), self % phi(world%n_x), self % phi_f(world%n_x), self%a_tri(world%n_x-3), &
+        self%b_tri(world%n_x-2), self%c_tri(world%n_x-3))
         call construct_diagMatrix(self, world)
         self % rho = 0
         self % J = 0
@@ -83,7 +82,7 @@ contains
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
         class(potSolver), intent(in out) :: self
         integer(int32) :: i, n !n size dependent on how many points are boundary conditions and thus moved to rhs equation
-        real(real64) :: m, d(size(self%phi) - 2), cp(size(self%phi) - 2),dp(size(self%phi) - 2)
+        real(real64) :: m, d(size(self%phi) - 2), cp(size(self%phi) - 3),dp(size(self%phi) - 2)
         n = size(self%phi) - 2
 
         d = -self%rho / eps_0
@@ -93,11 +92,12 @@ contains
         cp(1) = self%c_tri(1)/self%b_tri(1)
         dp(1) = d(1)/self%b_tri(1)
     ! solve for vectors c-prime and d-prime
-        do i = 2,n
+        do i = 2,n-1
             m = self%b_tri(i)-cp(i-1)*self%a_tri(i-1)
             cp(i) = self%c_tri(i)/m
             dp(i) = (d(i)-dp(i-1)*self%a_tri(i-1))/m
         end do
+        dp(n) = (d(n)-dp(n-1)*self%a_tri(n-1))/(self%b_tri(n)-cp(n-1)*self%a_tri(n-1))
     ! initialize x
         self%phi(2:n+1) = dp(n)
     ! solve for x from the vectors c-prime and d-prime
@@ -145,8 +145,8 @@ contains
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
         real(real64), intent(in) :: del_t
-        real(real64) :: rho_i(world%n_x), rho_f(world%n_x), gradJ(world%n_x-2), test(world%n_x-2), testConserv, a, c
-        integer(int32) :: k
+        real(real64) :: a, c !rho_i(world%n_x), rho_f(world%n_x), gradJ(world%n_x-2), test(world%n_x-2), testConserv, 
+        !integer(int32) :: k
         
         a = (part%q / part%mass / 2) * solver%getEField(l_sub, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
@@ -276,8 +276,8 @@ contains
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_cell
         real(real64), intent(in) :: del_t
-        real(real64) :: rho_i(world%n_x), rho_f(world%n_x), gradJ(world%n_x-2), test(world%n_x-2), testConserv, a, c
-        integer(int32) :: k
+        real(real64) :: a, c !rho_i(world%n_x), rho_f(world%n_x), gradJ(world%n_x-2), test(world%n_x-2), testConserv, 
+        !integer(int32) :: k
         ! get index cell where field and dx_dl is evaluated
         if (v_sub > 0) then
             l_cell = l_sub
@@ -412,6 +412,9 @@ contains
                     subStepNum = subStepNum + 1
                 end do
                 call singleRhoPass(rho_f, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol) 
+                if ((l_f < 1) .or. (l_f > world%n_x)) then
+                    stop "Have particles travelling outside domain!"
+                end if
             end do loopParticles
         end do loopSpecies
         ! Check final charge conservation

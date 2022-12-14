@@ -8,7 +8,7 @@ module mod_particle
     private
     public :: Particle
 
-    ! Particle contains particle properties and stored values in phase space
+    ! Particle contains particle properties and stored values in phase space df
     type :: Particle
         character(:), allocatable :: name !name of the particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1

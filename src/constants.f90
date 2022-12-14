@@ -10,7 +10,7 @@ module constants
     real(real64), parameter :: k_B = 1.380649d-23 ! m^2 kg s^-2 K^-1
     real(real64), parameter :: e = 1.602176634d-19 ! C
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
-    real(real64), parameter :: pi = 4*atan(1.d0)
+    real(real64), parameter :: pi = 4*atan(1.d0) ! pi from atan
 
 
 end module constants
