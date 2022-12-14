@@ -1,19 +1,37 @@
 FC = ifort
-FCFLAGS= -O3 -no-prec-div -m64 -auto -fp-model fast=2 -unroll-aggressive -xHost #-qmkl -qopenmp
-OBJS = constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o
+CC=mpiifort
+OPT= $(BASE)
+BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -unroll-aggressive -xHost -qmkl # -mtune=skylake -xCORE-AVX512 -mt_mpi -heap-arrays 8192
+DEBUG= $(BASE) -traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
+OBJ= constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o BoundPlasmaExample.o
+RM = rm -f
 
-.PHONY: all clean
-.SUFFIXES: .f90 .o
+all: clean BoundPlasmaExample
 
-all: BoundPlasmaExample
+BoundPlasmaExample: $(OBJ)
+	$(FC) $(DEBUG) -o $@ $(OBJ)
 
-BoundPlasmaExample: BoundPlasmaExample.f90 $(OBJS)
-	$(FC) $(FCFLAGS) $< $(OBJS) -o $@
+BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o
+	$(FC) $(DEBUG) -c  -o $@ $<
 
-.f90.o:
-	$(FC) -c $(FCFlags) $<
+mod_potentialSolver.o: mod_potentialSolver.f90 mod_domain.f90 constants.o mod_BasicFunctions.o mod_particle.o
+	$(FC) $(DEBUG) -c  -o $@ $<
 
-%.o: %.mod
+mod_domain.o: mod_domain.f90 constants.o mod_BasicFunctions.o mod_particle.o
+	$(FC) $(DEBUG) -c  -o $@ $<
+
+mod_particle.o: mod_particle.f90 constants.o mod_BasicFunctions.o
+	$(FC) $(DEBUG) -c  -o $@ $<
+
+mod_BasicFunctions.o: mod_BasicFunctions.f90 constants.o
+	$(FC) $(DEBUG) -c  -o $@ $<
+
+constants.o: constants.f90
+	$(FC) $(DEBUG) -c  -o $@ $<
+
+
 
 clean:
 	$(RM) BoundPlasmaExample *.o *.mod
+
+

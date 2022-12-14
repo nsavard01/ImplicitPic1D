@@ -8,12 +8,12 @@ module mod_particle
     private
     public :: Particle
 
-    ! Particle contains particle properties and stored values in phase space
+    ! Particle contains particle properties and stored values in phase space df
     type :: Particle
         character(:), allocatable :: name !name of the particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
-        real(real64), allocatable :: l_p(:) !positions of particles in logical space
-        real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s
+        real(real64), allocatable :: l_p(:), l_f(:) !positions of particles in logical space
+        real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s, second index corresponds to x,y,z since fortran column-major
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
 
     contains
@@ -46,6 +46,7 @@ contains
         self % finalIdx = finalIdx
         allocate(self%l_p(self%finalIdx), self%v_p(self%finalIdx, 3))
         self%l_p = 0
+        self%l_f = 0
         self%v_p = 0
 
     end function particle_constructor
@@ -56,6 +57,8 @@ contains
         real(real64), intent(in) :: n_ave, L_domain
         self % w_p = n_ave * L_domain / self % N_p
     end subroutine initialize_n_ave
+
+    ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
     subroutine initialize_randUniform(self, L_domain, dx_dl, n_x)
         ! place particles randomly in each dx_dl based on portion of volume it take up
@@ -117,6 +120,10 @@ contains
         real(real64) :: res
         res = SQRT(SUM(self%v_p(1:self%N_p, :)**2)/ self%N_p)
     end function getVrms
+
+    
+
+    ! --------------------------- Writing Particle Data to File -----------------------------------
 
     subroutine writeLocation(self)
         ! Writes a field into a binary file.
