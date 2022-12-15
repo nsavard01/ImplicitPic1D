@@ -9,7 +9,6 @@ module mod_domain
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
-        integer(int32) :: n_x !number grid nodes
         real(real64), allocatable :: grid(:) !array representing values at grid in m
         real(real64), allocatable :: dx_dl(:) !ratio of grid differences from physical to logical, assume logical separated by 1
         real(real64), allocatable :: nodeVol(:) !node vol, or difference between half grid in physical space
@@ -32,13 +31,11 @@ module mod_domain
 contains
 
     ! Initialization procedures
-    type(Domain) function domain_constructor(num) result(self)
+    type(Domain) function domain_constructor() result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
-        integer(int32), intent(in) :: num
         integer(int32) :: i
-        self % n_x = num
-        allocate(self % grid(num), self % dx_dl(num-1), self % nodeVol(num))
-        self % grid = (/(i, i=1, num)/)
+        allocate(self % grid(n_x), self % dx_dl(n_x-1), self % nodeVol(n_x))
+        self % grid = (/(i, i=1, n_x)/)
         self % dx_dl = 1
         self % nodeVol = 1
     end function domain_constructor
@@ -46,14 +43,14 @@ contains
     pure subroutine derive_DxDl_NodeVol(self)
         class(Domain), intent(in out) :: self
         integer(int32) :: i
-        do i = 1, self%n_x-1
+        do i = 1, n_x-1
             self%dx_dl(i) = self%grid(i+1) - self%grid(i)
         end do
 
         self%nodeVol(1) = self%dx_dl(1)/2
-        self%nodeVol(self%n_x) = self%dx_dl(self%n_x-1)/2
+        self%nodeVol(n_x) = self%dx_dl(n_x-1)/2
 
-        do i = 2, self%n_x-1
+        do i = 2, n_x-1
             self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
         end do
     end subroutine derive_DxDl_NodeVol
@@ -63,10 +60,10 @@ contains
         real(real64), intent(in) :: del_l, L_domain
         integer(int32) :: i
         self%grid(1) = 0
-        self%grid(self%n_x) = L_domain
-        do concurrent (i = 2:self % n_x-1)
-            self % grid(i) = L_domain * ((i-1) - (self%n_x - 1)*(1 - del_l)/pi/2 &
-            * SIN(2 * pi * (i-1) / (self%n_x - 1))) / (self%n_x - 1)
+        self%grid(n_x) = L_domain
+        do concurrent (i = 2:n_x-1)
+            self % grid(i) = L_domain * ((i-1) - (n_x - 1)*(1 - del_l)/pi/2 &
+            * SIN(2 * pi * (i-1) / (n_x - 1))) / (n_x - 1)
         end do
         call derive_DxDl_NodeVol(self)
     end subroutine constructSineGrid
@@ -76,9 +73,9 @@ contains
         real(real64), intent(in) :: L_domain
         integer(int32) :: i
         self%grid(1) = 0d0
-        self%grid(self%n_x) = L_domain
-        do i = 2, self % n_x-1
-            self % grid(i) =  (i-1) * L_domain / (self%n_x - 1)
+        self%grid(n_x) = L_domain
+        do i = 2, n_x-1
+            self % grid(i) =  (i-1) * L_domain / (n_x - 1)
         end do
         call derive_DxDl_NodeVol(self)
     end subroutine constructUniformGrid

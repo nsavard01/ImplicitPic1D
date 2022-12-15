@@ -8,7 +8,7 @@ module mod_BasicFunctions
 
 contains
 
-    ! Basic plasma properties we may want to calculate
+    !-------------------------- Basic plasma properties we may want to calculate----------------------------------------
     pure function getDebyeLength(T_e, n_e) result(res)
         real(real64), intent(in) :: T_e, n_e
         real(real64) :: res
@@ -62,8 +62,17 @@ contains
         end do
     end subroutine getRandom
 
-    pure real function getArrayMean1D(x) result(res)
+    !------------------------ Array Functions -------------------------------------
+
+    pure function arrayDiff(x) result(res)
         real(real64), intent(in) :: x(:)
+        real(real64) :: res(size(x)-1)
+        res = x(2:) - x(1:size(x)-1)
+    end function arrayDiff
+
+    pure function getArrayMean1D(x) result(res)
+        real(real64), intent(in) :: x(:)
+        real(real64) :: res
         res = sum(x)/size(x)
 
     end function getArrayMean1D

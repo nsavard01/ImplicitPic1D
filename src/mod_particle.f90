@@ -13,7 +13,7 @@ module mod_particle
         character(:), allocatable :: name !name of the particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
         real(real64), allocatable :: l_p(:), l_f(:) !positions of particles in logical space
-        real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s, second index corresponds to x,y,z since fortran column-major
+        real(real64), allocatable :: v_p(:, :), v_f(:) !velocities of particles in m/s, second index corresponds to x,y,z since fortran column-major
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
 
     contains
@@ -44,10 +44,11 @@ contains
         self % w_p = w_p
         self % N_p = N_p
         self % finalIdx = finalIdx
-        allocate(self%l_p(self%finalIdx), self%v_p(self%finalIdx, 3))
+        allocate(self%l_p(self%finalIdx), self%v_p(self%finalIdx, 3), self%v_f(self%finalIdx))
         self%l_p = 0
         self%l_f = 0
         self%v_p = 0
+        self%v_f = 0
 
     end function particle_constructor
 
@@ -60,13 +61,12 @@ contains
 
     ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
-    subroutine initialize_randUniform(self, L_domain, dx_dl, n_x)
+    subroutine initialize_randUniform(self, L_domain, dx_dl)
         ! place particles randomly in each dx_dl based on portion of volume it take up
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: dx_dl(:), L_domain
         integer(int32) :: i, numInCell, idxLower, numPerCell(n_x-1)
         real(real64) :: sumDxDl
-        integer(int32), intent(in):: n_x
         idxLower = 1
         sumDxDl = 0
         do i=1, n_x-1
@@ -104,6 +104,7 @@ contains
         self%v_p(1:self%N_p, 1) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
         self%v_p(1:self%N_p, 2) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
         self%v_p(1:self%N_p, 3) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
+        self%v_f = self%v_p(1:self%N_p, 1)
     end subroutine generate3DMaxwellian
 
     pure function getTemperature(self) result(res)
