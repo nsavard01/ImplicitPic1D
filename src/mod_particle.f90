@@ -21,6 +21,7 @@ module mod_particle
         procedure, public, pass(self) :: initialize_randUniform
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getTemperature
+        procedure, public, pass(self) :: getTotalKE
         procedure, public, pass(self) :: getVrms
         procedure, public, pass(self) :: writeLocation
         procedure, public, pass(self) :: writeVelocity
@@ -111,7 +112,7 @@ contains
         ! calculate average kinetic energy (temperature) in eV
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5 / e / self%N_p
+        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5d0 / e / self%N_p
 
     end function getTemperature
 
@@ -122,6 +123,13 @@ contains
         res = SQRT(SUM(self%v_p(1:self%N_p, :)**2)/ self%N_p)
     end function getVrms
 
+    pure function getTotalKE(self) result(res)
+        ! calculate average kinetic energy (temperature) in eV
+        class(Particle), intent(in) :: self
+        real(real64) :: res
+        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5d0 * self%w_p
+
+    end function getTotalKE
     
 
     ! --------------------------- Writing Particle Data to File -----------------------------------

@@ -41,7 +41,7 @@ program BoundPlasmaExample
     print *, "Mean temperature of proton is:", particleList(2)%getTemperature(), "should be", T_i * 1.5
     solver = potSolver(world)
     call solver%depositRho(particleList, world)
-    call solver%solve_tridiag_Poisson()
+    call solver%solve_tridiag_Poisson(world)
     call solver%construct_diagMatrix_Ampere(world)
 
     call system_clock(tclock1)

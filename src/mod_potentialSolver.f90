@@ -16,7 +16,8 @@ module mod_potentialSolver
 
     type :: potSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: phi_left, phi_right, iterNumOuter, iterNumParticle 
+        real(real64) :: phi_left, phi_right, minEField, energyError, chargeError
+        integer(int32) :: iterNumOuter, iterNumParticle
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
@@ -25,10 +26,12 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getEField
+        procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: depositJ
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: construct_diagMatrix_Ampere
         procedure, public, pass(self) :: solveDivAmperePicard
+        !procedure, public, pass(self) :: updateParticles
         procedure, private, pass(self) :: construct_diagMatrix
     end type
 
@@ -53,6 +56,9 @@ contains
         self % coeff_right = 2/(world%dx_dl(size(world%dx_dl)-1) + world%dx_dl(size(world%dx_dl)))/world%dx_dl(size(world%dx_dl))
         self%iterNumOuter = 0
         self%iterNumParticle = 0
+        self%minEField = 0 ! used for error calculation
+        self%energyError = 0
+        self%chargeError = 0
 
     end function potSolver_constructor
 
@@ -96,9 +102,10 @@ contains
 
     end subroutine construct_diagMatrix_Ampere
 
-    subroutine solve_tridiag_Poisson(self)
+    subroutine solve_tridiag_Poisson(self, world)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
         class(potSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
         integer(int32) :: i, n !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(size(self%phi) - 2), cp(size(self%phi) - 3),dp(size(self%phi) - 2)
         n = n_x - 2
@@ -123,6 +130,10 @@ contains
             self%phi(i+1) = dp(i)-cp(i)*self%phi(i+2)
         end do
         self%phi_f = self%phi
+        self%minEField = MINVAL(arrayDiff(self%phi)/world%dx_dl)
+        if (self%minEField == 0.0) then
+            stop "MINIMUM FIELD IS 0, NEED TO CHANGE ERROR CALCULATION"
+        end if
 
     end subroutine solve_tridiag_Poisson
 
@@ -171,9 +182,22 @@ contains
         d = (-self%J(2:) + self%J(1:n_x-2)) * del_t / eps_0 + arrayDiff(self%phi(1:n_x-1))/world%dx_dl(1:n_x-2) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
         d(1) = d(1) + self%phi_left * self%coeff_left
         d(n_x-2) = d(n_x-2) + self%phi_right * self%coeff_right
-        res = SQRT(SUM((Ax/d- 1.0d0)**2)/(n_x-2))
+        res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(n_x-2))
 
     end function getError_tridiag_Ampere
+
+    function getTotalPE(self, world, future) result(res)
+        ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
+        class(potSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        logical :: future
+        real(real64) :: res
+        if (future) then
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f)**2 / world%dx_dl)
+        else
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi)**2 / world%dx_dl)
+        end if
+    end function getTotalPE
 
     !----------------- Particle mover/sub-stepping procedures -------------------------------------------------------
 
@@ -205,13 +229,14 @@ contains
     end subroutine getl_BoundaryInitial
 
 
-    subroutine particleSubStepInitial(solver, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
+    subroutine particleSubStepInitial(solver, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV, boolDepositJ)
         ! Do initial substep, where particles start between nodes
         type(potSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
         real(real64), intent(in) :: del_t
+        logical, intent(in) :: boolDepositJ
         real(real64) :: a, c !rho_i(n_x), rho_f(n_x), gradJ(n_x-2), test(n_x-2), testConserv, 
         !integer(int32) :: k
         
@@ -280,7 +305,7 @@ contains
             else if (INT(l_f) /= INT(l_sub)) then
                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
             end if
-            solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)/2/world%dx_dl(INT(l_sub))
+            if (boolDepositJ) solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)/2/world%dx_dl(INT(l_sub))
             ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
             ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
             ! gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)/2, part%w_p, part%q, world%nodeVol)
@@ -307,7 +332,7 @@ contains
         else
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_tau - v_sub
             timePassed = timePassed + del_tau
-            solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_sub))/del_t
+            if (boolDepositJ) solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_sub))/del_t
             ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
             ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
             ! gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
@@ -336,13 +361,14 @@ contains
 
     end subroutine particleSubStepInitial
 
-    subroutine particleSubStep(solver, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
+    subroutine particleSubStep(solver, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell, boolDepositJ)
         ! Substeps, where particles start at nodes
         type(potSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_cell
         real(real64), intent(in) :: del_t
+        logical, intent(in) :: boolDepositJ
         real(real64) :: a, c !rho_i(n_x), rho_f(n_x), gradJ(n_x-2), test(n_x-2), testConserv, 
         !integer(int32) :: k
         ! get index cell where field and dx_dl is evaluated
@@ -397,7 +423,7 @@ contains
             else if (ABS(l_f - l_sub) >= 1) then
                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
             end if
-            solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2/world%dx_dl(INT(l_cell))/del_t
+            if (boolDepositJ) solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2/world%dx_dl(INT(l_cell))/del_t
             ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
             ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
             ! gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*(del_t - timePassed)/2/del_t, part%w_p, part%q, world%nodeVol)
@@ -419,7 +445,7 @@ contains
         else
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_cell)) / del_tau - v_sub
             timePassed = timePassed + del_tau
-            solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_cell))/del_t
+            if (boolDepositJ) solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_cell))/del_t
             ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
             ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
             ! gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
@@ -448,54 +474,81 @@ contains
 
     end subroutine particleSubStep
 
-    subroutine depositJ(self, particleList, world, del_t)
+    subroutine depositJ(self, particleList, world, del_t, boolDepositJ, boolDiagnostic)
         ! particle substepping procedure which deposits J
         class(potSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        type(Particle), intent(in) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
+        logical, intent(in) :: boolDiagnostic, boolDepositJ
+        logical :: boolDepositJTemp
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, l_cell, rho_f(n_x), gradJ(n_x-2), chargeConserv
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, l_cell
         integer(int32) :: subStepNum, j, i
-        self%J = 0
-        rho_f = 0
+        real(real64), allocatable :: rho_f(:), gradJ(:), KE_i, KE_f, PE_i, PE_f
+        boolDepositJTemp = boolDepositJ
+        if (boolDiagnostic) then
+            allocate(rho_f(n_x), gradJ(n_x-2), KE_i, KE_f, PE_i, PE_f)
+            rho_f = 0
+            KE_i = 0
+            KE_f = 0
+            PE_i = self%getTotalPE(world, .false.)
+            PE_f = 0
+            boolDepositJTemp = .true.
+        end if
+        if (boolDepositJTemp) self%J = 0
         loopSpecies: do j = 1, size(particleList)
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%v_p(i, 1)
                 l_sub = particleList(j)%l_p(i)
                 timePassed = 0
                 subStepNum = 0
+                if (boolDiagnostic) KE_i = KE_i + (particleList(j)%v_p(i, 1)**2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
                 do while((timePassed < del_t) .and. (l_sub /= 1.0) .and. (l_sub /= n_x))
                     if (subStepNum == 0) then
                         ! Initial sub-step
                         call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
-                        call particleSubStepInitial(self, world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
+                        call particleSubStepInitial(self, world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV, boolDepositJTemp)
                     else
                         ! Further sub-steps, particles start on grid nodes
                         l_alongV = l_sub + SIGN(1.0, v_sub)
-                        call particleSubStep(self, world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
+                        call particleSubStep(self, world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell, boolDepositJTemp)
                     end if
                     subStepNum = subStepNum + 1
                 end do
-                call singleRhoPass(rho_f, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol) 
+                if (boolDiagnostic) call singleRhoPass(rho_f, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol) 
+                if (boolDiagnostic) KE_f = KE_f + (v_f**2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
                 if ((l_f < 1) .or. (l_f > n_x)) then
                     stop "Have particles travelling outside domain!"
                 end if
+                if (.not. boolDepositJ) then
+                    ! When not depositing, then updating particles
+                    particleList(j)%l_p(i) = l_f
+                    particleList(j)%v_p(i, 1) = v_f
+                end if
             end do loopParticles
         end do loopSpecies
+        if (boolDiagnostic) PE_f = self%getTotalPE(world, .true.)
         ! Check final charge conservation
-        gradJ = 0.0d0
-        chargeConserv = 0.0d0
-        j = 0
-        do i = 1, size(self%J) -1
-            if (self%J(i + 1) - self%J(i) /= 0) then
-                chargeConserv = chargeConserv + (1 + (self%J(i + 1) - self%J(i)) *del_t/ world%nodeVol(i+1)/(rho_f(i+1) - self%rho(i+1)))**2
-                j = j + 1
+        if (boolDiagnostic) then
+            gradJ = 0.0d0
+            self%chargeError = 0.0d0
+            j = 0
+            do i = 1, size(self%J) -1
+                if (self%J(i + 1) - self%J(i) /= 0) then
+                    self%chargeError = self%chargeError + (1 + (self%J(i + 1) - self%J(i)) *del_t/ world%nodeVol(i+1)/(rho_f(i+1) - self%rho(i+1)))**2
+                    j = j + 1
+                end if
+            end do
+            self%chargeError = SQRT(self%chargeError/j)
+            print *, "Charge error is:", self%chargeError
+            if (self%chargeError > 1e-8) then
+                print *, "-------------------------WARNING------------------------"
+                stop "Total charge not conserved over time step in sub-step procedure!"
             end if
-        end do
-        if (SQRT(chargeConserv/j) > 1e-8) then
-            print *, "-------------------------WARNING------------------------"
-            stop "Total charge not conserved over time step in sub-step procedure!"
+
+            self%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
+            print *, "Energy error is:", self%energyError
         end if
     end subroutine depositJ
 
@@ -503,22 +556,22 @@ contains
 
     subroutine solveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_a)
         class(potSolver), intent(in out) :: self
-        type(Particle), intent(in) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_a
         real(real64) :: errorCurrent
         integer(int32) :: i
         do i = 1, maxIter
-            call self%depositJ(particleList, world, del_t)
+            call self%depositJ(particleList, world, del_t, .true., .false.)
             errorCurrent = self%getError_tridiag_Ampere(world, del_t)
             call self%solve_tridiag_Ampere(world, del_t)
             if (i > 2) then
                 if (errorCurrent < eps_a) then
-                    print *, "End iteration with", i, "iterations"
-                    call self%depositJ(particleList, world, del_t)
-                    errorCurrent = self%getError_tridiag_Ampere(world, del_t)
-                    print *, "Final error is:", errorCurrent
+                    print *, particleList(1)%v_p(1:10, 1)
+                    call self%depositJ(particleList, world, del_t, .false., .true.)
+                    print *, particleList(1)%v_p(1:10, 1)
+                    print *, "Final field error is:", errorCurrent
                     exit
                 end if
             end if
