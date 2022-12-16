@@ -483,10 +483,10 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         logical, intent(in) :: boolDiagnostic, boolDepositJ
-        logical :: boolDepositJTemp
+        logical :: boolDepositJTemp, delParticle = .false.
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, l_cell
-        integer(int32) :: subStepNum, j, i
+        integer(int32) :: subStepNum, j, i, delIdx
         real(real64), allocatable :: rho_f(:), gradJ(:), KE_i, KE_f, PE_i, PE_f
         boolDepositJTemp = boolDepositJ
         if (boolDiagnostic) then
@@ -500,6 +500,7 @@ contains
         end if
         if (boolDepositJTemp) self%J = 0
         loopSpecies: do j = 1, size(particleList)
+            delIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%v_p(i, 1)
                 l_sub = particleList(j)%l_p(i)
@@ -520,7 +521,7 @@ contains
                     if ((l_sub == 1.0) .or. (l_sub == n_x)) then
                         !check if particle has hit boundary, in which case delete
                         !will eventually need to replace with subroutine which takes in boundary inputs from world
-                        
+                        delParticle = .true.
                         exit
                     end if
                 end do
@@ -530,11 +531,22 @@ contains
                     stop "Have particles travelling outside domain!"
                 end if
                 if (.not. boolDepositJ) then
-                    ! When not depositing, then updating particles
-                    particleList(j)%l_p(i) = l_f
-                    particleList(j)%v_p(i, 1) = v_f
+                    ! When not depositing, then updating particles, overwrite deleted indices
+                    if (.not. delParticle) then
+                        particleList(j)%l_p(i-delIdx) = l_f
+                        particleList(j)%v_p(i-delIdx, 1) = v_f
+                    else
+                        delIdx = delIdx + 1
+                        delParticle = .false.
+                    end if
                 end if
             end do loopParticles
+            if (.not. boolDepositJ) then
+                particleList(j)%l_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
+                particleList(j)%v_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1, :) = 0.0d0
+                particleList(j)%N_p = particleList(j)%N_p - delIdx
+            end if
+            if (boolDiagnostic) print *, "Amount deleted particles for species ", particleList(j)%name, " is:", delIdx
         end do loopSpecies
         if (boolDiagnostic) PE_f = self%getTotalPE(world, .true.)
         ! Check final charge conservation

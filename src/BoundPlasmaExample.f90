@@ -50,6 +50,14 @@ program BoundPlasmaExample
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time is:", elapsed_time, "seconds"
 
+    do i=1, size(particleList)
+        print *, 'For particle ', particleList(i)%name
+        print *, "New particle number is:", particleList(i)%N_p
+        print *, "Particle end of array looks like:"
+        print *, particleList(i)%l_p(numParticles-3:numParticles + 5)
+        print *, particleList(i)%v_p(numParticles-3:numParticles + 5,1)
+    end do
+
     
 
     
