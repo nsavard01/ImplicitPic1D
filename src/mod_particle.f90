@@ -130,6 +130,8 @@ contains
         res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5d0 * self%w_p
 
     end function getTotalKE
+
+    ! ------------------------ delete/add particles --------------------------------------------
     
 
     ! --------------------------- Writing Particle Data to File -----------------------------------

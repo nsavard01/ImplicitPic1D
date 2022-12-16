@@ -45,7 +45,7 @@ program BoundPlasmaExample
     call solver%construct_diagMatrix_Ampere(world)
 
     call system_clock(tclock1)
-    call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_a)
+    call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_a, .true.)
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time is:", elapsed_time, "seconds"

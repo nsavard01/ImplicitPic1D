@@ -475,7 +475,9 @@ contains
     end subroutine particleSubStep
 
     subroutine depositJ(self, particleList, world, del_t, boolDepositJ, boolDiagnostic)
-        ! particle substepping procedure which deposits J
+        ! particle substepping procedure which deposits J, also used for general moving of particles
+        ! boolDeposit = true : deposit J
+        ! boolDeposit = false: only move particles, also delete particles for wall collisions (saves extra loop in collisions)
         class(potSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
@@ -504,7 +506,7 @@ contains
                 timePassed = 0
                 subStepNum = 0
                 if (boolDiagnostic) KE_i = KE_i + (particleList(j)%v_p(i, 1)**2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
-                do while((timePassed < del_t) .and. (l_sub /= 1.0) .and. (l_sub /= n_x))
+                do while((timePassed < del_t))
                     if (subStepNum == 0) then
                         ! Initial sub-step
                         call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
@@ -515,6 +517,12 @@ contains
                         call particleSubStep(self, world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell, boolDepositJTemp)
                     end if
                     subStepNum = subStepNum + 1
+                    if ((l_sub == 1.0) .or. (l_sub == n_x)) then
+                        !check if particle has hit boundary, in which case delete
+                        !will eventually need to replace with subroutine which takes in boundary inputs from world
+                        
+                        exit
+                    end if
                 end do
                 if (boolDiagnostic) call singleRhoPass(rho_f, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol) 
                 if (boolDiagnostic) KE_f = KE_f + (v_f**2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
@@ -549,17 +557,22 @@ contains
 
             self%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
             print *, "Energy error is:", self%energyError
+            if (self%energyError > 1e-8) then
+                print *, "-------------------------WARNING------------------------"
+                stop "Total energy not conserved over time step in sub-step procedure!"
+            end if
         end if
     end subroutine depositJ
 
     !--------------------------- non-linear solver for time step using divergence of ampere ------------------------
 
-    subroutine solveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_a)
+    subroutine solveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_a, boolDiagnostic)
         class(potSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_a
+        logical, intent(in) :: boolDiagnostic
         real(real64) :: errorCurrent
         integer(int32) :: i
         do i = 1, maxIter
@@ -568,10 +581,7 @@ contains
             call self%solve_tridiag_Ampere(world, del_t)
             if (i > 2) then
                 if (errorCurrent < eps_a) then
-                    print *, particleList(1)%v_p(1:10, 1)
-                    call self%depositJ(particleList, world, del_t, .false., .true.)
-                    print *, particleList(1)%v_p(1:10, 1)
-                    print *, "Final field error is:", errorCurrent
+                    call self%depositJ(particleList, world, del_t, .false., boolDiagnostic)
                     exit
                 end if
             end if
