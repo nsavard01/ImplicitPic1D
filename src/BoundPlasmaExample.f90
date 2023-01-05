@@ -10,6 +10,7 @@ program BoundPlasmaExample
 
     integer(int32) :: particleIdxFactor = 2, i, numParticles = 20000, num_grid_nodes = 64, maxIter = 50, tclock1, tclock2, clock_rate
     real(real64) :: w_p = 1.0d0, n_ave = 5d14, T_e = 5.0d0, T_i = 0.025d0, T, del_t, fractionFreq = 0.5d0, L_domain = 0.1d0, del_l = 0.005d0, eps_a = 1e-8, elapsed_time
+    real(real64) :: KE_e_i
     type(Domain) :: world
     type(Particle) :: particleList(2)
     type(potSolver) :: solver
@@ -38,8 +39,8 @@ program BoundPlasmaExample
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
     del_t = fractionFreq/getPlasmaFreq(n_ave)
     print *, "Time step (sec) is:", del_t
-    print *, "Mean temperature of electron is:", particleList(1)%getTemperature(), "should be", T_e * 1.5
-    print *, "Mean temperature of proton is:", particleList(2)%getTemperature(), "should be", T_i * 1.5
+    print *, "Mean KE of electron is:", particleList(1)%getKEAve(), "should be", T_e * 1.5
+    print *, "Mean KE of proton is:", particleList(2)%getKEAve(), "should be", T_i * 1.5
     solver = potSolver(world)
     call solver%depositRho(particleList, world)
     call solver%solve_tridiag_Poisson(world)
@@ -53,9 +54,17 @@ program BoundPlasmaExample
     print *, "Energy error is:", solver%energyError
     print *, "Charge error is:", solver%chargeError
 
-    print *, particleList(1)%N_p, particleList(2)%N_p
-    call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand, 300.0d0)
-    print *, particleList(1)%N_p, particleList(2)%N_p
+    KE_e_i = particleList(1)%getTotalKE()
+    print *, "KE sum of electron before adding power is:", KE_e_i
+    call addUniformPowerMaxwellianNicolas(particleList(1), Power, 0.05d0, irand, del_t)
+
+    print *, "KE sum of electron after adding power is:", particleList(1)%getTotalKE()
+    print *, "Energy loss is:", Power*del_t
+    print *, "Loss of electron energy is:", particleList(1)%getTotalKE() - KE_e_i
+
+    !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand, 300.0d0 * k_B/e)
+
+    
 
 
 
