@@ -5,9 +5,10 @@ program BoundPlasmaExample
     use mod_domain
     use mod_particle
     use mod_potentialSolver
+    use mod_collisions
     implicit none
 
-    integer(int32) :: particleIdxFactor = 2, i, irand = 9872364, numParticles = 10000, num_grid_nodes = 64, maxIter = 50, tclock1, tclock2, clock_rate
+    integer(int32) :: particleIdxFactor = 2, i, numParticles = 20000, num_grid_nodes = 64, maxIter = 50, tclock1, tclock2, clock_rate
     real(real64) :: w_p = 1.0d0, n_ave = 5d14, T_e = 5.0d0, T_i = 0.025d0, T, del_t, fractionFreq = 0.5d0, L_domain = 0.1d0, del_l = 0.005d0, eps_a = 1e-8, elapsed_time
     type(Domain) :: world
     type(Particle) :: particleList(2)
@@ -49,14 +50,14 @@ program BoundPlasmaExample
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time is:", elapsed_time, "seconds"
+    print *, "Energy error is:", solver%energyError
+    print *, "Charge error is:", solver%chargeError
 
-    do i=1, size(particleList)
-        print *, 'For particle ', particleList(i)%name
-        print *, "New particle number is:", particleList(i)%N_p
-        print *, "Particle end of array looks like:"
-        print *, particleList(i)%l_p(numParticles-3:numParticles + 5)
-        print *, particleList(i)%v_p(numParticles-3:numParticles + 5,1)
-    end do
+    print *, particleList(1)%N_p, particleList(2)%N_p
+    call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand, 300.0d0)
+    print *, particleList(1)%N_p, particleList(2)%N_p
+
+
 
     
 

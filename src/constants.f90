@@ -11,6 +11,6 @@ module constants
     real(real64), parameter :: e = 1.602176634d-19 ! C
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
     real(real64), parameter :: pi = 4*atan(1.d0) ! pi from atan
-    integer(int32) :: n_x
-
+    integer(int32) :: n_x !Global static variable, amount of grid nodes in x
+    integer(int32) :: irand = 9872364 !Global static variable
 end module constants

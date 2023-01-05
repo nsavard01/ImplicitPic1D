@@ -561,14 +561,12 @@ contains
                 end if
             end do
             self%chargeError = SQRT(self%chargeError/j)
-            print *, "Charge error is:", self%chargeError
             if (self%chargeError > 1e-8) then
                 print *, "-------------------------WARNING------------------------"
                 stop "Total charge not conserved over time step in sub-step procedure!"
             end if
 
             self%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
-            print *, "Energy error is:", self%energyError
             if (self%energyError > 1e-8) then
                 print *, "-------------------------WARNING------------------------"
                 stop "Total energy not conserved over time step in sub-step procedure!"
