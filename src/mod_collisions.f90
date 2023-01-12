@@ -21,7 +21,7 @@ contains
         type(Particle), intent(in out) :: electron, ion
         real(real64), intent(in) :: n_g, sigma, del_t, E_thres, T_gas
         integer(int32), intent(in out) :: irand
-        real(real64) :: electronEnergy, electronSpeed, Pcoll, R, energyPerElectron, speedPerElectron, U, theta, e_vector(3), V_neutral(3), V_cm(3)
+        real(real64) :: electronEnergy, electronSpeed, Pcoll, R, energyPerElectron, speedPerElectron, U, theta, e_vector(3), V_neutral(3), V_cm(3), P_before(3), P_after(3), KE_before, KE_after
         integer(int32) :: i, addIdx
         addIdx = 0
         do i=1, electron%N_p
@@ -35,26 +35,38 @@ contains
                     energyPerElectron = (electronEnergy - E_thres)/2.0d0
                     speedPerElectron = SQRT(2.0d0 * e * energyPerElectron/electron%mass)
                     call getMaxwellianSample(V_neutral, ion%mass, T_gas, irand)
+                    P_before = V_neutral * ion%mass + electron%mass * electron%v_p(i, :)
                     V_cm = (m_e *electron%v_p(i, :) + ion%mass * V_neutral) / (ion%mass)
+                    KE_before = electronEnergy + ion%mass * 0.5d0 * SUM(V_neutral**2) / e
 
                     U = 1.0d0 - 2.0d0*ran2(irand)
                     theta = ran2(irand) * 2 * pi
                     e_vector(1) = SQRT(1-U**2) * COS(theta) ! unit normal in x direction
                     e_vector(2) = SQRT(1 - U**2) * SIN(theta)
                     e_vector(3) = U
-                    electron%v_p(i, :) = e_vector * speedPerElectron
+                    electron%v_p(i, :) = e_vector * speedPerElectron + V_cm
 
                     U = 1.0d0 - 2.0d0*ran2(irand)
                     theta = ran2(irand) * 2 * pi
                     e_vector(1) = SQRT(1-U**2) * COS(theta) ! unit normal in x direction
                     e_vector(2) = SQRT(1 - U**2) * SIN(theta)
                     e_vector(3) = U
-                    electron%v_p(electron%N_p + addIdx, :) = e_vector * speedPerElectron
+                    electron%v_p(electron%N_p + addIdx, :) = e_vector * speedPerElectron + V_cm
                     electron%l_p(electron%N_p + addIdx) = electron%l_p(i)
 
                     ! Calculate new ion velocity
                     ion%v_p(ion%N_p + addIdx, :) = -(m_e/ion%mass) * (electron%v_p(i, :) + electron%v_p(electron%N_p + addIdx, :)) + V_cm
                     ion%l_p(ion%N_p + addIdx) = electron%l_p(i)
+                    P_after = ion%v_p(ion%N_p + addIdx, :) * ion%mass + electron%mass * electron%v_p(i, :) + electron%mass * electron%v_p(electron%N_p + addIdx, :)
+                    KE_after = SUM(ion%v_p(ion%N_p + addIdx, :)**2) * ion%mass * 0.5d0/e + electron%mass * SUM(electron%v_p(i, :)**2) * 0.5d0/e + electron%mass * SUM(electron%v_p(electron%N_p + addIdx, :)**2) * 0.5d0/e + E_thres
+                    print *, "P_before is:", P_before
+                    print *, "P_after is:", P_after
+                    print *, "KE_before is:", KE_before
+                    print *, "KE_after is:", KE_after
+                    stop
+
+
+
                     
                     
 
@@ -103,7 +115,7 @@ contains
 
     subroutine addUniformPowerMaxwellianNicolas(species, Power, percent, irand, del_t)
         ! Gwenael's method does not lead to conservation, very shady
-        ! Implement uniform power with conservation properties in mind (still statistical) to get improvement
+        ! Implement uniform power with conservation properties in mind to get improvement
         ! Percent is percentage of particles to sample, isotropic scatter
         type(Particle), intent(in out) :: species
         integer(int32), intent(in out) :: irand

@@ -182,7 +182,8 @@ contains
         d = (-self%J(2:) + self%J(1:n_x-2)) * del_t / eps_0 + arrayDiff(self%phi(1:n_x-1))/world%dx_dl(1:n_x-2) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
         d(1) = d(1) + self%phi_left * self%coeff_left
         d(n_x-2) = d(n_x-2) + self%phi_right * self%coeff_right
-        res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(n_x-2))
+        !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(n_x-2))
+        res = SQRT(SUM((Ax- d)**2))
 
     end function getError_tridiag_Ampere
 
@@ -306,49 +307,11 @@ contains
                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
             end if
             if (boolDepositJ) solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)/2/world%dx_dl(INT(l_sub))
-            ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
-            ! gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)/2, part%w_p, part%q, world%nodeVol)
-            ! testConserv = 0.0d0
-            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            ! do k = 1, n_x - 2
-            !     if (test(k) /= 0.0) then
-            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
-            !             stop "ERROR HERE!"
-            !         end if
-            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-            !     end if
-            ! end do
-            ! if (SQRT(testConserv) > 1e-8) then
-            !     print *, "error is:", SQRT(testConserv)
-            !     print *, "particle l_sub is:", l_sub
-            !     print *, "particle v_sub is:", v_sub
-            !     print *, "particle l_f is:", l_f
-            !     print *, "particle v_f is:", v_f
-            !     print *, "kinematic error is:", ABS((v_f - 2.0d0*a*del_t - v_sub)/v_sub)
-            !     stop "Failed non-substep charge conservation, subStepNum = 0"
-            ! end if
             
         else
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_tau - v_sub
             timePassed = timePassed + del_tau
             if (boolDepositJ) solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_sub))/del_t
-            ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
-            ! gradJ = singleGradJ(world%dx_dl, l_sub, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
-            ! testConserv = 0.0d0
-            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            ! do k = 1, n_x - 2
-            !     if (test(k) /= 0.0) then
-            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
-            !             stop "ERROR HERE!"
-            !         end if
-            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-            !     end if
-            ! end do
-            ! if (SQRT(testConserv) > 1e-8) then
-            !     stop "Failed substep charge conservation, subStepNum = 0"
-            ! end if
             if (MOD(l_f, 1.0) /= 0.0) then
                 print *, l_f
                 stop "l_f is not integer after subStep"
@@ -424,44 +387,12 @@ contains
                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
             end if
             if (boolDepositJ) solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2/world%dx_dl(INT(l_cell))/del_t
-            ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
-            ! gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*(del_t - timePassed)/2/del_t, part%w_p, part%q, world%nodeVol)
-            ! testConserv = 0.0d0
-            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            ! do k = 1, n_x - 2
-            !     if (test(k) /= 0.0) then
-            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
-            !             stop "ERROR HERE!"
-            !         end if
-            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-            !     end if
-            ! end do
-            ! if (SQRT(testConserv) > 1e-8) then
-            !     stop "Failed non-substep charge conservation, subStepNum > 0"
-            ! end if
             timePassed = del_t
             
         else
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_cell)) / del_tau - v_sub
             timePassed = timePassed + del_tau
             if (boolDepositJ) solver%J(INT(l_cell)) = solver%J(INT(l_cell)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2/world%dx_dl(INT(l_cell))/del_t
-            ! rho_i = singleRho(n_x, l_sub, part%w_p, part%q, world%nodeVol)
-            ! rho_f = singleRho(n_x, l_f, part%w_p, part%q, world%nodeVol)
-            ! gradJ = singleGradJ(world%dx_dl, l_cell, (v_f + v_sub)*del_tau/2/del_t, part%w_p, part%q, world%nodeVol)
-            ! testConserv = 0.0d0
-            ! test = (rho_f(2:size(rho_f)-1) - rho_i(2:size(rho_f)-1)) + gradJ*del_t
-            ! do k = 1, n_x - 2
-            !     if (test(k) /= 0.0) then
-            !         if (rho_f(k+1) - rho_i(k+1) == 0) then
-            !             stop "ERROR HERE!"
-            !         end if
-            !         testConserv = testConserv + (test(k)/(rho_f(k+1) - rho_i(k+1)))**2
-            !     end if
-            ! end do
-            ! if (SQRT(testConserv) > 1e-8) then
-            !     stop "Failed substep charge conservation, subStepNum > 0"
-            ! end if
             if (MOD(l_f, 1.0) /= 0.0) then
                 print *, l_f
                 stop "l_f is not integer after subStep"
@@ -577,25 +508,31 @@ contains
     !--------------------------- non-linear solver for time step using divergence of ampere ------------------------
 
     subroutine solveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_a, boolDiagnostic)
+        ! Solve for divergence of ampere using picard iterations
         class(potSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_a
         logical, intent(in) :: boolDiagnostic
-        real(real64) :: errorCurrent
+        real(real64) :: errorCurrent, errorInitial
         integer(int32) :: i
+        call self%depositJ(particleList, world, del_t, .true., .false.)
+        errorInitial = self%getError_tridiag_Ampere(world, del_t)
         do i = 1, maxIter
-            call self%depositJ(particleList, world, del_t, .true., .false.)
-            errorCurrent = self%getError_tridiag_Ampere(world, del_t)
             call self%solve_tridiag_Ampere(world, del_t)
+            call self%depositJ(particleList, world, del_t, .true., .false.)
             if (i > 2) then
-                if (errorCurrent < eps_a) then
+                errorCurrent = self%getError_tridiag_Ampere(world, del_t)
+                if (errorCurrent < eps_a*errorInitial) then
                     call self%depositJ(particleList, world, del_t, .false., boolDiagnostic)
                     exit
                 end if
             end if
         end do
+        if (i == maxIter+1) then
+            stop "MAXIMUM ITERATIONS FOR PICARD ITERATION REACHED!"
+        end if
         
 
     end subroutine solveDivAmperePicard
