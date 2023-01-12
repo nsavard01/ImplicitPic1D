@@ -9,8 +9,9 @@ module mod_simulation
     use mod_potentialSolver
     use mod_collisions
 
-    integer(int32) :: maxIter = 50, numTimeSteps = 0
+    integer(int32) :: maxIter = 50, numRunSteps = 100, numTimeSteps = 0
     real(real64) :: eps_r = 1e-8, del_t, fractionFreq = 0.5d0
+    real(real64), allocatable :: electronDensity(:,:), electricPotential(:)
 
 contains
     subroutine solveInitialPotential(particleList, solver, world)
@@ -19,7 +20,7 @@ contains
         type(Domain), intent(in) :: world
         type(potSolver), intent(in out) :: solver
         call solver%depositRho(particleList, world)
-        call solver%solve_tridiag_Poisson(world)
+        call solver%solve_tridiag_Poisson()
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call solver%construct_diagMatrix_Ampere(world)
 
@@ -33,22 +34,15 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter
         integer(int32), intent(in out) :: irand
-        real(real64) :: KE_e_i
 
         call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r, .true.)
-        print *, "Energy error is:", solver%energyError
-        print *, "Charge error is:", solver%chargeError
 
-        KE_e_i = particleList(1)%getTotalKE()
-        print *, "KE sum of electron before adding power is:", KE_e_i
         call addUniformPowerMaxwellianNicolas(particleList(1), Power, 0.05d0, irand, del_t)
-        print *, "KE sum of electron after adding power is:", particleList(1)%getTotalKE()
-        print *, "Energy loss is:", Power*del_t
-        print *, "Loss of electron energy is:", particleList(1)%getTotalKE() - KE_e_i
         call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand, 300.0d0 * k_B/e)
 
 
     end subroutine solveSingleTimeStep
+
 
 
 

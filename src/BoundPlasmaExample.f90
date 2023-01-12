@@ -35,7 +35,7 @@ program BoundPlasmaExample
         call particleList(i) % generate3DMaxwellian(T, irand)
     end do
 
-    
+    print *, "w_p is:", particleList(1)%w_p
     print *, "Debye length is:", getDebyeLength(T_e, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
     del_t = fractionFreq/getPlasmaFreq(n_ave)

@@ -16,7 +16,7 @@ module mod_potentialSolver
 
     type :: potSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: phi_left, phi_right, minEField, energyError, chargeError
+        real(real64) :: phi_left, phi_right, energyError, chargeError, particlePowerLoss, particleCurrentLoss
         integer(int32) :: iterNumOuter, iterNumParticle
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
@@ -50,15 +50,16 @@ contains
         self % rho = 0
         self % J = 0
         self % phi = 0
-        self % phi_left = 0
-        self % phi_right = 0
+        self % phi_left = 0.0d0
+        self % phi_right = 0.0d0
         self % coeff_left = 2/(world%dx_dl(1) + world%dx_dl(2))/world%dx_dl(1)
         self % coeff_right = 2/(world%dx_dl(size(world%dx_dl)-1) + world%dx_dl(size(world%dx_dl)))/world%dx_dl(size(world%dx_dl))
         self%iterNumOuter = 0
         self%iterNumParticle = 0
-        self%minEField = 0 ! used for error calculation
-        self%energyError = 0
-        self%chargeError = 0
+        self%particlePowerLoss = 0.0d0
+        self%particleCurrentLoss = 0.0d0
+        self%energyError = 0.0d0
+        self%chargeError = 0.0d0
 
     end function potSolver_constructor
 
@@ -102,10 +103,9 @@ contains
 
     end subroutine construct_diagMatrix_Ampere
 
-    subroutine solve_tridiag_Poisson(self, world)
+    subroutine solve_tridiag_Poisson(self)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
         class(potSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
         integer(int32) :: i, n !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(size(self%phi) - 2), cp(size(self%phi) - 3),dp(size(self%phi) - 2)
         n = n_x - 2
@@ -130,10 +130,6 @@ contains
             self%phi(i+1) = dp(i)-cp(i)*self%phi(i+2)
         end do
         self%phi_f = self%phi
-        self%minEField = MINVAL(arrayDiff(self%phi)/world%dx_dl)
-        if (self%minEField == 0.0) then
-            stop "MINIMUM FIELD IS 0, NEED TO CHANGE ERROR CALCULATION"
-        end if
 
     end subroutine solve_tridiag_Poisson
 
@@ -407,8 +403,8 @@ contains
 
     subroutine depositJ(self, particleList, world, del_t, boolDepositJ, boolDiagnostic)
         ! particle substepping procedure which deposits J, also used for general moving of particles
-        ! boolDeposit = true : deposit J
-        ! boolDeposit = false: only move particles, also delete particles for wall collisions (saves extra loop in collisions)
+        ! boolDepositJ = true : deposit J
+        ! boolDepositJ = false: only move particles (done after non-linear iteration), also delete particles for wall collisions (saves extra loop in collisions)
         class(potSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
@@ -427,6 +423,8 @@ contains
             KE_f = 0
             PE_i = self%getTotalPE(world, .false.)
             PE_f = 0
+            self%particlePowerLoss = 0.0d0
+            self%particleCurrentLoss = 0.0d0
             boolDepositJTemp = .true.
         end if
         if (boolDepositJTemp) self%J = 0
@@ -472,12 +470,17 @@ contains
                     end if
                 end if
             end do loopParticles
+            
+            if (boolDiagnostic) then
+                print *, "Number of deleted ", particleList(j)%name, " are:", delIdx
+                self%particleCurrentLoss = self%particleCurrentLoss + particleList(j)%q * particleList(j)%w_p * delIdx !A/m^2 in 1D
+                self%particlePowerLoss = self%particlePowerLoss + particleList(j)%w_p * SUM(particleList(j)%v_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1, :)**2) * particleList(j)%mass * 0.5d0 !W/m^2 in 1D
+            end if
             if (.not. boolDepositJ) then
                 particleList(j)%l_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
                 particleList(j)%v_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1, :) = 0.0d0
                 particleList(j)%N_p = particleList(j)%N_p - delIdx
             end if
-            if (boolDiagnostic) print *, "Amount deleted particles for species ", particleList(j)%name, " is:", delIdx
         end do loopSpecies
         if (boolDiagnostic) PE_f = self%getTotalPE(world, .true.)
         ! Check final charge conservation
@@ -502,6 +505,10 @@ contains
                 print *, "-------------------------WARNING------------------------"
                 stop "Total energy not conserved over time step in sub-step procedure!"
             end if
+            self%particleCurrentLoss = self%particleCurrentLoss/del_t
+            self%particlePowerLoss = self%particlePowerLoss/del_t
+            print *, "Current loss is:", self%particleCurrentLoss
+            print *, "Power loss is:", self%particlePowerLoss
         end if
     end subroutine depositJ
 
