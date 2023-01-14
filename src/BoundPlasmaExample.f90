@@ -40,14 +40,15 @@ program BoundPlasmaExample
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
     del_t = fractionFreq/getPlasmaFreq(n_ave)
     print *, "Time step (sec) is:", del_t
-    print *, "Mean KE of electron is:", particleList(1)%getKEAve(), "should be", T_e * 1.5
-    print *, "Mean KE of proton is:", particleList(2)%getKEAve(), "should be", T_i * 1.5
+    print *, "Mean initial KE of electron is:", particleList(1)%getKEAve(), "should be", T_e * 1.5
+    print *, "Mean initial KE of proton is:", particleList(2)%getKEAve(), "should be", T_i * 1.5
     ! Generate solver object, and then solve for initial rho/potential
     solver = potSolver(world)
     call solveInitialPotential(particleList, solver, world)
-    print *, solver%rho
 
     call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand)
+    print *, "Particle current loss is:", solver%particleCurrentLoss
+    print *, "Particle power loss is:", solver%particlePowerLoss
 
     
 

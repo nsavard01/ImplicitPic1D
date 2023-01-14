@@ -472,7 +472,6 @@ contains
             end do loopParticles
             
             if (boolDiagnostic) then
-                print *, "Number of deleted ", particleList(j)%name, " are:", delIdx
                 self%particleCurrentLoss = self%particleCurrentLoss + particleList(j)%q * particleList(j)%w_p * delIdx !A/m^2 in 1D
                 self%particlePowerLoss = self%particlePowerLoss + particleList(j)%w_p * SUM(particleList(j)%v_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1, :)**2) * particleList(j)%mass * 0.5d0 !W/m^2 in 1D
             end if
@@ -507,8 +506,6 @@ contains
             end if
             self%particleCurrentLoss = self%particleCurrentLoss/del_t
             self%particlePowerLoss = self%particlePowerLoss/del_t
-            print *, "Current loss is:", self%particleCurrentLoss
-            print *, "Power loss is:", self%particlePowerLoss
         end if
     end subroutine depositJ
 
