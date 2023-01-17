@@ -9,8 +9,8 @@ program BoundPlasmaExample
     use mod_simulation
     implicit none
 
-    integer(int32) :: particleIdxFactor = 2, i, numParticles = 10000, num_grid_nodes = 64
-    real(real64) :: w_p = 1.0d0, n_ave = 5d14, T_e = 5.0d0, T_i = 0.025d0, T, L_domain = 0.1d0, del_l = 0.005d0
+    integer(int32) :: particleIdxFactor = 2, i, numParticles = 50000, num_grid_nodes = 64, j
+    real(real64) :: w_p = 1.0d0, n_ave = 5.0d14, T_e = 5.0d0, T_i = 0.025d0, T, L_domain = 0.1d0, del_l = 0.005d0
     type(Domain) :: world
     type(Particle) :: particleList(2)
     type(potSolver) :: solver
@@ -45,30 +45,17 @@ program BoundPlasmaExample
     ! Generate solver object, and then solve for initial rho/potential
     solver = potSolver(world)
     call solveInitialPotential(particleList, solver, world)
+    allocate(particleDensity(numDiagnosticSteps, size(particleList), n_x), electricPotential(numDiagnosticSteps, n_x), simulationTime(numDiagnosticSteps))
+    particleDensity = 0.0d0
+    electricPotential = 0.0d0
+    simulationTime = 0.0d0
 
-    call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand)
+
+    call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
     print *, "Particle current loss is:", solver%particleCurrentLoss
     print *, "Particle power loss is:", solver%particlePowerLoss
 
     
 
-
-
     
-
-    
-
-
-
-    
-    
-
-    
-
-    
-
-
-
-
-
 end program BoundPlasmaExample

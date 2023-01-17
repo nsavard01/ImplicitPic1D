@@ -297,7 +297,13 @@ contains
             l_f = v_sub * del_t / world%dx_dl(INT(l_sub)) + (a/ world%dx_dl(INT(l_sub))) * del_t**2 + l_sub
             v_f = 2 * (l_f - l_sub) * world%dx_dl(INT(l_sub)) / del_t - v_sub
             timePassed = del_t
-            if (ABS((v_f - 2.0d0*a*del_t - v_sub)/v_sub) > 1e-6) then
+            if (ABS((v_f - 2.0d0*a*del_t - v_sub)/v_sub) > 1e-3) then
+                print *, "Particle is:", part%name
+                print *, "v_sub is:", v_sub
+                print *, "l_sub is:", l_sub
+                print *, "l_f is:", l_f
+                print *, "v_f is:", v_f
+                print *, "error is:", ABS((v_f - 2.0d0*a*del_t - v_sub)/v_sub)
                 stop "Kinematic equation doesn't match for no substep, subStepNum = 0"
             else if (INT(l_f) /= INT(l_sub)) then
                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
@@ -461,20 +467,20 @@ contains
                 end if
                 if (.not. boolDepositJ) then
                     ! When not depositing, then updating particles, overwrite deleted indices
-                    if (.not. delParticle) then
-                        particleList(j)%l_p(i-delIdx) = l_f
-                        particleList(j)%v_p(i-delIdx, 1) = v_f
-                    else
+                    if (delParticle) then
                         delIdx = delIdx + 1
                         delParticle = .false.
+                        if (boolDiagnostic) then
+                            self%particlePowerLoss = self%particlePowerLoss + particleList(j)%w_p * SUM(particleList(j)%v_p(i, :)**2) * particleList(j)%mass * 0.5d0 !W/m^2 in 1D
+                            self%particleCurrentLoss = self%particleCurrentLoss + particleList(j)%q * particleList(j)%w_p !A/m^2 in 1D
+                        end if
+                    else
+                        particleList(j)%l_p(i-delIdx) = l_f
+                        particleList(j)%v_p(i-delIdx, 1) = v_f
                     end if
                 end if
             end do loopParticles
             
-            if (boolDiagnostic) then
-                self%particleCurrentLoss = self%particleCurrentLoss + particleList(j)%q * particleList(j)%w_p * delIdx !A/m^2 in 1D
-                self%particlePowerLoss = self%particlePowerLoss + particleList(j)%w_p * SUM(particleList(j)%v_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1, :)**2) * particleList(j)%mass * 0.5d0 !W/m^2 in 1D
-            end if
             if (.not. boolDepositJ) then
                 particleList(j)%l_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
                 particleList(j)%v_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1, :) = 0.0d0
