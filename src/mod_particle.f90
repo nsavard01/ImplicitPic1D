@@ -20,7 +20,8 @@ module mod_particle
         procedure, public, pass(self) :: initialize_n_ave
         procedure, public, pass(self) :: initialize_randUniform
         procedure, public, pass(self) :: generate3DMaxwellian
-        procedure, public, pass(self) :: getTemperature
+        procedure, public, pass(self) :: getKEAve
+        procedure, public, pass(self) :: getTotalKE
         procedure, public, pass(self) :: getVrms
         procedure, public, pass(self) :: writeLocation
         procedure, public, pass(self) :: writeVelocity
@@ -60,13 +61,12 @@ contains
 
     ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
-    subroutine initialize_randUniform(self, L_domain, dx_dl, n_x)
+    subroutine initialize_randUniform(self, L_domain, dx_dl)
         ! place particles randomly in each dx_dl based on portion of volume it take up
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: dx_dl(:), L_domain
         integer(int32) :: i, numInCell, idxLower, numPerCell(n_x-1)
         real(real64) :: sumDxDl
-        integer(int32), intent(in):: n_x
         idxLower = 1
         sumDxDl = 0
         do i=1, n_x-1
@@ -106,13 +106,13 @@ contains
         self%v_p(1:self%N_p, 3) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
     end subroutine generate3DMaxwellian
 
-    pure function getTemperature(self) result(res)
+    pure function getKEAve(self) result(res)
         ! calculate average kinetic energy (temperature) in eV
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5 / e / self%N_p
+        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5d0 / e / self%N_p
 
-    end function getTemperature
+    end function getKEAve
 
     pure function getVrms(self) result(res)
         ! get rms velocity for checking
@@ -121,6 +121,15 @@ contains
         res = SQRT(SUM(self%v_p(1:self%N_p, :)**2)/ self%N_p)
     end function getVrms
 
+    pure function getTotalKE(self) result(res)
+        ! calculate total KE in Joules/m^2
+        class(Particle), intent(in) :: self
+        real(real64) :: res
+        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5d0 * self%w_p
+
+    end function getTotalKE
+
+    ! ------------------------ delete/add particles --------------------------------------------
     
 
     ! --------------------------- Writing Particle Data to File -----------------------------------

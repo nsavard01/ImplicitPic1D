@@ -5,7 +5,7 @@ OBJS = mod_test.o
 .PHONY: all clean
 .SUFFIXES: .f90 .o
 
-all: main
+all: clean main
 
 main: main.f90 $(OBJS)
 	$(FC) $(FCFLAGS) $< $(OBJS) -o $@
