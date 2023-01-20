@@ -82,29 +82,32 @@ contains
     end subroutine solveSingleTimeStep
 
 
-    ! subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps)
-    !     type(Particle), intent(in out) :: particleList(:)
-    !     type(potSolver), intent(in out) :: solver
-    !     type(Domain), intent(in) :: world
-    !     real(real64), intent(in) :: del_t, eps_r
-    !     logical, intent(in) :: boolDiagnostic
-    !     integer(int32), intent(in) :: maxIter, numTimeSteps
-    !     integer(int32), intent(in out) :: irand
-    !     integer(int32) :: numSkipSteps, currentStepNumber = 1, i
-    !     allocate(numDiagnosticSteps, particleDensity(size(particleList), n_x), electricPotential(numDiagnosticSteps, n_x), simulationTime(numDiagnosticSteps))
-    !     numSkipSteps = numTimeSteps/(numDiagnosticSteps-1)
-    !     do i = 1, numTimeSteps
-    !         if (MOD((i-1), numSkipSteps) /= 0) then
-    !             call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .false.)
-    !         else
-    !             call solver%depositSingleParticleDensity(particleList(1), world)
+    subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps)
+        type(Particle), intent(in out) :: particleList(:)
+        type(potSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t, eps_r
+        integer(int32), intent(in) :: maxIter, numTimeSteps
+        integer(int32), intent(in out) :: irand
+        integer(int32) :: numSkipSteps, currentDiagNum = 1, i
+        allocate(particleDensity(numDiagnosticSteps, size(particleList), n_x), electricPotential(numDiagnosticSteps, n_x), simulationTime(numDiagnosticSteps))
+        particleDensity = 0.0d0
+        electricPotential = 0.0d0
+        simulationTime = 0.0d0
+        numSkipSteps = numTimeSteps/(numDiagnosticSteps-1)
+        do i = 1, numTimeSteps-1
+            print *, "Current Step num is:", i
+            if (MOD((i-1), numSkipSteps) /= 0) then
+                call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
+            else
+                call depositSingleParticleDensity(particleDensity(currentDiagNum, :, :), particleList, world)
+                call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
+            end if
+        end do
 
-    !         end if
-    !     end do
 
 
-
-    ! end subroutine solveSimulation
+    end subroutine solveSimulation
 
 
 

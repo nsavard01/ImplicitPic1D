@@ -424,6 +424,7 @@ contains
         boolDepositJTemp = boolDepositJ
         if (boolDiagnostic) then
             allocate(rho_f(n_x), gradJ(n_x-2), KE_i, KE_f, PE_i, PE_f)
+            call self%depositRho(particleList, world)
             rho_f = 0
             KE_i = 0
             KE_f = 0
