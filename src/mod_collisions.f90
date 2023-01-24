@@ -65,7 +65,7 @@ contains
 
         electron%N_p = electron%N_p + addIdx
         ion%N_p = ion%N_p + addIdx
-        inelasticEnergyLoss = inelasticEnergyLoss + E_thres * addIdx
+        inelasticEnergyLoss = E_thres * addIdx
     end subroutine ionizationCollisionIsotropic
 
     subroutine getMaxwellianSample(v, M, T_gas, irand)

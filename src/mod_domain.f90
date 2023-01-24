@@ -20,7 +20,7 @@ module mod_domain
         procedure, public, pass(self) :: constructUniformGrid
         ! procedure, public, pass(self) :: depositRho
         ! procedure, public, pass(self) :: writeRho
-        procedure, public, pass(self) :: writeGrid
+        procedure, public, pass(self) :: writeDomain
     end type Domain
 
 
@@ -110,17 +110,13 @@ contains
     !     close(fileunit)
     !   end subroutine writeRho
 
-      subroutine writeGrid(self)
-        ! Writes rho into a binary file.
-        class(Domain), intent(in out) :: self
-        integer(int32) :: fileunit, record_length
-        character(100) :: filename
-        filename = 'record_Grid.dat'
-        record_length = 2*size(self%grid)
-        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
-        write(unit=fileunit, rec = 1) self%grid
-        close(fileunit)
-      end subroutine writeGrid
+      subroutine writeDomain(self)
+        ! Writes domain data into binary file under Data
+        class(Domain), intent(in) :: self
+        open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
+        write(41) self%grid
+        close(41)
+      end subroutine writeDomain
 
 
 

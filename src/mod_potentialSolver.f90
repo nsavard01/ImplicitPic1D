@@ -511,8 +511,8 @@ contains
                 print *, "-------------------------WARNING------------------------"
                 stop "Total energy not conserved over time step in sub-step procedure!"
             end if
-            self%particleCurrentLoss = self%particleCurrentLoss/del_t
-            self%particlePowerLoss = self%particlePowerLoss/del_t
+            self%particleCurrentLoss = self%particleCurrentLoss/del_t !W/m^2
+            self%particlePowerLoss = self%particlePowerLoss/del_t !A/m^2
         end if
     end subroutine depositJ
 

@@ -6,7 +6,7 @@ DEBUG= $(BASE) -traceback -CB -fp-stack-check -warn all -check uninit -check poi
 OBJ= constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_simulation.o BoundPlasmaExample.o
 RM = rm -f
 
-all: clean BoundPlasmaExample
+all: cleanData clean BoundPlasmaExample
 
 BoundPlasmaExample: $(OBJ)
 	$(FC) $(DEBUG) -o $@ $(OBJ)
@@ -39,5 +39,8 @@ constants.o: constants.f90
 
 clean:
 	$(RM) BoundPlasmaExample *.o *.mod
+
+cleanData:
+	$(RM) ../Data/*
 
 
