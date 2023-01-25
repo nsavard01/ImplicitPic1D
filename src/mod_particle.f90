@@ -12,8 +12,7 @@ module mod_particle
     type :: Particle
         character(:), allocatable :: name !name of the particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
-        real(real64), allocatable :: l_p(:), l_f(:) !positions of particles in logical space
-        real(real64), allocatable :: v_p(:, :) !velocities of particles in m/s, second index corresponds to x,y,z since fortran column-major
+        real(real64), allocatable :: phaseSpace(:,:) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
 
     contains
@@ -23,8 +22,7 @@ module mod_particle
         procedure, public, pass(self) :: getKEAve
         procedure, public, pass(self) :: getTotalKE
         procedure, public, pass(self) :: getVrms
-        procedure, public, pass(self) :: writeLocation
-        procedure, public, pass(self) :: writeVelocity
+        procedure, public, pass(self) :: writePhaseSpace
     end type Particle
 
 
@@ -45,10 +43,7 @@ contains
         self % w_p = w_p
         self % N_p = N_p
         self % finalIdx = finalIdx
-        allocate(self%l_p(self%finalIdx), self%v_p(self%finalIdx, 3))
-        self%l_p = 0
-        self%l_f = 0
-        self%v_p = 0
+        allocate(self%phaseSpace(4,finalIdx))
 
     end function particle_constructor
 
@@ -70,23 +65,24 @@ contains
         idxLower = 1
         sumDxDl = 0
         do i=1, n_x-1
-            ! Use int to make sure always have a bit left over, other will fill up before getting to end
+            ! Use int to make sure always have a bit left over, otherwise will fill up before getting to end
             numInCell = INT(self%N_p * dx_dl(i)/L_domain)
             if (idxLower + numInCell > self % N_P + 1) then
                 stop "You are putting too many particles for the uniform particle case"
             end if
 
             
-            call random_number(self%l_p(idxLower:idxLower + numInCell-1))
-            self%l_p(idxLower:idxLower + numInCell - 1) = self%l_p(idxLower:idxLower + numInCell - 1) + i
+            call random_number(self%phaseSpace(1,idxLower:idxLower + numInCell-1))
+            self%phaseSpace(1, idxLower:idxLower + numInCell - 1) = self%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i
             idxLower = idxLower + numInCell
             numPerCell(i) = numInCell
             
         end do
         if (idxLower < self%N_p + 1) then
-            call random_number(self%l_p(idxLower:self%N_p))
-            self%l_p(idxLower:self%N_p) = self%l_p(idxLower:self%N_p) * (n_x - 1) + 1
+            call random_number(self%phaseSpace(1, idxLower:self%N_p))
+            self%phaseSpace(1, idxLower:self%N_p) = self%phaseSpace(1, idxLower:self%N_p) * (n_x - 1) + 1
         end if
+        
         
     end subroutine initialize_randUniform
 
@@ -101,16 +97,16 @@ contains
         call getRandom(U2, irand)
         call getRandom(U3, irand)
         call getRandom(U4, irand)
-        self%v_p(1:self%N_p, 1) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
-        self%v_p(1:self%N_p, 2) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
-        self%v_p(1:self%N_p, 3) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
+        self%phaseSpace(2, 1:self%N_p) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
+        self%phaseSpace(3, 1:self%N_p) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
+        self%phaseSpace(4, 1:self%N_p) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
     end subroutine generate3DMaxwellian
 
     pure function getKEAve(self) result(res)
         ! calculate average kinetic energy (temperature) in eV
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5d0 / e / self%N_p
+        res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 / e / self%N_p
 
     end function getKEAve
 
@@ -118,14 +114,14 @@ contains
         ! get rms velocity for checking
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SQRT(SUM(self%v_p(1:self%N_p, :)**2)/ self%N_p)
+        res = SQRT(SUM(self%phaseSpace(2:4, 1:self%N_p)**2)/ self%N_p)
     end function getVrms
 
     pure function getTotalKE(self) result(res)
         ! calculate total KE in Joules/m^2
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SUM(self%v_p(1:self%N_p, :)**2) * self % mass * 0.5d0 * self%w_p
+        res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 * self%w_p
 
     end function getTotalKE
 
@@ -134,30 +130,15 @@ contains
 
     ! --------------------------- Writing Particle Data to File -----------------------------------
 
-    subroutine writeLocation(self)
-        ! Writes a field into a binary file.
-        class(Particle), intent(in out) :: self
-        integer(int32) :: fileunit, record_length
-        character(100) :: filename
-        filename = 'record_particlePosition.dat'
-        record_length = 2 * size(self%l_p(1:self%N_p))
-        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
-        write(unit=fileunit, rec=1) self%l_p(1:self%N_p)
-        close(fileunit)
-      end subroutine writeLocation
-
-      subroutine writeVelocity(self)
-        ! Writes a field into a binary file.
-        class(Particle), intent(in out) :: self
-        integer(int32) :: fileunit, record_length
-        character(100) :: filename
-        filename = 'record_particleVelocity.dat'
-        record_length = 2 * self%N_p
-        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
-        write(unit=fileunit, rec=1) self%v_p(1:self%N_p, 1)
-        write(unit=fileunit, rec=2) self%v_p(1:self%N_p, 2)
-        write(unit=fileunit, rec=3) self%v_p(1:self%N_p, 3)
-        close(fileunit)
-      end subroutine writeVelocity
+    subroutine writePhaseSpace(self, CurrentDiagStep)
+        ! Writes particle phase space into binary file
+        class(Particle), intent(in) :: self
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(len=5) :: char_i
+        write(char_i, '(I3)'), CurrentDiagStep
+        open(10,file='../Data/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        write(10) self%phaseSpace(:, 1:self%N_p)
+        close(10)
+    end subroutine writePhaseSpace
 
 end module mod_particle

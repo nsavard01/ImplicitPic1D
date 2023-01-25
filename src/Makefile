@@ -41,6 +41,9 @@ clean:
 	$(RM) BoundPlasmaExample *.o *.mod
 
 cleanData:
-	$(RM) ../Data/*
+	$(RM) ../Data/*.dat
+	$(RM) ../Data/Density/*.dat
+	$(RM) ../Data/Phi/*.dat
+	$(RM) ../Data/PhaseSpace/*.dat
 
 

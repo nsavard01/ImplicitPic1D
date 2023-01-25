@@ -15,26 +15,29 @@ module mod_collisions
 contains
 
     ! ----------------------- For 1D example, keep simple for now --------------------------------------
-    subroutine ionizationCollisionIsotropic(electron, ion, n_g, sigma, del_t, E_thres, irand, T_gas)
+    subroutine ionizationCollisionIsotropic(electron, ion, n_g, sigma, del_t, E_thres, irand)
         ! Temporary subroutine for artificial ionization, using MCC, energy units in eV
         ! divide energy among electrons, isotropic scatter
+        ! For moment assume null collision with gas temperature = 0
         type(Particle), intent(in out) :: electron, ion
-        real(real64), intent(in) :: n_g, sigma, del_t, E_thres, T_gas
+        real(real64), intent(in) :: n_g, sigma, del_t, E_thres
         integer(int32), intent(in out) :: irand
-        real(real64) :: electronEnergy, electronSpeed, Pcoll, R, speedPerElectron, U, theta, e_vector(3), V_neutral(3), V_cm(3), delE
+        real(real64) :: KE_cm, electronSpeed, Pcoll, R, speedPerElectron, U, theta, e_vector(3), V_cm(3), delE
         integer(int32) :: i, addIdx
         addIdx = 0
         do i=1, electron%N_p
-            electronEnergy = SUM(electron%v_p(i, :)**2) * 0.5d0 * electron%mass / e ! in eV
-            if (electronEnergy > E_thres) then
+            KE_cm = 0.5d0 * (m_e * ion%mass)/(m_e + ion%mass) * SUM((electron%phaseSpace(2:4, i))**2)
+            if (KE_cm/e > E_thres) then
                 R = ran2(irand)
-                electronSpeed = SQRT(SUM(electron%v_p(i, :)**2))
+                electronSpeed = SQRT(SUM(electron%phaseSpace(2:4, i)**2))
                 Pcoll = 1.0d0 - EXP(-n_g * sigma * del_t * electronSpeed)
                 if (Pcoll > R) then
                     addIdx = addIdx + 1
-                    call getMaxwellianSample(V_neutral, ion%mass, T_gas, irand)
-                    V_cm = (m_e *electron%v_p(i, :) + ion%mass * V_neutral) / (ion%mass + m_e)
-                    delE = 0.5d0 * (m_e * ion%mass)/(m_e + ion%mass) * SUM((electron%v_p(i, :) - V_neutral)**2) - E_thres*e
+                    delE = KE_cm - E_thres*e
+                    V_cm = (m_e *electron%phaseSpace(2:4, i)) / (ion%mass + m_e)
+                    if (delE < 0) then
+                        stop "delE less than 0"
+                    end if
                     speedPerElectron = SQRT(delE/m_e)
                     
                     U = 1.0d0 - 2.0d0*ran2(irand)
@@ -42,19 +45,19 @@ contains
                     e_vector(1) = SQRT(1-U**2) * COS(theta) ! unit normal in x direction
                     e_vector(2) = SQRT(1 - U**2) * SIN(theta)
                     e_vector(3) = U
-                    electron%v_p(i, :) = e_vector * speedPerElectron + V_cm
+                    electron%phaseSpace(2:4, i) = e_vector * speedPerElectron + V_cm
 
                     U = 1.0d0 - 2.0d0*ran2(irand)
                     theta = ran2(irand) * 2 * pi
                     e_vector(1) = SQRT(1-U**2) * COS(theta) ! unit normal in x direction
                     e_vector(2) = SQRT(1 - U**2) * SIN(theta)
                     e_vector(3) = U
-                    electron%v_p(electron%N_p + addIdx, :) = e_vector * speedPerElectron + V_cm
-                    electron%l_p(electron%N_p + addIdx) = electron%l_p(i)
+                    electron%phaseSpace(2:4, electron%N_p + addIdx) = e_vector * speedPerElectron + V_cm
+                    electron%phaseSpace(1,electron%N_p + addIdx) = electron%phaseSpace(1,i)
 
                     ! Calculate new ion velocity
-                    ion%v_p(ion%N_p + addIdx, :) = -(m_e/(ion%mass + m_e)) * (electron%v_p(i, :) + electron%v_p(electron%N_p + addIdx, :)) + V_cm
-                    ion%l_p(ion%N_p + addIdx) = electron%l_p(i)
+                    ion%phaseSpace(2:4, ion%N_p + addIdx) = -(m_e/(ion%mass + m_e)) * (electron%phaseSpace(2:4, i) + electron%phaseSpace(2:4,electron%N_p + addIdx)) + V_cm
+                    ion%phaseSpace(1,ion%N_p + addIdx) = electron%phaseSpace(1,i)
                       
 
                 end if
@@ -96,7 +99,7 @@ contains
         do i=1, size(idxChange)
             j = idxChange(i)
             call getMaxwellianSample(v_replace, species%mass, T_h, irand)
-            species%v_p(j, :) = v_replace
+            species%phaseSpace(2:4, j) = v_replace
         end do
     end subroutine addUniformPowerMaxwellian
 
@@ -114,13 +117,13 @@ contains
         E_distribute = Power*del_t/e/species%w_p/size(idxChange)
         do i=1, size(idxChange)
             j = idxChange(i)
-            KE_new = (SUM(species%v_p(j,:)**2) * species%mass * 0.5/e + E_distribute)
+            KE_new = (SUM(species%phaseSpace(2:4,j)**2) * species%mass * 0.5/e + E_distribute)
             U = 1.0d0 - 2.0d0*ran2(irand)
             theta = ran2(irand) * 2 * pi
             v_replace(1) = SQRT(1-U**2) * COS(theta) ! unit normal in x direction
             v_replace(2) = SQRT(1 - U**2) * SIN(theta)
             v_replace(3) = U
-            species%v_p(j, :) = v_replace * SQRT(2.0d0 * e * KE_new/species%mass)
+            species%phaseSpace(2:4,j) = v_replace * SQRT(2.0d0 * e * KE_new/species%mass)
         end do
     end subroutine addUniformPowerMaxwellianNicolas
 

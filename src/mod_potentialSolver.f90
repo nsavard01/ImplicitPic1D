@@ -31,7 +31,8 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: construct_diagMatrix_Ampere
         procedure, public, pass(self) :: solveDivAmperePicard
-        !procedure, public, pass(self) :: updateParticles
+        procedure, public, pass(self) :: writeParticleDensity
+        procedure, public, pass(self) :: writePhi
         procedure, private, pass(self) :: construct_diagMatrix
     end type
 
@@ -50,6 +51,7 @@ contains
         self % rho = 0
         self % J = 0
         self % phi = 0
+        self % phi_f = 0
         self % phi_left = 0.0d0
         self % phi_right = 0.0d0
         self % coeff_left = 2/(world%dx_dl(1) + world%dx_dl(2))/world%dx_dl(1)
@@ -72,8 +74,8 @@ contains
         self % rho = 0.0d0
         do i=1, size(particleList)
             do j = 1, particleList(i)%N_p
-                l_left = INT(particleList(i)%l_p(j))
-                d = MOD(particleList(i)%l_p(j), 1.0d0)
+                l_left = INT(particleList(i)%phaseSpace(1, j))
+                d = MOD(particleList(i)%phaseSpace(1, j), 1.0d0)
                 self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                 self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
             end do
@@ -195,6 +197,49 @@ contains
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi)**2 / world%dx_dl)
         end if
     end function getTotalPE
+
+    !--------------------- Writing Data -----------------------------------
+
+    subroutine WriteParticleDensity(self, particleList, world, CurrentDiagStep) 
+        ! For diagnostics, deposit single particle density
+        ! Re-use rho array since it doesn't get used after first Poisson
+        class(potSolver), intent(in out) :: self
+        type(Particle), intent(in) :: particleList(:)
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in) :: CurrentDiagStep
+        integer(int32) :: i, j, l_left
+        character(len=5) :: char_i
+        real(real64) :: d
+        
+        do i=1, size(particleList)
+            self % rho = 0.0d0
+            do j = 1, particleList(i)%N_p
+                l_left = INT(particleList(i)%phaseSpace(1,j))
+                d = MOD(particleList(i)%phaseSpace(1,j), 1.0d0)
+                self % rho(l_left) = self % rho(l_left) + particleList(i)%w_p * (1.0d0-d)
+                self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%w_p * d
+            end do
+            self % rho = self % rho / world%nodeVol
+            write(char_i, '(I3)'), CurrentDiagStep
+            open(41,file='../Data/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+            write(41) self%rho
+            close(41)
+        end do
+        
+    end subroutine WriteParticleDensity
+
+    subroutine writePhi(self, CurrentDiagStep) 
+        ! For diagnostics, deposit single particle density
+        ! Re-use rho array since it doesn't get used after first Poisson
+        class(potSolver), intent(in) :: self
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(len=5) :: char_i
+        write(char_i, '(I3)') CurrentDiagStep
+        open(41,file='../Data/Phi/phi_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        write(41) self%phi
+        close(41)
+        
+    end subroutine writePhi
 
     !----------------- Particle mover/sub-stepping procedures -------------------------------------------------------
 
@@ -438,11 +483,11 @@ contains
         loopSpecies: do j = 1, size(particleList)
             delIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p
-                v_sub = particleList(j)%v_p(i, 1)
-                l_sub = particleList(j)%l_p(i)
+                v_sub = particleList(j)%phaseSpace(2,i)
+                l_sub = particleList(j)%phaseSpace(1,i)
                 timePassed = 0
                 subStepNum = 0
-                if (boolDiagnostic) KE_i = KE_i + (particleList(j)%v_p(i, 1)**2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
+                if (boolDiagnostic) KE_i = KE_i + (particleList(j)%phaseSpace(2, i)**2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
                 do while((timePassed < del_t))
                     if (subStepNum == 0) then
                         ! Initial sub-step
@@ -472,19 +517,19 @@ contains
                         delIdx = delIdx + 1
                         delParticle = .false.
                         if (boolDiagnostic) then
-                            self%particlePowerLoss = self%particlePowerLoss + particleList(j)%w_p * SUM(particleList(j)%v_p(i, :)**2) * particleList(j)%mass * 0.5d0 !W/m^2 in 1D
+                            self%particlePowerLoss = self%particlePowerLoss + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i)**2) * particleList(j)%mass * 0.5d0 !W/m^2 in 1D
                             self%particleCurrentLoss = self%particleCurrentLoss + particleList(j)%q * particleList(j)%w_p !A/m^2 in 1D
                         end if
                     else
-                        particleList(j)%l_p(i-delIdx) = l_f
-                        particleList(j)%v_p(i-delIdx, 1) = v_f
+                        particleList(j)%phaseSpace(1, i-delIdx) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx) = v_f
                     end if
                 end if
             end do loopParticles
             
             if (.not. boolDepositJ) then
-                particleList(j)%l_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
-                particleList(j)%v_p(particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1, :) = 0.0d0
+                particleList(j)%phaseSpace(1, particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
+                particleList(j)%phaseSpace(2:4,particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
                 particleList(j)%N_p = particleList(j)%N_p - delIdx
             end if
         end do loopSpecies
@@ -537,6 +582,7 @@ contains
                 errorCurrent = self%getError_tridiag_Ampere(world, del_t)
                 if (errorCurrent < eps_a*errorInitial) then
                     call self%depositJ(particleList, world, del_t, .false., boolDiagnostic)
+                    self%phi = self%phi_f
                     exit
                 end if
             end if

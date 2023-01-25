@@ -9,43 +9,11 @@ module mod_simulation
     use mod_potentialSolver
     use mod_collisions
 
-    integer(int32) :: maxIter = 50, numDiagnosticSteps = 8, numTimeSteps = 24
+    integer(int32) :: maxIter = 50, numDiagnosticSteps = 6, numTimeSteps = 32
     real(real64) :: eps_r = 1e-8, del_t, fractionFreq = 0.5d0
 
 contains
-
-    ! -------------------------------- Diagnostic ------------------------------------
-    subroutine WriteParticleDensity(solver, particleList, world, CurrentDiagStep) 
-        ! For diagnostics, deposit single particle density
-        ! Re-use rho array since it doesn't get used after first Poisson
-        type(potSolver), intent(in out) :: solver
-        type(Particle), intent(in) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: CurrentDiagStep
-        integer(int32) :: i, j, l_left
-        character(len=5) :: char_i
-        real(real64) :: d
-        
-        do i=1, size(particleList)
-            solver % rho = 0.0d0
-            do j = 1, particleList(i)%N_p
-                l_left = INT(particleList(i)%l_p(j))
-                d = MOD(particleList(i)%l_p(j), 1.0d0)
-                solver % rho(l_left) = solver % rho(l_left) + particleList(i)%w_p * (1.0d0-d)
-                solver % rho(l_left + 1) = solver % rho(l_left + 1) + particleList(i)%w_p * d
-            end do
-            solver % rho = solver % rho / world%nodeVol
-            write(char_i, '(I3)'), CurrentDiagStep
-            open(41,file='../Data/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
-            write(41) solver%rho
-            close(41)
-        end do
-        
-    end subroutine WriteParticleDensity
-
-
-
-
+    
     ! -------------------------- Simulation ------------------------------------------
 
 
@@ -75,15 +43,17 @@ contains
         call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r, boolDiagnostic)
 
         call addUniformPowerMaxwellianNicolas(particleList(1), Power, 0.05d0, irand, del_t)
-        ! P_before = m_e * SUM(particleList(1)%v_p, DIM = 1) + particleList(2)%mass *SUM(particleList(2)%v_p, DIM = 1)
-        ! E_before = m_e * SUM(particleList(1)%v_p**2) * 0.5d0 / e + particleList(2)%mass * SUM(particleList(2)%v_p**2) * 0.5d0/e
-        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand, 0.0d0)
-        ! P_after = m_e * SUM(particleList(1)%v_p, DIM = 1) + particleList(2)%mass * SUM(particleList(2)%v_p, DIM = 1)
-        ! E_after = m_e * SUM(particleList(1)%v_p**2) * 0.5d0 / e + particleList(2)%mass * SUM(particleList(2)%v_p**2) * 0.5d0/e + inelasticEnergyLoss
+        ! P_before = m_e * SUM(particleList(1)%phaseSpace(2:4,:), DIM = 2) + particleList(2)%mass *SUM(particleList(2)%phaseSpace(2:4,:), DIM = 2)
+        ! E_before = m_e * SUM(particleList(1)%phaseSpace(2:4,:)**2) * 0.5d0 / e + particleList(2)%mass * SUM(particleList(2)%phaseSpace(2:4, :)**2) * 0.5d0/e
+        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
+        ! P_after = m_e * SUM(particleList(1)%phaseSpace(2:4,:), DIM = 2) + particleList(2)%mass *SUM(particleList(2)%phaseSpace(2:4,:), DIM = 2)
+        ! E_after = m_e * SUM(particleList(1)%phaseSpace(2:4,:)**2) * 0.5d0 / e + particleList(2)%mass * SUM(particleList(2)%phaseSpace(2:4, :)**2) * 0.5d0/e + inelasticEnergyLoss
         ! print *, "P_before is:", P_before
         ! print *, "P_after is:", P_after
         ! print *, "E_before is:", E_before
         ! print *, "E_after is:", E_after
+        ! print *, "Inelastic Energy loss is:", inelasticEnergyLoss
+        ! stop "Just to check collision"
 
 
     end subroutine solveSingleTimeStep
@@ -97,7 +67,7 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter, numTimeSteps
         integer(int32), intent(in out) :: irand
-        integer(int32) :: numSkipSteps, i, CurrentDiagStep = 1
+        integer(int32) :: numSkipSteps, i, j,CurrentDiagStep = 1
         real(real64) :: currentTime
         open(15,file='../Data/InitialConditions.dat',access='APPEND')
         write(15,'("Number Grid Nodes, Final Expected Time(s)")')
@@ -110,8 +80,12 @@ contains
         write(22,'("Time (s), InelasticEnergyLoss (eV), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
 
         !Save initial particle/field data, along with domain
-        call WriteParticleDensity(solver, particleList, world, 0) 
+        call solver%writeParticleDensity(particleList, world, 0) 
+        call solver%writePhi(0)
         call world%writeDomain()
+        do j=1, size(particleList)
+            call particleList(j)%writePhaseSpace(0)
+        end do
 
         do i = 1, numTimeSteps-1
             print *, "Current Step num is:", i
@@ -120,14 +94,22 @@ contains
             else
                 currentTime = (i) * del_t
                 call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
-                call WriteParticleDensity(solver, particleList, world, CurrentDiagStep) 
+                call solver%writeParticleDensity(particleList, world, CurrentDiagStep) 
+                call solver%writePhi(CurrentDiagStep)
+                do j=1, size(particleList)
+                    call particleList(j)%writePhaseSpace(CurrentDiagStep)
+                end do
                 write(22,101) currentTime, inelasticEnergyLoss, solver%particleCurrentLoss, solver%particlePowerLoss
                 CurrentDiagStep = CurrentDiagStep + 1
             end if
         end do
         currentTime = (numTimeSteps) * del_t
         call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
-        call WriteParticleDensity(solver, particleList, world, CurrentDiagStep) 
+        call solver%writeParticleDensity(particleList, world, CurrentDiagStep) 
+        call solver%writePhi(CurrentDiagStep)
+        do j=1, size(particleList)
+            call particleList(j)%writePhaseSpace(CurrentDiagStep)
+        end do
         write(22,101) currentTime, inelasticEnergyLoss, solver%particleCurrentLoss, solver%particlePowerLoss
         close(22)
 

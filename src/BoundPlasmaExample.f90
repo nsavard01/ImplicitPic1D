@@ -42,7 +42,7 @@ program BoundPlasmaExample
     print *, "Time step (sec) is:", del_t
     print *, "Mean initial KE of electron is:", particleList(1)%getKEAve(), "should be", T_e * 1.5
     print *, "Mean initial KE of proton is:", particleList(2)%getKEAve(), "should be", T_i * 1.5
-    ! Generate solver object, and then solve for initial rho/potential
+    ! ! Generate solver object, and then solve for initial rho/potential
     solver = potSolver(world)
     call solveInitialPotential(particleList, solver, world)
     
