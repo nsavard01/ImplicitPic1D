@@ -21,8 +21,6 @@ program BoundPlasmaExample
     call world % constructSineGrid(del_l, L_domain)
 
     !initialize the particles in this world, at some point will be read from input file or something
-    ! Change to file to see what happens
-    ! add more
     particleList(1) = Particle(m_e, -e, w_p, numParticles, numParticles * particleIdxFactor, "e")
     particleList(2) = Particle(m_p, e, w_p, numParticles, numParticles * particleIdxFactor, "H+")
     do i = 1, size(particleList)
