@@ -23,6 +23,7 @@ module mod_particle
         procedure, public, pass(self) :: getTotalKE
         procedure, public, pass(self) :: getVrms
         procedure, public, pass(self) :: writePhaseSpace
+        procedure, public, pass(self) :: writeLocalTemperature
     end type Particle
 
 
@@ -56,10 +57,11 @@ contains
 
     ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
-    subroutine initialize_randUniform(self, L_domain, dx_dl)
+    subroutine initialize_randUniform(self, L_domain, dx_dl, irand)
         ! place particles randomly in each dx_dl based on portion of volume it take up
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: dx_dl(:), L_domain
+        integer(int32), intent(in out) :: irand
         integer(int32) :: i, numInCell, idxLower, numPerCell(n_x-1)
         real(real64) :: sumDxDl
         idxLower = 1
@@ -72,14 +74,14 @@ contains
             end if
 
             
-            call random_number(self%phaseSpace(1,idxLower:idxLower + numInCell-1))
+            call getRandom(self%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
             self%phaseSpace(1, idxLower:idxLower + numInCell - 1) = self%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i
             idxLower = idxLower + numInCell
             numPerCell(i) = numInCell
             
         end do
         if (idxLower < self%N_p + 1) then
-            call random_number(self%phaseSpace(1, idxLower:self%N_p))
+            call getRandom(self%phaseSpace(1, idxLower:self%N_p), irand)
             self%phaseSpace(1, idxLower:self%N_p) = self%phaseSpace(1, idxLower:self%N_p) * (n_x - 1) + 1
         end if
         
@@ -140,5 +142,32 @@ contains
         write(10) self%phaseSpace(:, 1:self%N_p)
         close(10)
     end subroutine writePhaseSpace
+
+    subroutine writeLocalTemperature(self, CurrentDiagStep)
+        ! Write particle temperature averaged over local grid
+        class(Particle), intent(in) :: self
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(len=5) :: char_i
+        integer(int32) :: j, index, counter(n_x-1)
+        real(real64) :: temp(n_x-1)
+        temp = 0.0d0
+        counter = 0
+    
+        do j = 1, self%N_p
+            index = INT(self%phaseSpace(1, j))
+            temp(index) = temp(index) + SUM(self%phaseSpace(2:4, j)**2) * 0.5d0 * self%mass/e
+            counter(index) = counter(index) + 1
+        end do
+        do j = 1, n_x-1
+            if (counter(j) > 0) then
+                temp(j) = temp(j)*2.0d0/counter(j)/3.0d0
+            end if
+        end do
+        write(char_i, '(I3)'), CurrentDiagStep
+        open(10,file='../Data/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        write(10) temp
+        close(10)
+        
+    end subroutine writeLocalTemperature
 
 end module mod_particle
