@@ -9,22 +9,23 @@ program BoundPlasmaExample
     use mod_simulation
     implicit none
 
-    integer(int32) :: particleIdxFactor = 2, i, numParticles = 10000, num_grid_nodes = 64
+    integer(int32) :: particleIdxFactor = 2, i, numParticles = 10000
     real(real64) :: w_p = 1.0d0, n_ave = 5.0d14, T_e = 5.0d0, T_i = 0.1d0, T, L_domain = 0.1d0, del_l = 0.005d0
     type(Domain) :: world
-    type(Particle) :: particleList(2)
+    type(Particle), allocatable :: particleList(:)
     type(potSolver) :: solver
+    numberChargedParticles = 2
+    allocate(particleList(numberChargedParticles))
     
-    n_x = num_grid_nodes
+    n_x = 64
     ! create the world the particles live in
     world = Domain()
     call world % constructSineGrid(del_l, L_domain)
 
     !initialize the particles in this world, at some point will be read from input file or something
-    ! blah blah blah
     particleList(1) = Particle(m_e, -e, w_p, numParticles, numParticles * particleIdxFactor, "e")
     particleList(2) = Particle(m_p, e, w_p, numParticles, numParticles * particleIdxFactor, "H+")
-    do i = 1, size(particleList)
+    do i = 1, numberChargedParticles
         print *, 'Initializing ', particleList(i) % name
         call particleList(i) % initialize_randUniform(L_domain, world%dx_dl, irand)
         call particleList(i) % initialize_n_ave(n_ave, L_domain)
@@ -49,7 +50,7 @@ program BoundPlasmaExample
     
     numTimeSteps = NINT(22.0d-6 / del_t)
     !call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r, .false.)
-    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps)
+    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, stepsAverage)
     
 
     

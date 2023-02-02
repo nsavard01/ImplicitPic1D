@@ -16,7 +16,7 @@ module mod_potentialSolver
 
     type :: potSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: phi_left, phi_right, energyError, chargeError, particlePowerLoss, particleCurrentLoss
+        real(real64) :: phi_left, phi_right, energyError, chargeError, particleEnergyLoss, particleChargeLoss
         integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
@@ -61,8 +61,8 @@ contains
         self%iterNumPicard = 0
         self%iterNumAdaptiveSteps = 0
         self%iterNumParticle = 0
-        self%particlePowerLoss = 0.0d0
-        self%particleCurrentLoss = 0.0d0
+        self%particleEnergyLoss = 0.0d0
+        self%particleChargeLoss = 0.0d0
         self%energyError = 0.0d0
         self%chargeError = 0.0d0
 
@@ -75,7 +75,7 @@ contains
         integer(int32) :: i, j, l_left
         real(real64) :: d
         self % rho = 0.0d0
-        do i=1, size(particleList)
+        do i=1, numberChargedParticles
             do j = 1, particleList(i)%N_p
                 l_left = INT(particleList(i)%phaseSpace(1, j))
                 d = MOD(particleList(i)%phaseSpace(1, j), 1.0d0)
@@ -215,7 +215,7 @@ contains
         character(len=5) :: char_i
         real(real64) :: d
         
-        do i=1, size(particleList)
+        do i=1, numberChargedParticles
             self % rho = 0.0d0
             do j = 1, particleList(i)%N_p
                 l_left = INT(particleList(i)%phaseSpace(1,j))
@@ -486,12 +486,10 @@ contains
             KE_f = 0
             PE_i = self%getTotalPE(world, .false.)
             PE_f = 0
-            self%particlePowerLoss = 0.0d0
-            self%particleCurrentLoss = 0.0d0
             boolDepositJTemp = .true.
         end if
         if (boolDepositJTemp) self%J = 0
-        loopSpecies: do j = 1, size(particleList)
+        loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%phaseSpace(2,i)
@@ -528,8 +526,8 @@ contains
                         delIdx = delIdx + 1
                         delParticle = .false.
                         if (boolDiagnostic) then
-                            self%particlePowerLoss = self%particlePowerLoss + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i)**2) * particleList(j)%mass * 0.5d0 !W/m^2 in 1D
-                            self%particleCurrentLoss = self%particleCurrentLoss + particleList(j)%q * particleList(j)%w_p !A/m^2 in 1D
+                            self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i)**2) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                            self%particleChargeLoss = self%particleChargeLoss + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
                         end if
                     else
                         particleList(j)%phaseSpace(1, i-delIdx) = l_f
@@ -571,8 +569,6 @@ contains
                 print *, "Energy error is:", self%energyError
                 stop "Total energy not conserved over time step in sub-step procedure!"
             end if
-            self%particleCurrentLoss = self%particleCurrentLoss/del_t !W/m^2
-            self%particlePowerLoss = self%particlePowerLoss/del_t !A/m^2
             deallocate(rho_f)
         end if
     end subroutine depositJ
