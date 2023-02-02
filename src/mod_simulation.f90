@@ -16,6 +16,56 @@ contains
 
     ! --------------------------- Diagnostics ------------------------------------
 
+    subroutine loadParticleDensity(densities, particleList)
+        type(Particle), intent(in) :: particleList(:)
+        real(real64), intent(in out) :: densities(:,:)
+        integer(int32) :: i,j, l_left
+        real(real64) :: d
+        do i=1, numberChargedParticles
+            do j = 1, particleList(i)%N_p
+                l_left = INT(particleList(i)%phaseSpace(1,j))
+                d = MOD(particleList(i)%phaseSpace(1,j), 1.0d0)
+                densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * (1.0d0-d)
+                densities(l_left + 1, i) = densities(l_left + 1, i) + particleList(i)%w_p * d
+            end do
+        end do
+
+
+    end subroutine loadParticleDensity
+
+    subroutine WriteParticleDensity(densities, particleList, world, CurrentDiagStep) 
+        ! For diagnostics, deposit single particle density
+        ! Re-use rho array since it doesn't get used after first Poisson
+        real(real64), intent(in) :: densities(:,:)
+        type(Particle), intent(in) :: particleList(:)
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in) :: CurrentDiagStep
+        integer(int32) :: i, j, l_left
+        character(len=5) :: char_i
+        real(real64) :: d
+        
+        do i=1, numberChargedParticles
+            write(char_i, '(I3)'), CurrentDiagStep
+            open(41,file='../Data/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+            write(41) densities(:,i)/world%nodeVol
+            close(41)
+        end do
+        
+    end subroutine WriteParticleDensity
+
+    subroutine writePhi(phi, CurrentDiagStep) 
+        ! For diagnostics, deposit single particle density
+        ! Re-use rho array since it doesn't get used after first Poisson
+        real(real64), intent(in) :: phi(:)
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(len=5) :: char_i
+        write(char_i, '(I3)') CurrentDiagStep
+        open(41,file='../Data/Phi/phi_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        write(41) phi
+        close(41)
+        
+    end subroutine writePhi
+
     
     ! -------------------------- Simulation ------------------------------------------
 
@@ -60,7 +110,9 @@ contains
         integer(int32), intent(in) :: maxIter, numTimeSteps, stepsAverage
         integer(int32), intent(in out) :: irand
         integer(int32) :: numSkipSteps, i, j,CurrentDiagStep = 1
-        real(real64) :: currentTime, phi_average(n_x)
+        real(real64) :: currentTime, phi_average(n_x), densities(n_x, numberChargedParticles)
+
+
         open(15,file='../Data/InitialConditions.dat',access='APPEND')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s)")')
         write(15,"((I3.3, 1x), 2(es16.8,1x))") n_x, numTimeSteps*del_t, del_t
@@ -70,10 +122,12 @@ contains
         101 format(20(1x,es16.8))
         open(22,file='../Data/ScalarDiagnosticData.dat',access='APPEND')
         write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), chargeError (a.u), energyError(a.u)")')
-
+        
         !Save initial particle/field data, along with domain
-        call solver%writeParticleDensity(particleList, world, 0) 
-        call solver%writePhi(0)
+        densities = 0.0d0
+        call loadParticleDensity(densities, particleList)
+        call writeParticleDensity(densities, particleList, world, 0) 
+        call writePhi(solver%phi, 0)
         call particleList(1)%writeLocalTemperature(0)
         call world%writeDomain()
         do j=1, size(particleList)
@@ -90,8 +144,10 @@ contains
                 solver%particleChargeLoss = 0.0d0
                 inelasticEnergyLoss = 0.0d0
                 call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
-                call solver%writeParticleDensity(particleList, world, CurrentDiagStep) 
-                call solver%writePhi(CurrentDiagStep)
+                densities = 0.0d0
+                call loadParticleDensity(densities, particleList)
+                call writeParticleDensity(densities, particleList, world, CurrentDiagStep) 
+                call writePhi(solver%phi, CurrentDiagStep)
                 call particleList(1)%writeLocalTemperature(CurrentDiagStep)
                 do j=1, numberChargedParticles
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
@@ -106,15 +162,14 @@ contains
         solver%particleChargeLoss = 0.0d0
         inelasticEnergyLoss = 0.0d0
         phi_average = 0.0d0
+        densities = 0.0d0
         do i =1, stepsAverage
             call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
+            call loadParticleDensity(densities, particleList)
             phi_average = phi_average + solver%phi
         end do
-        call solver%writeParticleDensity(particleList, world, CurrentDiagStep) 
-        call solver%writePhi(CurrentDiagStep)
-        open(41,file="../Data/Phi/phi_average.dat", form='UNFORMATTED')
-        write(41) phi_average/stepsAverage
-        close(41)
+        call writeParticleDensity(densities/stepsAverage, particleList, world, CurrentDiagStep) 
+        call writePhi(phi_average/stepsAverage, CurrentDiagStep)
         call particleList(1)%writeLocalTemperature(CurrentDiagStep)
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(CurrentDiagStep)

@@ -97,6 +97,8 @@ for y in range(numDiagnosticTimes+1):
 #     plt.ylabel('Electron Temperature (eV)')
 #     plt.xlim([0, grid[-1]])
 #     plt.pause(0.05)
+
+
     
     
 # ---------------------- Final Plots --------------------------
