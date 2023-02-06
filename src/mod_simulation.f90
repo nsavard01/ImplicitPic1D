@@ -9,8 +9,8 @@ module mod_simulation
     use mod_potentialSolver
     use mod_collisions
 
-    integer(int32) :: maxIter = 50, numDiagnosticSteps = 50, numTimeSteps = 500, stepsAverage = 1000
-    real(real64) :: eps_r = 1e-8, del_t, fractionFreq = 0.5d0
+    integer(int32) :: maxIter = 50, numDiagnosticSteps = 25, numTimeSteps = 500, stepsAverage = 1000
+    real(real64) :: eps_r = 1e-8, del_t, fractionFreq = 1.5d0
 
 contains
 
@@ -40,9 +40,8 @@ contains
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: CurrentDiagStep
-        integer(int32) :: i, j, l_left
+        integer(int32) :: i
         character(len=5) :: char_i
-        real(real64) :: d
         
         do i=1, numberChargedParticles
             write(char_i, '(I3)'), CurrentDiagStep
@@ -80,7 +79,7 @@ contains
         integer(int32), intent(in out) :: irand
         !real(real64) :: P_before(3), P_after(3), E_before, E_after
 
-        call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r, boolDiagnostic)
+        call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r, boolDiagnostic)
 
         !call addUniformPowerMaxwellianNicolas(particleList(1), Power, 0.05d0, irand, del_t)
         call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
@@ -109,9 +108,9 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter, numTimeSteps, stepsAverage
         integer(int32), intent(in out) :: irand
-        integer(int32) :: numSkipSteps, i, j,CurrentDiagStep = 1
+        integer(int32) :: numSkipSteps, i, j,CurrentDiagStep
         real(real64) :: currentTime, phi_average(n_x), densities(n_x, numberChargedParticles)
-
+        CurrentDiagStep = 1
 
         open(15,file='../Data/InitialConditions.dat',access='APPEND')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s)")')
@@ -120,7 +119,7 @@ contains
         close(22)
         numSkipSteps = numTimeSteps/(numDiagnosticSteps)
         101 format(20(1x,es16.8))
-        open(22,file='../Data/ScalarDiagnosticData.dat',access='APPEND')
+        open(22,file='../Data/GlobalDiagnosticData.dat',access='APPEND')
         write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), chargeError (a.u), energyError(a.u)")')
         
         !Save initial particle/field data, along with domain
@@ -152,7 +151,7 @@ contains
                 do j=1, numberChargedParticles
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
                 end do
-                write(22,101) currentTime, inelasticEnergyLoss*e/del_t, solver%particleChargeLoss/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError
+                write(22,101) currentTime, inelasticEnergyLoss*e/del_t, SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError
                 CurrentDiagStep = CurrentDiagStep + 1
             end if
         end do
@@ -174,8 +173,10 @@ contains
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(CurrentDiagStep)
         end do
-        write(22,101) currentTime, inelasticEnergyLoss*e/del_t/stepsAverage, solver%particleChargeLoss/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage, solver%chargeError, solver%energyError
+        write(22,101) currentTime, inelasticEnergyLoss*e/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage, solver%chargeError, solver%energyError
         close(22)
+        print *, "Electron average wall loss:", solver%particleChargeLoss(1)/del_t/stepsAverage
+        print *, "Ion average wall loss:", solver%particleChargeLoss(2)/del_t/stepsAverage
 
 
 

@@ -38,8 +38,8 @@ t_final = np.loadtxt('Data/InitialConditions.dat', skiprows = 1)[1]
 # list names in diagnostic file for each time steps
 diagList = ['time', 'Ploss', 'I_wall', 'P_wall']
 
-ScalarDiagnostics = np.loadtxt('Data/ScalarDiagnosticData.dat', skiprows = 1)
-numDiagnosticTimes = ScalarDiagnostics.shape[0]
+GlobalDiagnostics = np.loadtxt('Data/GlobalDiagnosticData.dat', skiprows = 1)
+numDiagnosticTimes = GlobalDiagnostics.shape[0]
 
 
 grid = np.fromfile('Data/domainGrid.dat', dtype = 'float', offset = 4)
@@ -47,6 +47,8 @@ halfGrid = (grid[0:-1] + grid[1::])/2
 ne = np.zeros(n_x)
 ni = np.zeros(n_x)
 
+test_adaptive = np.fromfile('test_adaptive.dat', dtype = 'float', offset = 4)
+test_normal = np.fromfile('test_normal.dat', dtype = 'float', offset = 4)
 
 #------------------- Animation -------------------
 

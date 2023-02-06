@@ -9,8 +9,8 @@ program BoundPlasmaExample
     use mod_simulation
     implicit none
 
-    integer(int32) :: particleIdxFactor = 2, i, numParticles = 10000
-    real(real64) :: w_p = 1.0d0, n_ave = 5.0d14, T_e = 5.0d0, T_i = 0.1d0, T, L_domain = 0.1d0, del_l = 0.005d0
+    integer(int32) :: particleIdxFactor = 2, i, numParticles = 10000, tclock1, tclock2, clock_rate
+    real(real64) :: w_p = 1.0d0, n_ave = 5.0d14, T_e = 5.0d0, T_i = 0.1d0, T, L_domain = 0.1d0, del_l = 0.005d0, elapsed_time
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potSolver) :: solver
@@ -49,8 +49,11 @@ program BoundPlasmaExample
     call solver%solveInitialPotential(particleList, world)
     
     numTimeSteps = NINT(22.0d-6 / del_t)
-    !call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r, .false.)
+    call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, stepsAverage)
+    call system_clock(tclock2, clock_rate)
+    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
+    print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"
     
 
     
