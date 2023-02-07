@@ -1,0 +1,4 @@
+64 ! number of grid nodes
+0.1d0 ! Domain length
+0.005d0 ! smallest logical space unit for sinusoidal non-uniform grid
+END

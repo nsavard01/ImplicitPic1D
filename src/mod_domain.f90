@@ -20,7 +20,7 @@ module mod_domain
         procedure, public, pass(self) :: constructUniformGrid
         ! procedure, public, pass(self) :: depositRho
         ! procedure, public, pass(self) :: writeRho
-        procedure, public, pass(self) :: writeGrid
+        procedure, public, pass(self) :: writeDomain
     end type Domain
 
 
@@ -34,8 +34,8 @@ contains
     type(Domain) function domain_constructor() result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         integer(int32) :: i
-        allocate(self % grid(n_x), self % dx_dl(n_x-1), self % nodeVol(n_x))
-        self % grid = (/(i, i=1, n_x)/)
+        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes-1), self % nodeVol(NumberXNodes))
+        self % grid = (/(i, i=1, NumberXNodes)/)
         self % dx_dl = 1
         self % nodeVol = 1
     end function domain_constructor
@@ -43,14 +43,14 @@ contains
     pure subroutine derive_DxDl_NodeVol(self)
         class(Domain), intent(in out) :: self
         integer(int32) :: i
-        do i = 1, n_x-1
+        do i = 1, NumberXNodes-1
             self%dx_dl(i) = self%grid(i+1) - self%grid(i)
         end do
 
         self%nodeVol(1) = self%dx_dl(1)/2
-        self%nodeVol(n_x) = self%dx_dl(n_x-1)/2
+        self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)/2
 
-        do i = 2, n_x-1
+        do i = 2, NumberXNodes-1
             self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
         end do
     end subroutine derive_DxDl_NodeVol
@@ -60,10 +60,10 @@ contains
         real(real64), intent(in) :: del_l, L_domain
         integer(int32) :: i
         self%grid(1) = 0
-        self%grid(n_x) = L_domain
-        do concurrent (i = 2:n_x-1)
-            self % grid(i) = L_domain * ((i-1) - (n_x - 1)*(1 - del_l)/pi/2 &
-            * SIN(2 * pi * (i-1) / (n_x - 1))) / (n_x - 1)
+        self%grid(NumberXNodes) = L_domain
+        do concurrent (i = 2:NumberXNodes-1)
+            self % grid(i) = L_domain * ((i-1) - (NumberXNodes - 1)*(1 - del_l)/pi/2 &
+            * SIN(2 * pi * (i-1) / (NumberXNodes - 1))) / (NumberXNodes - 1)
         end do
         call derive_DxDl_NodeVol(self)
     end subroutine constructSineGrid
@@ -73,9 +73,9 @@ contains
         real(real64), intent(in) :: L_domain
         integer(int32) :: i
         self%grid(1) = 0d0
-        self%grid(n_x) = L_domain
-        do i = 2, n_x-1
-            self % grid(i) =  (i-1) * L_domain / (n_x - 1)
+        self%grid(NumberXNodes) = L_domain
+        do i = 2, NumberXNodes-1
+            self % grid(i) =  (i-1) * L_domain / (NumberXNodes - 1)
         end do
         call derive_DxDl_NodeVol(self)
     end subroutine constructUniformGrid
@@ -110,17 +110,13 @@ contains
     !     close(fileunit)
     !   end subroutine writeRho
 
-      subroutine writeGrid(self)
-        ! Writes rho into a binary file.
-        class(Domain), intent(in out) :: self
-        integer(int32) :: fileunit, record_length
-        character(100) :: filename
-        filename = 'record_Grid.dat'
-        record_length = 2*size(self%grid)
-        open(newunit=fileunit, file=filename, access='direct', recl= record_length)
-        write(unit=fileunit, rec = 1) self%grid
-        close(fileunit)
-      end subroutine writeGrid
+      subroutine writeDomain(self)
+        ! Writes domain data into binary file under Data
+        class(Domain), intent(in) :: self
+        open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
+        write(41) self%grid
+        close(41)
+      end subroutine writeDomain
 
 
 
