@@ -16,9 +16,9 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(n_x, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
+    subroutine readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
         ! Set initial conditions and global constants based on read input from txt file
-        integer(int32), intent(in out) :: n_x, maxIter, numDiagnosticSteps, stepsAverage, numParticles, particleIdxFactor
+        integer(int32), intent(in out) :: NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, numParticles, particleIdxFactor
         real(real64), intent(in out) :: eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l
         integer(int32) :: io
         open(10,file='../InputData/InitialConditions.inp', IOSTAT=io)
@@ -35,7 +35,7 @@ contains
         close(10)
 
         open(10,file='../InputData/Geometry.inp')
-        read(10, *, IOSTAT = io) n_x
+        read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) del_l
         close(10)
@@ -188,12 +188,12 @@ contains
         integer(int32), intent(in) :: maxIter, numTimeSteps, stepsAverage
         integer(int32), intent(in out) :: irand
         integer(int32) :: numSkipSteps, i, j,CurrentDiagStep
-        real(real64) :: currentTime, phi_average(n_x), densities(n_x, numberChargedParticles)
+        real(real64) :: currentTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles)
         CurrentDiagStep = 1
 
         open(15,file='../Data/InitialConditions.dat',access='APPEND')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s)")')
-        write(15,"((I3.3, 1x), 2(es16.8,1x))") n_x, numTimeSteps*del_t, del_t
+        write(15,"((I3.3, 1x), 2(es16.8,1x))") NumberXNodes, numTimeSteps*del_t, del_t
         close(15)
         close(22)
         numSkipSteps = numTimeSteps/(numDiagnosticSteps)

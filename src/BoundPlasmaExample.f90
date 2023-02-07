@@ -16,7 +16,7 @@ program BoundPlasmaExample
     type(potSolver) :: solver
     numberChargedParticles = 2
 
-    call readInputs(n_x, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
+    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
     
     
     ! Initialize constants

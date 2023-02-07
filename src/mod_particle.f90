@@ -62,11 +62,11 @@ contains
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: dx_dl(:), L_domain
         integer(int32), intent(in out) :: irand
-        integer(int32) :: i, numInCell, idxLower, numPerCell(n_x-1)
+        integer(int32) :: i, numInCell, idxLower, numPerCell(NumberXNodes-1)
         real(real64) :: sumDxDl
         idxLower = 1
         sumDxDl = 0
-        do i=1, n_x-1
+        do i=1, NumberXNodes-1
             ! Use int to make sure always have a bit left over, otherwise will fill up before getting to end
             numInCell = INT(self%N_p * dx_dl(i)/L_domain)
             if (idxLower + numInCell > self % N_P + 1) then
@@ -82,7 +82,7 @@ contains
         end do
         if (idxLower < self%N_p + 1) then
             call getRandom(self%phaseSpace(1, idxLower:self%N_p), irand)
-            self%phaseSpace(1, idxLower:self%N_p) = self%phaseSpace(1, idxLower:self%N_p) * (n_x - 1) + 1
+            self%phaseSpace(1, idxLower:self%N_p) = self%phaseSpace(1, idxLower:self%N_p) * (NumberXNodes - 1) + 1
         end if
         
         
@@ -148,8 +148,8 @@ contains
         class(Particle), intent(in) :: self
         integer(int32), intent(in) :: CurrentDiagStep
         character(len=5) :: char_i
-        integer(int32) :: j, index, counter(n_x-1)
-        real(real64) :: temp(n_x-1)
+        integer(int32) :: j, index, counter(NumberXNodes-1)
+        real(real64) :: temp(NumberXNodes-1)
         temp = 0.0d0
         counter = 0
     
@@ -158,7 +158,7 @@ contains
             temp(index) = temp(index) + SUM(self%phaseSpace(2:4, j)**2) * 0.5d0 * self%mass/e
             counter(index) = counter(index) + 1
         end do
-        do j = 1, n_x-1
+        do j = 1, NumberXNodes-1
             if (counter(j) > 0) then
                 temp(j) = temp(j)*2.0d0/counter(j)/3.0d0
             end if

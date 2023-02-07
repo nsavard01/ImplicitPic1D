@@ -50,8 +50,8 @@ contains
     type(potSolver) function potSolver_constructor(world) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
-        allocate(self % J(n_x-1), self % rho(n_x), self % phi(n_x), self % phi_f(n_x), self%a_tri(n_x-3), &
-        self%b_tri(n_x-2), self%c_tri(n_x-3), self%particleChargeLoss(numberChargedParticles))
+        allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-3), &
+        self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(numberChargedParticles))
         call construct_diagMatrix(self, world)
         self % rho = 0
         self % J = 0
@@ -93,9 +93,9 @@ contains
         ! construct diagonal components for thomas algorithm
         class(potSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        self % a_tri = 2.0d0/(world%dx_dl(2:n_x-2) + world%dx_dl(3:)) / world%dx_dl(2:n_x-2)
-        self % c_tri = 2.0d0/(world%dx_dl(1:n_x-3) + world%dx_dl(2:n_x-2))/world%dx_dl(2:n_x-2)
-        self % b_tri = -2.0d0/(world%dx_dl(1:n_x-2) + world%dx_dl(2:))/world%dx_dl(1:n_x-2) - 2.0d0/(world%dx_dl(1:n_x-2) + world%dx_dl(2:))/world%dx_dl(2:n_x-1)
+        self % a_tri = 2.0d0/(world%dx_dl(2:NumberXNodes-2) + world%dx_dl(3:)) / world%dx_dl(2:NumberXNodes-2)
+        self % c_tri = 2.0d0/(world%dx_dl(1:NumberXNodes-3) + world%dx_dl(2:NumberXNodes-2))/world%dx_dl(2:NumberXNodes-2)
+        self % b_tri = -2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:))/world%dx_dl(1:NumberXNodes-2) - 2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:))/world%dx_dl(2:NumberXNodes-1)
 
     end subroutine construct_diagMatrix
 
@@ -103,11 +103,11 @@ contains
         ! construct diagonal components for thomas algorithm, for Ampere (after initial Poisson)
         class(potSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        self % a_tri = -1.0d0/world%dx_dl(2:n_x-2)
-        self % c_tri = -1.0d0/world%dx_dl(2:n_x-2)
-        self % b_tri = (world%dx_dl(1:n_x-2) + world%dx_dl(2:n_x-1))/ (world%dx_dl(1:n_x-2) * world%dx_dl(2:n_x-1))
+        self % a_tri = -1.0d0/world%dx_dl(2:NumberXNodes-2)
+        self % c_tri = -1.0d0/world%dx_dl(2:NumberXNodes-2)
+        self % b_tri = (world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1))/ (world%dx_dl(1:NumberXNodes-2) * world%dx_dl(2:NumberXNodes-1))
         self % coeff_left = 1.0d0/world%dx_dl(1)
-        self % coeff_right = 1.0d0/world%dx_dl(n_x-1)
+        self % coeff_right = 1.0d0/world%dx_dl(NumberXNodes-1)
 
     end subroutine construct_diagMatrix_Ampere
 
@@ -116,9 +116,9 @@ contains
         class(potSolver), intent(in out) :: self
         integer(int32) :: i, n !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(size(self%phi) - 2), cp(size(self%phi) - 3),dp(size(self%phi) - 2)
-        n = n_x - 2
+        n = NumberXNodes - 2
 
-        d = -self%rho(2:n_x-1) / eps_0
+        d = -self%rho(2:NumberXNodes-1) / eps_0
         d(1) = d(1) - 2 * self%phi_left * self%coeff_left
         d(n) = d(n) - 2 * self%phi_right * self%coeff_right
     ! initialize c-prime and d-prime
@@ -147,8 +147,8 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i, n !n size dependent on how many points are inside (not boundary), so how many in rhs equation
-        real(real64) :: m, d(n_x - 2), cp(n_x - 3),dp(n_x- 2)
-        n = n_x - 2
+        real(real64) :: m, d(NumberXNodes - 2), cp(NumberXNodes - 3),dp(NumberXNodes- 2)
+        n = NumberXNodes - 2
 
         d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 + arrayDiff(self%phi(1:n+1))/world%dx_dl(1:n) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
         d(1) = d(1) + self%phi_left * self%coeff_left
@@ -177,16 +177,16 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i
-        real(real64) :: Ax(n_x-2), d(n_x-2), res
+        real(real64) :: Ax(NumberXNodes-2), d(NumberXNodes-2), res
         Ax(1) = self%b_tri(1)*self%phi_f(2) + self%c_tri(1) * self%phi_f(3)
-        do i=2, n_x-3
+        do i=2, NumberXNodes-3
             Ax(i) = self%b_tri(i)*self%phi_f(i+1) + self%c_tri(i) * self%phi_f(i+2) + self%a_tri(i-1) * self%phi_f(i)
         end do
-        Ax(n_x-2) = self%b_tri(n_x-2)*self%phi_f(n_x-1) + self%a_tri(n_x-3) * self%phi_f(n_x-2)
-        d = (-self%J(2:) + self%J(1:n_x-2)) * del_t / eps_0 + arrayDiff(self%phi(1:n_x-1))/world%dx_dl(1:n_x-2) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
+        Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
+        d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 + arrayDiff(self%phi(1:NumberXNodes-1))/world%dx_dl(1:NumberXNodes-2) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
         d(1) = d(1) + self%phi_left * self%coeff_left
-        d(n_x-2) = d(n_x-2) + self%phi_right * self%coeff_right
-        !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(n_x-2))
+        d(NumberXNodes-2) = d(NumberXNodes-2) + self%phi_right * self%coeff_right
+        !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(NumberXNodes-2))
         res = SQRT(SUM((Ax- d)**2))
 
     end function getError_tridiag_Ampere
@@ -217,7 +217,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: l_p
         real(real64) :: EField
-        if (l_p < 1 .or. l_p >= n_x) then
+        if (l_p < 1 .or. l_p >= NumberXNodes) then
             EField = 0.0
         else
             EField = (self%phi_f(INT(l_p)) + self%phi(INT(l_p)) - self%phi(INT(l_p)+1) - self%phi_f(INT(l_p) + 1)) / world%dx_dl(INT(l_p))/2
@@ -246,7 +246,7 @@ contains
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
         real(real64), intent(in) :: del_t
-        real(real64) :: a, c !rho_i(n_x), rho_f(n_x), gradJ(n_x-2), test(n_x-2), testConserv, 
+        real(real64) :: a, c !rho_i(NumberXNodes), rho_f(NumberXNodes), gradJ(NumberXNodes-2), test(NumberXNodes-2), testConserv, 
         !integer(int32) :: k
         
         a = (part%q / part%mass / 2.0d0) * self%getEField(l_sub, world)
@@ -454,13 +454,13 @@ contains
                         call self%particleSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
                     end if
                     subStepNum = subStepNum + 1
-                    if ((l_sub == 1.0) .or. (l_sub == n_x)) then
+                    if ((l_sub == 1.0) .or. (l_sub == NumberXNodes)) then
                         !check if particle has hit boundary, in which case delete
                         !will eventually need to replace with subroutine which takes in boundary inputs from world
                         exit
                     end if
                 end do
-                if ((l_f < 1) .or. (l_f > n_x)) then
+                if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling oremainDel_tutside domain!"
                 end if
             end do loopParticles
@@ -478,7 +478,7 @@ contains
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
         real(real64), intent(in) :: del_t
-        real(real64) :: a, c !rho_i(n_x), rho_f(n_x), gradJ(n_x-2), test(n_x-2), testConserv, 
+        real(real64) :: a, c !rho_i(NumberXNodes), rho_f(NumberXNodes), gradJ(NumberXNodes-2), test(NumberXNodes-2), testConserv, 
         !integer(int32) :: k
         
         a = (part%q / part%mass / 2.0d0) * self%getEField(l_sub, world)
@@ -666,7 +666,7 @@ contains
         real(real64), allocatable :: rho_f(:)
         delParticle = .false.
         if (boolDiagnostic) then
-            allocate(rho_f(n_x))
+            allocate(rho_f(NumberXNodes))
             call self%depositRho(particleList, world)
             rho_f = 0
             KE_i = 0
@@ -693,7 +693,7 @@ contains
                         call self%particleSubStepMover(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
                     end if
                     subStepNum = subStepNum + 1
-                    if ((l_sub == 1.0) .or. (l_sub == n_x)) then
+                    if ((l_sub == 1.0) .or. (l_sub == NumberXNodes)) then
                         !check if particle has hit boundary, in which case delete
                         !will eventually need to replace with subroutine which takes in boundary inputs from world
                         delParticle = .true.
@@ -704,7 +704,7 @@ contains
                     call singleRhoPass(rho_f, l_f, particleList(j)%w_p, particleList(j)%q, world%nodeVol) 
                     KE_f = KE_f + (v_f**2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
                 end if 
-                if ((l_f < 1) .or. (l_f > n_x)) then
+                if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling oremainDel_tutside domain!"
                 end if
                 
@@ -746,7 +746,7 @@ contains
                 print *, "-------------------------WARNING------------------------"
                 print *, "Charge error is:", self%chargeError
                 print *, "Charge error array is:"
-                print *, ABS(1 + (self%J(2:n_x-1) - self%J(1:n_x-2)) *del_t/ world%nodeVol(2:n_x-1)/(rho_f(2:n_x-1) - self%rho(2:n_x-1)))
+                print *, ABS(1 + (self%J(2:NumberXNodes-1) - self%J(1:NumberXNodes-2)) *del_t/ world%nodeVol(2:NumberXNodes-1)/(rho_f(2:NumberXNodes-1) - self%rho(2:NumberXNodes-1)))
                 stop "Total charge not conserved over time step in sub-step procedure!"
             end if
 
