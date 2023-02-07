@@ -9,24 +9,31 @@ program BoundPlasmaExample
     use mod_simulation
     implicit none
 
-    integer(int32) :: particleIdxFactor = 2, i, numParticles = 10000, tclock1, tclock2, clock_rate
-    real(real64) :: w_p = 1.0d0, n_ave = 5.0d14, T_e = 5.0d0, T_i = 0.1d0, T, L_domain = 0.1d0, del_l = 0.005d0, elapsed_time
+    integer(int32) :: i, tclock1, tclock2, clock_rate
+    real(real64) :: T, elapsed_time
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potSolver) :: solver
     numberChargedParticles = 2
-    allocate(particleList(numberChargedParticles))
+
+    call readInputs(n_x, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
     
-    n_x = 64
+    
+    ! Initialize constants
+
+
+    
     ! create the world the particles live in
     world = Domain()
     call world % constructSineGrid(del_l, L_domain)
 
+    particleList = readParticleInputs(numberChargedParticles)
     !initialize the particles in this world, at some point will be read from input file or something
-    particleList(1) = Particle(m_e, -e, w_p, numParticles, numParticles * particleIdxFactor, "e")
-    particleList(2) = Particle(m_p, e, w_p, numParticles, numParticles * particleIdxFactor, "H+")
+    
     do i = 1, numberChargedParticles
         print *, 'Initializing ', particleList(i) % name
+        print *, "Particle mass is:", particleList(i)%mass
+        print *, "Particle charge is:", particleList(i)%q
         call particleList(i) % initialize_randUniform(L_domain, world%dx_dl, irand)
         call particleList(i) % initialize_n_ave(n_ave, L_domain)
         if (i == 1) then
@@ -36,7 +43,6 @@ program BoundPlasmaExample
         end if
         call particleList(i) % generate3DMaxwellian(T, irand)
     end do
-
     print *, "w_p is:", particleList(1)%w_p
     print *, "Debye length is:", getDebyeLength(T_e, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)

@@ -56,8 +56,8 @@ plt.figure(figsize = (5,4), dpi = 80)
 for y in range(numDiagnosticTimes+1):
 
     plt.cla()
-    ne = np.fromfile('Data/Density/density_e_' + str(y) + '.dat', dtype = 'float', offset = 4)
-    ni = np.fromfile('Data/Density/density_H+_' + str(y) + '.dat', dtype = 'float', offset = 4)
+    ne = np.fromfile('Data/Density/density_[e]_' + str(y) + '.dat', dtype = 'float', offset = 4)
+    ni = np.fromfile('Data/Density/density_[H+]_' + str(y) + '.dat', dtype = 'float', offset = 4)
     plt.plot(grid, ne, 'b', label = r'$n_e$')
     plt.plot(grid, ni, 'r', label = r'$n_i$')
     plt.xlabel('Distance (m)')
@@ -104,7 +104,7 @@ for y in range(numDiagnosticTimes+1):
     
     
 # ---------------------- Final Plots --------------------------
-phaseSpace = extractPhaseSpace('Data/PhaseSpace/phaseSpace_e_' + str(numDiagnosticTimes) +'.dat', grid)
+phaseSpace = extractPhaseSpace('Data/PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', grid)
 KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
 Ehist = np.histogram(KE, bins = 100, density = True)
 T_elec = np.mean(KE)* (2/3)

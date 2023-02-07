@@ -10,8 +10,9 @@ module constants
     real(real64), parameter :: k_B = 1.380649d-23 ! m^2 kg s^-2 K^-1
     real(real64), parameter :: e = 1.602176634d-19 ! C
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
-    real(real64), parameter :: pi = 4*atan(1.d0) ! pi from atan
-    integer(int32) :: n_x !Global static variable, amount of grid nodes in x
-    integer(int32) :: numberChargedParticles 
+    real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
+    integer(int32) :: n_x, numberChargedParticles, maxIter, numDiagnosticSteps, stepsAverage, numParticles, particleIdxFactor
     integer(int32) :: irand = 987888 !Global static variable
+    real(real64) :: eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l
+
 end module constants

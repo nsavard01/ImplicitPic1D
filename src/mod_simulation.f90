@@ -9,10 +9,89 @@ module mod_simulation
     use mod_potentialSolver
     use mod_collisions
 
-    integer(int32) :: maxIter = 50, numDiagnosticSteps = 25, numTimeSteps = 500, stepsAverage = 1000
-    real(real64) :: eps_r = 1e-8, del_t, fractionFreq = 1.5d0
+    integer(int32) :: numTimeSteps
+    real(real64) :: del_t
 
 contains
+
+    ! ------------------------- Reading Input data --------------------------------
+
+    subroutine readInputs(n_x, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
+        ! Set initial conditions and global constants based on read input from txt file
+        integer(int32), intent(in out) :: n_x, maxIter, numDiagnosticSteps, stepsAverage, numParticles, particleIdxFactor
+        real(real64), intent(in out) :: eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l
+        integer(int32) :: io
+        open(10,file='../InputData/InitialConditions.inp', IOSTAT=io)
+        read(10, *, IOSTAT = io) T_e
+        read(10, *, IOSTAT = io) T_i
+        read(10, *, IOSTAT = io) numParticles
+        read(10, *, IOSTAT = io) eps_r
+        read(10, *, IOSTAT = io) particleIdxFactor
+        read(10, *, IOSTAT = io) n_ave
+        read(10, *, IOSTAT = io) numDiagnosticSteps
+        read(10, *, IOSTAT = io) maxIter
+        read(10, *, IOSTAT = io) fractionFreq
+        read(10, *, IOSTAT = io) stepsAverage
+        close(10)
+
+        open(10,file='../InputData/Geometry.inp')
+        read(10, *, IOSTAT = io) n_x
+        read(10, *, IOSTAT = io) L_domain
+        read(10, *, IOSTAT = io) del_l
+        close(10)
+        
+    end subroutine readInputs
+
+    function readParticleInputs(numberChargedParticles) result(particleList)
+        type(Particle), allocatable :: particleList(:)
+        integer(int32), intent(in out) :: numberChargedParticles
+        integer(int32) :: j, numSpecies = 0
+        character(len=6) :: name, particleNames(100)
+        real(real64) :: mass(100), charge(100), Ti(100)
+        numSpecies = 1 ! option in future to not have electrons by default
+        mass(1) = m_e
+        charge(1) = -1.0d0
+        Ti(1) = T_e
+        particleNames(1) = '[e]'
+        print *, "Reading particle inputs"
+        open(10,file='../InputData/BoundExample.dat')
+
+        do j=1, 10000
+            read(10,*,END=101,ERR=100) name
+
+            if( name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
+                goto 20
+            endif
+            ! Take care of extra text I guess
+20          do while(name.ne.'------')
+                read(10,*,END=101,ERR=100) name
+            end do
+            
+200         read(10,'(A6)',END=101,ERR=100, ADVANCE = 'NO') name
+            if (name.eq.'------') then
+                close(10)
+            else
+                numSpecies = numSpecies + 1
+                read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), Ti(numSpecies)
+                mass(numSpecies) = mass(numSpecies) * m_p
+                particleNames(numSpecies) = trim(name)
+                goto 200
+            end if
+
+        end do
+100     continue
+101     continue
+        numberChargedParticles = numSpecies
+        print *, numberChargedParticles
+        allocate(particleList(numberChargedParticles))
+        do j=1, numberChargedParticles
+            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles, numParticles * particleIdxFactor, trim(particleNames(j)))
+        end do
+        
+
+
+
+    end function readParticleInputs
 
     ! --------------------------- Diagnostics ------------------------------------
 
