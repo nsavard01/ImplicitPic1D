@@ -16,17 +16,18 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
-        ! Set initial conditions and global constants based on read input from txt file
-        integer(int32), intent(in out) :: NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, numParticles, particleIdxFactor
+    subroutine readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, world, solver)
+        ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
+        integer(int32), intent(in out) :: NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage
         real(real64), intent(in out) :: eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l
-        integer(int32) :: io
+        integer(int32) :: io, leftBoundary, rightBoundary
+        real(real64) :: leftVoltage, rightVoltage
+        type(Domain) :: world
+        type(potentialSolver) :: solver
         open(10,file='../InputData/InitialConditions.inp', IOSTAT=io)
         read(10, *, IOSTAT = io) T_e
         read(10, *, IOSTAT = io) T_i
-        read(10, *, IOSTAT = io) numParticles
         read(10, *, IOSTAT = io) eps_r
-        read(10, *, IOSTAT = io) particleIdxFactor
         read(10, *, IOSTAT = io) n_ave
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) maxIter
@@ -38,54 +39,82 @@ contains
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) del_l
+        read(10, *, IOSTAT = io) leftBoundary, rightBoundary
+        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+        print *, "Left voltage is:", leftVoltage
+        print *, "Right voltage is:", rightVoltage
         close(10)
+
+        ! if one boundary is periodic, other must also be
+        if ((leftBoundary == -3) .or. (rightBoundary == -3)) then
+            leftBoundary = -3
+            rightBoundary = -3
+            leftVoltage = rightVoltage
+        end if
+        world = Domain()
+        call world % constructSineGrid(del_l, L_domain)
+        solver = potentialSolver(world, leftBoundary, rightBoundary, leftVoltage, rightVoltage)
         
     end subroutine readInputs
 
     function readParticleInputs(numberChargedParticles) result(particleList)
         type(Particle), allocatable :: particleList(:)
         integer(int32), intent(in out) :: numberChargedParticles
-        integer(int32) :: j, numSpecies = 0
-        character(len=6) :: name, particleNames(100)
+        integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
+        character(len=15) :: name
+        character(len=8) :: particleNames(100)
         real(real64) :: mass(100), charge(100), Ti(100)
-        numSpecies = 1 ! option in future to not have electrons by default
-        mass(1) = m_e
-        charge(1) = -1.0d0
-        Ti(1) = T_e
-        particleNames(1) = '[e]'
+
         print *, "Reading particle inputs"
-        open(10,file='../InputData/BoundExample.dat')
+        open(10,file='../InputData/BoundExample.dat', action = 'read')
 
         do j=1, 10000
             read(10,*,END=101,ERR=100) name
 
-            if( name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
+            if( name(1:9).eq.'ELECTRONS') then
+                read(10,*,END=101,ERR=100) name
+                read(10,*,END=101,ERR=100) name
+                read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:4)
+                numSpecies = numSpecies + 1
+                read(10,*,END=101,ERR=100) Ti(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                mass(numSpecies) = m_e
+                charge(numSpecies) = -1.0
+                particleNames(numSpecies) = '[e]'
+                read(10,*,END=101,ERR=100) name
+                read(10,*,END=101,ERR=100) name
+            endif
+
+
+            if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
                 goto 20
             endif
             ! Take care of extra text I guess
-20          do while(name.ne.'------')
+20          do while(name(1:4).ne.'----')
                 read(10,*,END=101,ERR=100) name
+                print *, name
             end do
             
 200         read(10,'(A6)',END=101,ERR=100, ADVANCE = 'NO') name
-            if (name.eq.'------') then
+            if (name(1:4).eq.'----') then
                 close(10)
             else
                 numSpecies = numSpecies + 1
-                read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), Ti(numSpecies)
+                read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), Ti(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
                 mass(numSpecies) = mass(numSpecies) * m_p
                 particleNames(numSpecies) = trim(name)
                 goto 200
             end if
 
+
+
         end do
 100     continue
 101     continue
         numberChargedParticles = numSpecies
-        print *, numberChargedParticles
         allocate(particleList(numberChargedParticles))
         do j=1, numberChargedParticles
-            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles, numParticles * particleIdxFactor, trim(particleNames(j)))
+            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)))
+            print *, mass(j), e * charge(j), numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j))
         end do
         
 
@@ -150,7 +179,7 @@ contains
     subroutine solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, boolDiagnostic)
         ! Single time step solver with Divergence of ampere, followed by adding of power, followed by collisions
         type(Particle), intent(in out) :: particleList(:)
-        type(potSolver), intent(in out) :: solver
+        type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r
         logical, intent(in) :: boolDiagnostic
@@ -182,7 +211,7 @@ contains
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
         type(Particle), intent(in out) :: particleList(:)
-        type(potSolver), intent(in out) :: solver
+        type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter, numTimeSteps, stepsAverage

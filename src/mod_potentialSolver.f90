@@ -12,14 +12,16 @@ module mod_potentialSolver
     ! Will also contain particle mover, since needed to store to J, and cannot be separate
     ! Assume dirichlet boundaries at ends for now, so matrix solver can go down by two dimensions
     private
-    public :: potSolver
+    public :: potentialSolver
 
-    type :: potSolver
+    type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: phi_left, phi_right, energyError, chargeError, particleEnergyLoss
+        real(real64) :: energyError, chargeError, particleEnergyLoss
         integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
+        integer(int32), allocatable :: boundaryConditions(:) ! Boundary condition flags for fields and particles
+        ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
         procedure, public, pass(self) :: depositRho
@@ -41,24 +43,23 @@ module mod_potentialSolver
         procedure, private, pass(self) :: particleSubStepMover
     end type
 
-    interface potSolver
-        module procedure :: potSolver_constructor
-    end interface potSolver
+    interface potentialSolver
+        module procedure :: potentialSolver_constructor
+    end interface potentialSolver
 
 contains
 
-    type(potSolver) function potSolver_constructor(world) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftBoundary, rightBoundary, leftVoltage, rightVoltage) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
+        integer(int32), intent(in) :: leftBoundary, rightBoundary
+        real(real64), intent(in) :: leftVoltage, rightVoltage
         allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-3), &
-        self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(numberChargedParticles))
+        self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(numberChargedParticles), self%boundaryConditions(NumberXNodes))
         call construct_diagMatrix(self, world)
         self % rho = 0
         self % J = 0
         self % phi = 0
-        self % phi_f = 0
-        self % phi_left = 0.0d0
-        self % phi_right = 0.0d0
         self % coeff_left = 2/(world%dx_dl(1) + world%dx_dl(2))/world%dx_dl(1)
         self % coeff_right = 2/(world%dx_dl(size(world%dx_dl)-1) + world%dx_dl(size(world%dx_dl)))/world%dx_dl(size(world%dx_dl))
         self%iterNumPicard = 0
@@ -68,11 +69,18 @@ contains
         self%particleChargeLoss = 0.0d0
         self%energyError = 0.0d0
         self%chargeError = 0.0d0
+        self%boundaryConditions = 0
+        self%boundaryConditions(1) = leftBoundary
+        self%boundaryConditions(NumberXNodes) = rightBoundary
+        if (self%boundaryConditions(1) > 0) self%phi(1) = leftVoltage
+        if (self%boundaryConditions(NumberXNodes) > 0) self%phi(NumberXNodes) = rightVoltage
+        self%phi_f = self%phi  
 
-    end function potSolver_constructor
+
+    end function potentialSolver_constructor
 
     subroutine depositRho(self, particleList, world) 
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32) :: i, j, l_left
@@ -91,7 +99,7 @@ contains
 
     subroutine construct_diagMatrix(self, world)
         ! construct diagonal components for thomas algorithm
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         self % a_tri = 2.0d0/(world%dx_dl(2:NumberXNodes-2) + world%dx_dl(3:)) / world%dx_dl(2:NumberXNodes-2)
         self % c_tri = 2.0d0/(world%dx_dl(1:NumberXNodes-3) + world%dx_dl(2:NumberXNodes-2))/world%dx_dl(2:NumberXNodes-2)
@@ -101,7 +109,7 @@ contains
 
     subroutine construct_diagMatrix_Ampere(self, world)
         ! construct diagonal components for thomas algorithm, for Ampere (after initial Poisson)
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         self % a_tri = -1.0d0/world%dx_dl(2:NumberXNodes-2)
         self % c_tri = -1.0d0/world%dx_dl(2:NumberXNodes-2)
@@ -113,14 +121,14 @@ contains
 
     subroutine solve_tridiag_Poisson(self)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         integer(int32) :: i, n !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(size(self%phi) - 2), cp(size(self%phi) - 3),dp(size(self%phi) - 2)
         n = NumberXNodes - 2
 
         d = -self%rho(2:NumberXNodes-1) / eps_0
-        d(1) = d(1) - 2 * self%phi_left * self%coeff_left
-        d(n) = d(n) - 2 * self%phi_right * self%coeff_right
+        d(1) = d(1) - 2 * self%phi(1) * self%coeff_left
+        d(n) = d(n) - 2 * self%phi(NumberXNodes) * self%coeff_right
     ! initialize c-prime and d-prime
         cp(1) = self%c_tri(1)/self%b_tri(1)
         dp(1) = d(1)/self%b_tri(1)
@@ -143,7 +151,7 @@ contains
 
     subroutine solve_tridiag_Ampere(self, world, del_t)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i, n !n size dependent on how many points are inside (not boundary), so how many in rhs equation
@@ -151,8 +159,8 @@ contains
         n = NumberXNodes - 2
 
         d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 + arrayDiff(self%phi(1:n+1))/world%dx_dl(1:n) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
-        d(1) = d(1) + self%phi_left * self%coeff_left
-        d(n) = d(n) + self%phi_right * self%coeff_right
+        d(1) = d(1) + self%phi(1) * self%coeff_left
+        d(n) = d(n) + self%phi(NumberXNodes) * self%coeff_right
     ! initialize c-prime and d-prime
         cp(1) = self%c_tri(1)/self%b_tri(1)
         dp(1) = d(1)/self%b_tri(1)
@@ -173,7 +181,7 @@ contains
     end subroutine solve_tridiag_Ampere
 
     function getError_tridiag_Ampere(self, world, del_t) result(res)
-        class(potSolver), intent(in) :: self
+        class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i
@@ -184,8 +192,8 @@ contains
         end do
         Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
         d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 + arrayDiff(self%phi(1:NumberXNodes-1))/world%dx_dl(1:NumberXNodes-2) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
-        d(1) = d(1) + self%phi_left * self%coeff_left
-        d(NumberXNodes-2) = d(NumberXNodes-2) + self%phi_right * self%coeff_right
+        d(1) = d(1) + self%phi(1) * self%coeff_left
+        d(NumberXNodes-2) = d(NumberXNodes-2) + self%phi(NumberXNodes) * self%coeff_right
         !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(NumberXNodes-2))
         res = SQRT(SUM((Ax- d)**2))
 
@@ -194,7 +202,7 @@ contains
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
         ! In 1D is J/m^2
-        class(potSolver), intent(in) :: self
+        class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         logical :: future
         real(real64) :: res
@@ -213,7 +221,7 @@ contains
 
     pure function getEField(self, l_p, world) result(EField)
         !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
-        class(potSolver), intent(in) :: self
+        class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: l_p
         real(real64) :: EField
@@ -241,7 +249,7 @@ contains
 
     subroutine particleSubStepInitial(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
         ! Do initial substep, where particles start between nodes
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
@@ -340,7 +348,7 @@ contains
 
     subroutine particleSubStep(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
         ! Substeps, where particles start at nodes
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_cell
@@ -428,7 +436,7 @@ contains
         ! particle substepping procedure which deposits J, also used for general moving of particles
         ! boolDepositJ = true : deposit J
         ! boolDepositJ = false: only move particles (done after non-linear iteration), also delete particles for wall collisions (saves extra loop in collisions)
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
@@ -473,7 +481,7 @@ contains
     ! -------------------------------------------- Particle mover without boolean checks for depositing J ------------------------------------------------------------
     subroutine particleSubStepInitialMover(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
         ! Do initial substep, where particles start between nodes
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
@@ -570,7 +578,7 @@ contains
 
     subroutine particleSubStepMover(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
         ! Substeps, where particles start at nodes
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_cell
@@ -654,7 +662,7 @@ contains
 
     subroutine moveParticles(self, particleList, world, del_t, boolDiagnostic)
         ! particle mover to avoid the boolean checks which mostly don't happen when depositing J
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
@@ -764,7 +772,7 @@ contains
 
     subroutine solveInitialPotential(self, particleList, world)
         ! Solve for initial potential
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         call self%depositRho(particleList, world)
@@ -778,7 +786,7 @@ contains
 
     subroutine solveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_a, boolDiagnostic)
         ! Solve for divergence of ampere using picard iterations
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
@@ -809,7 +817,7 @@ contains
     subroutine adaptiveSolveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_a, boolDiagnostic)
         ! Solve for divergence of ampere's law with picard
         ! cut del_t in two if non-convergence after maxIter, repeat until convergence
-        class(potSolver), intent(in out) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
