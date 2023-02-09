@@ -16,7 +16,7 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, chargeError, particleEnergyLoss
+        real(real64) :: energyError, chargeError, particleEnergyLoss, particleEnergyLoss1D
         integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
@@ -67,6 +67,7 @@ contains
         self%iterNumParticle = 0
         self%particleEnergyLoss = 0.0d0
         self%particleChargeLoss = 0.0d0
+        self%particleEnergyLoss1D = 0.0d0
         self%energyError = 0.0d0
         self%chargeError = 0.0d0
         self%boundaryConditions = 0
@@ -705,6 +706,7 @@ contains
                     delIdx = delIdx + 1
                     delParticle = .false.
                     self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i)**2) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                    self%particleEnergyLoss1D = self%particleEnergyLoss1D + particleList(j)%w_p * v_f**2 * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                     self%particleChargeLoss(j) = self%particleChargeLoss(j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
                     
                 else

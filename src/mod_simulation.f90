@@ -209,27 +209,28 @@ contains
         if (boolDiagnostic) then
 
             ! Get charge/energy conservation error
-            solver%particleEnergyLoss = 0.0d0
+            solver%particleEnergyLoss1D = 0.0d0
             solver%particleChargeLoss = 0.0d0
             PE_i = solver%getTotalPE(world, .false.)
             KE_i = 0.0d0
             do j=1, numberChargedParticles
-                KE_i = KE_i + particleList(j)%getTotalKE()
+                KE_i = KE_i + particleList(j)%getTotalKE1D()
             end do
             print *, "KE_i is:", KE_i
             call solver%depositRho(particleList, world) 
             call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
-            KE_f = solver%particleEnergyLoss
+            KE_f = solver%particleEnergyLoss1D
             do j=1, numberChargedParticles
-                KE_f = KE_f + particleList(j)%getTotalKE()
+                KE_f = KE_f + particleList(j)%getTotalKE1D()
             end do
-            print *, "EnergyLoss is:", solver%particleEnergyLoss
-            print *, "KE_f is:", KE_f
+            print *, "EnergyLoss is:", solver%particleEnergyLoss1D
+            print *, "KE_f is:", KE_f - solver%particleEnergyLoss1D
             PE_f = solver%getTotalPE(world, .false.)
             print *, "PE_i is:", PE_i
             print *, "PE_f is:", PE_f
-            stop
             solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
+            print *, solver%energyError
+            stop
             call depositRhoDiag(rho_f, particleList, world)
             solver%chargeError = 0.0d0
             j = 0

@@ -21,6 +21,7 @@ module mod_particle
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getKEAve
         procedure, public, pass(self) :: getTotalKE
+        procedure, public, pass(self) :: getTotalKE1D
         procedure, public, pass(self) :: getVrms
         procedure, public, pass(self) :: writePhaseSpace
         procedure, public, pass(self) :: writeLocalTemperature
@@ -126,6 +127,14 @@ contains
         res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 * self%w_p
 
     end function getTotalKE
+
+    pure function getTotalKE1D(self) result(res)
+        ! calculate total KE in Joules/m^2 for domain dimension
+        class(Particle), intent(in) :: self
+        real(real64) :: res
+        res = SUM(self%phaseSpace(2, 1:self%N_p)**2) * self % mass * 0.5d0 * self%w_p
+
+    end function getTotalKE1D
 
     ! ------------------------ delete/add particles --------------------------------------------
     
