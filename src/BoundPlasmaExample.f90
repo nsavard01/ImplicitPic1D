@@ -13,22 +13,13 @@ program BoundPlasmaExample
     real(real64) :: T, elapsed_time
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
-    type(potSolver) :: solver
-    numberChargedParticles = 2
+    type(potentialSolver) :: solver
 
-    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, numParticles, particleIdxFactor)
-    
-    
-    ! Initialize constants
-
-
-    
-    ! create the world the particles live in
-    world = Domain()
-    call world % constructSineGrid(del_l, L_domain)
-
-    particleList = readParticleInputs(numberChargedParticles)
     !initialize the particles in this world, at some point will be read from input file or something
+    particleList = readParticleInputs(numberChargedParticles) 
+    ! Initialize constants with inputs
+    ! create the world the particles live in
+    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, world, solver)
     
     do i = 1, numberChargedParticles
         print *, 'Initializing ', particleList(i) % name
@@ -43,7 +34,7 @@ program BoundPlasmaExample
         end if
         call particleList(i) % generate3DMaxwellian(T, irand)
     end do
-    print *, "w_p is:", particleList(1)%w_p
+    print *, "w_p is:", particleList(2)%w_p
     print *, "Debye length is:", getDebyeLength(T_e, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
     del_t = fractionFreq/getPlasmaFreq(n_ave)   
@@ -51,9 +42,8 @@ program BoundPlasmaExample
     print *, "Mean initial KE of electron is:", particleList(1)%getKEAve(), "should be", T_e * 1.5
     print *, "Mean initial KE of proton is:", particleList(2)%getKEAve(), "should be", T_i * 1.5
     ! ! Generate solver object, and then solve for initial rho/potential
-    solver = potSolver(world)
-    call solver%solveInitialPotential(particleList, world)
     
+    call solver%solveInitialPotential(particleList, world)
     numTimeSteps = NINT(22.0d-6 / del_t)
     call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, stepsAverage)

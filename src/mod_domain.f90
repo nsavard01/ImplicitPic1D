@@ -12,7 +12,6 @@ module mod_domain
         real(real64), allocatable :: grid(:) !array representing values at grid in m
         real(real64), allocatable :: dx_dl(:) !ratio of grid differences from physical to logical, assume logical separated by 1
         real(real64), allocatable :: nodeVol(:) !node vol, or difference between half grid in physical space
-        !real(real64), allocatable :: phi(:), rho(:), J(:) ! array of phi, rho, and J values in space
 
     contains
         procedure, private, pass(self) :: derive_DxDl_NodeVol
