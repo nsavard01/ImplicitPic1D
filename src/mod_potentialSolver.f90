@@ -459,15 +459,16 @@ contains
                         call self%particleSubStepInitial(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
                     else
                         ! Further sub-steps, particles start on grid nodes
+                        ! Check boundary condition
+                        if (self%boundaryConditions(int(l_sub)) > 0) then
+                            !check if particle has hit boundary, in which case delete
+                            !will eventually need to replace with subroutine which takes in boundary inputs from world
+                            exit
+                        end if
                         l_alongV = l_sub + SIGN(1.0d0, v_sub)
                         call self%particleSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
                     end if
                     subStepNum = subStepNum + 1
-                    if ((l_sub == 1.0) .or. (l_sub == NumberXNodes)) then
-                        !check if particle has hit boundary, in which case delete
-                        !will eventually need to replace with subroutine which takes in boundary inputs from world
-                        exit
-                    end if
                 end do
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling oremainDel_tutside domain!"
@@ -686,16 +687,16 @@ contains
                         call self%particleSubStepInitialMover(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
                     else
                         ! Further sub-steps, particles start on grid nodes
+                        if (self%boundaryConditions(int(l_sub)) > 0) then
+                            !check if particle has hit boundary, in which case delete
+                            !will eventually need to replace with subroutine which takes in boundary inputs from world
+                            delParticle = .true.
+                            exit
+                        end if
                         l_alongV = l_sub + SIGN(1.0, v_sub)
                         call self%particleSubStepMover(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
                     end if
                     subStepNum = subStepNum + 1
-                    if ((l_sub == 1.0) .or. (l_sub == NumberXNodes)) then
-                        !check if particle has hit boundary, in which case delete
-                        !will eventually need to replace with subroutine which takes in boundary inputs from world
-                        delParticle = .true.
-                        exit
-                    end if
                 end do
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling oremainDel_tutside domain!"
