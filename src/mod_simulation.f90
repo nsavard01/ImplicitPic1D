@@ -194,6 +194,45 @@ contains
     
     ! -------------------------- Simulation ------------------------------------------
 
+    subroutine solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r, irand)
+        ! Single time step solver with Divergence of ampere, followed by adding of power, followed by collisions
+        type(Particle), intent(in out) :: particleList(:)
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t, eps_r
+        integer(int32), intent(in) :: maxIter
+        integer(int32), intent(in out) :: irand
+        integer(int32) :: j, k
+        real(real64) :: KE_i, KE_f, PE_i, PE_f, rho_f(NumberXNodes)
+
+        ! Get charge/energy conservation error
+        solver%particleEnergyLoss1D = 0.0d0
+        PE_i = solver%getTotalPE(world, .false.)
+        KE_i = 0.0d0
+        do j=1, numberChargedParticles
+            KE_i = KE_i + particleList(j)%getTotalKE1D()
+        end do
+        call solver%depositRho(particleList, world) 
+        call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+        KE_f = solver%particleEnergyLoss1D
+        do j=1, numberChargedParticles
+            KE_f = KE_f + particleList(j)%getTotalKE1D()
+        end do
+        PE_f = solver%getTotalPE(world, .false.)
+        solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
+        call depositRhoDiag(rho_f, particleList, world)
+        solver%chargeError = 0.0d0
+        j = 0
+        do k = 1, NumberXNodes -2
+            if ((solver%J(k + 1) - solver%J(k) /= 0) .and. (solver%rho(k+1) /= 0)) then
+                solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%nodeVol(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
+                j = j + 1
+            end if
+        end do
+        solver%chargeError = SQRT(solver%chargeError/j)
+
+    end subroutine solveSingleTimeStepDiagnostic
+
     subroutine solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, boolDiagnostic)
         ! Single time step solver with Divergence of ampere, followed by adding of power, followed by collisions
         type(Particle), intent(in out) :: particleList(:)
@@ -210,27 +249,19 @@ contains
 
             ! Get charge/energy conservation error
             solver%particleEnergyLoss1D = 0.0d0
-            solver%particleChargeLoss = 0.0d0
             PE_i = solver%getTotalPE(world, .false.)
             KE_i = 0.0d0
             do j=1, numberChargedParticles
                 KE_i = KE_i + particleList(j)%getTotalKE1D()
             end do
-            print *, "KE_i is:", KE_i
             call solver%depositRho(particleList, world) 
             call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
             KE_f = solver%particleEnergyLoss1D
             do j=1, numberChargedParticles
                 KE_f = KE_f + particleList(j)%getTotalKE1D()
             end do
-            print *, "EnergyLoss is:", solver%particleEnergyLoss1D
-            print *, "KE_f is:", KE_f - solver%particleEnergyLoss1D
             PE_f = solver%getTotalPE(world, .false.)
-            print *, "PE_i is:", PE_i
-            print *, "PE_f is:", PE_f
             solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
-            print *, solver%energyError
-            stop
             call depositRhoDiag(rho_f, particleList, world)
             solver%chargeError = 0.0d0
             j = 0
@@ -261,7 +292,7 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter, numTimeSteps, stepsAverage
         integer(int32), intent(in out) :: irand
-        integer(int32) :: numSkipSteps, i, j, CurrentDiagStep
+        integer(int32) :: numSkipSteps, i, j, k, CurrentDiagStep
         real(real64) :: currentTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles)
         CurrentDiagStep = 1
 
@@ -288,13 +319,16 @@ contains
 
         do i = 1, numTimeSteps-stepsAverage
             if (MOD((i-1), numSkipSteps) /= 0) then
-                call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .false.)
+                call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", real(i)/numTimeSteps * 100.0, "percent done"
                 currentTime = (i) * del_t
                 inelasticEnergyLoss = 0.0d0
-                call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
+                solver%particleEnergyLoss = 0.0d0
+                call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r, irand)
                 
                 ! Stop program if catch abnormally large error
                 if (solver%energyError > 1e-8) then
@@ -308,7 +342,8 @@ contains
                     print *, "Charge error is:", solver%chargeError
                     stop "Total charge not conserved over time step in sub-step procedure!"
                 end if
-
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep) 
@@ -329,11 +364,15 @@ contains
         phi_average = 0.0d0
         densities = 0.0d0
         do i =1, stepsAverage-1
-            call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .false.)
+            call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+            call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+            call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
             call loadParticleDensity(densities, particleList)
             phi_average = phi_average + solver%phi
         end do
-        call solveSingleTimeStep(solver, particleList, world, del_t, maxIter, eps_r, irand, .true.)
+        call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r, irand)
+        call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
         call loadParticleDensity(densities, particleList)
         phi_average = phi_average + solver%phi
         call writeParticleDensity(densities/stepsAverage, particleList, world, CurrentDiagStep) 

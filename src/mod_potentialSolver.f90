@@ -705,8 +705,8 @@ contains
                 if (delParticle) then
                     delIdx = delIdx + 1
                     delParticle = .false.
-                    self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i)**2) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                     self%particleEnergyLoss1D = self%particleEnergyLoss1D + particleList(j)%w_p * v_f**2 * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                    self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                     self%particleChargeLoss(j) = self%particleChargeLoss(j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
                     
                 else
@@ -759,7 +759,6 @@ contains
                 if (errorCurrent < eps_r*errorInitial) then
                     call self%moveParticles(particleList, world, del_t)
                     self%phi = self%phi_f
-                    print *, "Took", i, "iterations"
                     exit
                 end if
             end if
