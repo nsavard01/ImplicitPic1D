@@ -223,8 +223,12 @@ contains
             do j=1, numberChargedParticles
                 KE_f = KE_f + particleList(j)%getTotalKE()
             end do
-            print *, "KE_f is:", KE_f - solver%particleEnergyLoss
+            print *, "EnergyLoss is:", solver%particleEnergyLoss
+            print *, "KE_f is:", KE_f
             PE_f = solver%getTotalPE(world, .false.)
+            print *, "PE_i is:", PE_i
+            print *, "PE_f is:", PE_f
+            stop
             solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
             call depositRhoDiag(rho_f, particleList, world)
             solver%chargeError = 0.0d0
