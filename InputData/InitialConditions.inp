@@ -1,5 +1,3 @@
-5.0 ! T_e (eV)
-0.1 ! Ti (eV)
 1.d-8 ! relative tolerance for non-linear residual
 5.0d14 ! Initial number density (1/m^3) of particles
 20 ! number of diagnostic data dumps    

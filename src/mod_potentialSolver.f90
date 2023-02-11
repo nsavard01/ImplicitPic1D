@@ -20,8 +20,7 @@ module mod_potentialSolver
         integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
-        integer(int32), allocatable :: boundaryConditions(:) ! Boundary condition flags for fields and particles
-        ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
+
 
     contains
         procedure, public, pass(self) :: depositRho
@@ -49,13 +48,12 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftBoundary, rightBoundary, leftVoltage, rightVoltage) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: leftBoundary, rightBoundary
         real(real64), intent(in) :: leftVoltage, rightVoltage
         allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-3), &
-        self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(numberChargedParticles), self%boundaryConditions(NumberXNodes))
+        self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(numberChargedParticles))
         call construct_diagMatrix(self, world)
         self % rho = 0
         self % J = 0
@@ -70,11 +68,8 @@ contains
         self%particleEnergyLoss1D = 0.0d0
         self%energyError = 0.0d0
         self%chargeError = 0.0d0
-        self%boundaryConditions = 0
-        self%boundaryConditions(1) = leftBoundary
-        self%boundaryConditions(NumberXNodes) = rightBoundary
-        if (self%boundaryConditions(1) > 0) self%phi(1) = leftVoltage
-        if (self%boundaryConditions(NumberXNodes) > 0) self%phi(NumberXNodes) = rightVoltage
+        if (world%boundaryConditions(1) > 0) self%phi(1) = leftVoltage
+        if (world%boundaryConditions(NumberXNodes) > 0) self%phi(NumberXNodes) = rightVoltage
         self%phi_f = self%phi  
 
 
@@ -96,6 +91,10 @@ contains
             end do
         end do
         self % rho = self % rho / world%nodeVol
+        if (world%boundaryConditions(1) == -3) then
+            self%rho(1) = self%rho(1) + self%rho(NumberXNodes)
+            self%rho(NumberXNodes) = self%rho(1)
+        end if
     end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
@@ -460,10 +459,14 @@ contains
                     else
                         ! Further sub-steps, particles start on grid nodes
                         ! Check boundary condition
-                        if (self%boundaryConditions(int(l_sub)) > 0) then
+                        if (world%boundaryConditions(int(l_sub)) ==0) then
+                            ! nothing happens, exit if statements
+                        else if (world%boundaryConditions(int(l_sub)) > 0) then
                             !check if particle has hit boundary, in which case delete
                             !will eventually need to replace with subroutine which takes in boundary inputs from world
                             exit
+                        else if (world%boundaryConditions(int(l_sub)) == -3) then
+                            l_sub = ABS(l_sub - real(NumberXNodes)-1.0d0)
                         end if
                         l_alongV = l_sub + SIGN(1.0d0, v_sub)
                         call self%particleSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)
@@ -687,11 +690,15 @@ contains
                         call self%particleSubStepInitialMover(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
                     else
                         ! Further sub-steps, particles start on grid nodes
-                        if (self%boundaryConditions(int(l_sub)) > 0) then
+                        if (world%boundaryConditions(int(l_sub)) ==0) then
+                            ! nothing happens, exit if statements
+                        else if (world%boundaryConditions(int(l_sub)) > 0) then
                             !check if particle has hit boundary, in which case delete
                             !will eventually need to replace with subroutine which takes in boundary inputs from world
                             delParticle = .true.
                             exit
+                        else if (world%boundaryConditions(int(l_sub)) == -3) then
+                            l_sub = ABS(l_sub - real(NumberXNodes)-1.0d0)
                         end if
                         l_alongV = l_sub + SIGN(1.0, v_sub)
                         call self%particleSubStepMover(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_cell)

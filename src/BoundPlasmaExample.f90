@@ -10,37 +10,30 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i, tclock1, tclock2, clock_rate
-    real(real64) :: T, elapsed_time
+    real(real64) :: elapsed_time
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
 
     !initialize the particles in this world, at some point will be read from input file or something
-    particleList = readParticleInputs(numberChargedParticles) 
+    particleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, T_e, T_i, L_domain, del_l, world, solver)
-    
+    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver)
     do i = 1, numberChargedParticles
-        print *, 'Initializing ', particleList(i) % name
-        print *, "Particle mass is:", particleList(i)%mass
-        print *, "Particle charge is:", particleList(i)%q
-        call particleList(i) % initialize_randUniform(L_domain, world%dx_dl, irand)
-        call particleList(i) % initialize_n_ave(n_ave, L_domain)
-        if (i == 1) then
-            T = T_e
-        else
-            T = T_i
-        end if
-        call particleList(i) % generate3DMaxwellian(T, irand)
+        call particleList(i) % initialize_randUniform(world%grid(NumberXNodes) - world%grid(1), world%dx_dl, irand)
+        call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
     end do
-    print *, "w_p is:", particleList(2)%w_p
-    print *, "Debye length is:", getDebyeLength(T_e, n_ave)
+
+    print *, "Calulated values:"
+    print *, "w_p is:", particleList(1)%w_p
+    print *, "Debye length is:", getDebyeLength(particleList(1)%getKEAve()*2.0d0/3.0d0, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
+    print *, "Average density is ", particleList(1)%N_p * particleList(1)%w_p / (world%grid(NumberXNodes) - world%grid(1)), "should be", n_ave
     del_t = fractionFreq/getPlasmaFreq(n_ave)   
     print *, "Time step (sec) is:", del_t
-    print *, "Mean initial KE of electron is:", particleList(1)%getKEAve(), "should be", T_e * 1.5
-    print *, "Mean initial KE of proton is:", particleList(2)%getKEAve(), "should be", T_i * 1.5
+    print *, "----------------"
+    print *, ""
     ! ! Generate solver object, and then solve for initial rho/potential
     
     call solver%solveInitialPotential(particleList, world)
