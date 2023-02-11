@@ -1,9 +1,0 @@
-5.0 ! T_e (eV)
-0.1 ! Ti (eV)
-1.d-8 ! relative tolerance for non-linear residual
-5.0d14 ! Initial number density (1/m^3) of particles
-20 ! number of diagnostic data dumps    
-50 ! Maximum number of outer iterations for picard potential solver
-0.5 ! Fraction of initial 1/w_p for initial time step
-1000 ! Amount of steps to average for final diagnostics
-END
