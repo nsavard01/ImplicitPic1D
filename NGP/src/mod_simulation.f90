@@ -134,6 +134,7 @@ contains
             print *, "Particle mass is:", particleList(j)%mass
             print *, "Particle charge is:", particleList(j)%q
             print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
+            print *, "Number of particles is:", numParticles(j)
         end do
         
         print *, "---------------"

@@ -26,6 +26,7 @@ program BoundPlasmaExample
     end do
 
     print *, "Calulated values:"
+    print *, "Number of particles is:", particleList(1)%N_p
     print *, "w_p is:", particleList(1)%w_p
     print *, "Debye length is:", getDebyeLength(particleList(1)%getKEAve()*2.0d0/3.0d0, n_ave)
     print *, "Plasma frequency is:", getPlasmaFreq(n_ave)

@@ -1,0 +1,9 @@
+
+
+IONS
+name   mass  charge  temp.(eV)	NumParticles   ArraySizeMultiplication
+--------------------------------------------------
+[H+]     1.     1.     0.1		10000     2
+--------------------------------------------------
+
+ENDFILE
