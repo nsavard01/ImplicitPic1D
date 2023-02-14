@@ -39,7 +39,7 @@ program BoundPlasmaExample
     
     call solver%solveInitialPotential(particleList, world)
     numTimeSteps = NINT(22.0d-6 / del_t)
-    call solver%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+    call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
     call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, stepsAverage)
     call system_clock(tclock2, clock_rate)

@@ -242,16 +242,23 @@ contains
         end if
     end function getEField
 
-    subroutine getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
+    subroutine getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV, boundaryConditions)
         ! get point in l-space on boundary which is away or towards boundary based on velocity direction, when particle between nodes
         real(real64), intent(in out) :: l_alongV, l_awayV
+        integer(int32), intent(in) :: boundaryConditions(NumberXNodes)
         real(real64), intent(in) :: l_sub, v_sub
-        if (v_sub > 0.0) then
-            l_alongV = real(INT(l_sub) + 1, kind = real64)
-            l_awayV = real(INT(l_sub), kind = real64)
-        else
-            l_alongV = real(INT(l_sub), kind = real64)
-            l_awayV = real(INT(l_sub) + 1, kind = real64)
+        integer(int32) :: l_cell
+        l_cell = NINT(l_sub)
+        if (boundaryConditions(l_cell) == 0) then
+            l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
+            l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
+        else if (boundaryConditions(l_cell) > 0) then
+            !Dirichlet
+            l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))/2.0d0
+            l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))/2.0d0
+        else if (boundaryConditions(l_cell) > 0) then
+            l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
+            l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
         end if
 
     end subroutine getl_BoundaryInitial
@@ -464,7 +471,7 @@ contains
                 do while((timePassed < del_t))
                     if (subStepNum == 0) then
                         ! Initial sub-step
-                        call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
+                        call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV, world%boundaryConditions)
                         call self%particleSubStepInitial(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
                     else
                         ! Further sub-steps, particles start on grid nodes
@@ -696,7 +703,7 @@ contains
                 do while((timePassed < del_t))
                     if (subStepNum == 0) then
                         ! Initial sub-step
-                        call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
+                        call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV, world%boundaryConditions)
                         call self%particleSubStepInitialMover(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV)
                     else
                         ! Further sub-steps, particles start on grid nodes
