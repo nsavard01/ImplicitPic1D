@@ -99,8 +99,10 @@ contains
                 else if (world%boundaryConditions(l_center) == -3) then
                     ! Periodic
                     self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
-                    self % rho(MOD(l_center,NumberXNodes)+1) = self % rho(MOD(l_center,NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
-                    self % rho(MOD(l_center-2,NumberXNodes)+1) = self % rho(MOD(l_center-2,NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    ! towards domain
+                    self % rho(l_center+INT(SIGN(1.0, d))) = self % rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    ! across periodic boundary
+                    self % rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = self % rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
                 end if
             end do
         end do
@@ -234,11 +236,20 @@ contains
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: l_p
-        real(real64) :: EField
-        if (l_p < 1 .or. l_p >= NumberXNodes) then
-            EField = 0.0
-        else
-            EField = (self%phi_f(INT(l_p)) + self%phi(INT(l_p)) - self%phi(INT(l_p)+1) - self%phi_f(INT(l_p) + 1)) / world%dx_dl(INT(l_p))/2
+        integer(int32) :: l_cell
+        real(real64) :: EField, d
+        l_cell = NINT(l_p)
+        d = l_p - real(l_cell, kind = real64) + 0.5d0
+        if (world%boundaryConditions(l_cell)==0) then
+            EField = ((self%phi_f(l_cell) + self%phi(l_cell) - self%phi(l_cell+1) - self%phi_f(l_cell + 1)) * d/2.0d0 +  &
+            (self%phi_f(l_cell-1) + self%phi(l_cell-1) - self%phi(l_cell) - self%phi_f(l_cell)) * (1.0d0 - d)/2.0d0)/world%dx_dl(l_cell)
+        else if (world%boundaryConditions(l_cell) > 0) then
+            !Dirichlet
+            EField = SIGN(1.0, d-0.5d0) * (self%phi_f(l_cell) + self%phi(l_cell) - self%phi(l_cell+ INT(SIGN(1.0, d-0.5d0))) - self%phi_f(l_cell + INT(SIGN(1.0, d-0.5d0))))/world%dx_dl(l_cell)/2.0d0
+        else if (world%boundaryConditions(l_cell) == -3) then
+            ! Figure this out later
+            EField = ((self%phi_f(l_cell) + self%phi(l_cell) - self%phi(MOD(l_cell,NumberXNodes)+1) - self%phi_f(MOD(l_cell,NumberXNodes)+1)) * d/2.0d0 +  &
+            (self%phi_f(MOD(l_cell-2,NumberXNodes)+1) + self%phi(MOD(l_cell-2,NumberXNodes)+1) - self%phi(l_cell) - self%phi_f(l_cell)) * (1.0d0 - d)/2.0d0)/world%dx_dl(l_cell)
         end if
     end function getEField
 
@@ -271,7 +282,7 @@ contains
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
         real(real64), intent(in) :: del_t
-        real(real64) :: a, c !rho_i(NumberXNodes), rho_f(NumberXNodes), gradJ(NumberXNodes-2), test(NumberXNodes-2), testConserv, 
+        real(real64) :: a, c
         !integer(int32) :: k
         
         a = (part%q / part%mass / 2.0d0) * self%getEField(l_sub, world)
@@ -698,6 +709,7 @@ contains
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%phaseSpace(2,i)
                 l_sub = particleList(j)%phaseSpace(1,i)
+                l_cell = NINT(l_sub)
                 timePassed = 0
                 subStepNum = 0
                 do while((timePassed < del_t))
