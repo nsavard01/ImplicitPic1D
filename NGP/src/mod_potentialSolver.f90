@@ -773,7 +773,6 @@ contains
         end do
         self%iterNumPicard = i-1
         
-        
 
     end subroutine solveDivAmperePicard
 
@@ -789,6 +788,7 @@ contains
         call self%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
         remainDel_t = del_t  
         do while (self%iterNumPicard == maxIter)
+            print *, "Entering adaptive step!"
             self%iterNumAdaptiveSteps = 0
             currDel_t = remainDel_t
             do while (self%iterNumPicard == maxIter)

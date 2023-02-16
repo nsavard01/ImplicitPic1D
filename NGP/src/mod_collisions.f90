@@ -7,8 +7,8 @@ module mod_collisions
     implicit none
 
     real(real64) :: inelasticEnergyLoss = 0.0d0
-    real(real64) :: Power = 100 !W/m^2 in 1D
-    real(real64) :: nu_h = 1e8 !Hz
+    real(real64) :: Power = 100.0d3 !W/m^2 in 1D
+    real(real64) :: nu_h = 30.0d8 !Hz
     ! Type of collisions, will likely need arrays which you can loop through which has source, target particle, choose from particle list
     ! Will likely have construct method which takes in collision data and turns into array
 
@@ -58,12 +58,8 @@ contains
                     ! Calculate new ion velocity
                     ion%phaseSpace(2:4, ion%N_p + addIdx) = -(m_e/(ion%mass + m_e)) * (electron%phaseSpace(2:4, i) + electron%phaseSpace(2:4,electron%N_p + addIdx)) + V_cm
                     ion%phaseSpace(1,ion%N_p + addIdx) = electron%phaseSpace(1,i)
-                      
-
                 end if
             end if
-
-
         end do
 
         electron%N_p = electron%N_p + addIdx
@@ -86,20 +82,21 @@ contains
 
 
     !-------------------------- add Power in form of re-maxwellianizing collision ---------------------------------------------
-    subroutine addUniformPowerMaxwellian(species, Power, nu_h, irand, del_t)
+    subroutine addUniformPowerMaxwellian(species, Power, nu_h, irand, del_t, heatSkipSteps)
         ! Add power to all particles in domain
         type(Particle), intent(in out) :: species
         integer(int32), intent(in out) :: irand
+        integer(int32), intent(in) :: heatSkipSteps
         real(real64), intent(in) :: Power, nu_h, del_t
-        real(real64) :: T_h, idxChange(NINT(nu_h * del_t * species%N_p)), v_replace(3)
-        integer(int32) :: j, i
+        real(real64) :: T_h, v_replace(3), R
+        integer(int32) :: i
         T_h = (species%getKEAve() + Power/e/species%N_p/species%w_p/nu_h) * 2.0d0 / 3.0d0
-        call getRandom(idxChange, irand)
-        idxChange = INT(idxChange*(species%N_p-1) + 1)
-        do i=1, size(idxChange)
-            j = idxChange(i)
-            call getMaxwellianSample(v_replace, species%mass, T_h, irand)
-            species%phaseSpace(2:4, j) = v_replace
+        do i=1, species%N_p
+            R = ran2(irand)
+            if (R < nu_h * heatSkipSteps * del_t) then
+                call getMaxwellianSample(v_replace, species%mass, T_h, irand)
+                species%phaseSpace(2:4, i) = v_replace
+            end if
         end do
     end subroutine addUniformPowerMaxwellian
 

@@ -15,7 +15,8 @@ program BoundPlasmaExample
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
     
-
+    print *, NINT(63.5d0)
+    stop
     !initialize the particles in this world, at some point will be read from input file or something
     particleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
@@ -38,6 +39,9 @@ program BoundPlasmaExample
     ! ! Generate solver object, and then solve for initial rho/potential
     
     call solver%solveInitialPotential(particleList, world)
+
+    call solver%depositJ(particleList, world, del_t, maxIter, eps_r)
+    stop
     numTimeSteps = NINT(22.0d-6 / del_t)
     call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
     call system_clock(tclock1)
