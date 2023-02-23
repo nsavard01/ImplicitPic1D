@@ -33,12 +33,12 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solveDivAmperePicard
         procedure, public, pass(self) :: adaptiveSolveDivAmperePicard
         procedure, public, pass(self) :: solveInitialPotential
+        procedure, public, pass(self) :: getDelTauInitialSubStep
+        procedure, public, pass(self) :: getDelTauSubStep
+        procedure, public, pass(self) :: picardIterParticles
+        procedure, public, pass(self) ::depositJSubStep
         procedure, public, pass(self) :: moveParticles
         procedure, private, pass(self) :: construct_diagMatrix
-        procedure, private, pass(self) :: particleSubStepInitial
-        procedure, private, pass(self) :: particleSubStep
-        procedure, private, pass(self) :: particleSubStepInitialMover
-        procedure, private, pass(self) :: particleSubStepMover
     end type
 
     interface potentialSolver
@@ -325,22 +325,18 @@ contains
 
     end subroutine getl_BoundaryInitial
 
-
-    subroutine particleSubStepInitial(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV, maxIter, eps_r)
-        ! Do initial substep, where particles start between nodes
-        class(potentialSolver), intent(in out) :: self
+    subroutine getDelTauInitialSubStep(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+        class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
-        real(real64), intent(in) :: del_t, eps_r
-        integer(int32), intent(in) :: maxIter
-        real(real64) :: a, c, d
-        integer(int32) :: i
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_awayV, a, c
+        real(real64), intent(in) :: del_t
+        integer(int32), intent(in) :: l_cell
         del_tau = del_t
         a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_alongV)/2.0d0, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
         if ((a/=0.0d0) .and. (v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
-            c = (l_sub - l_alongV) * world%dx_dl(NINT(l_sub))
+            c = (l_sub - l_alongV) * world%dx_dl(l_cell)
             if (a*v_sub > 0) then
                 ! velocity and acceleration in same direction
                 del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
@@ -360,7 +356,7 @@ contains
                 ! boundary opposite direction of v
                 a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_awayV)/2.0d0, world)
                 if (a*v_sub < 0) then
-                    c = (l_sub - l_awayV) * world%dx_dl(NINT(l_sub))
+                    c = (l_sub - l_awayV) * world%dx_dl(l_cell)
                     del_tau = (ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
                     l_f = l_awayV
                     if (del_tau <= 0) then
@@ -370,8 +366,8 @@ contains
             end if
         else if ((a == 0.0) .and. (v_sub /= 0.0)) then
             !Free particle drift
-            del_tau = (l_alongV - l_sub) * world%dx_dl(NINT(l_sub))/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(NINT(l_sub)) / del_tau
+            del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
+            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
             l_f = l_alongV
             if (del_tau <= 0.0d0) then
                 stop "Have issue with del_tau for a = 0"
@@ -379,15 +375,15 @@ contains
 
         else
             ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
-            if (world%boundaryConditions(NINT(l_sub)) == 0) then
-                l_alongV = real(NINT(l_sub), kind = real64) + SIGN(0.5d0, a)
-            else if (world%boundaryConditions(NINT(l_sub)) > 0) then
+            if (world%boundaryConditions(l_cell) == 0) then
+                l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, a)
+            else if (world%boundaryConditions(l_cell) > 0) then
                 !Dirichlet
                 l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, a))/2.0d0
-            else if (world%boundaryConditions(NINT(l_sub)) > 0) then
-                l_alongV = real(NINT(l_sub), kind = real64) + SIGN(0.5d0, a)
+            else if (world%boundaryConditions(l_cell) > 0) then
+                l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, a)
             end if
-            c = (l_sub - l_alongV) * world%dx_dl(NINT(l_sub))
+            c = (l_sub - l_alongV) * world%dx_dl(l_cell)
             del_tau = SQRT(-c/a)
             l_f = l_alongV
             if (del_tau <= 0.0d0) then
@@ -395,79 +391,16 @@ contains
             end if
         end if
 
-        if (del_tau >= del_t) then
-            ! Add directly to J with no substep
-            do i = 1, maxIter
-                l_f = (v_f + v_sub) * del_t / world%dx_dl(NINT(l_sub)) / 2.0d0 + l_sub
-                v_f = v_sub + (part%q/part%mass) * self%getEField((l_sub + l_f)/2.0d0, world) * del_t
-                if (i > 2) then
-                    if (ABS(l_f - l_sub - (v_f + v_sub) * (del_t) / world%dx_dl(NINT(l_sub)) / 2.0d0 ) < eps_r) exit
-                end if
-            end do
-            if (i-1 == maxIter) then
-                print *, "particle q is:", part%q
-                print *, "l_sub is:", l_sub
-                print *, "v_sub is:", v_sub
-                print *, "l_f is:", l_f
-                print *, "v_f is:", v_f
-                print *, "a is:", a
-                print *, "dx_dl is:", world%dx_dl(NINT(l_sub))
-                stop "Particles have undergone maximum iterations in picard, initial substep"
-            end if
-            
-            
-            if (world%boundaryConditions(NINT(l_sub)) == 0) then
-                d = (l_sub + l_f)/2.0d0 - REAL(NINT(l_sub), kind = real64) + 0.5d0
-                self%J(NINT(l_sub)-1) = self%J(NINT(l_sub)-1) + (1.0d0 - d) * part%w_p * part%q * (v_f + v_sub)/2.0d0/world%dx_dl(NINT(l_sub))
-                self%J(NINT(l_sub)) = self%J(NINT(l_sub)) + d * part%w_p * part%q * (v_f + v_sub)/2.0d0/world%dx_dl(NINT(l_sub))
-            else if (world%boundaryConditions(NINT(l_sub)) > 0) then
-                self%J(INT(l_sub)) = self%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)/2.0d0/world%dx_dl(NINT(l_sub))
-            end if  
-            
-            timePassed = del_t
-            if (NINT(l_f) /= NINT(l_sub)) then
-                print *, "In initial substep procedure"
-                stop "l_f has crossed boundary when condition says it shouldn't have any substeps"
-            end if
+    end subroutine getDelTauInitialSubstep
 
-            
-        else
-            v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(NINT(l_sub)) / del_tau - v_sub
-            if (world%boundaryConditions(NINT(l_sub)) == 0) then
-                d = (l_sub + l_f)/2.0d0 - REAL(NINT(l_sub), kind = real64) + 0.5d0
-                self%J(NINT(l_sub)-1) = self%J(NINT(l_sub)-1) + (1.0d0 - d) * part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(NINT(l_sub))/del_t
-                self%J(NINT(l_sub)) = self%J(NINT(l_sub)) + d * part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(NINT(l_sub))/del_t
-            else if (world%boundaryConditions(NINT(l_sub)) > 0) then
-                self%J(INT(l_sub)) = self%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(NINT(l_sub))/del_t
-            end if 
-            
-            timePassed = timePassed + del_tau
-             
-            if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (INT(ABS(l_f - l_sub)) /= 0)) then
-                print *, l_f
-                stop "l_f is not half integer after subStep or it is too far away"
-            end if
-
-            ! now final position/velocity becomes next starting position/velocity
-            l_sub = l_f
-            v_sub = v_f
-    
-        end if
-
-    end subroutine particleSubStepInitial
-
-    subroutine particleSubStep(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, maxIter, eps_r)
-        ! Substeps, where particles start at nodes
-        class(potentialSolver), intent(in out) :: self
+    subroutine getDelTauSubStep(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+        class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: a, c, d
-        integer(int32) :: l_cell, i
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, a, c
+        real(real64), intent(in) :: del_t, timePassed
+        integer(int32), intent(in) :: l_cell
         del_tau = del_t - timePassed
-        l_cell = NINT((l_sub + l_alongV)/2.0d0)
         ! get index cell where field and dx_dl is evaluated
         a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_alongV)/2.0d0, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
@@ -509,50 +442,43 @@ contains
             end if
         end if
 
+    end subroutine getDelTauSubstep
 
-        if (del_tau >= del_t-timePassed) then
-            ! Add directly to J with no substep
-            do i = 1, maxIter
-                l_f = (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 + l_sub
-                v_f = v_sub + (part%q/part%mass) * self%getEField((l_sub + l_f)/2.0d0, world) * (del_t - timePassed)
-                if (i > 2) then
-                    if (ABS(l_f - l_sub - (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 ) < eps_r) exit
-                end if
-            end do
-            if (i-1 == maxIter) then
-                stop "Particles have undergone maximum iterations in picard with l_sub on boundary"
+    subroutine picardIterParticles(self, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed, maxIter, eps_r)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f
+        real(real64), intent(in) :: del_t, timePassed, eps_r, q, mass
+        integer(int32), intent(in) :: maxIter, l_cell
+        integer(int32) :: i
+        do i = 1, maxIter
+            l_f = (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 + l_sub
+            v_f = v_sub + (q/mass) * self%getEField((l_sub + l_f)/2.0d0, world) * (del_t - timePassed)
+            if (i > 2) then
+                if (ABS(l_f - l_sub - (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 ) < eps_r) exit
             end if
-
-            if (world%boundaryConditions(l_cell) == 0) then
-                d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-                self%J(l_cell-1) = self%J(l_cell-1) + (1.0d0 - d) * part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2.0d0/world%dx_dl(l_cell)/del_t
-                self%J(l_cell) = self%J(l_cell) + d * part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2.0d0/world%dx_dl(l_cell)/del_t
-            else if (world%boundaryConditions(l_cell) > 0) then
-                self%J(INT(l_sub)) = self%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2.0d0/world%dx_dl(l_cell)/del_t
-            end if 
-            timePassed = del_t
-            
-        else
-            v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
-            timePassed = timePassed + del_tau
-            if (world%boundaryConditions(l_cell) == 0) then
-                d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-                self%J(l_cell-1) = self%J(l_cell-1) + (1.0d0 - d) * part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
-                self%J(l_cell) = self%J(l_cell) + d * part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
-            else if (world%boundaryConditions(l_cell) > 0) then
-                self%J(INT(l_sub)) = self%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
-            end if 
-            if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
-                print *, l_f
-                stop "l_f is not half integer after subStep or it is too far away"
-            end if
-            ! now final position/velocity becomes next starting position/velocity
-            l_sub = l_f
-            v_sub = v_f
-    
+        end do
+        if (i-1 == maxIter) then
+            stop "Particles have undergone maximum iterations in picard"
         end if
 
-    end subroutine particleSubStep
+    end subroutine picardIterParticles
+
+    subroutine depositJSubStep(self, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: d
+        if (world%boundaryConditions(l_cell) == 0) then
+            d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
+            self%J(l_cell-1) = self%J(l_cell-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
+            self%J(l_cell) = self%J(l_cell) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
+        else if (world%boundaryConditions(l_cell) > 0) then
+            self%J(INT(l_sub)) = self%J(INT(l_sub)) + w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
+        end if 
+
+    end subroutine depositJSubStep
 
     subroutine depositJ(self, particleList, world, del_t, maxIter, eps_r)
         ! particle substepping procedure which deposits J, also used for general moving of particles
@@ -564,8 +490,8 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
-        integer(int32) :: subStepNum, j, i, delIdx
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
+        integer(int32) :: subStepNum, j, i, delIdx, l_cell
         self%J = 0.0d0
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
@@ -579,8 +505,9 @@ contains
                 do while((timePassed < del_t))
                     if (subStepNum == 0) then
                         ! Initial sub-step
+                        l_cell = NINT(l_sub)
                         call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV, world%boundaryConditions)
-                        call self%particleSubStepInitial(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV, maxIter, eps_r)
+                        call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                     else
                         ! Further sub-steps, particles start on grid nodes
                         ! Check boundary condition
@@ -600,7 +527,26 @@ contains
                         else if (world%boundaryConditions(NINT(l_sub + SIGN(0.1d0, v_sub))) > 0) then
                             l_alongV = l_sub + SIGN(0.5d0, v_sub)
                         end if
-                        call self%particleSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, maxIter, eps_r)
+                        l_cell = NINT((l_sub + l_alongV)/2.0d0)
+                        call self%getDelTauSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                    end if
+                    if (del_tau >= del_t-timePassed) then
+                        ! Add directly to J with no substep
+                        call self%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed, maxIter, eps_r)
+                        call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t) 
+                        timePassed = del_t
+                        
+                    else
+                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                        call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
+                        timePassed = timePassed + del_tau
+                        if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
+                            print *, l_f
+                            stop "l_f is not half integer after subStep or it is too far away"
+                        end if
+                        ! now final position/velocity becomes next starting position/velocity
+                        l_sub = l_f
+                        v_sub = v_f
                     end if
                     subStepNum = subStepNum + 1
                 end do
@@ -616,217 +562,7 @@ contains
     end subroutine depositJ
 
 
-    ! -------------------------------------------- Particle mover without boolean checks for depositing J ------------------------------------------------------------
-    subroutine particleSubStepInitialMover(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV, maxIter, eps_r)
-        ! Do initial substep, where particles start between nodes
-        class(potentialSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
-        type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
-        real(real64), intent(in) :: del_t, eps_r
-        integer(int32), intent(in) :: maxIter
-        real(real64) :: a, c
-        integer(int32) :: i
-        del_tau = del_t
-        a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_alongV)/2.0d0, world)
-        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-        if ((a/=0.0d0) .and. (v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
-            c = (l_sub - l_alongV) * world%dx_dl(NINT(l_sub))
-            if (a*v_sub > 0) then
-                ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
-                l_f = l_alongV
-                if (del_tau <= 0.0d0) then
-                    stop "Have issue with del_tau for v,a in same direction"
-                end if
-            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
-                ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
-                l_f = l_alongV
-                if (del_tau <= 0.0d0) then
-                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
-                end if
-            end if
-            if (del_tau >= del_t) then
-                ! boundary opposite direction of v
-                a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_awayV)/2.0d0, world)
-                if (a*v_sub < 0) then
-                    c = (l_sub - l_awayV) * world%dx_dl(NINT(l_sub))
-                    del_tau = (ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
-                    l_f = l_awayV
-                    if (del_tau <= 0) then
-                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
-                    end if
-                end if  
-            end if
-        else if ((a == 0.0) .and. (v_sub /= 0.0)) then
-            !Free particle drift
-            del_tau = (l_alongV - l_sub) * world%dx_dl(NINT(l_sub))/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(NINT(l_sub)) / del_tau
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for a = 0"
-            end if
-
-        else
-            ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
-            c = (l_sub - l_alongV) * world%dx_dl(NINT(l_sub))
-            del_tau = SQRT(-c/a)
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v = 0"
-            end if
-        end if
-
-        if (del_tau >= del_t) then
-            ! Add directly to J with no substep
-            do i = 1, maxIter
-                l_f = (v_f + v_sub) * del_t / world%dx_dl(NINT(l_sub)) / 2.0d0 + l_sub
-                v_f = v_sub + (part%q/part%mass) * self%getEField((l_sub + l_f)/2.0d0, world) * del_t
-                if (i > 2) then
-                    if (ABS(l_f - l_sub - (v_f + v_sub) * del_t / world%dx_dl(NINT(l_sub)) / 2.0d0 ) < eps_r) exit
-                end if
-            end do
-            if (i-1 == maxIter) then
-                stop "Particles have undergone maximum iterations in picard, initial substep"
-            end if
-            timePassed = del_t
-            if (NINT(l_f) /= NINT(l_sub)) then
-                print *, "In initial substep procedure"
-                stop "l_f has crossed boundary when condition says it shouldn't have any substeps"
-            end if
-
-            
-        else
-            v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(NINT(l_sub)) / del_tau - v_sub
-            timePassed = timePassed + del_tau
-             
-            if (MOD(l_f, 0.5d0) /= 0.0d0) then
-                print *, l_f
-                stop "l_f is not half integer after subStep"
-            end if
-            ! now final position/velocity becomes next starting position/velocity
-            l_sub = l_f
-            v_sub = v_f
-    
-        end if
-
-    end subroutine particleSubStepInitialMover
-
-    subroutine particleSubStepMover(self, world, part, l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, maxIter, eps_r)
-        ! Substeps, where particles start at nodes
-        class(potentialSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
-        type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, timePassed, del_tau, l_alongV
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: a, c, d
-        integer(int32) :: l_cell, i
-        del_tau = del_t - timePassed
-        l_cell = NINT((l_sub + l_alongV)/2.0d0)
-        ! get index cell where field and dx_dl is evaluated
-        a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_alongV)/2.0d0, world)
-        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-        if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
-            c = (l_sub - l_alongV) * world%dx_dl(l_cell)
-            if (a*v_sub > 0) then
-                ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
-                l_f = l_alongV
-                if (del_tau <= 0.0d0) then
-                    stop "Have issue with del_tau for v,a in same direction"
-                end if
-            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
-                ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
-                l_f = l_alongV
-                if (del_tau <= 0.0d0) then
-                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
-                end if
-            end if
-            if (del_tau >= del_t-timePassed) then
-                ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
-                a = (part%q / part%mass / 2.0d0) * self%getEField(l_sub + (del_t - timePassed) *v_sub/8.0d0/world%dx_dl(l_cell), world)
-                if (a*v_sub < 0) then
-                    del_tau = ABS(v_sub/a)
-                    l_f = l_sub
-                    if (del_tau <= 0) then
-                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
-                    end if
-                end if  
-            end if
-        else
-            !Free particle drift
-            del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for a = 0"
-            end if
-        end if
-
-
-        if (del_tau >= del_t-timePassed) then
-            ! Add directly to J with no substep
-            do i = 1, maxIter
-                l_f = (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 + l_sub
-                v_f = v_sub + (part%q/part%mass) * self%getEField((l_sub + l_f)/2.0d0, world) * (del_t - timePassed)
-                if (i > 2) then
-                    if (ABS(l_f - l_sub - (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 ) < eps_r) exit
-                end if
-            end do
-            if (i-1 == maxIter) then
-                stop "Particles have undergone maximum iterations in picard"
-            end if
-            ! if (ABS((v_f - 2*a*(del_t - timePassed) - v_sub)/v_sub) > 1e-3) then
-            !     print *, "WARNING: Kinematic equation doesn't match for no substep, subStepNum > 0"
-            !     print *, "Particle is:", part%name
-            !     print *, "v_sub is:", v_sub
-            !     print *, "l_sub is:", l_sub
-            !     print *, "l_f is:", l_f
-            !     print *, "v_f is:", v_f
-            !     print *, "error is:", ABS((v_f - 2.0d0*a*del_t - v_sub)/v_sub)
-            if (NINT(l_f) /= NINT(l_sub + SIGN(0.1d0, v_sub))) then
-                print *, "l_sub is:", l_sub
-                print *, 'v_sub is:', v_sub
-                print *, 'l_f is:', l_f
-                print *, 'v_f is:', v_f
-                print *, 'a is:', a
-                print *, 'l_alongV is:', l_alongV
-                print *, "In non-initial substep procedure"
-                stop "l_f has crossed boundary when condition says it shouldn't have any substeps"
-            end if
-            if (world%boundaryConditions(l_cell) == 0) then
-                d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-                self%J(l_cell-1) = self%J(l_cell-1) + (1.0d0 - d) * part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2.0d0/world%dx_dl(l_cell)/del_t
-                self%J(l_cell) = self%J(l_cell) + d * part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2.0d0/world%dx_dl(l_cell)/del_t
-            else if (world%boundaryConditions(l_cell) > 0) then
-                self%J(INT(l_sub)) = self%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*(del_t - timePassed)/2.0d0/world%dx_dl(l_cell)/del_t
-            end if  
-            timePassed = del_t
-            
-        else
-            v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
-            timePassed = timePassed + del_tau
-            if (world%boundaryConditions(l_cell) == 0) then
-                d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-                self%J(l_cell-1) = self%J(l_cell-1) + (1.0d0 - d) * part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
-                self%J(l_cell) = self%J(l_cell) + d * part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
-            else if (world%boundaryConditions(l_cell) > 0) then
-                self%J(INT(l_sub)) = self%J(INT(l_sub)) + part%w_p * part%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(NINT(l_sub))/del_t
-            end if 
-            if (MOD(l_f, 0.5d0) /= 0.0d0) then
-                print *, l_f
-                stop "l_f is not half integer after subStep"
-            end if
-            ! now final position/velocity becomes next starting position/velocity
-            l_sub = l_f
-            v_sub = v_f
-    
-        end if
-
-    end subroutine particleSubStepMover
+    ! -------------------------------------------- Particle mover without boolean checks for depositing J -----------------------------------------------------------
 
     subroutine moveParticles(self, particleList, world, del_t, maxIter, eps_r)
         ! particle mover to avoid the boolean checks which mostly don't happen when depositing J
@@ -836,8 +572,8 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV
-        integer(int32) :: subStepNum, j, i, delIdx
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
+        integer(int32) :: subStepNum, j, i, delIdx, l_cell
         logical :: delParticle
         delParticle = .false.
         self%J = 0.0d0
@@ -853,8 +589,9 @@ contains
                 do while((timePassed < del_t))
                     if (subStepNum == 0) then
                         ! Initial sub-step
+                        l_cell = NINT(l_sub)
                         call getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV, world%boundaryConditions)
-                        call self%particleSubStepInitial(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, l_awayV, maxIter, eps_r)
+                        call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                     else
                         ! Further sub-steps, particles start on grid nodes
                         ! Check boundary condition
@@ -864,7 +601,6 @@ contains
                             if (world%boundaryConditions(INT(l_sub)) > 0) then
                                 !check if particle has hit boundary, in which case delete
                                 !will eventually need to replace with subroutine which takes in boundary inputs from world
-                                delParticle = .true.
                                 exit
                             else if (world%boundaryConditions(INT(l_sub)) == -3) then
                                 l_sub = ABS(l_sub - real(NumberXNodes)-1.0d0)
@@ -875,7 +611,26 @@ contains
                         else if (world%boundaryConditions(NINT(l_sub + SIGN(0.1d0, v_sub))) > 0) then
                             l_alongV = l_sub + SIGN(0.5d0, v_sub)
                         end if
-                        call self%particleSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, timePassed, del_tau, del_t, l_alongV, maxIter, eps_r)
+                        l_cell = NINT((l_sub + l_alongV)/2.0d0)
+                        call self%getDelTauSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                    end if
+                    if (del_tau >= del_t-timePassed) then
+                        ! Add directly to J with no substep
+                        call self%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed, maxIter, eps_r)
+                        call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t) 
+                        timePassed = del_t
+                        
+                    else
+                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                        call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
+                        timePassed = timePassed + del_tau
+                        if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
+                            print *, l_f
+                            stop "l_f is not half integer after subStep or it is too far away"
+                        end if
+                        ! now final position/velocity becomes next starting position/velocity
+                        l_sub = l_f
+                        v_sub = v_f
                     end if
                     subStepNum = subStepNum + 1
                 end do
