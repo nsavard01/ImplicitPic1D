@@ -39,7 +39,8 @@ program BoundPlasmaExample
     
     call solver%solveInitialPotential(particleList, world)
     numTimeSteps = NINT(simulationTime / del_t)
-    numTimeSteps = 300000
+    
+    stop
     call system_clock(tclock1)
     call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps)
     call system_clock(tclock2, clock_rate)

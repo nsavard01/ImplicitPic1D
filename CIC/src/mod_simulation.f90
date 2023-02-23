@@ -149,22 +149,41 @@ contains
         real(real64), intent(in out) :: rho(:)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_left
+        integer(int32) :: i, j, l_center
         real(real64) :: d
         rho = 0.0d0
         do i=1, numberChargedParticles
             do j = 1, particleList(i)%N_p
-                l_left = INT(particleList(i)%phaseSpace(1, j))
-                d = MOD(particleList(i)%phaseSpace(1, j), 1.0d0)
-                rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                rho(l_left + 1) = rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
+                l_center = NINT(particleList(i)%phaseSpace(1, j))
+                d = particleList(i)%phaseSpace(1, j) - l_center
+                if (world%boundaryConditions(l_center) == 0) then
+                    ! Inside domain
+                    rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                    rho(l_center + 1) = rho(l_center + 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    rho(l_center - 1) = rho(l_center - 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                else if (world%boundaryConditions(l_center) > 0) then
+                    !Dirichlet
+                    if (l_center == 1) then
+                        rho(1) = rho(2) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
+                        rho(2) = rho(2) + particleList(i)%q * particleList(i)%w_p * ABS(d) 
+                    else
+                        rho(NumberXNodes) = rho(NumberXNodes) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
+                        rho(NumberXNodes-1) = rho(NumberXNodes-1) + particleList(i)%q * particleList(i)%w_p * ABS(d) 
+                    end if
+                    ! rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
+                    ! rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
+                
+                else if (world%boundaryConditions(l_center) == -3) then
+                    ! Periodic
+                    rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                    ! towards domain
+                    rho(l_center+INT(SIGN(1.0, d))) = rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    ! across periodic boundary
+                    rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                end if
             end do
         end do
         rho = rho / world%dx_dl
-        if (world%boundaryConditions(1) == -3) then
-            rho(1) = rho(1) + rho(NumberXNodes)
-            rho(NumberXNodes) = rho(1)
-        end if
     end subroutine depositRhoDiag
 
     subroutine loadParticleDensity(densities, particleList)
@@ -375,12 +394,6 @@ contains
         write(22,101) currentTime, inelasticEnergyLoss*e/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage, solver%chargeError, solver%energyError
         close(22)
 
-
-
-
-
-
-
     end subroutine solveSimulationOnlyPotential
 
     subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps)
@@ -393,7 +406,7 @@ contains
         integer(int32), intent(in) :: maxIter, numTimeSteps
         integer(int32), intent(in out) :: irand
         integer(int32) :: numSkipSteps, i, j, CurrentDiagStep
-        real(real64) :: currentTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles)
+        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles)
         CurrentDiagStep = 1
 
         !Wrtie Initial conditions
@@ -508,9 +521,8 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter, numTimeSteps, stepsAverage
         integer(int32), intent(in out) :: irand
-        integer(int32) :: numSkipSteps, i, j, CurrentDiagStep
+        integer(int32) :: numSkipSteps, i
         real(real64) :: currentTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles)
-        CurrentDiagStep = stepsAverage
 
 
         numSkipSteps = numTimeSteps/(numDiagnosticSteps)
@@ -537,8 +549,8 @@ contains
         call loadParticleDensity(densities, particleList)
         phi_average = phi_average + solver%phi
         densities = densities/stepsAverage
-        call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .true.) 
-        call writePhi(phi_average/stepsAverage, CurrentDiagStep, .true.)
+        call writeParticleDensity(densities, particleList, world, 0, .true.) 
+        call writePhi(phi_average/stepsAverage, 0, .true.)
         write(22,101) currentTime, inelasticEnergyLoss*e/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage, solver%chargeError, solver%energyError
         close(22)
         print *, "Electron average wall loss:", solver%particleChargeLoss(1)/del_t/stepsAverage

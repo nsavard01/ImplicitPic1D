@@ -78,18 +78,17 @@ contains
     end function getArrayMean1D
 
     !----------------- particle to mesh functions -----------------------------------
-    pure function singleRho(n, l_p, w_p, q, nodeVol) result(rho)
-        ! for diagnostic in substep routine
-        integer(int32), intent(in) :: n
-        real(real64), intent(in) :: l_p, w_p, q, nodeVol(:)
-        real(real64) :: rho(n), d
-        integer(int32) :: l_left
-        rho = 0.0d0
-        l_left = INT(l_p)
-        d = MOD(l_p, 1.0d0)
-        rho(l_left) = q * w_p * (1.0d0-d) / nodeVol(l_left)
-        rho(l_left + 1) =  q * w_p * d / nodeVol(l_left+1)
-    end function singleRho
+    ! pure function singleRho(l_p, w_p, q, nodeVol) result(rho)
+    !     ! for diagnostic in substep routine
+    !     real(real64), intent(in) :: l_p, w_p, q, nodeVol(:)
+    !     real(real64) :: rho(NumberXNodes), d
+    !     integer(int32) :: l_left
+    !     rho = 0.0d0
+    !     l_left = INT(l_p)
+    !     d = MOD(l_p, 1.0d0)
+    !     rho(l_left) = q * w_p * (1.0d0-d) / nodeVol(l_left)
+    !     rho(l_left + 1) =  q * w_p * d / nodeVol(l_left+1)
+    ! end function singleRho
 
     subroutine singleRhoPass(rho, l_p, w_p, q, nodeVol) 
         ! for diagnostic in substep routine, combine all rho for final charge conservation

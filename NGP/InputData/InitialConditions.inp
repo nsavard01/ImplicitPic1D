@@ -1,6 +1,6 @@
 22.0d-6 ! simulation time
 1.d-8 ! relative tolerance for non-linear residual
-5.0d17 ! Initial number density (1/m^3) of particles
+5.0d14 ! Initial number density (1/m^3) of particles
 10 ! number of diagnostic data dumps    
 50 ! Maximum number of outer iterations for picard potential solver
 0.5 ! Fraction of initial 1/w_p for initial time step
