@@ -548,17 +548,17 @@ contains
         do i = 1, maxIter
             l_f = (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 + l_sub
             v_f = v_sub + (q/mass) * self%getEField((l_sub + l_f)/2.0d0, l_cell, world) * (del_t - timePassed)
-            ! if (i > 2) then
-            !     if (ABS(l_f - l_sub - (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 ) < eps_r) exit
-            ! end if
+            if (i > 2) then
+                if (ABS(l_f - l_sub - (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 ) < eps_r) exit
+            end if
         end do
         if (NINT(l_f) /= l_cell) then
             print *, "Final l_f is not inside the proper cell in picard particle mover!"
             stop
         end if
-        ! if (i-1 == maxIter) then
-        !     stop "Particles have undergone maximum iterations in picard"
-        ! end if
+        if (i-1 == maxIter) then
+            stop "Particles have undergone maximum iterations in picard"
+        end if
 
     end subroutine picardIterParticles
 
@@ -626,8 +626,9 @@ contains
                                 call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
                                 timePassed = timePassed + del_tau
                                 if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
-                                    print *, l_f
-                                    stop "l_f is not correct boundary after initial diriclet substep"
+                                    print *, "l_sub is:", l_sub
+                                    print *, "l_f is:", l_f
+                                    stop "l_f is not correct boundary after initial domain substep"
                                 end if
                                 ! now final position/velocity becomes next starting position/velocity
                                 l_sub = l_f
@@ -653,8 +654,9 @@ contains
                                 call self%depositJSubStepDirichlet(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t)
                                 timePassed = timePassed + del_tau
                                 if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
-                                    print *, l_f
-                                    stop "l_f is not correct boundary after initial diriclet substep"
+                                    print *, "l_sub is:", l_sub
+                                    print *, "l_f is:", l_f
+                                    stop "l_f is not correct boundary after initial dirichlet domain substep"
                                 end if
                                 ! now final position/velocity becomes next starting position/velocity
                                 l_sub = l_f
@@ -722,9 +724,13 @@ contains
                                 else
                                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
                                     call self%depositJSubStepDirichlet(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t) 
-                                    if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
-                                        print *, l_f
-                                        stop "l_f is not correct boundary after ongoing diriclet substep"
+                                    if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 0.5d0)) then
+                                        print *, "l_sub is:", l_sub
+                                        print *, "l_f is:", l_f
+                                        print *, "a is:", a 
+                                        print *, "v_sub is:", v_sub
+                                        print *, "v_f is:", v_f
+                                        stop "l_f is not correct boundary after ongoing dirichlet substep"
                                     end if
                                     ! now final position/velocity becomes next starting position/velocity
                                     l_sub = l_f
