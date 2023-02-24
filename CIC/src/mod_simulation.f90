@@ -278,6 +278,7 @@ contains
         end do
         PE_f = solver%getTotalPE(world, .false.)
         solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
+        print *, "Energy error is:", solver%energyError
         call depositRhoDiag(rho_f, particleList, world)
         solver%chargeError = 0.0d0
         j = 0
@@ -288,6 +289,7 @@ contains
             end if
         end do
         solver%chargeError = SQRT(solver%chargeError/j)
+        print *, "Charge error is:", solver%chargeError
 
     end subroutine solveSingleTimeStepDiagnostic
 

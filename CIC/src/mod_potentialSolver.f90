@@ -44,7 +44,7 @@ module mod_potentialSolver
     interface potentialSolver
         module procedure :: potentialSolver_constructor
     end interface potentialSolver
-
+    !real(real64) :: v_final(100000) = 0.0, l_final(100000) = 0.0
 contains
 
     type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
@@ -221,7 +221,9 @@ contains
         real(real64) :: m, d(NumberXNodes - 2), cp(NumberXNodes - 3),dp(NumberXNodes- 2)
         n = NumberXNodes - 2
 
-        d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 + arrayDiff(self%phi(1:n+1))/world%dx_dl(1:n) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
+        d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 &
+        + arrayDiff(self%phi(1:n+1))*2.0d0/(world%dx_dl(1:n) + world%dx_dl(2:n+1)) &
+        - arrayDiff(self%phi(2:))*2.0d0/(world%dx_dl(3:n+2) + world%dx_dl(2:n+1))
         d(1) = d(1) + self%phi(1) * self%coeff_left
         d(n) = d(n) + self%phi(NumberXNodes) * self%coeff_right
     ! initialize c-prime and d-prime
@@ -254,7 +256,9 @@ contains
             Ax(i) = self%b_tri(i)*self%phi_f(i+1) + self%c_tri(i) * self%phi_f(i+2) + self%a_tri(i-1) * self%phi_f(i)
         end do
         Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
-        d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 + arrayDiff(self%phi(1:NumberXNodes-1))/world%dx_dl(1:NumberXNodes-2) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
+        d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 &
+        + arrayDiff(self%phi(1:NumberXNodes-1))*2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1)) &
+        - arrayDiff(self%phi(2:))*2.0d0/(world%dx_dl(3:NumberXNodes) + world%dx_dl(2:NumberXNodes-1))
         d(1) = d(1) + self%phi(1) * self%coeff_left
         d(NumberXNodes-2) = d(NumberXNodes-2) + self%phi(NumberXNodes) * self%coeff_right
         !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(NumberXNodes-2))
@@ -270,9 +274,9 @@ contains
         logical :: future
         real(real64) :: res
         if (future) then
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f)**2 / world%dx_dl)
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f)**2 * 2.0d0 / (world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes)))
         else
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi)**2 / world%dx_dl)
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi)**2 * 2.0d0 / (world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes)))
         end if
     end function getTotalPE
 
@@ -349,6 +353,10 @@ contains
                 del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
+                    print *, "l_sub is:", l_sub
+                    print *, "v_sub is:", v_sub
+                    print *, "a is:", a
+                    print *, "In initial sub-step routine"
                     stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
                 end if
             end if
@@ -418,6 +426,7 @@ contains
                 del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
+                    print *, "In regular substep routine"
                     stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
                 end if
             end if
@@ -513,7 +522,6 @@ contains
                         ! Check boundary condition
                         if (MOD(l_sub, 1.0) == 0) then
                             ! On a node
-                
                             if (world%boundaryConditions(INT(l_sub)) > 0) then
                                 !check if particle has hit boundary, in which case delete
                                 !will eventually need to replace with subroutine which takes in boundary inputs from world
@@ -553,8 +561,6 @@ contains
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling outside domain!"
                 end if
-                particleList(j)%phaseSpace(2,i) = v_f
-                particleList(j)%phaseSpace(1,i) = l_f
             end do loopParticles
             
         end do loopSpecies
@@ -576,7 +582,6 @@ contains
         integer(int32) :: subStepNum, j, i, delIdx, l_cell
         logical :: delParticle
         delParticle = .false.
-        self%J = 0.0d0
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p
@@ -601,6 +606,7 @@ contains
                             if (world%boundaryConditions(INT(l_sub)) > 0) then
                                 !check if particle has hit boundary, in which case delete
                                 !will eventually need to replace with subroutine which takes in boundary inputs from world
+                                delParticle = .true.
                                 exit
                             else if (world%boundaryConditions(INT(l_sub)) == -3) then
                                 l_sub = ABS(l_sub - real(NumberXNodes)-1.0d0)
@@ -617,12 +623,10 @@ contains
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
                         call self%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed, maxIter, eps_r)
-                        call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t) 
                         timePassed = del_t
                         
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
-                        call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
                         timePassed = timePassed + del_tau
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
                             print *, l_f
@@ -638,6 +642,7 @@ contains
                     stop "Have particles travelling outside domain!"
                 end if
                 ! When not depositing, then updating particles, overwrite deleted indices
+                
                 if (delParticle) then
                     delIdx = delIdx + 1
                     delParticle = .false.
@@ -687,6 +692,7 @@ contains
         call self%depositJ(particleList, world, del_t, maxIter, eps_r)
         errorInitial = self%getError_tridiag_Ampere(world, del_t)
         do i = 1, maxIter
+            print *, "In iteration loop number:", i
             call self%solve_tridiag_Ampere(world, del_t)
             call self%depositJ(particleList, world, del_t, maxIter, eps_r)
             errorCurrent = self%getError_tridiag_Ampere(world, del_t)
