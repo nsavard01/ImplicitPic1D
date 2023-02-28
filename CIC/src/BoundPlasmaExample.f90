@@ -10,7 +10,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i, tclock1, tclock2, clock_rate
-    real(real64) :: elapsed_time
+    real(real64) :: elapsed_time, KE_i, KE_f, PE_i, PE_f
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
@@ -36,11 +36,20 @@ program BoundPlasmaExample
     print *, ""
     ! ! Generate solver object, and then solve for initial rho/potential
     call solver%solveInitialPotential(particleList, world)
+    inelasticEnergyLoss = 0.0d0
+    PE_i = SUM(particleList(1)%phaseSpace(2:4, 1:particleList(1)%N_p)) * m_e + SUM(particleList(2)%phaseSpace(2:4, 1:particleList(2)%N_p)) * particleList(2)%mass
+    KE_i = particleList(1)%getTotalKE() + particleList(2)%getTotalKE()
+    call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t*4.0d0, 15.8d0, 0.0d0, irand)
+    KE_f = particleList(1)%getTotalKE() + particleList(2)%getTotalKE()
+    PE_f = SUM(particleList(1)%phaseSpace(2:4, 1:particleList(1)%N_p)) * m_e + SUM(particleList(2)%phaseSpace(2:4, 1:particleList(2)%N_p)) * particleList(2)%mass
+    print *, "Difference in energy is:"
+    print *, ABS((inelasticEnergyLoss - (KE_i - KE_f)) / (KE_i - KE_f))
+    print *, "Difference in momentum is:"
+    print *, ABS((PE_i - PE_f)/PE_i)
     numTimeSteps = NINT(22.0d-6 / del_t)
-    call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
     stop
     call system_clock(tclock1)
-    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps)
+    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, 4)
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"

@@ -3,15 +3,15 @@ CC=mpiifort
 OPT= $(BASE)
 BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -unroll-aggressive -qmkl -mtune=skylake -heap-arrays 8192 -ffloat-store -xHost #-xCORE-AVX512 -mt_mpi 
 DEBUG= -traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
-OBJ= constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_simulation.o TwoStreamInstability.o
+OBJ= constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_simulation.o BoundPlasmaExample.o
 RM = rm -f
 
-all: cleanData clean TwoStreamInstability
+all: cleanData clean BoundPlasmaExample
 
-TwoStreamInstability: $(OBJ)
+BoundPlasmaExample: $(OBJ)
 	$(FC) $(DEBUG) -o $@ $(OBJ)
 
-TwoStreamInstability.o: TwoStreamInstability.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_simulation.o
+BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_simulation.o
 	$(FC) $(DEBUG) -c  -o $@ $<
 
 mod_simulation.o: mod_simulation.f90 mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
@@ -38,7 +38,7 @@ constants.o: constants.f90
 
 
 clean:
-	$(RM) TwoStreamInstability *.o *.mod
+	$(RM) BoundPlasmaExample *.o *.mod
 
 cleanData:
 	$(RM) ../Data/*.dat

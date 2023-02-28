@@ -62,6 +62,18 @@ contains
         end do
     end subroutine getRandom
 
+    subroutine get3DMaxwellianVelocity(V, mass, T, irand)
+        ! T in eV
+        real(real64), intent(in out) :: V(3)
+        real(real64), intent(in) :: mass, t
+        integer(int32), intent(in out) :: irand
+        real(real64) :: U(4)
+        call getRandom(U, irand)
+        V(1) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
+        V(2) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
+        V(3) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
+    end subroutine
+
     !------------------------ Array Functions -------------------------------------
 
     pure function arrayDiff(x) result(res)
