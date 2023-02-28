@@ -380,12 +380,6 @@ contains
                 SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
         close(22)
 
-
-
-
-
-
-
     end subroutine solveSimulationOnlyPotential
 
     subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, heatSkipSteps)

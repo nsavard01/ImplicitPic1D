@@ -55,7 +55,7 @@ module mod_potentialSolver
     interface potentialSolver
         module procedure :: potentialSolver_constructor
     end interface potentialSolver
-    !real(real64) :: v_final(100000) = 0.0, l_final(100000) = 0.0
+    
 contains
 
     type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
@@ -1391,7 +1391,6 @@ contains
         call self%depositJ(particleList, world, del_t)
         errorInitial = self%getError_tridiag_Ampere(world, del_t)
         do i = 1, maxIter
-            print *, "In iteration loop number:", i
             call self%solve_tridiag_Ampere(world, del_t)
             call self%depositJ(particleList, world, del_t)
             errorCurrent = self%getError_tridiag_Ampere(world, del_t)
@@ -1429,11 +1428,9 @@ contains
                 if (self%iterNumAdaptiveSteps > 3) then
                     stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
                 end if
-                print *, "currDel_t is:", currDel_t
                 call self%solveDivAmperePicard(particleList, world, currDel_t, maxIter, eps_r)   
             end do
             remainDel_t = remainDel_t - currDel_t 
-            print *, "remaining Del_t is:", remainDel_t 
             call self%solveDivAmperePicard(particleList, world, remainDel_t, maxIter, eps_r)
         end do
        

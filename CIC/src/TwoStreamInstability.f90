@@ -48,8 +48,8 @@ program TwoStreamInstability
     ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
     call solver%construct_diagMatrix_Ampere(world)
     numTimeSteps = NINT(10.0d0 * 2.0d0 * pi /getPlasmaFreq(n_ave)/del_t)
-    call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
-    !call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps, stepsAverage)
+    !call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
+    call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps)
             
 
 
