@@ -27,6 +27,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getEField
         procedure, public, pass(self) :: getEFieldLogical
+        procedure, public, pass(self) :: getEFieldPeriodic
         procedure, public, pass(self) :: getEFieldDirichlet
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: depositJ
@@ -37,11 +38,15 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: getDelTauInitialSubStep
         procedure, public, pass(self) :: getDelTauSubStep
+        procedure, public, pass(self) :: getDelTauInitialSubStepPeriodic
+        procedure, public, pass(self) :: getDelTauSubStepPeriodic
         procedure, public, pass(self) :: getDelTauInitialSubStepDirichlet
         procedure, public, pass(self) :: getDelTauSubStepDirichlet
         procedure, public, pass(self) :: picardIterParticles
         procedure, public, pass(self) :: analyticalParticleMover
+        procedure, public, pass(self) :: analyticalParticleMoverPeriodic
         procedure, public, pass(self) :: depositJSubStep
+        procedure, public, pass(self) :: depositJSubStepPeriodic
         procedure, public, pass(self) :: depositJSubStepDirichlet
         procedure, public, pass(self) :: moveParticles
         procedure, private, pass(self) :: construct_diagMatrix
@@ -75,6 +80,10 @@ contains
         self%chargeError = 0.0d0
         if (world%boundaryConditions(1) > 0) self%phi(1) = leftVoltage
         if (world%boundaryConditions(NumberXNodes) > 0) self%phi(NumberXNodes) = rightVoltage
+        if (world%boundaryConditions(1) == -3) then
+            self%phi(1) = leftVoltage
+            self%phi(NumberXNodes) = leftVoltage
+        end if
         self%phi_f = self%phi  
 
 
@@ -105,12 +114,16 @@ contains
                     ! Periodic
                     self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
-                    self % rho(l_center+INT(SIGN(1.0, d))) = self % rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    self % rho(l_center+INT(SIGN(1.0, d))) = self % rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
                     ! across periodic boundary
-                    self % rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = self % rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    self % rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = self % rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
                 end if
             end do
         end do
+        if (world%boundaryConditions(1) == -3) then
+            self%rho(1) = self%rho(1) + self%rho(NumberXNodes)
+            self%rho(NumberXNodes) = self%rho(1)
+        end if
         self % rho = self % rho / world%dx_dl
     end subroutine depositRho
 
@@ -304,6 +317,18 @@ contains
         (self%phi_f(l_cell-1) + self%phi(l_cell-1) - self%phi(l_cell) - self%phi_f(l_cell)) * (1.0d0 - d)/2.0d0)/world%dx_dl(l_cell)
     end function getEField
 
+    pure function getEFieldPeriodic(self, l_p, l_cell, world) result(EField)
+        !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: l_p
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: EField, d
+        d = l_p - real(l_cell, kind = real64) + 0.5d0
+        EField = ((self%phi_f(1) + self%phi(1) - self%phi(2) - self%phi_f(2)) * d/2.0d0 +  &
+        (self%phi_f(NumberXNodes-1) + self%phi(NumberXNodes-1) - self%phi(1) - self%phi_f(1)) * (1.0d0 - d)/2.0d0)/world%dx_dl(l_cell)
+    end function getEFieldPeriodic
+
     pure function getEFieldLogical(self, l_p) result(EField)
         !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
         class(potentialSolver), intent(in) :: self
@@ -477,6 +502,156 @@ contains
 
     end subroutine getDelTauSubstep
 
+    subroutine getDelTauInitialSubStepPeriodic(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_awayV, a, c
+        real(real64), intent(in) :: del_t
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau_tmp
+        del_tau = del_t
+        a = (part%q / part%mass / 2.0d0) * self%getEFieldPeriodic((l_sub + l_alongV)/2.0d0, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if ((a/=0.0d0) .and. (v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
+            c = (l_sub - l_alongV) * world%dx_dl(l_cell)
+            if (a*v_sub > 0) then
+                ! velocity and acceleration in same direction
+                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    print *, "l_sub is:", l_sub
+                    print *, "v_sub is:", v_sub
+                    print *, "a is:", a
+                    print *, "In initial sub-step routine"
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
+            end if
+            if (del_tau >= del_t) then
+                ! boundary opposite direction of v
+                a = (part%q / part%mass / 2.0d0) * self%getEFieldPeriodic((l_sub + l_awayV)/2.0d0, l_cell, world)
+                if (a*v_sub < 0) then
+                    c = (l_sub - l_awayV) * world%dx_dl(l_cell)
+                    del_tau_tmp = (ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                    if (del_tau_tmp < del_tau) then
+                        ! If del_tau isn't reduced, then want to keep saved l_f since might make picard iteration more stable as initial condition
+                        del_tau = del_tau_tmp
+                        l_f = l_awayV
+                    end if
+                    if (del_tau <= 0) then
+                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                    end if
+                end if  
+            end if
+        else if ((a == 0.0) .and. (v_sub /= 0.0)) then
+            !Free particle drift
+            del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
+            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for a = 0"
+            end if
+
+        else
+            ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
+            if (world%boundaryConditions(l_cell) == 0) then
+                l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, a)
+            else if (world%boundaryConditions(l_cell) > 0) then
+                !Dirichlet
+                l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, a))/2.0d0
+            else if (world%boundaryConditions(l_cell) == -3) then
+                l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, a)
+            end if
+            c = (l_sub - l_alongV) * world%dx_dl(l_cell)
+            del_tau = SQRT(-c/a)
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for v = 0"
+            end if
+        end if
+
+    end subroutine getDelTauInitialSubstepPeriodic
+
+    subroutine getDelTauSubStepPeriodic(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, a, c
+        real(real64), intent(in) :: del_t, timePassed
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau_tmp
+        del_tau = del_t - timePassed
+        ! get index cell where field and dx_dl is evaluated
+        a = (part%q / part%mass / 2.0d0) * self%getEFieldPeriodic((l_sub + l_alongV)/2.0d0, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
+            c = (l_sub - l_alongV) * world%dx_dl(l_cell)
+            l_f = l_alongV
+            if (a*v_sub > 0) then
+                ! velocity and acceleration in same direction
+                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    print *, "In regular substep routine"
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
+            end if
+            if (del_tau >= del_t-timePassed) then
+                ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
+                if (ABS((del_t - timePassed) *v_sub/4.0d0/world%dx_dl(l_cell)) < 1.0) then
+                    a = (part%q / part%mass / 2.0d0) * self%getEFieldPeriodic(l_sub + (del_t - timePassed) *v_sub/8.0d0/world%dx_dl(l_cell), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                        end if
+                    end if
+                end if
+                ! try for minimum distance particle can go
+                if (del_tau >= del_t - timePassed) then
+                    a = (part%q / part%mass / 2.0d0) * self%getEFieldPeriodic(l_sub + SIGN(1.0d-6, v_sub), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v, second try close to boundary"
+                        end if
+                    end if
+                end if
+            end if
+        else
+            !Free particle drift
+            del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
+            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for a = 0"
+            end if
+        end if
+
+    end subroutine getDelTauSubstepPeriodic
+
     subroutine getDelTauInitialSubStepDirichlet(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, l_awayV, l_alongV, l_cell, a, c)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
@@ -623,6 +798,37 @@ contains
 
     end subroutine analyticalParticleMover
 
+    subroutine analyticalParticleMoverPeriodic(self, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
+        real(real64), intent(in out) :: l_f, v_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
+        dx = world%dx_dl(l_cell)
+        del_tau = del_t - timePassed
+        del_tau_sqr = del_tau**2
+        real_l_cell = real(l_cell, kind = real64)
+        l_f = (-4.0d0*del_tau**2 *real_l_cell*self%phi(1)*q + 2.0d0*del_tau**2 *real_l_cell *self%phi(2)*q + & 
+        2.0d0* del_tau_sqr *real_l_cell*self%phi(NumberXNodes-1)*q - 4.0d0*del_tau**2 *real_l_cell*self%phi_f(1)*q + &
+        2.0d0*del_tau_sqr *real_l_cell*self%phi_f(2)*q + 2.0d0*del_tau_sqr *real_l_cell*self%phi_f(NumberXNodes-1)*q + &
+        2.0d0*del_tau_sqr  *l_sub*self%phi(1)*q - del_tau_sqr *l_sub*self%phi(2)*q - &
+        del_tau_sqr *l_sub*self%phi(NumberXNodes-1)*q + 2.0d0*del_tau_sqr *l_sub*self%phi_f(1)*q - &
+        del_tau_sqr *l_sub*self%phi_f(2)*q - del_tau_sqr *l_sub*self%phi_f(NumberXNodes-1)*q - &
+        del_tau_sqr *self%phi(2)*q + del_tau_sqr *self%phi(NumberXNodes-1)*q - del_tau_sqr *self%phi_f(2)*q + &
+        del_tau_sqr *self%phi_f(NumberXNodes-1)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
+        8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *self%phi(1)*q + del_tau_sqr *self%phi(2)*q + &
+        del_tau_sqr *self%phi(NumberXNodes-1)*q - 2.0d0*del_tau_sqr *self%phi_f(1)*q + del_tau_sqr *self%phi_f(2)*q + &
+        del_tau_sqr *self%phi_f(NumberXNodes-1)*q + 8.0d0*mass*dx**2)
+        v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
+        if (NINT(l_f) /= l_cell) then
+            print *, "Have final l_f outside initial cell"
+            print *, "particle charge is:", q
+            stop 
+        end if
+
+    end subroutine analyticalParticleMoverPeriodic
+
     subroutine picardIterParticles(self, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed, maxIter, eps_r, numberPicardIterations)
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
@@ -666,36 +872,6 @@ contains
             stop 
         end if
         numberPicardIterations = i - 1
-        ! if (numberPicardIterations == maxIter) then
-            
-        !     print *, "particle charge is:", q
-        !     print *, "error is:", ABS(l_f - l_sub - (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 )
-        !     print *, "initial error is:", ABS(l_sub - l_sub - (v_sub + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 )
-        !     print *, "del_t remaining is:", del_t - timePassed
-        !     print *, "l_sub is:", l_sub
-        !     print *, "l_f is:", l_f
-        !     print *, "v_sub is:", v_sub
-        !     print *, "v_f is:", v_f
-        !     print *, "a direction is:", (q/mass/2.0d0) * self%getEField((l_sub + l_f)/2.0d0, l_cell, world)
-        !     print *, "Undergoing another iteration:"
-        !     print *, "---------------"
-        !     l_f = (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 + l_sub
-        !     v_f = v_sub + (q/mass) * self%getEField((l_sub + l_f)/2.0d0, l_cell, world) * (del_t - timePassed)
-        !     print *, "next l_f is:", l_f
-        !     print *, "next v_f is:", v_f
-        !     print *, "next a is:", (q/mass/2.0d0) * self%getEField((l_sub + l_f)/2.0d0, l_cell, world)
-        !     print *, "Undergoing another iteration:"
-        !     print *, "---------------"
-        !     l_f = (v_f + v_sub) * (del_t - timePassed) / world%dx_dl(l_cell) / 2.0d0 + l_sub
-        !     v_f = v_sub + (q/mass) * self%getEField((l_sub + l_f)/2.0d0, l_cell, world) * (del_t - timePassed)
-        !     print *, "next l_f is:", l_f
-        !     print *, "next v_f is:", v_f
-        !     print *, "next a is:", (q/mass/2.0d0) * self%getEField((l_sub + l_f)/2.0d0, l_cell, world)
-        !     print *, "del_tau should be:", (ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*((q/mass/2.0d0) * self%getEField((l_sub + 19.501d0)/2.0d0, l_cell, world))*(l_sub - 19.501d0)*world%dx_dl(l_cell)))/2.0d0/ABS((q/mass/2.0d0) * self%getEField((l_sub + 19.501d0)/2.0d0, l_cell, world))
-        !     !print *, "a for other side is:", (q/mass/2.0d0) * self%getEField((l_sub + 37.5d0)/2.0d0, l_cell, world)
-        !     print *, "Final l_f is not inside the proper cell in picard particle mover!"
-        !     stop "Particles have undergone maximum iterations in picard"
-        ! end if
 
     end subroutine picardIterParticles
 
@@ -710,6 +886,18 @@ contains
         self%J(l_cell) = self%J(l_cell) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
 
     end subroutine depositJSubStep
+
+    subroutine depositJSubStepPeriodic(self, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: d
+        d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
+        self%J(NumberXNodes-1) = self%J(NumberXNodes-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
+        self%J(1) = self%J(1) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
+
+    end subroutine depositJSubStepPeriodic
 
     subroutine depositJSubStepDirichlet(self, world, q, w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t)
         class(potentialSolver), intent(in out) :: self
@@ -750,7 +938,6 @@ contains
                             l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
                             call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                             if (del_tau >= del_t-timePassed) then
-                                
                                 call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)    
                                 call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t-timePassed, del_t) 
                                 if (NINT(l_f) /= NINT(l_sub)) then
@@ -799,11 +986,41 @@ contains
                                 l_sub = l_f
                                 v_sub = v_f
                             end if
-                        else if (world%boundaryConditions(l_cell) > 0) then
+                        else if (world%boundaryConditions(l_cell) == -3) then
                             l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                             l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                            print *, "Not yet ready for periodic boundary conditions"
-                            stop
+                            call self%getDelTauInitialSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                            if (del_tau >= del_t-timePassed) then
+                                call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)    
+                                call self%depositJSubStepPeriodic(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t-timePassed, del_t) 
+                                if (NINT(l_f) /= NINT(l_sub)) then
+                                    print *, "After initial periodic substep, l_f is not in correct cell"
+                                    stop
+                                end if
+                                if (l_f < 1) then
+                                    l_f = NumberXNodes + (l_f - l_cell)
+                                else if (l_f > NumberXNodes) then
+                                    l_f = l_f - l_cell + 1
+                                end if
+                                timePassed = del_t  
+                            else
+                                v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                                call self%depositJSubStepPeriodic(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+                                if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
+                                    print *, "l_sub is:", l_sub
+                                    print *, "l_f is:", l_f
+                                    stop "l_f is not correct boundary after initial periodic substep"
+                                end if
+                                if (l_f < 1) then
+                                    l_f = NumberXNodes + (l_f - l_cell)
+                                else if (l_f > NumberXNodes) then
+                                    l_f = l_f - l_cell + 1
+                                end if
+                                timePassed = timePassed + del_tau
+                                ! now final position/velocity becomes next starting position/velocity
+                                l_sub = l_f
+                                v_sub = v_f
+                            end if
                         end if
                     else
                         ! Further sub-steps, particles start on grid nodes
@@ -813,10 +1030,6 @@ contains
                             if (world%boundaryConditions(INT(l_sub)) > 0) then
                                 !check if particle has hit boundary, in which case exit while loop
                                 exit
-                            else if (world%boundaryConditions(INT(l_sub)) == -3) then
-                                print *, "Not ready for periodic conditions yet"
-                                l_sub = ABS(l_sub - real(NumberXNodes)-1.0d0)
-                                stop
                             end if
                         else
                             l_cell = NINT(l_sub + SIGN(0.1d0, v_sub))
@@ -874,8 +1087,39 @@ contains
                                     v_sub = v_f
                                 end if
                             else if (world%boundaryConditions(l_cell) == -3) then
-                                print *, "Not ready for periodic boundary yet!"
-                                stop
+                                l_alongV = l_sub + SIGN(1.0d0, v_sub)
+                                call self%getDelTauSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                                if (del_tau >= del_t-timePassed) then
+                                    ! Add directly to J with no substep
+                                    call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                                    call self%depositJSubStepPeriodic(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t)
+                                    if (NINT(l_f) /= l_cell) then
+                                        print *, "After final periodic substep, l_f is not in correct cell"
+                                        stop
+                                    end if
+                                    if (l_f < 1) then
+                                        l_f = NumberXNodes + (l_f - l_cell)
+                                    else if (l_f > NumberXNodes) then
+                                        l_f = l_f - l_cell + 1
+                                    end if
+                                    timePassed = del_t  
+                                else
+                                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                                    call self%depositJSubStepPeriodic(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
+                                    if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
+                                        print *, l_f
+                                        stop "l_f is not half integer after ogoing periodic subStep or it is too far away"
+                                    end if
+                                    if (l_f < 1) then
+                                        l_f = NumberXNodes + (l_f - l_cell)
+                                    else if (l_f > NumberXNodes) then
+                                        l_f = l_f - l_cell + 1
+                                    end if
+                                    timePassed = timePassed + del_tau
+                                    ! now final position/velocity becomes next starting position/velocity
+                                    l_sub = l_f
+                                    v_sub = v_f
+                                end if
                             end if 
                         end if      
                     end if
@@ -964,11 +1208,39 @@ contains
                                 l_sub = l_f
                                 v_sub = v_f
                             end if
-                        else if (world%boundaryConditions(l_cell) > 0) then
+                        else if (world%boundaryConditions(l_cell) == -3) then
                             l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                             l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                            print *, "Not yet ready for periodic boundary conditions"
-                            stop
+                            call self%getDelTauInitialSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                            if (del_tau >= del_t-timePassed) then
+                                call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                                if (NINT(l_f) /= NINT(l_sub)) then
+                                    print *, "After initial periodic substep, l_f is not in correct cell"
+                                    stop
+                                end if
+                                if (l_f < 1) then
+                                    l_f = NumberXNodes + (l_f - l_cell)
+                                else if (l_f > NumberXNodes) then
+                                    l_f = l_f - l_cell + 1
+                                end if
+                                timePassed = del_t  
+                            else
+                                v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                                if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
+                                    print *, "l_sub is:", l_sub
+                                    print *, "l_f is:", l_f
+                                    stop "l_f is not correct boundary after initial periodic substep"
+                                end if
+                                if (l_f < 1) then
+                                    l_f = NumberXNodes + (l_f - l_cell)
+                                else if (l_f > NumberXNodes) then
+                                    l_f = l_f - l_cell + 1
+                                end if
+                                timePassed = timePassed + del_tau
+                                ! now final position/velocity becomes next starting position/velocity
+                                l_sub = l_f
+                                v_sub = v_f
+                            end if
                         end if
                     else
                         ! Further sub-steps, particles start on grid nodes
@@ -979,10 +1251,6 @@ contains
                                 !check if particle has hit boundary, in which case exit while loop
                                 delParticle = .true.
                                 exit
-                            else if (world%boundaryConditions(INT(l_sub)) == -3) then
-                                print *, "Not ready for periodic conditions yet"
-                                l_sub = ABS(l_sub - real(NumberXNodes)-1.0d0)
-                                stop
                             end if
                         else
                             l_cell = NINT(l_sub + SIGN(0.1d0, v_sub))
@@ -1033,8 +1301,37 @@ contains
                                     v_sub = v_f
                                 end if
                             else if (world%boundaryConditions(l_cell) == -3) then
-                                print *, "Not ready for periodic boundary yet!"
-                                stop
+                                l_alongV = l_sub + SIGN(1.0d0, v_sub)
+                                call self%getDelTauSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                                if (del_tau >= del_t-timePassed) then
+                                    ! Add directly to J with no substep
+                                    call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                                    if (NINT(l_f) /= l_cell) then
+                                        print *, "After final periodic substep, l_f is not in correct cell"
+                                        stop
+                                    end if
+                                    if (l_f < 1) then
+                                        l_f = NumberXNodes + (l_f - l_cell)
+                                    else if (l_f > NumberXNodes) then
+                                        l_f = l_f - l_cell + 1
+                                    end if
+                                    timePassed = del_t  
+                                else
+                                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                                    if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
+                                        print *, l_f
+                                        stop "l_f is not half integer after ogoing periodic subStep or it is too far away"
+                                    end if
+                                    if (l_f < 1) then
+                                        l_f = NumberXNodes + (l_f - l_cell)
+                                    else if (l_f > NumberXNodes) then
+                                        l_f = l_f - l_cell + 1
+                                    end if
+                                    timePassed = timePassed + del_tau
+                                    ! now final position/velocity becomes next starting position/velocity
+                                    l_sub = l_f
+                                    v_sub = v_f
+                                end if
                             end if 
                         end if      
                     end if

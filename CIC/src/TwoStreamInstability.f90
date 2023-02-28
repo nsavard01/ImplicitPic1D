@@ -21,10 +21,10 @@ program TwoStreamInstability
     ! create the world the particles live in
     call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver)
     do i = 1, numberChargedParticles
-        call particleList(i) % initialize_randUniform(world%grid(NumberXNodes) - world%grid(1), world%dx_dl, irand)
+        call particleList(i) % initialize_randUniform(world, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
     end do
-
+    
     print *, "Calulated values:"
     print *, "w_p is:", particleList(1)%w_p
     print *, "Debye length is:", getDebyeLength(particleList(1)%getTotalKE()*2.0d0/3.0d0, n_ave)
@@ -43,13 +43,13 @@ program TwoStreamInstability
         end if
     end do
     call solver%depositRho(particleList, world)
-  
     solver%rho = solver%rho + n_ave*e
     call solver%solve_tridiag_Poisson()
     ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
     call solver%construct_diagMatrix_Ampere(world)
     numTimeSteps = NINT(10.0d0 * 2.0d0 * pi /getPlasmaFreq(n_ave)/del_t)
-    call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps, stepsAverage)
+    call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
+    !call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps, stepsAverage)
             
 
 

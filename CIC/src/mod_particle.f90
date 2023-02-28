@@ -88,14 +88,17 @@ contains
                 self%phaseSpace(1, idxLower:idxLower + numInCell - 1) = self%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i - 0.5d0
                 numPerCell(i) = numInCell
             end if
-            idxLower = idxLower + numInCell
+            if (idxLower + numInCell> self % N_P + 1) then
+                print *, "numInCell is:", numInCell
+                print *, "on", i, "cell"
+                stop "You are putting too many particles for the uniform particle case"
+            end if  
             if (numInCell < 1) then
                 print *, "You are placing 0 particles in a cell."
                 print *, "Either the cell size is very small with respect to the domain, or too few particles."
             end if
-            if (idxLower + numInCell > self % N_P + 1) then
-                stop "You are putting too many particles for the uniform particle case"
-            end if  
+            idxLower = idxLower + numInCell
+            
         end do
         if (idxLower < self%N_p + 1) then
             call getRandom(self%phaseSpace(1, idxLower:self%N_p), irand)

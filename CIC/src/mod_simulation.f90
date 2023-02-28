@@ -177,12 +177,16 @@ contains
                     ! Periodic
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
-                    rho(l_center+INT(SIGN(1.0, d))) = rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    rho(l_center+INT(SIGN(1.0, d))) = rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
                     ! across periodic boundary
-                    rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = rho(MOD(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
                 end if
             end do
         end do
+        if (world%boundaryConditions(1) == -3) then
+            rho(1) = rho(1) + rho(NumberXNodes)
+            rho(NumberXNodes) = rho(1)
+        end if
         rho = rho / world%dx_dl
     end subroutine depositRhoDiag
 
@@ -282,8 +286,12 @@ contains
         call depositRhoDiag(rho_f, particleList, world)
         solver%chargeError = 0.0d0
         j = 0
+        if (world%boundaryConditions(1) == -3) then
+            j = j + 1
+            solver%chargeError = solver%chargeError + (1 + (solver%J(1) - solver%J(NumberXNodes-1)) *del_t/ world%dx_dl(1)/(rho_f(1) - solver%rho(1)))**2
+        end if
         do k = 1, NumberXNodes -2
-            if ((solver%J(k + 1) - solver%J(k) /= 0) .and. (solver%rho(k+1) /= 0)) then
+            if ((solver%rho(k+1) /= 0)) then
                 solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%dx_dl(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
                 j = j + 1
             end if
