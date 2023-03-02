@@ -55,7 +55,7 @@ module mod_potentialSolver
     interface potentialSolver
         module procedure :: potentialSolver_constructor
     end interface potentialSolver
-    
+    real(real64) :: l_f_array(20000, 2)
 contains
 
     type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
@@ -195,15 +195,8 @@ contains
             rho(l_center - 1) = rho(l_center - 1) + q * w_p * 0.5d0 * (0.5d0 - d)**2
         else if (world%boundaryConditions(l_center) > 0) then
             !Dirichlet
-            if (l_center == 1) then
-                rho(1) = rho(2) + q * w_p * (1.0d0-ABS(d))
-                rho(2) = rho(2) + q * w_p * ABS(d) 
-            else
-                rho(NumberXNodes) = rho(NumberXNodes) + q * w_p * (1.0d0-ABS(d))
-                rho(NumberXNodes-1) = rho(NumberXNodes-1) + q * w_p * ABS(d) 
-            end if
-            ! rho(l_center) = rho(l_center) + q * w_p * (1.0d0-ABS(d))
-            ! rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + q * w_p * ABS(d)
+            rho(l_center) = rho(l_center) + q * w_p * (1.0d0-ABS(d))
+            rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + q * w_p * ABS(d)
         
         else if (world%boundaryConditions(l_center) == -3) then
             ! Periodic
@@ -216,12 +209,12 @@ contains
         rho = rho / world%dx_dl
     end function singleRho
 
-    pure function singleJ(l_half, v_half, del_tau, del_t, w_p, q, world) result(J)
+    subroutine singleJ(J, l_half, v_half, del_tau, del_t, w_p, q, world)
         ! for diagnostic in substep routine
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: l_half, v_half, w_p, q, del_tau, del_t
-        real(real64) :: J(NumberXNodes-1), d
-        J = 0.0d0
+        real(real64), intent(in out) :: J(NumberXNodes-1)
+        real(real64) :: d
         if (world%boundaryConditions(NINT(l_half)) == 0) then
             d = (l_half) - REAL(NINT(l_half), kind = real64) + 0.5d0
             J(NINT(l_half)-1) = J(NINT(l_half)-1) + (1.0d0 - d) * w_p * q * v_half*del_tau/world%dx_dl(NINT(l_half))/del_t
@@ -229,7 +222,7 @@ contains
         else if (world%boundaryConditions(NINT(l_half)) > 0) then
             J(INT(l_half)) = J(INT(l_half)) + w_p * q * v_half*del_tau/world%dx_dl(NINT(l_half))/del_t
         end if  
-    end function singleJ
+    end subroutine singleJ
 
     subroutine solve_tridiag_Ampere(self, world, del_t)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
@@ -826,7 +819,6 @@ contains
             print *, "particle charge is:", q
             stop 
         end if
-
     end subroutine analyticalParticleMoverPeriodic
 
     subroutine picardIterParticles(self, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed, maxIter, eps_r, numberPicardIterations)
@@ -838,7 +830,6 @@ contains
         integer(int32), intent(in out) :: numberPicardIterations
         integer(int32) :: i
         real(real64) :: l_f_previous
-        
         do i = 1, maxIter
             l_f_previous = l_f
             v_f = v_sub + (q/mass) * self%getEField((l_sub + l_f)/2.0d0, l_cell, world) * (del_t - timePassed)
@@ -872,7 +863,6 @@ contains
             stop 
         end if
         numberPicardIterations = i - 1
-
     end subroutine picardIterParticles
 
     subroutine depositJSubStep(self, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
@@ -884,7 +874,6 @@ contains
         d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
         self%J(l_cell-1) = self%J(l_cell-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
         self%J(l_cell) = self%J(l_cell) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
-
     end subroutine depositJSubStep
 
     subroutine depositJSubStepPeriodic(self, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
@@ -919,6 +908,7 @@ contains
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
         integer(int32) :: subStepNum, j, i, delIdx, l_cell
+        l_f_array = 0.0d0
         self%J = 0.0d0
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
@@ -938,7 +928,7 @@ contains
                             l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
                             call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                             if (del_tau >= del_t-timePassed) then
-                                call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)    
+                                call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                                 call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t-timePassed, del_t) 
                                 if (NINT(l_f) /= NINT(l_sub)) then
                                     print *, "After initial domain substep, l_f is not in correct cell"
@@ -1128,6 +1118,7 @@ contains
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling outside domain!"
                 end if
+                l_f_array(i, j) = l_f
             end do loopParticles
             
         end do loopSpecies
@@ -1259,7 +1250,7 @@ contains
                                 call self%getDelTauSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
                                 if (del_tau >= del_t-timePassed) then
                                     ! Add directly to J with no substep
-                                    call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed) 
+                                    call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                                     timePassed = del_t  
                                 else
                                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub 
@@ -1337,6 +1328,16 @@ contains
                     end if
                     subStepNum = subStepNum + 1
                 end do
+                if (ABS(l_f - l_f_array(i,j)) > 1.0d-8) then
+                    print *, "There's an issue"
+                    print *, "particle type is:", j
+                    print *, "particle number is:", i
+                    print *, "l_i is:", particleList(j)%phaseSpace(1,i)
+                    print *, "v_i is:", particleList(j)%phaseSpace(2,i)
+                    print *, "l_f is:", l_f
+                    print *, "previous l_f was:", l_f_array(i,j)
+                end if
+                
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling outside domain!"
                 end if
@@ -1359,7 +1360,6 @@ contains
             particleList(j)%phaseSpace(1, particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
             particleList(j)%phaseSpace(2:4,particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
             particleList(j)%N_p = particleList(j)%N_p - delIdx
-            
         end do loopSpecies
     end subroutine moveParticles
 
@@ -1403,8 +1403,6 @@ contains
             end if
         end do
         self%iterNumPicard = i-1
-        
-        
 
     end subroutine solveDivAmperePicard
 
@@ -1420,6 +1418,7 @@ contains
         call self%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
         remainDel_t = del_t  
         do while (self%iterNumPicard == maxIter)
+            print *, "Reducing time step adaptively"
             self%iterNumAdaptiveSteps = 0
             currDel_t = remainDel_t
             do while (self%iterNumPicard == maxIter)

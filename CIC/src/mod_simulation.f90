@@ -163,15 +163,8 @@ contains
                     rho(l_center - 1) = rho(l_center - 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
                 else if (world%boundaryConditions(l_center) > 0) then
                     !Dirichlet
-                    if (l_center == 1) then
-                        rho(1) = rho(1) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
-                        rho(2) = rho(2) + particleList(i)%q * particleList(i)%w_p * ABS(d) 
-                    else
-                        rho(NumberXNodes) = rho(NumberXNodes) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
-                        rho(NumberXNodes-1) = rho(NumberXNodes-1) + particleList(i)%q * particleList(i)%w_p * ABS(d) 
-                    end if
-                    ! rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
-                    ! rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
+                    rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
+                    rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
                 
                 else if (world%boundaryConditions(l_center) == -3) then
                     ! Periodic
@@ -202,21 +195,21 @@ contains
                 d = particleList(i)%phaseSpace(1, j) - l_center
                 if (world%boundaryConditions(l_center) == 0) then
                     ! Inside domain
-                    densities(l_center, i) = densities(l_center, i) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
-                    densities(l_center + 1, i) = densities(l_center + 1, i) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
-                    densities(l_center - 1, i) = densities(l_center - 1, i) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (0.75 - d**2)
+                    densities(l_center + 1, i) = densities(l_center + 1, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    densities(l_center - 1, i) = densities(l_center - 1, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
                 else if (world%boundaryConditions(l_center) > 0) then
                     !Dirichlet
-                    densities(l_center, i) = densities(l_center, i) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
-                    densities(l_center + INT(SIGN(1.0, d)), i) = densities(l_center + INT(SIGN(1.0, d)), i) + particleList(i)%q * particleList(i)%w_p * ABS(d)
+                    densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (1.0d0-ABS(d))
+                    densities(l_center + INT(SIGN(1.0, d)), i) = densities(l_center + INT(SIGN(1.0, d)), i) + particleList(i)%w_p * ABS(d)
                 
                 else if (world%boundaryConditions(l_center) == -3) then
                     ! Periodic
-                    densities(l_center, i) = densities(l_center, i) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                    densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
-                    densities(l_center+INT(SIGN(1.0, d)), i) = densities(l_center+INT(SIGN(1.0, d)), i) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
+                    densities(l_center+INT(SIGN(1.0, d)), i) = densities(l_center+INT(SIGN(1.0, d)), i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
                     ! across periodic boundary
-                    densities(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), i) = densities(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), i) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
+                    densities(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), i) = densities(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
                 end if
             end do
         end do
@@ -501,7 +494,7 @@ contains
                 do j=1, numberChargedParticles
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
                 end do
-                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss*e/del_t, &
+                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
                 SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
                 CurrentDiagStep = CurrentDiagStep + 1
             end if
@@ -527,7 +520,7 @@ contains
             print *, "Charge error is:", solver%chargeError
             stop "Total charge not conserved over time step in sub-step procedure!"
         end if
-        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.025d0, irand)
+        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -536,7 +529,7 @@ contains
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(CurrentDiagStep)
         end do
-        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss*e/del_t, &
+        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
         SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
         CurrentDiagStep = CurrentDiagStep + 1
 
@@ -567,7 +560,7 @@ contains
         densities = 0.0d0
         do i =1, stepsAverage
             call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
-            call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.025d0, irand)
+            call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             if (MOD(i, heatSkipSteps) == 0) then
@@ -577,7 +570,7 @@ contains
         densities = densities/stepsAverage
         call writeParticleDensity(densities, particleList, world, 0, .true.) 
         call writePhi(phi_average/stepsAverage, 0, .true.)
-        write(22,"((I4, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss*e/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
+        write(22,"((I4, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
         close(22)
         print *, "Electron average wall loss:", solver%particleChargeLoss(1)/del_t/stepsAverage
         print *, "Ion average wall loss:", solver%particleChargeLoss(2)/del_t/stepsAverage
