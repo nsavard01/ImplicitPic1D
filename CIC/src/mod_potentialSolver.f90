@@ -1157,7 +1157,7 @@ contains
                             l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
                             call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                             if (del_tau >= del_t-timePassed) then
-                                call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                                call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed) 
                                 if (NINT(l_f) /= NINT(l_sub)) then
                                     print *, "After initial domain substep, l_f is not in correct cell"
                                     stop
@@ -1167,8 +1167,9 @@ contains
                                 v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
                                 timePassed = timePassed + del_tau
                                 if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
-                                    print *, l_f
-                                    stop "l_f is not correct boundary after initial diriclet substep"
+                                    print *, "l_sub is:", l_sub
+                                    print *, "l_f is:", l_f
+                                    stop "l_f is not correct boundary after initial domain substep"
                                 end if
                                 ! now final position/velocity becomes next starting position/velocity
                                 l_sub = l_f
@@ -1192,8 +1193,9 @@ contains
                                 v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
                                 timePassed = timePassed + del_tau
                                 if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
-                                    print *, l_f
-                                    stop "l_f is not correct boundary after initial diriclet substep"
+                                    print *, "l_sub is:", l_sub
+                                    print *, "l_f is:", l_f
+                                    stop "l_f is not correct boundary after initial dirichlet domain substep"
                                 end if
                                 ! now final position/velocity becomes next starting position/velocity
                                 l_sub = l_f
@@ -1204,7 +1206,7 @@ contains
                             l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
                             call self%getDelTauInitialSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                             if (del_tau >= del_t-timePassed) then
-                                call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                                call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed) 
                                 if (NINT(l_f) /= NINT(l_sub)) then
                                     print *, "After initial periodic substep, l_f is not in correct cell"
                                     stop
@@ -1251,9 +1253,13 @@ contains
                                 if (del_tau >= del_t-timePassed) then
                                     ! Add directly to J with no substep
                                     call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                                    if (NINT(l_f) /= l_cell) then
+                                        print *, "After ongoing substep, l_f is not in correct cell"
+                                        stop
+                                    end if
                                     timePassed = del_t  
                                 else
-                                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub 
+                                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
                                     timePassed = timePassed + del_tau
                                     if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
                                         print *, l_f
@@ -1269,22 +1275,21 @@ contains
                                 call self%getDelTauSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_cell, a, c)
                                 if (del_tau >= del_t-timePassed) then
                                     ! Add directly to J with no substep
-                                    l_f = v_sub * (del_t-timePassed) / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * (del_t-timePassed)**2 + l_sub
+                                    l_f = v_sub * (del_t-timePassed) / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * (del_t - timePassed)**2 + l_sub
                                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / (del_t - timePassed) - v_sub
                                     if (NINT(l_f) /= l_cell) then
-                                        print *, "After ongoing Dirichlet substep, l_f is not in correct cell"
+                                        print *, "After ongoing Dirichlet last substep, l_f is not in correct cell"
                                         stop
                                     end if
                                     timePassed = del_t  
                                 else
                                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
-                                    timePassed = timePassed + del_tau
                                     if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 0.5d0)) then
                                         print *, "l_sub is:", l_sub
                                         print *, "l_f is:", l_f
+                                        print *, "a is:", a 
                                         print *, "v_sub is:", v_sub
                                         print *, "v_f is:", v_f
-                                        print *, "Issue in only mover, with dirichlet substep"
                                         stop "l_f is not correct boundary after ongoing dirichlet substep"
                                     end if
                                     ! now final position/velocity becomes next starting position/velocity
@@ -1328,15 +1333,6 @@ contains
                     end if
                     subStepNum = subStepNum + 1
                 end do
-                if (ABS(l_f - l_f_array(i,j)) > 1.0d-8) then
-                    print *, "There's an issue"
-                    print *, "particle type is:", j
-                    print *, "particle number is:", i
-                    print *, "l_i is:", particleList(j)%phaseSpace(1,i)
-                    print *, "v_i is:", particleList(j)%phaseSpace(2,i)
-                    print *, "l_f is:", l_f
-                    print *, "previous l_f was:", l_f_array(i,j)
-                end if
                 
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling outside domain!"
@@ -1356,9 +1352,6 @@ contains
                 end if
 
             end do loopParticles
-    
-            particleList(j)%phaseSpace(1, particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
-            particleList(j)%phaseSpace(2:4,particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
             particleList(j)%N_p = particleList(j)%N_p - delIdx
         end do loopSpecies
     end subroutine moveParticles
