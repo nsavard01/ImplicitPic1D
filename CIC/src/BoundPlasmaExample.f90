@@ -37,7 +37,7 @@ program BoundPlasmaExample
     ! ! Generate solver object, and then solve for initial rho/potential
     call solver%solveInitialPotential(particleList, world)
     numTimeSteps = NINT(22.0d-6 / del_t/100.0)
-    do i = 1, 20
+    do i = 1, numTimeSteps
         print *, "i is:", i
         call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
 
@@ -54,10 +54,6 @@ program BoundPlasmaExample
         end if
         
     end do
-    print *, "Number of electrons lost is:", (10000 - particleList(1)%N_p) * particleList(1)%q * particleList(1)%w_p
-    print *, "Number of ions is:", (10000 - particleList(2)%N_p) * particleList(2)%q * particleList(2)%w_p
-    print *, "Number of electrons lost should be:", solver%particleChargeLoss(1)
-    print *, "Number of ions lost should be:", solver%particleChargeLoss(2)
     stop
     call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, 4)

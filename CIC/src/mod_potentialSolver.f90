@@ -55,7 +55,7 @@ module mod_potentialSolver
     interface potentialSolver
         module procedure :: potentialSolver_constructor
     end interface potentialSolver
-    real(real64) :: l_f_array(20000, 2)
+   
 contains
 
     type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
@@ -908,7 +908,6 @@ contains
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
         integer(int32) :: subStepNum, j, i, delIdx, l_cell
-        l_f_array = 0.0d0
         self%J = 0.0d0
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
@@ -1118,7 +1117,6 @@ contains
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                     stop "Have particles travelling outside domain!"
                 end if
-                l_f_array(i, j) = l_f
             end do loopParticles
             
         end do loopSpecies
@@ -1407,25 +1405,30 @@ contains
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: remainDel_t, currDel_t
+        real(real64) :: remainDel_t, currDel_t, adaptiveJ(NumberXNodes-1)
         call self%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
         remainDel_t = del_t  
-        do while (self%iterNumPicard == maxIter)
-            print *, "Reducing time step adaptively"
-            self%iterNumAdaptiveSteps = 0
-            currDel_t = remainDel_t
+        if (self%iterNumPicard == maxIter) then
             do while (self%iterNumPicard == maxIter)
-                currDel_t = currDel_t/2.0d0
-                self%iterNumAdaptiveSteps = self%iterNumAdaptiveSteps + 1
-                if (self%iterNumAdaptiveSteps > 3) then
-                    stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
-                end if
-                call self%solveDivAmperePicard(particleList, world, currDel_t, maxIter, eps_r)   
+                print *, "Reducing time step adaptively"
+                self%iterNumAdaptiveSteps = 0
+                currDel_t = remainDel_t
+                adaptiveJ = 0.0d0
+                do while (self%iterNumPicard == maxIter)
+                    currDel_t = currDel_t/2.0d0
+                    self%iterNumAdaptiveSteps = self%iterNumAdaptiveSteps + 1
+                    if (self%iterNumAdaptiveSteps > 4) then
+                        stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
+                    end if
+                    call self%solveDivAmperePicard(particleList, world, currDel_t, maxIter, eps_r)   
+                end do
+                adaptiveJ = adaptiveJ + self%J * currDel_t/del_t
+                remainDel_t = remainDel_t - currDel_t 
+                call self%solveDivAmperePicard(particleList, world, remainDel_t, maxIter, eps_r)
             end do
-            remainDel_t = remainDel_t - currDel_t 
-            call self%solveDivAmperePicard(particleList, world, remainDel_t, maxIter, eps_r)
-        end do
-       
+            adaptiveJ = adaptiveJ + self%J * remainDel_t/del_t
+            self%J = adaptiveJ
+        end if
         
 
     end subroutine adaptiveSolveDivAmperePicard
