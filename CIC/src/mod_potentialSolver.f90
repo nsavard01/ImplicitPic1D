@@ -15,7 +15,7 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, chargeError, particleEnergyLoss, particleEnergyLoss1D
+        real(real64) :: energyError, chargeError, particleEnergyLoss
         integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
@@ -75,7 +75,6 @@ contains
         self%iterNumParticle = 0
         self%particleEnergyLoss = 0.0d0
         self%particleChargeLoss = 0.0d0
-        self%particleEnergyLoss1D = 0.0d0
         self%energyError = 0.0d0
         self%chargeError = 0.0d0
         if (world%boundaryConditions(1) > 0) self%phi(1) = leftVoltage
@@ -786,7 +785,10 @@ contains
         if (NINT(l_f) /= l_cell) then
             print *, "Have final l_f outside initial cell"
             print *, "particle charge is:", q
-            stop 
+            print *, "l_sub is:", l_sub
+            print *, "l_f is:", l_f
+            print *, "v_sub is:", v_sub
+            print *, "v_f is:", v_f
         end if
 
     end subroutine analyticalParticleMover
@@ -1031,7 +1033,6 @@ contains
                                     call self%depositJSubStep(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t)
                                     if (NINT(l_f) /= l_cell) then
                                         print *, "After ongoing substep, l_f is not in correct cell"
-                                        stop
                                     end if
                                     timePassed = del_t  
                                 else
@@ -1158,7 +1159,6 @@ contains
                                 call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed) 
                                 if (NINT(l_f) /= NINT(l_sub)) then
                                     print *, "After initial domain substep, l_f is not in correct cell"
-                                    stop
                                 end if
                                 timePassed = del_t  
                             else
@@ -1253,7 +1253,6 @@ contains
                                     call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                                     if (NINT(l_f) /= l_cell) then
                                         print *, "After ongoing substep, l_f is not in correct cell"
-                                        stop
                                     end if
                                     timePassed = del_t  
                                 else
@@ -1340,13 +1339,14 @@ contains
                 if (delParticle) then
                     delIdx = delIdx + 1
                     delParticle = .false.
-                    self%particleEnergyLoss1D = self%particleEnergyLoss1D + particleList(j)%w_p * v_f**2 * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                     self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                     self%particleChargeLoss(j) = self%particleChargeLoss(j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+    
                     
                 else
                     particleList(j)%phaseSpace(1, i-delIdx) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)
                 end if
 
             end do loopParticles

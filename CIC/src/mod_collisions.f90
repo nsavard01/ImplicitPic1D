@@ -7,8 +7,8 @@ module mod_collisions
     implicit none
 
     real(real64) :: inelasticEnergyLoss = 0.0d0
-    real(real64) :: Power = 100 !W/m^2 in 1D
-    real(real64) :: nu_h = 1e8 !Hz
+    real(real64) :: Power = 100.0d0 !W/m^2 in 1D
+    real(real64) :: nu_h = 1.0d8 !Hz
     ! Type of collisions, will likely need arrays which you can loop through which has source, target particle, choose from particle list
     ! Will likely have construct method which takes in collision data and turns into array
 
@@ -104,27 +104,25 @@ contains
         end do
     end subroutine addUniformPowerMaxwellian
 
-    subroutine addUniformPowerMaxwellianNicolas(species, Power, percent, irand, del_t)
+    subroutine addUniformPowerMaxwellianNicolas(species, Power, irand, del_t, heatSkipSteps)
         ! Gwenael's method does not lead to conservation, very shady
         ! Implement uniform power with conservation properties in mind to get improvement
         ! Percent is percentage of particles to sample, isotropic scatter
         type(Particle), intent(in out) :: species
         integer(int32), intent(in out) :: irand
-        real(real64), intent(in) :: Power, percent, del_t
-        integer(int32) :: j, i
-        real(real64) :: KE_new, idxChange(NINT(percent * species%N_p)), v_replace(3), E_distribute, U, theta
-        call getRandom(idxChange, irand)
-        idxChange = INT(idxChange*(species%N_p-1) + 1)
-        E_distribute = Power*del_t/e/species%w_p/size(idxChange)
-        do i=1, size(idxChange)
-            j = idxChange(i)
-            KE_new = (SUM(species%phaseSpace(2:4,j)**2) * species%mass * 0.5/e + E_distribute)
+        integer(int32), intent(in) :: heatSkipSteps
+        real(real64), intent(in) :: Power, del_t
+        integer(int32) :: i
+        real(real64) :: KE_new, E_distribute, U, theta, V_replace(3)
+        E_distribute = Power*del_t*heatSkipSteps/species%w_p/species%N_p ! J/particle
+        do i=1, species%N_p
+            KE_new = (SUM(species%phaseSpace(2:4,i)**2) * species%mass * 0.5 + E_distribute)
             U = 1.0d0 - 2.0d0*ran2(irand)
-            theta = ran2(irand) * 2 * pi
-            v_replace(1) = SQRT(1-U**2) * COS(theta) ! unit normal in x direction
-            v_replace(2) = SQRT(1 - U**2) * SIN(theta)
+            theta = ran2(irand) * 2.0d0 * pi
+            v_replace(1) = SQRT(1.0d0-U**2) * COS(theta) ! unit normal in x direction
+            v_replace(2) = SQRT(1.0d0 - U**2) * SIN(theta)
             v_replace(3) = U
-            species%phaseSpace(2:4,j) = v_replace * SQRT(2.0d0 * e * KE_new/species%mass)
+            species%phaseSpace(2:4,i) = v_replace * SQRT(2.0d0 * KE_new/species%mass)
         end do
     end subroutine addUniformPowerMaxwellianNicolas
 

@@ -36,25 +36,7 @@ program BoundPlasmaExample
     print *, ""
     ! ! Generate solver object, and then solve for initial rho/potential
     call solver%solveInitialPotential(particleList, world)
-    numTimeSteps = NINT(22.0d-6 / del_t/100.0)
-    do i = 1, numTimeSteps
-        print *, "i is:", i
-        call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
-
-        if (solver%chargeError > 1e-8) then
-            print *, "-------------------------WARNING------------------------"
-            print *, "Charge error is:", solver%chargeError
-            stop "Total charge not conserved over time step in sub-step procedure!"
-        end if    
-        ! Stop program if catch abnormally large error
-        if (solver%energyError > 1e-8) then
-            print *, "-------------------------WARNING------------------------"
-            print *, "Energy error is:", solver%energyError
-            stop "Total energy not conserved over time step in sub-step procedure!"
-        end if
-        
-    end do
-    stop
+    numTimeSteps = NINT(22.0d-6 / del_t)
     call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, 4)
     call system_clock(tclock2, clock_rate)
