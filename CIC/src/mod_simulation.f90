@@ -61,9 +61,9 @@ contains
         print *, ""
 
         ! if one boundary is periodic, other must also be
-        if ((leftBoundary == -3) .or. (rightBoundary == -3)) then
-            leftBoundary = -3
-            rightBoundary = -3
+        if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
+            leftBoundary = 3
+            rightBoundary = 3
             leftVoltage = rightVoltage
         end if
         world = Domain(leftBoundary, rightBoundary)
@@ -161,12 +161,12 @@ contains
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     rho(l_center + 1) = rho(l_center + 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
                     rho(l_center - 1) = rho(l_center - 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                else if (world%boundaryConditions(l_center) > 0) then
+                else if (world%boundaryConditions(l_center) == 1) then
                     !Dirichlet
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
                     rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
                 
-                else if (world%boundaryConditions(l_center) == -3) then
+                else if (world%boundaryConditions(l_center) == 3) then
                     ! Periodic
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
@@ -176,7 +176,7 @@ contains
                 end if
             end do
         end do
-        if (world%boundaryConditions(1) == -3) then
+        if (world%boundaryConditions(1) == 3) then
             rho(1) = rho(1) + rho(NumberXNodes)
             rho(NumberXNodes) = rho(1)
         end if
@@ -198,12 +198,12 @@ contains
                     densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (0.75 - d**2)
                     densities(l_center + 1, i) = densities(l_center + 1, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
                     densities(l_center - 1, i) = densities(l_center - 1, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                else if (world%boundaryConditions(l_center) > 0) then
+                else if (world%boundaryConditions(l_center) == 1) then
                     !Dirichlet
                     densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (1.0d0-ABS(d))
                     densities(l_center + INT(SIGN(1.0, d)), i) = densities(l_center + INT(SIGN(1.0, d)), i) + particleList(i)%w_p * ABS(d)
                 
-                else if (world%boundaryConditions(l_center) == -3) then
+                else if (world%boundaryConditions(l_center) == 3) then
                     ! Periodic
                     densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
@@ -229,7 +229,7 @@ contains
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            if (world%boundaryConditions(1) == -3) then
+            if (world%boundaryConditions(1) == 3) then
                 densities(1,i) = densities(1,i) + densities(NumberXNodes, i)
                 densities(NumberXNodes, i) = densities(1, i)
             end if
@@ -295,7 +295,7 @@ contains
         call depositRhoDiag(rho_f, particleList, world)
         solver%chargeError = 0.0d0
         j = 0
-        if (world%boundaryConditions(1) == -3) then
+        if (world%boundaryConditions(1) == 3) then
             j = j + 1
             solver%chargeError = solver%chargeError + (1 + (solver%J(1) - solver%J(NumberXNodes-1)) *del_t/ world%dx_dl(1)/(rho_f(1) - solver%rho(1)))**2
         end if
@@ -466,7 +466,7 @@ contains
                 call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.025d0, irand)
             else  
-                ! Data dump with diagnostics
+                ! Data dump with Diagnostics
                 print *, "Simulation is", real(i)/numTimeSteps * 100.0, "percent done"
                 currentTime = (i) * del_t
                 inelasticEnergyLoss = 0.0d0
@@ -572,8 +572,10 @@ contains
         call writePhi(phi_average/stepsAverage, 0, .true.)
         write(22,"((I4, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
         close(22)
-        print *, "Electron average wall loss:", solver%particleChargeLoss(1)/del_t/stepsAverage
-        print *, "Ion average wall loss:", solver%particleChargeLoss(2)/del_t/stepsAverage
+        print *, "Electron average wall loss on left wall is:", solver%particleChargeLoss(1, 1)/del_t/stepsAverage
+        print *, "Electron average wall loss on right wall is:", solver%particleChargeLoss(2, 1)/del_t/stepsAverage
+        print *, "Ion average wall loss on left wall is:", solver%particleChargeLoss(1, 2)/del_t/stepsAverage
+        print *, "Ion average wall loss on right wall is:", solver%particleChargeLoss(2, 2)/del_t/stepsAverage
 
     end subroutine solveSimulationFinalAverage
 

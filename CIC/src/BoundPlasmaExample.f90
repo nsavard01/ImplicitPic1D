@@ -36,7 +36,7 @@ program BoundPlasmaExample
     print *, ""
     ! ! Generate solver object, and then solve for initial rho/potential
     call solver%solveInitialPotential(particleList, world)
-    numTimeSteps = NINT(22.0d-6 / del_t)
+    numTimeSteps = NINT(22.0d-6/del_t)
     call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, 4)
     call system_clock(tclock2, clock_rate)

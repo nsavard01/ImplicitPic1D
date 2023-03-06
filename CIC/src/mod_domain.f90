@@ -49,22 +49,6 @@ contains
         do i = 1, NumberXNodes
             self%dx_dl(i) = self%gridField(i+1) - self%gridField(i)
         end do
-
-        ! if (self%boundaryConditions(1) > 0) then
-        !     self%dx_dl(1) = self%dx_dl(1)/2
-        ! else if (self%boundaryConditions(1) == -3) then
-        !     self%dx_dl(1) = (self%dx_dl(1) + self%dx_dl(NumberXNodes-1))/2
-        ! end if
-
-        ! if (self%boundaryConditions(NumberXNodes) > 0) then
-        !     self%dx_dl(NumberXNodes) = self%dx_dl(NumberXNodes-1)/2
-        ! else if (self%boundaryConditions(NumberXNodes) == -3) then
-        !     self%dx_dl(NumberXNodes) = (self%dx_dl(1) + self%dx_dl(NumberXNodes-1))/2
-        ! end if
-
-        ! do i = 2, NumberXNodes-1
-        !     self%dx_dl(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
-        ! end do
     end subroutine derive_DxDl
 
     subroutine constructGrid(self, del_l, L_domain, gridType)
@@ -107,37 +91,7 @@ contains
         call self%derive_DxDl()
     end subroutine constructUniformGrid
 
-    ! subroutine depositRho(self, particleList) 
-    !     class(Domain), intent(in out) :: self
-    !     type(Particle), intent(in) :: particleList(:)
-    !     integer(int32) :: i, j, l_left
-    !     real(real64) :: d
-    !     do i=1, size(particleList)
-    !         do j = 1, particleList(i)%N_p
-    !             l_left = INT(particleList(i)%l_p(j))
-    !             d = MOD(particleList(i)%l_p(j), 1.0)
-    !             self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0-d)
-    !             self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
-    !         end do
-    !     end do
-    !     self % rho = self % rho / self % dx_dl
-    ! end subroutine depositRho
-
-    ! ! Write data from rho
-
-    ! subroutine writeRho(self)
-    !     ! Writes rho into a binary file.
-    !     class(Domain), intent(in out) :: self
-    !     integer(int32) :: fileunit, record_length
-    !     character(100) :: filename
-    !     filename = 'record_Rho.dat'
-    !     record_length = 2 * size(self%rho)
-    !     open(newunit=fileunit, file=filename, access='direct', recl= record_length)
-    !     write(unit=fileunit, rec=1) self%rho
-    !     close(fileunit)
-    !   end subroutine writeRho
-
-      subroutine writeDomain(self)
+    subroutine writeDomain(self)
         ! Writes domain data into binary file under Data
         class(Domain), intent(in) :: self
         open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
@@ -147,7 +101,7 @@ contains
         open(41,file="../Data/domainDxDl.dat", form='UNFORMATTED')
         write(41) self%dx_dl
         close(41)
-      end subroutine writeDomain
+    end subroutine writeDomain
 
 
 
