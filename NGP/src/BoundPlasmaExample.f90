@@ -40,9 +40,22 @@ program BoundPlasmaExample
     call solver%solveInitialPotential(particleList, world)
     numTimeSteps = NINT(simulationTime / del_t)
     
-    stop
     call system_clock(tclock1)
-    call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps)
+    do i = 1, numTimeSteps
+        call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
+        if (solver%energyError > 1e-8) then
+            print *, "-------------------------WARNING------------------------"
+            print *, "Energy error is:", solver%energyError
+            stop "Total energy not conserved over time step in sub-step procedure!"
+        end if
+        
+        if (solver%chargeError > 1e-6) then
+            print *, "-------------------------WARNING------------------------"
+            print *, "Charge error is:", solver%chargeError
+            stop "Total charge not conserved over time step in sub-step procedure!"
+        end if
+    end do
+    print *, solver%energyError
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"

@@ -246,17 +246,17 @@ contains
         real(real64) :: KE_i, KE_f, PE_i, PE_f, rho_f(NumberXNodes)
 
         ! Get charge/energy conservation error
-        solver%particleEnergyLoss1D = 0.0d0
+        solver%particleEnergyLoss = 0.0d0
         PE_i = solver%getTotalPE(world, .false.)
         KE_i = 0.0d0
         do j=1, numberChargedParticles
-            KE_i = KE_i + particleList(j)%getTotalKE1D()
+            KE_i = KE_i + particleList(j)%getTotalKE()
         end do
         call solver%depositRho(particleList, world) 
         call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
-        KE_f = solver%particleEnergyLoss1D
+        KE_f = solver%particleEnergyLoss
         do j=1, numberChargedParticles
-            KE_f = KE_f + particleList(j)%getTotalKE1D()
+            KE_f = KE_f + particleList(j)%getTotalKE()
         end do
         PE_f = solver%getTotalPE(world, .false.)
         solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
@@ -346,7 +346,7 @@ contains
                 do j=1, numberChargedParticles
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
                 end do
-                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss*e/del_t, &
+                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
                 SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
                 CurrentDiagStep = CurrentDiagStep + 1
             end if
@@ -376,7 +376,7 @@ contains
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(CurrentDiagStep)
         end do
-        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss*e/del_t, &
+        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
                 SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
         close(22)
 
@@ -428,7 +428,7 @@ contains
         do i = 1, numTimeSteps-1
             if (MOD((i-1), numSkipSteps) /= 0) then
                 call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
-                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
+                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", real(i)/numTimeSteps * 100.0, "percent done"
@@ -449,7 +449,7 @@ contains
                     print *, "Charge error is:", solver%chargeError
                     stop "Total charge not conserved over time step in sub-step procedure!"
                 end if
-                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
+                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -458,7 +458,7 @@ contains
                 do j=1, numberChargedParticles
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
                 end do
-                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss*e/del_t, &
+                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
                 SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
                 CurrentDiagStep = CurrentDiagStep + 1
             end if
@@ -484,7 +484,7 @@ contains
             print *, "Charge error is:", solver%chargeError
             stop "Total charge not conserved over time step in sub-step procedure!"
         end if
-        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
+        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -493,7 +493,7 @@ contains
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(CurrentDiagStep)
         end do
-        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss*e/del_t, &
+        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
         SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
         CurrentDiagStep = CurrentDiagStep + 1
 
@@ -524,7 +524,7 @@ contains
         densities = 0.0d0
         do i =1, stepsAverage
             call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
-            call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, irand)
+            call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
             call loadParticleDensity(densities, particleList)
             phi_average = phi_average + solver%phi
             if (MOD(i, heatSkipSteps) == 0) then

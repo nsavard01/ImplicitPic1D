@@ -16,7 +16,7 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, chargeError, particleEnergyLoss, particleEnergyLoss1D
+        real(real64) :: energyError, chargeError, particleEnergyLoss
         integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
@@ -65,7 +65,6 @@ contains
         self%iterNumParticle = 0
         self%particleEnergyLoss = 0.0d0
         self%particleChargeLoss = 0.0d0
-        self%particleEnergyLoss1D = 0.0d0
         self%energyError = 0.0d0
         self%chargeError = 0.0d0
         if (world%boundaryConditions(1) > 0) self%phi(1) = leftVoltage
@@ -713,20 +712,16 @@ contains
                 if (delParticle) then
                     delIdx = delIdx + 1
                     delParticle = .false.
-                    self%particleEnergyLoss1D = self%particleEnergyLoss1D + particleList(j)%w_p * v_f**2 * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                     self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                     self%particleChargeLoss(j) = self%particleChargeLoss(j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
                     
                 else
                     particleList(j)%phaseSpace(1, i-delIdx) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)
                 end if
                 
             end do loopParticles
-            
-
-            particleList(j)%phaseSpace(1, particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
-            particleList(j)%phaseSpace(2:4,particleList(j)%N_p+1-delIdx:particleList(j)%N_p+1) = 0.0d0
             particleList(j)%N_p = particleList(j)%N_p - delIdx
             
         end do loopSpecies
@@ -784,24 +779,30 @@ contains
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: remainDel_t, currDel_t
+        real(real64) :: remainDel_t, currDel_t, adaptiveJ(NumberXNodes-1)
         call self%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
         remainDel_t = del_t  
-        do while (self%iterNumPicard == maxIter)
-            print *, "Entering adaptive step!"
-            self%iterNumAdaptiveSteps = 0
-            currDel_t = remainDel_t
+        if (self%iterNumPicard == maxIter) then
             do while (self%iterNumPicard == maxIter)
-                currDel_t = currDel_t/2.0d0
-                self%iterNumAdaptiveSteps = self%iterNumAdaptiveSteps + 1
-                if (self%iterNumAdaptiveSteps > 3) then
-                    stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
-                end if
-                call self%solveDivAmperePicard(particleList, world, currDel_t, maxIter, eps_r)   
+                print *, "Reducing time step adaptively"
+                self%iterNumAdaptiveSteps = 0
+                currDel_t = remainDel_t
+                adaptiveJ = 0.0d0
+                do while (self%iterNumPicard == maxIter)
+                    currDel_t = currDel_t/2.0d0
+                    self%iterNumAdaptiveSteps = self%iterNumAdaptiveSteps + 1
+                    if (self%iterNumAdaptiveSteps > 4) then
+                        stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
+                    end if
+                    call self%solveDivAmperePicard(particleList, world, currDel_t, maxIter, eps_r)   
+                end do
+                adaptiveJ = adaptiveJ + self%J * currDel_t/del_t
+                remainDel_t = remainDel_t - currDel_t 
+                call self%solveDivAmperePicard(particleList, world, remainDel_t, maxIter, eps_r)
             end do
-            remainDel_t = remainDel_t - currDel_t  
-            call self%solveDivAmperePicard(particleList, world, remainDel_t, maxIter, eps_r)
-        end do
+            adaptiveJ = adaptiveJ + self%J * remainDel_t/del_t
+            self%J = adaptiveJ
+        end if
        
         
 
