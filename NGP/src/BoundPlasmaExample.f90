@@ -10,7 +10,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i, tclock1, tclock2, clock_rate
-    real(real64) :: elapsed_time, KE_i, KE_f
+    real(real64) :: elapsed_time, E_i, E_f
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
@@ -39,23 +39,24 @@ program BoundPlasmaExample
     
     call solver%solveInitialPotential(particleList, world)
     numTimeSteps = NINT(simulationTime / del_t)
-    
-    call system_clock(tclock1)
-    do i = 1, numTimeSteps
-        call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
-        if (solver%energyError > 1e-8) then
-            print *, "-------------------------WARNING------------------------"
-            print *, "Energy error is:", solver%energyError
-            stop "Total energy not conserved over time step in sub-step procedure!"
-        end if
-        
-        if (solver%chargeError > 1e-6) then
-            print *, "-------------------------WARNING------------------------"
-            print *, "Charge error is:", solver%chargeError
-            stop "Total charge not conserved over time step in sub-step procedure!"
-        end if
+    solver%particleEnergyLoss = 0.0d0
+    solver%particleChargeLoss = 0.0d0
+    inelasticEnergyLoss = 0.0d0
+    E_i = solver%getTotalPE(world, .false.)
+    do i=1, numberChargedParticles
+        E_i = E_i + particleList(i)%getTotalKE()
     end do
-    print *, solver%energyError
+    call system_clock(tclock1)
+    do i = 1, 1000
+        call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+    end do
+    E_f = solver%getTotalPE(world, .false.) + inelasticEnergyLoss + solver%particleEnergyLoss
+    do i=1, numberChargedParticles 
+        E_f = E_f + particleList(i)%getTotalKE()
+    end do
+    print *, "E_loss difference is:", (E_f - E_i)/E_i
+    !call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, heatSkipSteps)
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"

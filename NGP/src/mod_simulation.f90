@@ -510,7 +510,7 @@ contains
         integer(int32), intent(in) :: maxIter, stepsAverage, heatSkipSteps
         integer(int32), intent(in out) :: irand
         integer(int32) :: i
-        real(real64) :: currentTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles)
+        real(real64) :: phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles)
 
 
         open(22,file='../Data/GlobalDiagnosticDataAveraged.dat')
@@ -534,7 +534,7 @@ contains
         densities = densities/stepsAverage
         call writeParticleDensity(densities, particleList, world, 0, .true.) 
         call writePhi(phi_average/stepsAverage, 0, .true.)
-        write(22,"((I4, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss*e/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
+        write(22,"((I4, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
         close(22)
         print *, "Electron average wall loss:", solver%particleChargeLoss(1)/del_t/stepsAverage
         print *, "Ion average wall loss:", solver%particleChargeLoss(2)/del_t/stepsAverage
