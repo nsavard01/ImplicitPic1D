@@ -51,15 +51,15 @@ contains
             self%dx_dl(i) = self%grid(i+1) - self%grid(i)
         end do
 
-        if (self%boundaryConditions(1) > 0) then
-            self%nodeVol(1) = self%dx_dl(1)/2
-        else if (self%boundaryConditions(1) == -3) then
+        if (self%boundaryConditions(1) == 1) then
+            self%nodeVol(1) = self%dx_dl(1)
+        else if (self%boundaryConditions(1) == 3) then
             self%nodeVol(1) = (self%dx_dl(1) + self%dx_dl(NumberXNodes-1))/2
         end if
 
-        if (self%boundaryConditions(NumberXNodes) > 0) then
-            self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)/2
-        else if (self%boundaryConditions(NumberXNodes) == -3) then
+        if (self%boundaryConditions(NumberXNodes) == 1) then
+            self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
+        else if (self%boundaryConditions(NumberXNodes) == 3) then
             self%nodeVol(NumberXNodes) = (self%dx_dl(1) + self%dx_dl(NumberXNodes-1))/2
         end if
 

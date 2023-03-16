@@ -19,7 +19,7 @@ program TwoStreamInstability
     particleList = readParticleInputs('TwoStream.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver)
+    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime)
     do i = 1, numberChargedParticles
         call particleList(i) % initialize_randUniform(world%grid(NumberXNodes) - world%grid(1), world%dx_dl, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
@@ -49,7 +49,7 @@ program TwoStreamInstability
     ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
     call solver%construct_diagMatrix_Ampere(world)
     numTimeSteps = NINT(10.0d0 * 2.0d0 * pi /getPlasmaFreq(n_ave)/del_t)
-    call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps, stepsAverage)
+    call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps)
             
 
 

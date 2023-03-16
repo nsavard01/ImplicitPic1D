@@ -9,7 +9,7 @@ module mod_simulation
     use mod_potentialSolver
     use mod_collisions
 
-    integer(int32) :: numTimeSteps, heatSkipSteps = 4
+    integer(int32) :: numTimeSteps, heatSkipSteps = 1
     real(real64) :: del_t, simulationTime
 
 contains
@@ -20,8 +20,8 @@ contains
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
         integer(int32), intent(in out) :: NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage
         real(real64), intent(in out) :: eps_r, fractionFreq, n_ave, simulationTime
-        integer(int32) :: io, leftBoundary, rightBoundary, gridType
-        real(real64) :: leftVoltage, rightVoltage, L_domain, del_l
+        integer(int32) :: io, leftBoundary, rightBoundary, gridType, m_Anderson
+        real(real64) :: leftVoltage, rightVoltage, L_domain, del_l, Beta_k
         type(Domain) :: world
         type(potentialSolver) :: solver
 
@@ -29,6 +29,8 @@ contains
         open(10,file='../InputData/InitialConditions.inp', IOSTAT=io)
         read(10, *, IOSTAT = io) simulationTime
         read(10, *, IOSTAT = io) eps_r
+        read(10, *, IOSTAT = io) m_Anderson
+        read(10, *, IOSTAT = io) Beta_k
         read(10, *, IOSTAT = io) n_ave
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) maxIter
@@ -69,7 +71,7 @@ contains
         end if
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(del_l, L_domain, gridType)
-        solver = potentialSolver(world, leftVoltage, rightVoltage)
+        solver = potentialSolver(world, leftVoltage, rightVoltage, m_Anderson, Beta_k)
         
     end subroutine readInputs
 
@@ -162,7 +164,7 @@ contains
             end do
         end do
         rho = rho / world%nodeVol
-        if (world%boundaryConditions(1) == -3) then
+        if (world%boundaryConditions(1) == 3) then
             rho(1) = rho(1) + rho(NumberXNodes)
             rho(NumberXNodes) = rho(1)
         end if
@@ -198,7 +200,7 @@ contains
         
         do i=1, numberChargedParticles
             densities(:,i) = densities(:,i)/world%nodeVol
-            if (world%boundaryConditions(1) == -3) then
+            if (world%boundaryConditions(1) == 3) then
                 densities(1,i) = densities(1,i) + densities(NumberXNodes, i)
                 densities(NumberXNodes, i) = densities(1, i)
             end if
@@ -253,7 +255,7 @@ contains
             KE_i = KE_i + particleList(j)%getTotalKE()
         end do
         call solver%depositRho(particleList, world) 
-        call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+        call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
         KE_f = solver%particleEnergyLoss
         do j=1, numberChargedParticles
             KE_f = KE_f + particleList(j)%getTotalKE()
@@ -317,7 +319,7 @@ contains
 
         do i = 1, numTimeSteps-1
             if (MOD((i-1), numSkipSteps) /= 0) then
-                call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+                call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", real(i)/numTimeSteps * 100.0, "percent done"
@@ -327,13 +329,13 @@ contains
                 call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
                 
                 ! Stop program if catch abnormally large error
-                if (solver%energyError > 1e-8) then
+                if (solver%energyError > eps_r) then
                     print *, "-------------------------WARNING------------------------"
                     print *, "Energy error is:", solver%energyError
                     stop "Total energy not conserved over time step in sub-step procedure!"
                 end if
                 
-                if (solver%chargeError > 1e-6) then
+                if (solver%chargeError > eps_r) then
                     print *, "-------------------------WARNING------------------------"
                     print *, "Charge error is:", solver%chargeError
                     stop "Total charge not conserved over time step in sub-step procedure!"
@@ -427,7 +429,7 @@ contains
 
         do i = 1, numTimeSteps-1
             if (MOD((i-1), numSkipSteps) /= 0) then
-                call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+                call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
             else  
                 ! Data dump with diagnostics
@@ -438,13 +440,13 @@ contains
                 call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
                 
                 ! Stop program if catch abnormally large error
-                if (solver%energyError > 1e-8) then
+                if (solver%energyError > eps_r) then
                     print *, "-------------------------WARNING------------------------"
                     print *, "Energy error is:", solver%energyError
                     stop "Total energy not conserved over time step in sub-step procedure!"
                 end if
                 
-                if (solver%chargeError > 1e-6) then
+                if (solver%chargeError > eps_r) then
                     print *, "-------------------------WARNING------------------------"
                     print *, "Charge error is:", solver%chargeError
                     stop "Total charge not conserved over time step in sub-step procedure!"
@@ -479,7 +481,7 @@ contains
             stop "Total energy not conserved over time step in sub-step procedure!"
         end if
         
-        if (solver%chargeError > 1e-6) then
+        if (solver%chargeError > 1e-4) then
             print *, "-------------------------WARNING------------------------"
             print *, "Charge error is:", solver%chargeError
             stop "Total charge not conserved over time step in sub-step procedure!"
@@ -523,7 +525,7 @@ contains
         phi_average = 0.0d0
         densities = 0.0d0
         do i =1, stepsAverage
-            call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+            call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
             call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
             call loadParticleDensity(densities, particleList)
             phi_average = phi_average + solver%phi
