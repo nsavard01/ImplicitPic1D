@@ -17,7 +17,7 @@ module mod_potentialSolver
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: energyError, chargeError, particleEnergyLoss, Beta_k
-        integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, m_Anderson
+        integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, m_Anderson, amountTimeSplits
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
@@ -59,6 +59,7 @@ contains
         self % rho = 0
         self % J = 0
         self % phi = 0
+        self % amountTimeSplits = 0
         self % Beta_k = Beta_k
         self % m_Anderson = m_Anderson
         self % coeff_left = 2/(world%dx_dl(1) + world%dx_dl(2))/world%dx_dl(1)
@@ -652,7 +653,6 @@ contains
             end if
             call self%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = self%phi_f(2:NumberXNodes-1) - phi_k(:,index)
-            print *, SUM(Residual_k(:, index)**2)
             if (i > self%m_Anderson) then
                 if (self%m_anderson > 1) then
                     sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2) &
@@ -671,6 +671,10 @@ contains
             end do
             alpha = -Residual_k(:, index)
             call dgels('N', NumberXNodes-2, m_k, 1, fitMat(:, 1:m_k), NumberXNodes-2, alpha, NumberXNodes-2, work, lwork, info)
+            if (info /= 0) then
+                print *, "Issue with minimization procedure dgels in Anderson Acceleration!"
+                stop
+            end if
             alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k)) 
             phi_k(:, MODULO(i+1, self%m_Anderson+1) + 1) = alpha(1) * (self%Beta_k*Residual_k(:, MODULO(i-m_k, self%m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k,self%m_Anderson+1) + 1))
             do j=1, m_k
@@ -737,6 +741,7 @@ contains
                 currDel_t = remainDel_t
                 adaptiveJ = 0.0d0
                 do while (self%iterNumPicard == maxIter)
+                    self%amountTimeSplits = self%amountTimeSplits + 1
                     currDel_t = currDel_t/2.0d0
                     self%iterNumAdaptiveSteps = self%iterNumAdaptiveSteps + 1
                     if (self%iterNumAdaptiveSteps > 4) then

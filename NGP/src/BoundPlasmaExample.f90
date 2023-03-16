@@ -39,28 +39,29 @@ program BoundPlasmaExample
     
     call solver%solveInitialPotential(particleList, world)
     numTimeSteps = NINT(simulationTime / del_t)
-    call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
-    print *, "Total number of iterations is:", solver%iterNumPicard
-    print *, "Anderson number is:", solver%m_Anderson
-    print *, "Relaxation parameter is:", solver%Beta_k
-    print *, "Energy error is:", solver%energyError
-    print *, "Charge error is:", solver%chargeError
-    if (solver%energyError > eps_r) then
-        print *, "-------------------------WARNING------------------------"
-        print *, "Energy error is:", solver%energyError
-        stop "Total energy not conserved over time step in sub-step procedure!"
-    end if
-    if (solver%chargeError > eps_r) then
-        print *, "-------------------------WARNING------------------------"
-        print *, "Charge error is:", solver%chargeError
-        stop "Total charge not conserved over time step in sub-step procedure!"
-    end if
-    stop
+    ! call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
+    ! print *, "Total number of iterations is:", solver%iterNumPicard
+    ! print *, "Anderson number is:", solver%m_Anderson
+    ! print *, "Relaxation parameter is:", solver%Beta_k
+    ! print *, "Energy error is:", solver%energyError
+    ! print *, "Charge error is:", solver%chargeError
+    ! if (solver%energyError > eps_r) then
+    !     print *, "-------------------------WARNING------------------------"
+    !     print *, "Energy error is:", solver%energyError
+    !     stop "Total energy not conserved over time step in sub-step procedure!"
+    ! end if
+    ! if (solver%chargeError > eps_r) then
+    !     print *, "-------------------------WARNING------------------------"
+    !     print *, "Charge error is:", solver%chargeError
+    !     stop "Total charge not conserved over time step in sub-step procedure!"
+    ! end if
+    ! stop
     call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, heatSkipSteps)
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"
+    print *, "Percentage of steps adaptive is:", 100.0d0 * real(solver%amountTimeSplits)/real(numTimeSteps)
     print *, "Averaging over", stepsAverage, "time steps"
     call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)
     
