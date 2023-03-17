@@ -3,7 +3,6 @@ module mod_collisions
     use constants
     use mod_BasicFunctions
     use mod_particle
-    use mod_domain
     implicit none
 
     real(real64) :: inelasticEnergyLoss = 0.0d0

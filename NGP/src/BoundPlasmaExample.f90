@@ -21,7 +21,7 @@ program BoundPlasmaExample
     ! create the world the particles live in
     call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime)
     do i = 1, numberChargedParticles
-        call particleList(i) % initialize_randUniform(world%grid(NumberXNodes) - world%grid(1), world%dx_dl, irand)
+        call initialize_randUniform(particleList(i), world%grid(NumberXNodes) - world%grid(1), world%dx_dl, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
     end do
 

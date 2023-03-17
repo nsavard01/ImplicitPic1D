@@ -17,7 +17,6 @@ module mod_particle
 
     contains
         procedure, public, pass(self) :: initialize_n_ave
-        procedure, public, pass(self) :: initialize_randUniform
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getKEAve
         procedure, public, pass(self) :: getTotalKE
@@ -58,36 +57,6 @@ contains
 
     ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
-    subroutine initialize_randUniform(self, L_domain, dx_dl, irand)
-        ! place particles randomly in each dx_dl based on portion of volume it take up
-        class(Particle), intent(in out) :: self
-        real(real64), intent(in) :: dx_dl(:), L_domain
-        integer(int32), intent(in out) :: irand
-        integer(int32) :: i, numInCell, idxLower, numPerCell(NumberXNodes-1)
-        real(real64) :: sumDxDl
-        idxLower = 1
-        sumDxDl = 0
-        do i=1, NumberXNodes-1
-            ! Use int to make sure always have a bit left over, otherwise will fill up before getting to end
-            numInCell = INT(self%N_p * dx_dl(i)/L_domain)
-            if (idxLower + numInCell > self % N_P + 1) then
-                stop "You are putting too many particles for the uniform particle case"
-            end if
-
-            
-            call getRandom(self%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
-            self%phaseSpace(1, idxLower:idxLower + numInCell - 1) = self%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i
-            idxLower = idxLower + numInCell
-            numPerCell(i) = numInCell
-            
-        end do
-        if (idxLower < self%N_p + 1) then
-            call getRandom(self%phaseSpace(1, idxLower:self%N_p), irand)
-            self%phaseSpace(1, idxLower:self%N_p) = self%phaseSpace(1, idxLower:self%N_p) * (NumberXNodes - 1) + 1
-        end if
-        
-        
-    end subroutine initialize_randUniform
 
     subroutine generate3DMaxwellian(self, T, irand)
         ! random velocity generator for the particle for temperature T (eV)

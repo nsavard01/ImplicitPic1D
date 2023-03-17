@@ -146,6 +146,39 @@ contains
 
     end function readParticleInputs
 
+    ! ----------------------------- Initializations ---------------------------------------------
+
+    subroutine initialize_randUniform(part, L_domain, dx_dl, irand)
+        ! place particles randomly in each dx_dl based on portion of volume it take up
+        type(Particle), intent(in out) :: part
+        real(real64), intent(in) :: dx_dl(:), L_domain
+        integer(int32), intent(in out) :: irand
+        integer(int32) :: i, numInCell, idxLower, numPerCell(NumberXNodes-1)
+        real(real64) :: sumDxDl
+        idxLower = 1
+        sumDxDl = 0
+        do i=1, NumberXNodes-1
+            ! Use int to make sure always have a bit left over, otherwise will fill up before getting to end
+            numInCell = INT(part%N_p * dx_dl(i)/L_domain)
+            if (idxLower + numInCell > part % N_P + 1) then
+                stop "You are putting too many particles for the uniform particle case"
+            end if
+
+            
+            call getRandom(part%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
+            part%phaseSpace(1, idxLower:idxLower + numInCell - 1) = part%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i
+            idxLower = idxLower + numInCell
+            numPerCell(i) = numInCell
+            
+        end do
+        if (idxLower < part%N_p + 1) then
+            call getRandom(part%phaseSpace(1, idxLower:part%N_p), irand)
+            part%phaseSpace(1, idxLower:part%N_p) = part%phaseSpace(1, idxLower:part%N_p) * (NumberXNodes - 1) + 1
+        end if
+        
+        
+    end subroutine initialize_randUniform
+
     ! --------------------------- Diagnostics ------------------------------------
 
     subroutine depositRhoDiag(rho, particleList, world) 
@@ -291,7 +324,7 @@ contains
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq")')
-        write(15,"((I3.3, 1x), 3(es16.8,1x))") NumberXNodes, numTimeSteps*del_t, del_t, FractionFreq
+        write(15,"((I3.3, 1x), 3(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq
         close(15)
 
         ! Write Particle properties
@@ -401,7 +434,7 @@ contains
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq")')
-        write(15,"((I3.3, 1x), 3(es16.8,1x))") NumberXNodes, numTimeSteps*del_t, del_t, FractionFreq
+        write(15,"((I3.3, 1x), 3(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq
         close(15)
 
         ! Write Particle properties

@@ -17,22 +17,22 @@ BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mo
 mod_simulation.o: mod_simulation.f90 mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-mod_collisions.o: mod_collisions.f90 mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
-	$(FC) $(OPT) -c  -o $@ $<
-
 mod_potentialSolver.o: mod_potentialSolver.f90 mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-mod_domain.o: mod_domain.f90 constants.o mod_BasicFunctions.o mod_particle.o
+mod_domain.o: mod_domain.f90 constants.o mod_BasicFunctions.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-mod_particle.o: mod_particle.f90 constants.o mod_BasicFunctions.o
+mod_collisions.o: ../../SharedModules/mod_collisions.f90 constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-mod_BasicFunctions.o: mod_BasicFunctions.f90 constants.o
+mod_particle.o: ../../SharedModules/mod_particle.f90 constants.o mod_BasicFunctions.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-constants.o: constants.f90
+mod_BasicFunctions.o: ../../SharedModules/mod_BasicFunctions.f90 constants.o
+	$(FC) $(OPT) -c  -o $@ $<
+
+constants.o: ../../SharedModules/constants.f90
 	$(FC) $(OPT) -c  -o $@ $<
 
 

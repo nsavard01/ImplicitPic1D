@@ -1,7 +1,6 @@
 module mod_domain
     use iso_fortran_env, only: int32, real64
     use constants
-    use mod_particle
     implicit none
 
     private
@@ -104,43 +103,14 @@ contains
         call self%derive_DxDl_NodeVol()
     end subroutine constructUniformGrid
 
-    ! subroutine depositRho(self, particleList) 
-    !     class(Domain), intent(in out) :: self
-    !     type(Particle), intent(in) :: particleList(:)
-    !     integer(int32) :: i, j, l_left
-    !     real(real64) :: d
-    !     do i=1, size(particleList)
-    !         do j = 1, particleList(i)%N_p
-    !             l_left = INT(particleList(i)%l_p(j))
-    !             d = MOD(particleList(i)%l_p(j), 1.0)
-    !             self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0-d)
-    !             self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
-    !         end do
-    !     end do
-    !     self % rho = self % rho / self % nodeVol
-    ! end subroutine depositRho
 
-    ! ! Write data from rho
-
-    ! subroutine writeRho(self)
-    !     ! Writes rho into a binary file.
-    !     class(Domain), intent(in out) :: self
-    !     integer(int32) :: fileunit, record_length
-    !     character(100) :: filename
-    !     filename = 'record_Rho.dat'
-    !     record_length = 2 * size(self%rho)
-    !     open(newunit=fileunit, file=filename, access='direct', recl= record_length)
-    !     write(unit=fileunit, rec=1) self%rho
-    !     close(fileunit)
-    !   end subroutine writeRho
-
-      subroutine writeDomain(self)
-        ! Writes domain data into binary file under Data
-        class(Domain), intent(in) :: self
-        open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
-        write(41) self%grid
-        close(41)
-      end subroutine writeDomain
+    subroutine writeDomain(self)
+    ! Writes domain data into binary file under Data
+    class(Domain), intent(in) :: self
+    open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
+    write(41) self%grid
+    close(41)
+    end subroutine writeDomain
 
 
 
