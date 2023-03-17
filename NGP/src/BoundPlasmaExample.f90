@@ -38,7 +38,6 @@ program BoundPlasmaExample
     ! ! Generate solver object, and then solve for initial rho/potential
     
     call solver%solveInitialPotential(particleList, world)
-    numTimeSteps = NINT(simulationTime / del_t)
     ! call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
     ! print *, "Total number of iterations is:", solver%iterNumPicard
     ! print *, "Anderson number is:", solver%m_Anderson
@@ -57,13 +56,12 @@ program BoundPlasmaExample
     ! end if
     ! stop
     call system_clock(tclock1)
-    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, numTimeSteps, heatSkipSteps)
+    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime)
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"
-    print *, "Percentage of steps adaptive is:", 100.0d0 * real(solver%amountTimeSplits)/real(numTimeSteps)
     print *, "Averaging over", stepsAverage, "time steps"
-    call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)
+    call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage)
     
 
     

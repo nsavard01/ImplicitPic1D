@@ -7,7 +7,7 @@ module mod_collisions
     implicit none
 
     real(real64) :: inelasticEnergyLoss = 0.0d0
-    real(real64) :: Power = 100.0 !W/m^2 in 1D
+    real(real64) :: Power = 100.0d0 !W/m^2 in 1D
     real(real64) :: nu_h = 1.0d8 !Hz
     ! Type of collisions, will likely need arrays which you can loop through which has source, target particle, choose from particle list
     ! Will likely have construct method which takes in collision data and turns into array
@@ -86,18 +86,17 @@ contains
 
 
     !-------------------------- add Power in form of re-maxwellianizing collision ---------------------------------------------
-    subroutine addUniformPowerMaxwellian(species, Power, nu_h, irand, del_t, heatSkipSteps)
+    subroutine addUniformPowerMaxwellian(species, Power, nu_h, irand, del_t)
         ! Add power to all particles in domain
         type(Particle), intent(in out) :: species
         integer(int32), intent(in out) :: irand
-        integer(int32), intent(in) :: heatSkipSteps
         real(real64), intent(in) :: Power, nu_h, del_t
         real(real64) :: T_h, v_replace(3), R
         integer(int32) :: i
         T_h = (species%getKEAve() + Power/e/species%N_p/species%w_p/nu_h) * 2.0d0 / 3.0d0
         do i=1, species%N_p
             R = ran2(irand)
-            if (R < nu_h * heatSkipSteps * del_t) then
+            if (R < nu_h * del_t) then
                 call getMaxwellianSample(v_replace, species%mass, T_h, irand)
                 species%phaseSpace(2:4, i) = v_replace
             end if

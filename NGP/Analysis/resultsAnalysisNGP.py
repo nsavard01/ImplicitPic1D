@@ -112,7 +112,7 @@ def plotAverageDensity(ParticleProperties):
     colors = ['b', 'r', 'g', 'k', 'c', 'm', 'y']
     for i,name in enumerate(ParticleProperties['name']):
         n = np.fromfile('../Data/Density/density_' + name + '_Average.dat', dtype = 'float', offset = 4)
-        plt.plot(grid, n, colors[i], label = r'$n_{' + name[1:-1] +  '}$')
+        plt.plot(grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name[1:-1] +  '}$')
     plt.xlabel('Distance (m)')
     plt.ylabel('Particle Density (1/m^3)')
     plt.xlim([0, grid[-1]])

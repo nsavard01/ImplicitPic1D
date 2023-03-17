@@ -736,7 +736,6 @@ contains
         remainDel_t = del_t  
         if (self%iterNumPicard == maxIter) then
             do while (self%iterNumPicard == maxIter)
-                print *, "Reducing time step adaptively"
                 self%iterNumAdaptiveSteps = 0
                 currDel_t = remainDel_t
                 adaptiveJ = 0.0d0
