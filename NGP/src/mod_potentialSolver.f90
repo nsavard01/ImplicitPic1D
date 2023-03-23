@@ -644,24 +644,24 @@ contains
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: initialR, sumPastResiduals
+        real(real64) :: initialR, sumPastResiduals, initialNorm
         real(real64) :: Residual_k(NumberXNodes-2, self%m_Anderson+1), phi_k(NumberXNodes-2, self%m_Anderson+1), fitMat(NumberXNodes-2, self%m_Anderson), alpha(NumberXNodes-2)
         integer(int32) :: lwork, work(NumberXNodes -2 + self%m_Anderson)
         integer(int32) :: i, j, index, m_k, info
         lwork=(NumberXNodes -2)+ self%m_Anderson
 
         phi_k(:,1) = self%phi(2:NumberXNodes-1)
+        initialNorm = SQRT(SUM(self%phi**2))
         call self%depositJ(particleList, world, del_t)
-        initialR = SQRT(SUM(self%phi(2:NumberXNodes-1)**2))
         call self%solve_tridiag_Ampere(world, del_t)
         phi_k(:,2) = self%phi_f(2:NumberXNodes-1)
+        initialR = SQRT(SUM((self%phi_f(2:NumberXNodes-1) - phi_k(:,1))**2))
         Residual_k(:,1) = phi_k(:,2) - phi_k(:,1)
-        
         do i = 1, maxIter
             index = MODULO(i, self%m_Anderson+1) + 1
             m_k = MIN(i, self%m_Anderson)
             call self%depositJ(particleList, world, del_t)
-            if (SQRT(SUM((self%phi_f(2:NumberXNodes-1) - phi_k(:,MODULO(i-1, self%m_Anderson+1) + 1))**2)) < eps_r*initialR) then
+            if (SQRT(SUM((self%phi_f(2:NumberXNodes-1) - phi_k(:,MODULO(i-1, self%m_Anderson+1) + 1))**2)) < eps_r*(initialR + initialNorm)) then
                 call self%moveParticles(particleList, world, del_t)
                 self%phi = self%phi_f
                 exit

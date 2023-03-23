@@ -24,7 +24,6 @@ program BoundPlasmaExample
         call initialize_randUniform(particleList(i), world, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
     end do
-    !particleList(2)%phaseSpace(1, 1:particleList(2)%N_p) = particleList(1)%phaseSpace(1, 1:particleList(1)%N_p)
 
     print *, "Calulated values:"
     print *, "Number of particles is:", particleList(1)%N_p
