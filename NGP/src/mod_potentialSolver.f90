@@ -257,7 +257,6 @@ contains
         real(real64) :: c !rho_i(NumberXNodes), rho_f(NumberXNodes), gradJ(NumberXNodes-2), test(NumberXNodes-2), testConserv, 
         !integer(int32) :: k
         
-        a = (part%q / part%mass / 2.0d0) * self%getEField(l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
         if ((a/=0.0d0) .and. (v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
             c = (l_sub - l_alongV) * world%dx_dl(l_cell)
@@ -265,15 +264,31 @@ contains
                 ! velocity and acceleration in same direction
                 del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
                 l_f = l_alongV
-                if (del_tau <= 0.0d0) then
+                if (del_tau == 0.0d0) then
+                    ! a is weak, particle drift
+                    del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
+                else if (del_tau < 0.0d0) then
+                    print *, "del_tau is:", del_tau
+                    print *, "a is:", a
+                    print *, "c is:", c
+                    print *, "l_sub is:", l_sub
+                    print *, "v_sub is:", v_sub
                     stop "Have issue with del_tau for v,a in same direction"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
                 del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
                 l_f = l_alongV
-                if (del_tau <= 0.0d0) then
-                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                if (del_tau == 0.0d0) then
+                    ! a is weak, particle drift
+                    del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
+                else if (del_tau < 0.0d0) then
+                    print *, "del_tau is:", del_tau
+                    print *, "a is:", a
+                    print *, "c is:", c
+                    print *, "l_sub is:", l_sub
+                    print *, "v_sub is:", v_sub
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v, initial tau"
                 end if
             else
                 ! v and a opposite direction, boundary opposite direction of v
@@ -321,7 +336,6 @@ contains
         real(real64) :: c
         !integer(int32) :: k
         ! get index cell where field and dx_dl is evaluated
-        a = (part%q / part%mass / 2.0d0) * self%getEField(l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
         if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
             c = (l_sub - l_alongV) * world%dx_dl(l_cell)
@@ -329,15 +343,26 @@ contains
                 ! velocity and acceleration in same direction
                 del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
                 l_f = l_alongV
-                if (del_tau <= 0.0d0) then
-                    stop "Have issue with del_tau for v,a in same direction"
+                if (del_tau == 0.0d0) then
+                    ! a is weak, try picard
+                    del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
+                else if (del_tau < 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction, ongoing substep"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
                 del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
                 l_f = l_alongV
-                if (del_tau <= 0.0d0) then
-                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                if (del_tau == 0.0d0) then
+                    ! a is weak, particle drift
+                    del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
+                else if (del_tau < 0.0d0) then
+                    print *, "del_tau is:", del_tau
+                    print *, "a is:", a
+                    print *, "c is:", c
+                    print *, "l_sub is:", l_sub
+                    print *, "v_sub is:", v_sub
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v, ongoing substep"
                 end if
             else
                 ! v and a opposite direction, reverses back to initial position
@@ -381,6 +406,7 @@ contains
                 l_cell = INT(l_sub)
                 l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
                 l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
+                a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * self%getEField(l_cell, world)
                 call self%particleSubStepInitialTau(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_awayV, l_cell, a)
                 if (del_tau >= del_t) then
                     ! Add directly to J with no substep
@@ -391,7 +417,6 @@ contains
                         stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
                     end if
                     self%J(l_cell) = self%J(l_cell) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)/2.0d0/world%dx_dl(l_cell)
-                    
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
                     timePassed = timePassed + del_tau
@@ -418,12 +443,22 @@ contains
                 do while((timePassed < del_t))
                     l_alongV = l_sub + SIGN(1.0d0, v_sub)
                     l_cell = INT(l_sub + SIGN(0.5d0, v_sub))
+                    a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * self%getEField(l_cell, world)
                     call self%particleSubStepTau(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_cell, a)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
                         l_f = v_sub * (del_t - timePassed) / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * (del_t - timePassed)**2 + l_sub
                         v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / (del_t - timePassed) - v_sub
                         if (ABS(l_f - l_sub) >= 1) then
+                            print *, "l_sub is:", l_sub
+                            print *, "v_sub is:", v_sub
+                            print *, "a is:", a
+                            print *, "c is:", (l_sub - l_alongV) * world%dx_dl(l_cell)
+                            print *, "l_f is:", l_f
+                            print *, "v_f is:", v_f
+                            print *, "del_tau is:", del_tau
+                            print *, "remaining is:", del_t - timePassed
+                            print *, "del_tau should be", (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*(l_sub - l_alongV) * world%dx_dl(l_cell)))/2.0d0/ABS(a)
                             stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
                         end if
                         self%J(l_cell) = self%J(l_cell) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)*(del_t - timePassed)/2.0d0/world%dx_dl(l_cell)/del_t
@@ -487,6 +522,7 @@ contains
                 l_cell = INT(l_sub)
                 l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
                 l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
+                a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * self%getEField(l_cell, world)
                 call self%particleSubStepInitialTau(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_awayV, l_cell, a)
                 if (del_tau >= del_t) then
                     ! Add directly to J with no substep
@@ -532,6 +568,7 @@ contains
                 do while((timePassed < del_t))
                     l_alongV = l_sub + SIGN(1.0d0, v_sub)
                     l_cell = INT(l_sub + SIGN(0.5d0, v_sub))
+                    a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * self%getEField(l_cell, world)
                     call self%particleSubStepTau(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_cell, a)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
