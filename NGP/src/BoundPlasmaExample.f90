@@ -21,7 +21,7 @@ program BoundPlasmaExample
     ! create the world the particles live in
     call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime)
     do i = 1, numberChargedParticles
-        call initialize_randUniform(particleList(i), world%grid(NumberXNodes) - world%grid(1), world%dx_dl, irand)
+        call initialize_randUniform(particleList(i), world, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
     end do
 
@@ -56,12 +56,12 @@ program BoundPlasmaExample
     ! end if
     ! stop
     call system_clock(tclock1)
-    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime)
+    call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     call system_clock(tclock2, clock_rate)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
     print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"
     print *, "Averaging over", stepsAverage, "time steps"
-    call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage)
+    call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)
     
 
     

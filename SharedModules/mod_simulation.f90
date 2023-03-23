@@ -8,9 +8,9 @@ module mod_simulation
     use mod_domain
     use mod_potentialSolver
     use mod_collisions
-    use mod_NGP
+    use mod_Scheme
 
-    integer(int32) :: numTimeSteps, heatSkipSteps = 4
+    integer(int32) :: numTimeSteps
     real(real64) :: del_t, simulationTime
 
 contains
@@ -146,47 +146,26 @@ contains
 
 
     end function readParticleInputs
-
+    
+    subroutine writePhi(phi, CurrentDiagStep, boolAverage) 
+        ! For diagnostics, deposit single particle density
+        ! Re-use rho array since it doesn't get used after first Poisson
+        real(real64), intent(in) :: phi(:)
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(len=5) :: char_i
+        logical, intent(in) :: boolAverage
+        write(char_i, '(I3)') CurrentDiagStep
+        if (boolAverage) then
+            open(41,file='../Data/Phi/phi_Average.dat', form='UNFORMATTED')
+        else
+            open(41,file='../Data/Phi/phi_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        end if
+        write(41) phi
+        close(41)
+        
+    end subroutine writePhi
     
     ! -------------------------- Simulation ------------------------------------------
-
-    subroutine solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
-        ! Single time step solver with Divergence of ampere, followed by adding of power, followed by collisions
-        type(Particle), intent(in out) :: particleList(:)
-        type(potentialSolver), intent(in out) :: solver
-        type(Domain), intent(in) :: world
-        real(real64), intent(in) :: del_t, eps_r
-        integer(int32), intent(in) :: maxIter
-        integer(int32) :: j, k
-        real(real64) :: KE_i, KE_f, PE_i, PE_f, rho_f(NumberXNodes)
-
-        ! Get charge/energy conservation error
-        solver%particleEnergyLoss = 0.0d0
-        PE_i = solver%getTotalPE(world, .false.)
-        KE_i = 0.0d0
-        do j=1, numberChargedParticles
-            KE_i = KE_i + particleList(j)%getTotalKE()
-        end do
-        call solver%depositRho(particleList, world) 
-        call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
-        KE_f = solver%particleEnergyLoss
-        do j=1, numberChargedParticles
-            KE_f = KE_f + particleList(j)%getTotalKE()
-        end do
-        PE_f = solver%getTotalPE(world, .false.)
-        solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
-        call depositRhoDiag(rho_f, particleList, world)
-        solver%chargeError = 0.0d0
-        j = 0
-        do k = 1, NumberXNodes -2
-            if ((solver%J(k + 1) - solver%J(k) /= 0) .and. (solver%rho(k+1) /= 0)) then
-                solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%nodeVol(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
-                j = j + 1
-            end if
-        end do
-        solver%chargeError = SQRT(solver%chargeError/j)
-
-    end subroutine solveSingleTimeStepDiagnostic
 
     subroutine solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, simulationTime)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
@@ -223,7 +202,7 @@ contains
         
         !Save initial particle/field data, along with domain
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, 0, .false.) 
         call writePhi(solver%phi, 0, .false.)
         call particleList(1)%writeLocalTemperature(0)
@@ -255,7 +234,7 @@ contains
                     stop "Total charge not conserved over time step in sub-step procedure!"
                 end if
                 densities = 0.0d0
-                call loadParticleDensity(densities, particleList)
+                call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
                 call writePhi(solver%phi, CurrentDiagStep, .false.)
                 call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -285,7 +264,7 @@ contains
             stop "Total charge not conserved over time step in sub-step procedure!"
         end if
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
         call writePhi(solver%phi, CurrentDiagStep, .false.)
         call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -298,14 +277,14 @@ contains
 
     end subroutine solveSimulationOnlyPotential
 
-    subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime)
+    subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
         type(Particle), intent(in out) :: particleList(:)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r, simulationTime
-        integer(int32), intent(in) :: maxIter
+        integer(int32), intent(in) :: maxIter, heatSkipSteps
         integer(int32), intent(in out) :: irand
         integer(int32) :: i, j, CurrentDiagStep
         real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime
@@ -333,7 +312,7 @@ contains
         
         !Save initial particle/field data, along with domain
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, 0, .false.) 
         call writePhi(solver%phi, 0, .false.)
         call particleList(1)%writeLocalTemperature(0)
@@ -367,7 +346,7 @@ contains
                 end if
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 densities = 0.0d0
-                call loadParticleDensity(densities, particleList)
+                call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
                 call writePhi(solver%phi, CurrentDiagStep, .false.)
                 call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -379,7 +358,9 @@ contains
                 CurrentDiagStep = CurrentDiagStep + 1
                 diagTime = diagTime + diagTimeDivision
             end if
-            call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+            if (MODULO(i+1, heatSkipSteps) == 0) then
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, real(heatSkipSteps, kind = real64) *del_t)
+            end if
             currentTime = currentTime + del_t
             i = i + 1
         end do
@@ -401,7 +382,7 @@ contains
         end if
         call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
         call writePhi(solver%phi, CurrentDiagStep, .false.)
         call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -415,14 +396,14 @@ contains
     end subroutine solveSimulation
 
 
-    subroutine solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage)
+    subroutine solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
         type(Particle), intent(in out) :: particleList(:)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r
-        integer(int32), intent(in) :: maxIter, stepsAverage
+        integer(int32), intent(in) :: maxIter, stepsAverage, heatSkipSteps
         integer(int32), intent(in out) :: irand
         integer(int32) :: i
         real(real64) :: phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles)
@@ -440,17 +421,19 @@ contains
         do i =1, stepsAverage
             call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
             call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-            call loadParticleDensity(densities, particleList)
+            call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
-            call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+            if (MODULO(i, heatSkipSteps) == 0) then
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, real(heatSkipSteps, kind = real64) *del_t)
+            end if
         end do
         densities = densities/stepsAverage
         call writeParticleDensity(densities, particleList, world, 0, .true.) 
         call writePhi(phi_average/stepsAverage, 0, .true.)
         write(22,"((I4, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
         close(22)
-        print *, "Electron average wall loss:", solver%particleChargeLoss(1)/del_t/stepsAverage
-        print *, "Ion average wall loss:", solver%particleChargeLoss(2)/del_t/stepsAverage
+        print *, "Electron average wall loss:", SUM(solver%particleChargeLoss(:, 1))/del_t/stepsAverage
+        print *, "Ion average wall loss:", SUM(solver%particleChargeLoss(:, 2))/del_t/stepsAverage
 
 
 

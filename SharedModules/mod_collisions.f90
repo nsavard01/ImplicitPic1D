@@ -6,8 +6,9 @@ module mod_collisions
     implicit none
 
     real(real64) :: inelasticEnergyLoss = 0.0d0
-    real(real64) :: Power = 100.0d0 !W/m^2 in 1D
+    real(real64) :: Power = 2.5d3 !W/m^2 in 1D
     real(real64) :: nu_h = 1.0d8 !Hz
+    integer(int32) :: heatSkipSteps = 4
     ! Type of collisions, will likely need arrays which you can loop through which has source, target particle, choose from particle list
     ! Will likely have construct method which takes in collision data and turns into array
 

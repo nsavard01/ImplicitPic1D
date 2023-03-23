@@ -15,7 +15,7 @@ module mod_potentialSolver
     public :: potentialSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:,:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: energyError, chargeError, particleEnergyLoss, Beta_k
         integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, m_Anderson, amountTimeSplits
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
@@ -54,7 +54,7 @@ contains
         real(real64), intent(in) :: leftVoltage, rightVoltage, Beta_k
         integer(int32), intent(in) :: m_Anderson
         allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-3), &
-        self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(numberChargedParticles))
+        self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(2, numberChargedParticles))
         call construct_diagMatrix(self, world)
         self % rho = 0
         self % J = 0
@@ -514,7 +514,11 @@ contains
                         timePassed = del_t
                         delIdx = delIdx + 1
                         self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
-                        self%particleChargeLoss(j) = self%particleChargeLoss(j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                        if (l_f == 1) then
+                            self%particleChargeLoss(1, j) = self%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                        else
+                            self%particleChargeLoss(2, j) = self%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                        end if
                     CASE(3)
                         l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                     CASE default
@@ -554,7 +558,11 @@ contains
                         CASE(1)
                             delIdx = delIdx + 1
                             self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
-                            self%particleChargeLoss(j) = self%particleChargeLoss(j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                            if (l_f == 1) then
+                                self%particleChargeLoss(1, j) = self%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                            else
+                                self%particleChargeLoss(2, j) = self%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                            end if
                             exit
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)

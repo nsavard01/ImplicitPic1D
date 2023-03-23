@@ -112,7 +112,7 @@ def plotAverageDensity(ParticleProperties):
     colors = ['b', 'r', 'g', 'k', 'c', 'm', 'y']
     for i,name in enumerate(ParticleProperties['name']):
         n = np.fromfile('../Data/Density/density_' + name + '_Average.dat', dtype = 'float', offset = 4)
-        plt.plot(grid, n, colors[i], label = r'$n_{' + name[1:-1] +  '}$')
+        plt.plot(grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name[1:-1] +  '}$')
     plt.xlabel('Distance (m)')
     plt.ylabel('Particle Density (1/m^3)')
     plt.xlim([0, grid[-1]])
@@ -215,7 +215,41 @@ def phiAnimation(boolMakeAnimation):
             plt.xlim([0, grid[-1]])
             plt.pause(0.05)        
         
-    
+def temperatureAnimation(boolMakeAnimation):
+    if boolMakeAnimation:
+        numframes = numDiagnosticTimes + 1
+        fig, ax = plt.subplots()
+        phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(i) +'.dat', grid)
+        KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
+        E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
+        num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
+        ax.plot(halfGrid, E_binned*2.0/num_binned/3.0, 'o-')
+            
+        ax.set_xlabel('Distance (m)')
+        ax.set_ylabel(r'$T_e$ (eV)')
+        ax.set_xlim([0, grid[-1]])
+        ax.set_ylim([0, 7])
+        ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(ax,))
+        
+        ani.save('PostProcessing/BoundPlasmaTemp.gif')
+        plt.show()
+        
+        
+    else:
+        plt.figure(figsize = (5,4), dpi = 80)
+        for y in range(numDiagnosticTimes+1):
+        
+            plt.cla()
+            
+            phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(y) +'.dat', grid)
+            KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
+            E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
+            num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
+            plt.plot(halfGrid, E_binned*2.0/num_binned/3.0, 'o-')
+            plt.xlabel('Distance (m)')
+            plt.ylabel(r'$T_e$ (eV)')
+            plt.xlim([0, grid[-1]])
+            plt.pause(0.05)        
 
     
 def plotAveragePhi():
@@ -233,7 +267,6 @@ def plotAveragePhi():
 
 def finalElectronEEDFVsMaxwellian():
     phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', grid)
-    print(phaseSpace.shape)
     KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
     Ehist = np.histogram(KE, bins = 100, density = True)
     T_elec = np.mean(KE)* (2/3)

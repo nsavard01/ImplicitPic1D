@@ -105,7 +105,7 @@ def densityAnimation(ParticleProperties, boolMakeAnimation):
             plt.ylabel('Particle Density (1/m^3)')
             plt.xlim([0, grid[-1]])
             plt.legend(loc = 'best')
-            plt.pause(0.05)
+            plt.pause(1)
             
     
 def plotAverageDensity(ParticleProperties):
