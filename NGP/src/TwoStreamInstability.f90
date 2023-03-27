@@ -9,8 +9,8 @@ program TwoStreamInstability
     use mod_simulation
     implicit none
 
-    integer(int32) :: i!, tclock1, tclock2, clock_rate
-    real(real64) :: v_init = 2000.0d0!elapsed_time
+    integer(int32) :: i, tclock1, tclock2, clock_rate
+    real(real64) :: v_init = 2000.0d0, elapsed_time
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
@@ -19,7 +19,7 @@ program TwoStreamInstability
     particleList = readParticleInputs('TwoStream.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver)
+    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime)
     do i = 1, numberChargedParticles
         call particleList(i) % initialize_randUniform(world%grid(NumberXNodes) - world%grid(1), world%dx_dl, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
@@ -48,8 +48,12 @@ program TwoStreamInstability
     call solver%solve_tridiag_Poisson()
     ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
     call solver%construct_diagMatrix_Ampere(world)
-    numTimeSteps = NINT(10.0d0 * 2.0d0 * pi /getPlasmaFreq(n_ave)/del_t)
-    call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, numTimeSteps, stepsAverage)
+    simulationTime = 50.0d0 * 2.0d0 * pi /getPlasmaFreq(n_ave)
+    call system_clock(tclock1)
+    call solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, simulationTime)
+    call system_clock(tclock2, clock_rate)
+    elapsed_time = real(tclock2 - tclock1, kind = real64) / real(clock_rate, kind = real64)
+    print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"
             
 
 
