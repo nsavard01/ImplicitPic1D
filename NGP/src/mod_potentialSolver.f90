@@ -651,7 +651,7 @@ contains
         lwork=(NumberXNodes -2)+ self%m_Anderson
 
         phi_k(:,1) = self%phi(2:NumberXNodes-1)
-        initialNorm = SQRT(SUM(self%phi**2))
+        initialNorm = SQRT(SUM(self%phi(2:NumberXNodes-1)**2))
         call self%depositJ(particleList, world, del_t)
         call self%solve_tridiag_Ampere(world, del_t)
         phi_k(:,2) = self%phi_f(2:NumberXNodes-1)

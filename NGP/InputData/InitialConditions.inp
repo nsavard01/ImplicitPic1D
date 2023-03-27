@@ -2,7 +2,7 @@
 1.d-8 ! relative tolerance for non-linear residual
 5 ! Number of past solutions to store for anderson acceleration, 0 is basic picard iteration
 0.5 ! Beta_k relaxation parameter for anderson acceleration
-5.0d14 ! Initial number density (1/m^3) of particles
+1.5d16 ! Initial number density (1/m^3) of particles
 20 ! number of diagnostic data dumps    
 100 ! Maximum number of outer iterations for picard potential solver
 2.0 ! Fraction of initial 1/w_p for initial time step

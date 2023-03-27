@@ -6,9 +6,9 @@ module mod_collisions
     implicit none
 
     real(real64) :: inelasticEnergyLoss = 0.0d0
-    real(real64) :: Power = 100.0d0 !W/m^2 in 1D
-    real(real64) :: nu_h = 1.0d8 !Hz
-    integer(int32) :: heatSkipSteps = 4
+    real(real64) :: Power = 2.5d3 !W/m^2 in 1D
+    real(real64) :: nu_h = 1.0d8, fraction = 0.1d0 !Hz
+    integer(int32) :: heatSkipSteps = 1
     ! Type of collisions, will likely need arrays which you can loop through which has source, target particle, choose from particle list
     ! Will likely have construct method which takes in collision data and turns into array
 
@@ -103,26 +103,42 @@ contains
         end do
     end subroutine addUniformPowerMaxwellian
 
-    subroutine addUniformPowerMaxwellianNicolas(species, Power, irand, del_t, heatSkipSteps)
+    subroutine addUniformPowerMaxwellianNicolas(species, Power, irand, del_t, fraction)
         ! Gwenael's method does not lead to conservation, very shady
         ! Implement uniform power with conservation properties in mind to get improvement
         ! Percent is percentage of particles to sample, isotropic scatter
         type(Particle), intent(in out) :: species
         integer(int32), intent(in out) :: irand
-        integer(int32), intent(in) :: heatSkipSteps
-        real(real64), intent(in) :: Power, del_t
-        integer(int32) :: i
-        real(real64) :: KE_new, E_distribute, U, theta, V_replace(3)
-        E_distribute = Power*del_t*heatSkipSteps/species%w_p/species%N_p ! J/particle
+        real(real64), intent(in) :: Power, fraction, del_t
+        real(real64) :: T_h, v_replace(3), R, KE
+        integer(int32) :: i, NSample, maxIndex
+        integer(int32), allocatable :: sampleIndex(:)
+        maxIndex = NINT(fraction*species%N_p*2.0d0)
+        allocate(sampleIndex(maxIndex))
+        NSample = 0
+        KE = 0.0d0
         do i=1, species%N_p
-            KE_new = (SUM(species%phaseSpace(2:4,i)**2) * species%mass * 0.5 + E_distribute)
-            U = 1.0d0 - 2.0d0*ran2(irand)
-            theta = ran2(irand) * 2.0d0 * pi
-            v_replace(1) = SQRT(1.0d0-U**2) * COS(theta) ! unit normal in x direction
-            v_replace(2) = SQRT(1.0d0 - U**2) * SIN(theta)
-            v_replace(3) = U
-            species%phaseSpace(2:4,i) = v_replace * SQRT(2.0d0 * KE_new/species%mass)
+            R = ran2(irand)
+            if (R < fraction) then
+                NSample = NSample + 1
+                if (NSample > maxIndex) then
+                    stop "Sample rate in maxwellian power is higher than max"
+                end if
+                sampleIndex(NSample) = i
+                KE = KE + SUM(species%phaseSpace(2:4, i)**2)
+            end if
         end do
+        !print *, "NSample is:", NSample
+        KE = KE * species%mass * 0.5d0 / e / NSample
+        !print *, "KE ave is:", KE * 2.0d0/3.0d0
+        T_h = (KE + Power*del_t/e/NSample/species%w_p) * 2.0d0 / 3.0d0
+        ! print *, "T_h is:", T_h
+        ! stop
+        do i = 1, NSample
+            call getMaxwellianSample(v_replace, species%mass, T_h, irand)
+            species%phaseSpace(2:4, sampleIndex(i)) = v_replace
+        end do
+        deallocate(sampleIndex)
     end subroutine addUniformPowerMaxwellianNicolas
 
 

@@ -44,6 +44,7 @@ contains
         print *, "Maximum iteration number:", maxIter
         print *, "Fraction of 1/w_p for time step:", fractionFreq
         print *, "Number of final steps for averaging:", stepsAverage
+        print *, "Anderson number m is:", m_Anderson
         print *, "------------------"
         print *, ""
         print *, "Reading domain inputs:"
@@ -287,7 +288,7 @@ contains
         integer(int32), intent(in) :: maxIter, heatSkipSteps
         integer(int32), intent(in out) :: irand
         integer(int32) :: i, j, CurrentDiagStep
-        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime
+        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, Etotal
         CurrentDiagStep = 1
 
         !Wrtie Initial conditions
@@ -308,7 +309,7 @@ contains
         diagTime = diagTimeDivision
         101 format(20(1x,es16.8))
         open(22,file='../Data/GlobalDiagnosticData.dat')
-        write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), chargeError (a.u), energyError(a.u), Picard Iteration Number")')
+        write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), EnergyTotal (J/m^2), chargeError (a.u), energyError(a.u), Picard Iteration Number")')
         
         !Save initial particle/field data, along with domain
         densities = 0.0d0
@@ -339,7 +340,7 @@ contains
                     stop "Total energy not conserved over time step in sub-step procedure!"
                 end if
                 
-                if (solver%chargeError > eps_r) then
+                if (solver%chargeError > 1.0d-6) then
                     print *, "-------------------------WARNING------------------------"
                     print *, "Charge error is:", solver%chargeError
                     stop "Total charge not conserved over time step in sub-step procedure!"
@@ -350,16 +351,20 @@ contains
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
                 call writePhi(solver%phi, CurrentDiagStep, .false.)
                 call particleList(1)%writeLocalTemperature(CurrentDiagStep)
+                Etotal = solver%getTotalPE(world, .false.)
                 do j=1, numberChargedParticles
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
+                    Etotal = Etotal + particleList(j)%getTotalKE()
                 end do
-                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
-                SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
+                write(22,"(7(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
+                SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, Etotal, &
+                solver%chargeError, solver%energyError, solver%iterNumPicard
                 CurrentDiagStep = CurrentDiagStep + 1
+                print *, "Number of electrons is:", particleList(1)%N_p
                 diagTime = diagTime + diagTimeDivision
             end if
             if (MODULO(i+1, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, real(heatSkipSteps, kind = real64) *del_t)
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
             end if
             currentTime = currentTime + del_t
             i = i + 1
@@ -375,7 +380,7 @@ contains
             stop "Total energy not conserved over time step in sub-step procedure!"
         end if
         
-        if (solver%chargeError > eps_r) then
+        if (solver%chargeError > 1.0d-6) then
             print *, "-------------------------WARNING------------------------"
             print *, "Charge error is:", solver%chargeError
             stop "Total charge not conserved over time step in sub-step procedure!"
@@ -386,11 +391,14 @@ contains
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
         call writePhi(solver%phi, CurrentDiagStep, .false.)
         call particleList(1)%writeLocalTemperature(CurrentDiagStep)
+        Etotal = solver%getTotalPE(world, .false.)
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(CurrentDiagStep)
+            Etotal = Etotal + particleList(j)%getTotalKE()
         end do
-        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
-        SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, solver%iterNumPicard
+        write(22,"(7(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
+        SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, &
+        Etotal, solver%chargeError, solver%energyError, solver%iterNumPicard
         print *, "Percentage of steps adaptive is:", 100.0d0 * real(solver%amountTimeSplits)/real(i + 1)
 
     end subroutine solveSimulation
@@ -424,7 +432,7 @@ contains
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             if (MODULO(i, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, real(heatSkipSteps, kind = real64) *del_t)
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
             end if
         end do
         densities = densities/stepsAverage

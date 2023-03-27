@@ -28,7 +28,7 @@ contains
             KE_i = KE_i + particleList(j)%getTotalKE()
         end do
         call solver%depositRho(particleList, world) 
-        call solver%adaptiveSolveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
+        call solver%solveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
         KE_f = solver%particleEnergyLoss
         do j=1, numberChargedParticles
             KE_f = KE_f + particleList(j)%getTotalKE()
@@ -43,7 +43,7 @@ contains
             solver%chargeError = solver%chargeError + (1 + (solver%J(1) - solver%J(NumberXNodes-1)) *del_t/ world%dx_dl(1)/(rho_f(1) - solver%rho(1)))**2
         end if
         do k = 1, NumberXNodes -2
-            if ((solver%rho(k+1) /= 0)) then
+            if ((rho_f(k+1) - solver%rho(k+1)) /= 0) then
                 solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%dx_dl(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
                 j = j + 1
             end if
