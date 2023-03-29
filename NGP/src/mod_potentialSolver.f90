@@ -161,7 +161,7 @@ contains
         real(real64) :: m, d(NumberXNodes - 2), cp(NumberXNodes - 3),dp(NumberXNodes- 2)
         n = NumberXNodes - 2
 
-        d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 + arrayDiff(self%phi(1:n+1))/world%dx_dl(1:n) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
+        d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 + arrayDiff(self%phi(1:n+1), n+1)/world%dx_dl(1:n) - arrayDiff(self%phi(2:), n+1)/world%dx_dl(2:)
         d(1) = d(1) + self%phi(1) * self%coeff_left
         d(n) = d(n) + self%phi(NumberXNodes) * self%coeff_right
     ! initialize c-prime and d-prime
@@ -194,7 +194,7 @@ contains
             Ax(i) = self%b_tri(i)*self%phi_f(i+1) + self%c_tri(i) * self%phi_f(i+2) + self%a_tri(i-1) * self%phi_f(i)
         end do
         Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
-        d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 + arrayDiff(self%phi(1:NumberXNodes-1))/world%dx_dl(1:NumberXNodes-2) - arrayDiff(self%phi(2:))/world%dx_dl(2:)
+        d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 + arrayDiff(self%phi(1:NumberXNodes-1), NumberXNodes-1)/world%dx_dl(1:NumberXNodes-2) - arrayDiff(self%phi(2:), NumberXNodes-1)/world%dx_dl(2:)
         d(1) = d(1) + self%phi(1) * self%coeff_left
         d(NumberXNodes-2) = d(NumberXNodes-2) + self%phi(NumberXNodes) * self%coeff_right
         !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(NumberXNodes-2))
@@ -210,9 +210,9 @@ contains
         logical :: future
         real(real64) :: res
         if (future) then
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f)**2 / world%dx_dl)
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f, NumberXNodes)**2 / world%dx_dl)
         else
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi)**2 / world%dx_dl)
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%dx_dl)
         end if
     end function getTotalPE
 

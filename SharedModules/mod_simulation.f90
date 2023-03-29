@@ -66,9 +66,9 @@ contains
         print *, ""
 
         ! if one boundary is periodic, other must also be
-        if ((leftBoundary == -3) .or. (rightBoundary == -3)) then
-            leftBoundary = -3
-            rightBoundary = -3
+        if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
+            leftBoundary = 3
+            rightBoundary = 3
             leftVoltage = rightVoltage
         end if
         world = Domain(leftBoundary, rightBoundary)
@@ -438,7 +438,7 @@ contains
         densities = densities/stepsAverage
         call writeParticleDensity(densities, particleList, world, 0, .true.) 
         call writePhi(phi_average/stepsAverage, 0, .true.)
-        write(22,"((I4, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
+        write(22,"((I6, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/del_t/stepsAverage, SUM(solver%particleChargeLoss)/del_t/stepsAverage, solver%particleEnergyLoss/del_t/stepsAverage
         close(22)
         print *, "Electron average wall loss:", SUM(solver%particleChargeLoss(:, 1))/del_t/stepsAverage
         print *, "Ion average wall loss:", SUM(solver%particleChargeLoss(:, 2))/del_t/stepsAverage

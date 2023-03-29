@@ -76,10 +76,11 @@ contains
 
     !------------------------ Array Functions -------------------------------------
 
-    pure function arrayDiff(x) result(res)
-        real(real64), intent(in) :: x(:)
-        real(real64) :: res(size(x)-1)
-        res = x(2:) - x(1:size(x)-1)
+    pure function arrayDiff(x, n) result(res)
+        integer(int32), intent(in) :: n
+        real(real64), intent(in) :: x(n)
+        real(real64) :: res(n-1)
+        res = x(2:) - x(1:n-1)
     end function arrayDiff
 
     pure function getArrayMean1D(x) result(res)

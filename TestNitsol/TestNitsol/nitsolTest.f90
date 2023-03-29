@@ -17,17 +17,21 @@ program nitsolTest
     real(real64), parameter :: e = 1.602176634d-19 ! C
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
-    integer(int32) :: num_grid_nodes = 64, i,j, ipar(3), itrmf, input(10), info(6), kdmax, iterm
-    real(real64) :: phi(64), grid(64), rho(64), L_domain = 0.1d0, b(62), delx, phi_Pic(62), A_pic(62,62), fcur(62), diag(62), diagLower(61), rpar(62,63), ftol, initialNormR, stptol
+    integer(int32) :: num_grid_nodes = 64, i,j, ipar(3), itrmf, input(10), info(6), kdmax, iterm, infoLpack
+    real(real64) :: phi(64), grid(64), rho(64), L_domain = 0.1d0, b(62), delx, phi_Pic(62), A_pic(62,62), fcur(62), diag(62), diagLower(61), diagUpper(61), rpar(62,63), ftol, initialNormR, stptol
     real(real64), allocatable :: rwork(:)
-    external ddot
-    external dnrm2
+    double precision, external :: ddot
+    double precision, external :: dnrm2
     iplvl = 4
     iterm = 0
     kdmax = 20 ! maximum krylov subspace dimension
     input = 0
     input(1) = 50 ! maximum iterations
     input(4) = kdmax
+    input(10) = 2
+    etamax = 0.8d0
+    choice2_exp = 1.5d0
+    choice2_coef = 0.9d0
     allocate(rwork(62*(kdmax+5)+kdmax*(kdmax+3)))
     ftol = 1.0d-6
     stptol = 1.0d-8
@@ -37,7 +41,11 @@ program nitsolTest
     b = -rho(2:63) * delx**2 /eps_0
     A_pic = 0.0d0
     diagLower = 1.0d0
+    diagUpper = 1.0d0
     diag = -2.0d0
+    call dgtsv(62, 1, diagLower, diag, diagUpper, b, 62, infoLpack)
+    print *, b
+    stop
     do i=1, 62
         do j=1, 62
             if (ABS(j-i) == 1) then
@@ -53,10 +61,11 @@ program nitsolTest
     rpar(:, 63) = b
     fcur = b
     call func(62, phi_Pic, fcur, rpar, ipar, itrmf)
-    initialNormR = SUM(SQRT(fcur**2))
-    print *, initialNormR
+    initialNormR = dnrm2(62, fcur, 1)
+    print *, "Initial norm is:", initialNormR
     call nitsol(62, phi_Pic, func, jacv, ftol*initialNormR, stptol,input, info, rwork, rpar, ipar, iterm, ddot, dnrm2)
-    print *, phi_Pic
+    call func(62, phi_Pic, fcur, rpar, ipar, itrmf)
+    initialNormR = dnrm2(62, fcur, 1)
     write(6,*) 
     write(6,880) iterm
     write(6,900) info(1)

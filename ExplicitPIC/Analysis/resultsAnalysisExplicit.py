@@ -27,11 +27,10 @@ mu_0 = scipy.constants.mu_0
 k_boltz = scipy.constants.k
 e = scipy.constants.e
 
-def extractPhaseSpace(filename, grid):
+def extractPhaseSpace(filename, delX):
     phaseSpace = np.fromfile(filename, dtype = 'float', offset = 4)
     phaseSpace = phaseSpace.reshape((int(phaseSpace.size/4), 4))
-    d = phaseSpace[:,0] - phaseSpace[:,0].astype(int)
-    phaseSpace[:,0] = grid[phaseSpace[:,0].astype(int)-1] + d * (grid[phaseSpace[:,0].astype(int)] - grid[phaseSpace[:,0].astype(int)-1])
+    phaseSpace[:,0] = (phaseSpace[:,0]-1) * delX
     return phaseSpace
 
 
@@ -40,10 +39,11 @@ n_x = int(np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[0])
 t_final = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[1]
 del_t = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[2]
 FracFreq = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[3]
+delX = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[4]
 boolAverageFile = os.path.isfile('../Data/GlobalDiagnosticDataAveraged.dat')
 plasmaPeriod = del_t/FracFreq
 # list names in diagnostic file for each time steps
-diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'chargeError', 'energyError', 'numPicardIter']
+diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
 diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
 GlobalDiagnostics = pd.read_csv('../Data/GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
 numDiagnosticTimes = GlobalDiagnostics.shape[0]
@@ -52,8 +52,6 @@ if (boolAverageFile):
     GlobalDiagnosticsAveraged = pd.read_csv('../Data/GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
 
 grid = np.fromfile('../Data/domainGrid.dat', dtype = 'float', offset = 4)
-dx_dl = np.fromfile('../Data/domainDxDl.dat', dtype = 'float', offset = 4)
-halfGrid = (grid[0:-1] + grid[1::])/2
 ne = np.zeros(n_x)
 ni = np.zeros(n_x)
 
@@ -112,10 +110,7 @@ def plotAverageDensity(ParticleProperties):
     colors = ['b', 'r', 'g', 'k', 'c', 'm', 'y']
     for i,name in enumerate(ParticleProperties['name']):
         n = np.fromfile('../Data/Density/density_' + name + '_Average.dat', dtype = 'float', offset = 4)
-        plt.plot(grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name[1:-1] +  '}$ ' + 'CIC')
-    for i,name in enumerate(ParticleProperties['name']):
-        n = np.fromfile('../../NGP/Data/Density/density_' + name + '_Average.dat', dtype = 'float', offset = 4)
-        plt.plot(grid, n,  linestyle = '--', marker = '^', color = colors[i], label = r'$n_{' + name[1:-1] +  '}$ ' + 'NGP')
+        plt.plot(grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name[1:-1] +  '}$')
     plt.xlabel('Distance (m)')
     plt.ylabel('Particle Density (1/m^3)')
     plt.xlim([0, grid[-1]])
@@ -186,7 +181,7 @@ def update_plot_Phi(i, ax):
     ax.set_xlabel('Distance (m)')
     ax.set_ylabel('Potential (V)')
     ax.set_xlim([0, grid[-1]])
-    ax.set_ylim([0, 25])
+    ax.set_ylim([0, 30])
     
 def phiAnimation(boolMakeAnimation):
     if boolMakeAnimation:
@@ -198,7 +193,7 @@ def phiAnimation(boolMakeAnimation):
         ax.set_xlabel('Distance (m)')
         ax.set_ylabel('Potential (V)')
         ax.set_xlim([0, grid[-1]])
-        ax.set_ylim([0, 25])
+        ax.set_ylim([0, 30])
         ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(ax,))
         
         ani.save('PostProcessing/BoundPlasmaPhi.gif')
@@ -218,17 +213,47 @@ def phiAnimation(boolMakeAnimation):
             plt.xlim([0, grid[-1]])
             plt.pause(0.05)        
         
-    
+def temperatureAnimation(boolMakeAnimation):
+    if boolMakeAnimation:
+        numframes = numDiagnosticTimes + 1
+        fig, ax = plt.subplots()
+        phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(i) +'.dat', delX)
+        KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
+        E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
+        num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
+        ax.plot(halfGrid, E_binned*2.0/num_binned/3.0, 'o-')
+            
+        ax.set_xlabel('Distance (m)')
+        ax.set_ylabel(r'$T_e$ (eV)')
+        ax.set_xlim([0, grid[-1]])
+        ax.set_ylim([0, 7])
+        ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(ax,))
+        
+        ani.save('PostProcessing/BoundPlasmaTemp.gif')
+        plt.show()
+        
+        
+    else:
+        plt.figure(figsize = (5,4), dpi = 80)
+        for y in range(numDiagnosticTimes+1):
+        
+            plt.cla()
+            
+            phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(y) +'.dat', delX)
+            KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
+            E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
+            num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
+            plt.xlabel('Distance (m)')
+            plt.ylabel(r'$T_e$ (eV)')
+            plt.xlim([0, grid[-1]])
+            plt.pause(0.05)        
 
     
 def plotAveragePhi():
     phi = np.fromfile('../Data/Phi/phi_Average.dat', dtype = 'float', offset = 4)
-    phi_NGP = np.fromfile('../../NGP/Data/Phi/phi_Average.dat', dtype = 'float', offset = 4)
-    plt.plot(grid, phi, 'o-', label = 'CIC')
-    plt.plot(grid, phi_NGP, 'o-', label = 'NGP')
+    plt.plot(grid, phi, 'o-')
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
-    plt.legend(loc = 'lower center')
     plt.xlim([0, grid[-1]])
     plt.pause(0.05)        
 
@@ -238,8 +263,7 @@ def plotAveragePhi():
 # ---------------------- Final Plots --------------------------
 
 def finalElectronEEDFVsMaxwellian():
-    phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', grid)
-    print(phaseSpace.shape)
+    phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', delX)
     KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
     Ehist = np.histogram(KE, bins = 100, density = True)
     T_elec = np.mean(KE)* (2/3)
@@ -253,8 +277,8 @@ def finalElectronEEDFVsMaxwellian():
     plt.xlabel('Electron Energy (eV)')
     plt.legend(loc = 'best')
 
-
-
+if (boolAverageFile):
+    print("Global power is:", GlobalDiagnosticsAveraged['Ploss(W/m^2)'] + GlobalDiagnosticsAveraged['P_wall(W/m^2)'], 'W/m^2')
 
 
 

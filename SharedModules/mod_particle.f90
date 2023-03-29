@@ -21,6 +21,7 @@ module mod_particle
         procedure, public, pass(self) :: getKEAve
         procedure, public, pass(self) :: getTotalKE
         procedure, public, pass(self) :: getTotalKE1D
+        procedure, public, pass(self) :: getTotalMomentum
         procedure, public, pass(self) :: getVrms
         procedure, public, pass(self) :: writePhaseSpace
         procedure, public, pass(self) :: writeLocalTemperature
@@ -81,6 +82,12 @@ contains
         res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 / e / self%N_p
 
     end function getKEAve
+
+    pure function getTotalMomentum(self) result(res)
+        class(Particle), intent(in) :: self
+        real(real64) :: res(3)
+        res = self%w_p * self%mass * SUM(self%phaseSpace(2:4, 1:self%N_p), DIM = 2)
+    end function getTotalMomentum
 
     pure function getVrms(self) result(res)
         ! get rms velocity for checking
