@@ -239,8 +239,8 @@ contains
         n = NumberXNodes - 2
 
         d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 &
-        + arrayDiff(self%phi(1:n+1))*2.0d0/(world%dx_dl(1:n) + world%dx_dl(2:n+1)) &
-        - arrayDiff(self%phi(2:))*2.0d0/(world%dx_dl(3:n+2) + world%dx_dl(2:n+1))
+        + arrayDiff(self%phi(1:n+1), n+1)*2.0d0/(world%dx_dl(1:n) + world%dx_dl(2:n+1)) &
+        - arrayDiff(self%phi(2:), n+1)*2.0d0/(world%dx_dl(3:n+2) + world%dx_dl(2:n+1))
         d(1) = d(1) + self%phi(1) * self%coeff_left
         d(n) = d(n) + self%phi(NumberXNodes) * self%coeff_right
     ! initialize c-prime and d-prime
@@ -274,8 +274,8 @@ contains
         end do
         Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
         d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 &
-        + arrayDiff(self%phi(1:NumberXNodes-1))*2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1)) &
-        - arrayDiff(self%phi(2:))*2.0d0/(world%dx_dl(3:NumberXNodes) + world%dx_dl(2:NumberXNodes-1))
+        + arrayDiff(self%phi(1:NumberXNodes-1), NumberXNodes-1)*2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1)) &
+        - arrayDiff(self%phi(2:), NumberXNodes-1)*2.0d0/(world%dx_dl(3:NumberXNodes) + world%dx_dl(2:NumberXNodes-1))
         d(1) = d(1) + self%phi(1) * self%coeff_left
         d(NumberXNodes-2) = d(NumberXNodes-2) + self%phi(NumberXNodes) * self%coeff_right
         !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(NumberXNodes-2))
@@ -291,9 +291,9 @@ contains
         logical :: future
         real(real64) :: res
         if (future) then
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f)**2 * 2.0d0 / (world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes)))
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f, NumberXNodes)**2 * 2.0d0 / (world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes)))
         else
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi)**2 * 2.0d0 / (world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes)))
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 * 2.0d0 / (world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes)))
         end if
     end function getTotalPE
 
@@ -361,18 +361,18 @@ contains
         del_tau = del_t
         a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_alongV)/2.0d0, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-        if ((a/=0.0d0) .and. (v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
+        if (v_sub/=0.0d0) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
             c = (l_sub - l_alongV) * world%dx_dl(l_cell)
             if (a*v_sub > 0) then
                 ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in same direction"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     print *, "l_sub is:", l_sub
@@ -387,7 +387,7 @@ contains
                 a = (part%q / part%mass / 2.0d0) * self%getEField((l_sub + l_awayV)/2.0d0, l_cell, world)
                 if (a*v_sub < 0) then
                     c = (l_sub - l_awayV) * world%dx_dl(l_cell)
-                    del_tau_tmp = (ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                    del_tau_tmp = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
                     if (del_tau_tmp < del_tau) then
                         ! If del_tau isn't reduced, then want to keep saved l_f since might make picard iteration more stable as initial condition
                         del_tau = del_tau_tmp
@@ -398,15 +398,6 @@ contains
                     end if
                 end if  
             end if
-        else if ((a == 0.0) .and. (v_sub /= 0.0)) then
-            !Free particle drift
-            del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for a = 0"
-            end if
-
         else
             ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
             if (world%boundaryConditions(l_cell) == 0) then
@@ -444,14 +435,14 @@ contains
             l_f = l_alongV
             if (a*v_sub > 0) then
                 ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in same direction"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     print *, "In regular substep routine"
@@ -475,7 +466,7 @@ contains
                 end if
                 ! try for minimum distance particle can go
                 if (del_tau >= del_t - timePassed) then
-                    a = (part%q / part%mass / 2.0d0) * self%getEField(l_sub + SIGN(1.0d-6, v_sub), l_cell, world)
+                    a = (part%q / part%mass / 2.0d0) * self%getEField(l_sub + SIGN(1.0d-8, v_sub), l_cell, world)
                     if (a*v_sub < 0) then
                         del_tau_tmp = ABS(v_sub/a)
                         if (del_tau_tmp < del_tau) then
@@ -511,18 +502,18 @@ contains
         del_tau = del_t
         a = (part%q / part%mass / 2.0d0) * self%getEFieldPeriodic((l_sub + l_alongV)/2.0d0, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-        if ((a/=0.0d0) .and. (v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
+        if ((v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
             c = (l_sub - l_alongV) * world%dx_dl(l_cell)
             if (a*v_sub > 0) then
                 ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in same direction"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     print *, "l_sub is:", l_sub
@@ -537,7 +528,7 @@ contains
                 a = (part%q / part%mass / 2.0d0) * self%getEFieldPeriodic((l_sub + l_awayV)/2.0d0, l_cell, world)
                 if (a*v_sub < 0) then
                     c = (l_sub - l_awayV) * world%dx_dl(l_cell)
-                    del_tau_tmp = (ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                    del_tau_tmp = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
                     if (del_tau_tmp < del_tau) then
                         ! If del_tau isn't reduced, then want to keep saved l_f since might make picard iteration more stable as initial condition
                         del_tau = del_tau_tmp
@@ -547,14 +538,6 @@ contains
                         stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
                     end if
                 end if  
-            end if
-        else if ((a == 0.0) .and. (v_sub /= 0.0)) then
-            !Free particle drift
-            del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for a = 0"
             end if
 
         else
@@ -594,14 +577,14 @@ contains
             l_f = l_alongV
             if (a*v_sub > 0) then
                 ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in same direction"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     print *, "In regular substep routine"
@@ -658,18 +641,18 @@ contains
         integer(int32), intent(in) :: l_cell
         a = (part%q / part%mass / 2.0d0) * self%getEFieldDirichlet(l_sub, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-        if ((a/=0.0d0) .and. (v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
+        if ((v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
             c = (l_sub - l_alongV) * world%dx_dl(l_cell)
             if (a*v_sub > 0) then
                 ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in same direction"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
@@ -677,21 +660,12 @@ contains
             else
                 ! v and a opposite direction, boundary opposite direction of v
                 c = (l_sub - l_awayV) * world%dx_dl(l_cell)
-                del_tau = (ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
                 l_f = l_awayV
                 if (del_tau <= 0) then
                     stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
                 end if
             end if
-        else if ((a == 0.0) .and. (v_sub /= 0.0)) then
-            !Free particle drift
-            del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for a = 0"
-            end if
-
         else
             ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
             if (a > 0) then
@@ -720,14 +694,14 @@ contains
             c = (l_sub - l_alongV) * world%dx_dl(l_cell)
             if (a*v_sub > 0.0d0) then
                 ! velocity and acceleration in same direction
-                del_tau = (-ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in same direction"
                 end if
             else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
                 ! v and a opposite direction, but particle can still reach boundary along v
-                del_tau = (ABS(v_sub) - SQRT(v_sub**2 - 4.0d0*a*c))/2.0d0/ABS(a)
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
                 l_f = l_alongV
                 if (del_tau <= 0.0d0) then
                     stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"

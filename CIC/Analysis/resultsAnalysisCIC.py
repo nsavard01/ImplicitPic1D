@@ -27,6 +27,12 @@ mu_0 = scipy.constants.mu_0
 k_boltz = scipy.constants.k
 e = scipy.constants.e
 
+def getDebyeLength(T_e, n_e):
+    return np.sqrt(eps_0 * T_e/n_e/e)
+
+def getPlasmaFreq(n_e):
+    return np.sqrt(n_e * (e**2) / m_e/eps_0)
+
 def extractPhaseSpace(filename, grid):
     phaseSpace = np.fromfile(filename, dtype = 'float', offset = 4)
     phaseSpace = phaseSpace.reshape((int(phaseSpace.size/4), 4))
