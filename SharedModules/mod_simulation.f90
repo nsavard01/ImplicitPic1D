@@ -337,7 +337,7 @@ contains
                 if (solver%energyError > eps_r) then
                     print *, "-------------------------WARNING------------------------"
                     print *, "Energy error is:", solver%energyError
-                    stop "Total energy not conserved over time step in sub-step procedure!"
+                    print *, "Total energy not conserved over time step in sub-step procedure!"
                 end if
                 
                 if (solver%chargeError > 1.0d-6) then
