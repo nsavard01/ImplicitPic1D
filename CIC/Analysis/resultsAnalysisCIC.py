@@ -17,6 +17,8 @@ import pandas as pd
 import glob, os
 import matplotlib.animation as animation
 import itertools
+import shutil
+import sys
 
 
 eps_0 = scipy.constants.epsilon_0
@@ -26,6 +28,17 @@ m_p = scipy.constants.m_p
 mu_0 = scipy.constants.mu_0
 k_boltz = scipy.constants.k
 e = scipy.constants.e
+
+
+dataFolder = ''
+InitialConditions = None
+GlobalDiagnostics = None
+ParticleProperties = None
+GlobalDiagnosticsAveraged = None
+boolAverageFile = None
+grid = None
+dx_dl = None
+numDiagnosticTimes = None
 
 def getDebyeLength(T_e, n_e):
     return np.sqrt(eps_0 * T_e/n_e/e)
@@ -41,27 +54,27 @@ def extractPhaseSpace(filename, grid):
     return phaseSpace
 
 
-# name for each initial condition simulation
-n_x = int(np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[0])
-t_final = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[1]
-del_t = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[2]
-FracFreq = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[3]
-boolAverageFile = os.path.isfile('../Data/GlobalDiagnosticDataAveraged.dat')
-plasmaPeriod = del_t/FracFreq
-# list names in diagnostic file for each time steps
-diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'chargeError', 'energyError', 'numPicardIter']
-diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
-GlobalDiagnostics = pd.read_csv('../Data/GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
-numDiagnosticTimes = GlobalDiagnostics.shape[0]
-ParticleProperties = pd.read_csv('../Data/ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
-if (boolAverageFile):
-    GlobalDiagnosticsAveraged = pd.read_csv('../Data/GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
-endData = pd.read_csv('../Data/SimulationFinalData.dat', skiprows = 1, delim_whitespace=True, names = ['Time(s)', 'Steps', 'NumAdaptiveSteps'])
-grid = np.fromfile('../Data/domainGrid.dat', dtype = 'float', offset = 4)
-dx_dl = np.fromfile('../Data/domainDxDl.dat', dtype = 'float', offset = 4)
-halfGrid = (grid[0:-1] + grid[1::])/2
-ne = np.zeros(n_x)
-ni = np.zeros(n_x)
+# # name for each initial condition simulation
+# n_x = int(np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[0])
+# t_final = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[1]
+# del_t = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[2]
+# FracFreq = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[3]
+# boolAverageFile = os.path.isfile('../Data/GlobalDiagnosticDataAveraged.dat')
+# plasmaPeriod = del_t/FracFreq
+# # list names in diagnostic file for each time steps
+# diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'chargeError', 'energyError', 'numPicardIter']
+# diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+# GlobalDiagnostics = pd.read_csv('../Data/GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+# numDiagnosticTimes = GlobalDiagnostics.shape[0]
+# ParticleProperties = pd.read_csv('../Data/ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
+# if (boolAverageFile):
+#     GlobalDiagnosticsAveraged = pd.read_csv('../Data/GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
+# endData = pd.read_csv('../Data/SimulationFinalData.dat', skiprows = 1, delim_whitespace=True, names = ['Time(s)', 'Steps', 'NumAdaptiveSteps'])
+# grid = np.fromfile('../Data/domainGrid.dat', dtype = 'float', offset = 4)
+# dx_dl = np.fromfile('../Data/domainDxDl.dat', dtype = 'float', offset = 4)
+# halfGrid = (grid[0:-1] + grid[1::])/2
+# ne = np.zeros(n_x)
+# ni = np.zeros(n_x)
 
 
 #------------------- Animation -------------------
@@ -267,9 +280,7 @@ def plotAveragePhi():
     plt.pause(0.05)        
 
 
-    
-    
-# ---------------------- Final Plots --------------------------
+
 
 def finalElectronEEDFVsMaxwellian():
     phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', grid)
@@ -285,8 +296,40 @@ def finalElectronEEDFVsMaxwellian():
     plt.ylabel(r'PDF ($\frac{1}{eV^{3/2}}$)')
     plt.xlabel('Electron Energy (eV)')
     plt.legend(loc = 'best')
+    
+def getData(filename):
+    global dataFolder
+    global InitialConditions
+    global GlobalDiagnostics
+    global ParticleProperties
+    global GlobalDiagnosticsAveraged
+    global boolAverageFile
+    global grid
+    global numDiagnosticTimes
+    
+    
+    dataFolder = '../' + filename + '/'
+    diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'chargeError', 'energyError', 'numPicardIter']
+    diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+    InitialConditionsList = ['n_x', 't_final', 'del_t', 'FracFreq', 'Power', 'heatSteps', 'nu_h']
+    # list names in diagnostic file for each time steps
+    InitialConditions =  pd.read_csv(dataFolder + 'InitialConditions.dat', skiprows = 1, delim_whitespace=True, names = InitialConditionsList)
+    GlobalDiagnostics = pd.read_csv(dataFolder + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+    
+    ParticleProperties = pd.read_csv(dataFolder + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
+    boolAverageFile = os.path.isfile(dataFolder + 'GlobalDiagnosticDataAveraged.dat')
+    GlobalDiagnosticsAveraged = pd.DataFrame()
+    if (boolAverageFile):
+        GlobalDiagnosticsAveraged = pd.read_csv(dataFolder + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
+    
+    grid = np.fromfile(dataFolder + 'domainGrid.dat', dtype = 'float', offset = 4)
+    dx_dl = np.fromfile('../Data/domainDxDl.dat', dtype = 'float', offset = 4)
+    numDiagnosticTimes = GlobalDiagnostics.shape[0]
 
+def saveData(saveFile):
+    shutil.copytree('../Data', '../' + saveFile)
 
+getData('Data')
 print("Global power is:", GlobalDiagnosticsAveraged['Ploss(W/m^2)'] + GlobalDiagnosticsAveraged['P_wall(W/m^2)'], 'W/m^2')
 
 

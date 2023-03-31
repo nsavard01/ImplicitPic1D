@@ -10,6 +10,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i
+    real(real64) :: E_i, E_f
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
@@ -17,7 +18,7 @@ program BoundPlasmaExample
     particleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime)
+    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h)
     do i = 1, numberChargedParticles
         call initialize_randUniform(particleList(i), world, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
@@ -53,7 +54,13 @@ program BoundPlasmaExample
     !     stop "Total charge not conserved over time step in sub-step procedure!"
     ! end if
     ! stop
-  
+    
+    E_i = particleList(1)%getTotalKE() + particleList(2)%getTotalKE() + solver%getTotalPE(world, .false.)
+    call solver%solveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
+    E_f = particleList(1)%getTotalKE() + particleList(2)%getTotalKE() + solver%getTotalPE(world, .true.) + solver%particleEnergyLoss
+    print *, "took iteration number:", solver%iterNumPicard
+    print *, "Percent difference is:", ABS((E_f - E_i)/E_i) * 100.0d0
+    stop
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", stepsAverage, "time steps"
     call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)

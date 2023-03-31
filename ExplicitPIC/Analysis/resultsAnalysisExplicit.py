@@ -48,23 +48,6 @@ def extractPhaseSpace(filename, delX):
     phaseSpace[:,0] = (phaseSpace[:,0]-1) * delX
     return phaseSpace
 
-def setDataFolder(dataFolder):
-# name for each initial condition simulation
-    diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
-    diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
-    InitialConditionsList = ['n_x', 't_final', 'del_t', 'FracFreq', 'delX', 'Power', 'heatSteps', 'nu_h']
-    # list names in diagnostic file for each time steps
-    InitialConditions =  pd.read_csv(dataFolder + 'InitialConditions.dat', skiprows = 1, delim_whitespace=True, names = InitialConditionsList)
-    GlobalDiagnostics = pd.read_csv(dataFolder + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
-    
-    ParticleProperties = pd.read_csv(dataFolder + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
-    boolAverageFile = os.path.isfile(dataFolder + 'GlobalDiagnosticDataAveraged.dat')
-    GlobalDiagnosticsAveraged = pd.DataFrame()
-    if (boolAverageFile):
-        GlobalDiagnosticsAveraged = pd.read_csv(dataFolder + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
-    
-    grid = np.fromfile(dataFolder + 'domainGrid.dat', dtype = 'float', offset = 4)
-    return InitialConditions, GlobalDiagnostics, ParticleProperties, GlobalDiagnosticsAveraged, grid
 
 
 #------------------- Animation -------------------

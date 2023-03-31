@@ -1042,6 +1042,13 @@ contains
                             v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / (del_t - timePassed) - v_sub
                             call self%depositJSubStepDirichlet(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_t-timePassed, del_t)
                             if (NINT(l_f) /= l_cell) then
+                                print *, "a is:", a
+                                print *, world%dx_dl
+                                print *, 'v_sub is:', v_sub
+                                print *, "remaining time:", del_t - timePassed
+                                print *, "l_f is:", l_f
+                                print *, "l_sub is:", l_sub
+                                print *, "l_cell is:", l_cell
                                 print *, "After ongoing Dirichlet last substep, l_f is not in correct cell"
                                 stop
                             end if
@@ -1461,11 +1468,13 @@ contains
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
         real(real64) :: initialR, sumPastResiduals, initialNorm
-        real(real64) :: Residual_k(NumberXNodes-2, self%m_Anderson+1), phi_k(NumberXNodes-2, self%m_Anderson+1), fitMat(NumberXNodes-2, self%m_Anderson), alpha(NumberXNodes-2)
-        integer(int32) :: lwork, work(NumberXNodes -2 + self%m_Anderson)
-        integer(int32) :: i, j, index, m_k, info
-        lwork=(NumberXNodes -2)+ self%m_Anderson
-
+        real(real64) :: Residual_k(NumberXNodes-2, self%m_Anderson+1), phi_k(NumberXNodes-2, self%m_Anderson+1), fitMat(NumberXNodes-2, self%m_Anderson)
+        integer(int32) :: lwork
+        real(real64), allocatable :: work(:), alpha(:)
+        integer(int32) :: i, j, index, m_k, info, ldb
+        ldb = MAX(self%m_Anderson, (NumberXNodes -2))
+        lwork= MIN((NumberXNodes -2),self%m_Anderson) + ldb
+        allocate(alpha(ldb), work(lwork))
         phi_k(:,1) = self%phi(2:NumberXNodes-1)
         call self%depositJ(particleList, world, del_t)
         initialNorm = SQRT(SUM(self%phi(2:NumberXNodes-1)**2))
@@ -1477,32 +1486,36 @@ contains
         do i = 1, maxIter
             index = MODULO(i, self%m_Anderson+1) + 1
             m_k = MIN(i, self%m_Anderson)
+            ldb = MAX(m_k, (NumberXNodes -2))
             call self%depositJ(particleList, world, del_t)
             if (SQRT(SUM((self%phi_f(2:NumberXNodes-1) - phi_k(:,MODULO(i-1, self%m_Anderson+1) + 1))**2)) < eps_r*(initialR + initialNorm)) then
+                print *, "converged"
+                print *, "initialR is:", initialR
+                print *, "initialNorm is:", initialNorm
                 call self%moveParticles(particleList, world, del_t)
                 self%phi = self%phi_f
                 exit
             end if
             call self%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = self%phi_f(2:NumberXNodes-1) - phi_k(:,index)
-            if (i > self%m_Anderson) then
-                if (self%m_anderson > 1) then
-                    sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2) &
-                    + SUM(Residual_k(:, MODULO(i-2, self%m_Anderson+1) + 1)**2)
-                    sumPastResiduals = sumPastResiduals/2.0d0
-                else
-                    sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2)
-                end if
-                if (SUM(Residual_k(:, index)**2) > sumPastResiduals) then
-                    self%iterNumPicard = maxIter
-                    goto 75
-                end if
-            end if
+            ! if (i > self%m_Anderson) then
+            !     if (self%m_anderson > 1) then
+            !         sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2) &
+            !         + SUM(Residual_k(:, MODULO(i-2, self%m_Anderson+1) + 1)**2)
+            !         sumPastResiduals = sumPastResiduals/2.0d0
+            !     else
+            !         sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2)
+            !     end if
+            !     if (SUM(Residual_k(:, index)**2) > sumPastResiduals) then
+            !         self%iterNumPicard = maxIter
+            !         goto 75
+            !     end if
+            ! end if
             do j = 0, m_k-1
                 fitMat(:,j+1) = Residual_k(:, MODULO(i - m_k + j, self%m_Anderson+1) + 1) - Residual_k(:, index)
             end do
-            alpha = -Residual_k(:, index)
-            call dgels('N', NumberXNodes-2, m_k, 1, fitMat(:, 1:m_k), NumberXNodes-2, alpha, NumberXNodes-2, work, lwork, info)
+            alpha(1:NumberXNodes-2) = -Residual_k(1:NumberXNodes-2, index)
+            call dgels('N', NumberXNodes-2, m_k, 1, fitMat(:, 1:m_k), NumberXNodes-2, alpha(1:ldb), ldb, work, lwork, info)
             if (info /= 0) then
                 print *, "Issue with minimization procedure dgels in Anderson Acceleration!"
                 stop

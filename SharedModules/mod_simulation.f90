@@ -17,10 +17,10 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime)
+    subroutine readInputs(NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, eps_r, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h)
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
-        integer(int32), intent(in out) :: NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage
-        real(real64), intent(in out) :: eps_r, fractionFreq, n_ave, simulationTime
+        integer(int32), intent(in out) :: NumberXNodes, maxIter, numDiagnosticSteps, stepsAverage, heatSkipSteps
+        real(real64), intent(in out) :: eps_r, fractionFreq, n_ave, simulationTime, Power, nu_h
         integer(int32) :: io, leftBoundary, rightBoundary, gridType, m_Anderson
         real(real64) :: leftVoltage, rightVoltage, L_domain, del_l, Beta_k
         type(Domain) :: world
@@ -37,6 +37,9 @@ contains
         read(10, *, IOSTAT = io) maxIter
         read(10, *, IOSTAT = io) fractionFreq
         read(10, *, IOSTAT = io) stepsAverage
+        read(10, *, IOSTAT = io) Power
+        read(10, *, IOSTAT = io) heatSkipSteps
+        read(10, *, IOSTAT = io) nu_h
         close(10)
         print *, "Relative error:", eps_r
         print *, "Average initial particle density:", n_ave
@@ -45,6 +48,9 @@ contains
         print *, "Fraction of 1/w_p for time step:", fractionFreq
         print *, "Number of final steps for averaging:", stepsAverage
         print *, "Anderson number m is:", m_Anderson
+        print *, "Power input (W/m^2):", Power
+        print *, "Steps to skip for heating:", heatSkipSteps
+        print *, "Heating frequency (Hz):", nu_h
         print *, "------------------"
         print *, ""
         print *, "Reading domain inputs:"
@@ -294,8 +300,8 @@ contains
         call cpu_time(superStart)
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq")')
-        write(15,"((I3.3, 1x), 3(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, Power(W/m^2), heatSteps, nu_h")')
+        write(15,"((I3.3, 1x), 4(es16.8,1x), (I3.3, 1x), (es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, Power, heatSkipSteps, nu_h
         close(15)
 
         ! Write Particle properties
@@ -330,7 +336,7 @@ contains
                 call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 call cpu_time(endTime)
-                elapsed_time = elasped_time + (endTime - startTime)
+                elapsed_time = elapsed_time + (endTime - startTime)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
@@ -353,7 +359,7 @@ contains
                 end if
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 call cpu_time(endTime)
-                elapsed_time = elasped_time + (endTime -startTime)
+                elapsed_time = elapsed_time + (endTime -startTime)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -396,7 +402,7 @@ contains
         end if
         call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
         call cpu_time(endTime)
-        elapsed_time = elasped_time + (endTime - startTime)
+        elapsed_time = elapsed_time + (endTime - startTime)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
