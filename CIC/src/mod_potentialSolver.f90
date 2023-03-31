@@ -1489,28 +1489,25 @@ contains
             ldb = MAX(m_k, (NumberXNodes -2))
             call self%depositJ(particleList, world, del_t)
             if (SQRT(SUM((self%phi_f(2:NumberXNodes-1) - phi_k(:,MODULO(i-1, self%m_Anderson+1) + 1))**2)) < eps_r*(initialR + initialNorm)) then
-                print *, "converged"
-                print *, "initialR is:", initialR
-                print *, "initialNorm is:", initialNorm
                 call self%moveParticles(particleList, world, del_t)
                 self%phi = self%phi_f
                 exit
             end if
             call self%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = self%phi_f(2:NumberXNodes-1) - phi_k(:,index)
-            ! if (i > self%m_Anderson) then
-            !     if (self%m_anderson > 1) then
-            !         sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2) &
-            !         + SUM(Residual_k(:, MODULO(i-2, self%m_Anderson+1) + 1)**2)
-            !         sumPastResiduals = sumPastResiduals/2.0d0
-            !     else
-            !         sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2)
-            !     end if
-            !     if (SUM(Residual_k(:, index)**2) > sumPastResiduals) then
-            !         self%iterNumPicard = maxIter
-            !         goto 75
-            !     end if
-            ! end if
+            if (i > self%m_Anderson) then
+                if (self%m_anderson > 1) then
+                    sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2) &
+                    + SUM(Residual_k(:, MODULO(i-2, self%m_Anderson+1) + 1)**2)
+                    sumPastResiduals = sumPastResiduals/2.0d0
+                else
+                    sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2)
+                end if
+                if (SUM(Residual_k(:, index)**2) > sumPastResiduals) then
+                    self%iterNumPicard = maxIter
+                    goto 75
+                end if
+            end if
             do j = 0, m_k-1
                 fitMat(:,j+1) = Residual_k(:, MODULO(i - m_k + j, self%m_Anderson+1) + 1) - Residual_k(:, index)
             end do

@@ -55,12 +55,6 @@ program BoundPlasmaExample
     ! end if
     ! stop
     
-    E_i = particleList(1)%getTotalKE() + particleList(2)%getTotalKE() + solver%getTotalPE(world, .false.)
-    call solver%solveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
-    E_f = particleList(1)%getTotalKE() + particleList(2)%getTotalKE() + solver%getTotalPE(world, .true.) + solver%particleEnergyLoss
-    print *, "took iteration number:", solver%iterNumPicard
-    print *, "Percent difference is:", ABS((E_f - E_i)/E_i) * 100.0d0
-    stop
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", stepsAverage, "time steps"
     call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)
