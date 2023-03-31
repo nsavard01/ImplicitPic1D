@@ -9,8 +9,8 @@ program BoundPlasmaExample
     use mod_simulation
     implicit none
 
-    integer(int32) :: i, tclock1, tclock2, clock_rate
-    real(real64) :: elapsed_time
+    integer(int32) :: i
+    real(real64) :: KE_i, KE_f
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
@@ -18,7 +18,7 @@ program BoundPlasmaExample
     particleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(particleList(1), NumberXNodes, numDiagnosticSteps, stepsAverage, fractionFreq, n_ave, world, solver, simulationTime)
+    call readInputs(particleList(1), NumberXNodes, numDiagnosticSteps, stepsAverage, fractionFreq, n_ave, world, solver, simulationTime, heatSkipSteps, Power, nu_h)
     do i = 1, numberChargedParticles
         call initialize_randUniform(particleList(i), irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
@@ -35,13 +35,9 @@ program BoundPlasmaExample
     print *, "Time step (sec) is:", del_t
     print *, "----------------"
     print *, ""
-
+    
     ! Generate solver object, and then solve for initial rho/potential
-    call system_clock(tclock1)
     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
-    call system_clock(tclock2, clock_rate)
-    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
-    print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"
     print *, "Averaging over", stepsAverage, "time steps"
     call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, stepsAverage, heatSkipSteps)
 

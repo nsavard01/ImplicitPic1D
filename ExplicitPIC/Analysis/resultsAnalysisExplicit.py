@@ -17,6 +17,10 @@ import pandas as pd
 import glob, os
 import matplotlib.animation as animation
 import itertools
+import shutil
+import sys
+
+
 
 
 eps_0 = scipy.constants.epsilon_0
@@ -27,33 +31,40 @@ mu_0 = scipy.constants.mu_0
 k_boltz = scipy.constants.k
 e = scipy.constants.e
 
+
+dataFolder = ''
+InitialConditions = None
+GlobalDiagnostics = None
+ParticleProperties = None
+GlobalDiagnosticsAveraged = None
+boolAverageFile = None
+grid = None
+numDiagnosticTimes = None
+
+
 def extractPhaseSpace(filename, delX):
     phaseSpace = np.fromfile(filename, dtype = 'float', offset = 4)
     phaseSpace = phaseSpace.reshape((int(phaseSpace.size/4), 4))
     phaseSpace[:,0] = (phaseSpace[:,0]-1) * delX
     return phaseSpace
 
-
+def setDataFolder(dataFolder):
 # name for each initial condition simulation
-n_x = int(np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[0])
-t_final = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[1]
-del_t = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[2]
-FracFreq = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[3]
-delX = np.loadtxt('../Data/InitialConditions.dat', skiprows = 1)[4]
-boolAverageFile = os.path.isfile('../Data/GlobalDiagnosticDataAveraged.dat')
-plasmaPeriod = del_t/FracFreq
-# list names in diagnostic file for each time steps
-diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
-diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
-GlobalDiagnostics = pd.read_csv('../Data/GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
-numDiagnosticTimes = GlobalDiagnostics.shape[0]
-ParticleProperties = pd.read_csv('../Data/ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
-if (boolAverageFile):
-    GlobalDiagnosticsAveraged = pd.read_csv('../Data/GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
-
-grid = np.fromfile('../Data/domainGrid.dat', dtype = 'float', offset = 4)
-ne = np.zeros(n_x)
-ni = np.zeros(n_x)
+    diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+    diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+    InitialConditionsList = ['n_x', 't_final', 'del_t', 'FracFreq', 'delX', 'Power', 'heatSteps', 'nu_h']
+    # list names in diagnostic file for each time steps
+    InitialConditions =  pd.read_csv(dataFolder + 'InitialConditions.dat', skiprows = 1, delim_whitespace=True, names = InitialConditionsList)
+    GlobalDiagnostics = pd.read_csv(dataFolder + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+    
+    ParticleProperties = pd.read_csv(dataFolder + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
+    boolAverageFile = os.path.isfile(dataFolder + 'GlobalDiagnosticDataAveraged.dat')
+    GlobalDiagnosticsAveraged = pd.DataFrame()
+    if (boolAverageFile):
+        GlobalDiagnosticsAveraged = pd.read_csv(dataFolder + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
+    
+    grid = np.fromfile(dataFolder + 'domainGrid.dat', dtype = 'float', offset = 4)
+    return InitialConditions, GlobalDiagnostics, ParticleProperties, GlobalDiagnosticsAveraged, grid
 
 
 #------------------- Animation -------------------
@@ -61,7 +72,7 @@ ni = np.zeros(n_x)
 def update_plot_Density(i, ax, ParticleProperties, colors):
     ax.clear()
     for j,name in enumerate(ParticleProperties['name']):
-        n = np.fromfile('../Data/Density/density_' + name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
+        n = np.fromfile(dataFolder + 'Density/density_' + name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
         ax.plot(grid, n, 'o-', c=colors[j], label = r'$n_{' + name[1:-1] +  '}$')
     ax.set_xlabel('Distance (m)')
     ax.set_ylabel('Particle Density (1/m^3)')
@@ -75,7 +86,7 @@ def densityAnimation(ParticleProperties, boolMakeAnimation):
         numframes = numDiagnosticTimes + 1
         fig, ax = plt.subplots()
         for j,name in enumerate(ParticleProperties['name']):
-            n = np.fromfile('../Data/Density/density_' + name + '_0.dat', dtype = 'float', offset = 4)
+            n = np.fromfile(dataFolder + 'Density/density_' + name + '_0.dat', dtype = 'float', offset = 4)
             ax.plot(grid, n, 'o-', c = colors[j], label = r'$n_{' + name[1:-1] +  '}$')
             
         ax.set_xlabel('Distance (m)')
@@ -97,7 +108,7 @@ def densityAnimation(ParticleProperties, boolMakeAnimation):
             plt.cla()
             
             for i,name in enumerate(ParticleProperties['name']):
-                n = np.fromfile('../Data/Density/density_' + name + '_' + str(y) + '.dat', dtype = 'float', offset = 4)
+                n = np.fromfile(dataFolder + 'Density/density_' + name + '_' + str(y) + '.dat', dtype = 'float', offset = 4)
                 plt.plot(grid, n, colors[i], label = r'$n_{' + name[1:-1] +  '}$')
             plt.xlabel('Distance (m)')
             plt.ylabel('Particle Density (1/m^3)')
@@ -109,16 +120,25 @@ def densityAnimation(ParticleProperties, boolMakeAnimation):
 def plotAverageDensity(ParticleProperties):
     colors = ['b', 'r', 'g', 'k', 'c', 'm', 'y']
     for i,name in enumerate(ParticleProperties['name']):
-        n = np.fromfile('../Data/Density/density_' + name + '_Average.dat', dtype = 'float', offset = 4)
+        n = np.fromfile(dataFolder + 'Density/density_' + name + '_Average.dat', dtype = 'float', offset = 4)
         plt.plot(grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name[1:-1] +  '}$')
     plt.xlabel('Distance (m)')
     plt.ylabel('Particle Density (1/m^3)')
     plt.xlim([0, grid[-1]])
     plt.legend(loc = 'best')
     plt.pause(0.05)
+    
+def plotAverageDensityParticle(ParticleProperties, particleName, label):
+    n = np.fromfile(dataFolder + 'Density/density_' + particleName + '_Average.dat', dtype = 'float', offset = 4)
+    plt.plot(grid, n,  linestyle = '-', marker = 'o', label = label)
+    plt.xlabel('Distance (m)')
+    plt.ylabel('Particle Density ' + particleName[1:-1] + ' (1/m^3)')
+    plt.xlim([0, grid[-1]])
+    plt.legend(loc = 'lower center')
+    plt.pause(0.05)
  
 def update_plot_PhaseSpace(i, scat, ParticleName):
-    filename = '../Data/PhaseSpace/phaseSpace_'+ ParticleName + '_' + str(i) +'.dat'
+    filename = dataFolder + 'PhaseSpace/phaseSpace_'+ ParticleName + '_' + str(i) +'.dat'
     phaseSpace = extractPhaseSpace(filename, grid)
     scat.set_offsets(phaseSpace[:,0:2])
     return scat,
@@ -126,7 +146,7 @@ def update_plot_PhaseSpace(i, scat, ParticleName):
 def PhaseSpaceAnimation(ParticleName, boolMakeAnimation): 
     if boolMakeAnimation:
         numframes = numDiagnosticTimes+1
-        filename = '../Data/PhaseSpace/phaseSpace_'+ ParticleName + '_0.dat'
+        filename = dataFolder + 'PhaseSpace/phaseSpace_'+ ParticleName + '_0.dat'
         phaseSpace = extractPhaseSpace(filename, grid)
         fig = plt.figure()
         scat = plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
@@ -141,7 +161,7 @@ def PhaseSpaceAnimation(ParticleName, boolMakeAnimation):
         plt.figure(figsize = (5,4), dpi = 80)
         for y in range(numDiagnosticTimes+1):
             plt.cla()
-            filename = '../Data/PhaseSpace/phaseSpace_'+ ParticleName + '_' + str(y) +'.dat'
+            filename = dataFolder + 'PhaseSpace/phaseSpace_'+ ParticleName + '_' + str(y) +'.dat'
             phaseSpace = extractPhaseSpace(filename, grid)
             plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
             plt.xlabel('Distance (m)')
@@ -156,7 +176,7 @@ def TwoStreamEnergyIncrease():
     t = np.zeros(numDiagnosticTimes+1)
     t[1::] = GlobalDiagnostics['time(s)']
     for y in range(numDiagnosticTimes+1):
-        phi = np.fromfile('../Data/Phi/phi_' + str(y) + '.dat', dtype = 'float', offset = 4)
+        phi = np.fromfile(dataFolder + 'Phi/phi_' + str(y) + '.dat', dtype = 'float', offset = 4)
         PE[y] = 0.5 * eps_0 * np.sum((np.diff(phi)**2) * 2 / (dx_dl[0:-1] + dx_dl[1::]))
      
     PE_growth = PE[0] * np.exp( 0.5 * (1/plasmaPeriod) * t)
@@ -175,7 +195,7 @@ def TwoStreamEnergyIncrease():
     
 def update_plot_Phi(i, ax):
     ax.clear()
-    phi = np.fromfile('../Data/Phi/phi_'+str(i) + '.dat', dtype = 'float', offset = 4)
+    phi = np.fromfile(dataFolder + 'Phi/phi_'+str(i) + '.dat', dtype = 'float', offset = 4)
     ax.plot(grid, phi, 'o-')
         
     ax.set_xlabel('Distance (m)')
@@ -187,7 +207,7 @@ def phiAnimation(boolMakeAnimation):
     if boolMakeAnimation:
         numframes = numDiagnosticTimes + 1
         fig, ax = plt.subplots()
-        phi = np.fromfile('../Data/Phi/phi_0.dat', dtype = 'float', offset = 4)
+        phi = np.fromfile(dataFolder + 'Phi/phi_0.dat', dtype = 'float', offset = 4)
         ax.plot(grid, phi, 'o-')
             
         ax.set_xlabel('Distance (m)')
@@ -206,7 +226,7 @@ def phiAnimation(boolMakeAnimation):
         
             plt.cla()
             
-            phi = np.fromfile('../Data/Phi/phi_' + str(y) + '.dat', dtype = 'float', offset = 4)
+            phi = np.fromfile(dataFolder + 'Phi/phi_' + str(y) + '.dat', dtype = 'float', offset = 4)
             plt.plot(grid, phi, 'o-')
             plt.xlabel('Distance (m)')
             plt.ylabel('Potential (V)')
@@ -217,7 +237,7 @@ def temperatureAnimation(boolMakeAnimation):
     if boolMakeAnimation:
         numframes = numDiagnosticTimes + 1
         fig, ax = plt.subplots()
-        phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(i) +'.dat', delX)
+        phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(i) +'.dat', delX)
         KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
         E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
         num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
@@ -239,7 +259,7 @@ def temperatureAnimation(boolMakeAnimation):
         
             plt.cla()
             
-            phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(y) +'.dat', delX)
+            phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(y) +'.dat', delX)
             KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
             E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
             num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
@@ -249,21 +269,51 @@ def temperatureAnimation(boolMakeAnimation):
             plt.pause(0.05)        
 
     
-def plotAveragePhi():
-    phi = np.fromfile('../Data/Phi/phi_Average.dat', dtype = 'float', offset = 4)
-    plt.plot(grid, phi, 'o-')
+def plotAveragePhi(label):
+    phi = np.fromfile(dataFolder + 'Phi/phi_Average.dat', dtype = 'float', offset = 4)
+    plt.plot(grid, phi, 'o-', label = label)
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
+    if label != '':
+        plt.legend(loc = 'lower center')
     plt.xlim([0, grid[-1]])
     plt.pause(0.05)        
 
-
+def getData(filename):
+    global dataFolder
+    global InitialConditions
+    global GlobalDiagnostics
+    global ParticleProperties
+    global GlobalDiagnosticsAveraged
+    global boolAverageFile
+    global grid
+    global numDiagnosticTimes
     
+    
+    dataFolder = '../' + filename + '/'
+    diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+    diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+    InitialConditionsList = ['n_x', 't_final', 'del_t', 'FracFreq', 'delX', 'Power', 'heatSteps', 'nu_h']
+    # list names in diagnostic file for each time steps
+    InitialConditions =  pd.read_csv(dataFolder + 'InitialConditions.dat', skiprows = 1, delim_whitespace=True, names = InitialConditionsList)
+    GlobalDiagnostics = pd.read_csv(dataFolder + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+    
+    ParticleProperties = pd.read_csv(dataFolder + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
+    boolAverageFile = os.path.isfile(dataFolder + 'GlobalDiagnosticDataAveraged.dat')
+    GlobalDiagnosticsAveraged = pd.DataFrame()
+    if (boolAverageFile):
+        GlobalDiagnosticsAveraged = pd.read_csv(dataFolder + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
+    
+    grid = np.fromfile(dataFolder + 'domainGrid.dat', dtype = 'float', offset = 4)
+    numDiagnosticTimes = GlobalDiagnostics.shape[0]
+
+def saveData(saveFile):
+    shutil.copytree('../Data', '../' + saveFile)
     
 # ---------------------- Final Plots --------------------------
 
 def finalElectronEEDFVsMaxwellian():
-    phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', delX)
+    phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', delX)
     KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
     Ehist = np.histogram(KE, bins = 100, density = True)
     T_elec = np.mean(KE)* (2/3)
@@ -277,10 +327,10 @@ def finalElectronEEDFVsMaxwellian():
     plt.xlabel('Electron Energy (eV)')
     plt.legend(loc = 'best')
 
-if (boolAverageFile):
-    print("Global power is:", GlobalDiagnosticsAveraged['Ploss(W/m^2)'] + GlobalDiagnosticsAveraged['P_wall(W/m^2)'], 'W/m^2')
 
-
+getData('Data')
+if(boolAverageFile):
+    print('Total power is:', GlobalDiagnosticsAveraged['Ploss(W/m^2)'] +GlobalDiagnosticsAveraged['P_wall(W/m^2)'] )
 
 
 

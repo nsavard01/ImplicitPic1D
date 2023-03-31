@@ -56,7 +56,7 @@ numDiagnosticTimes = GlobalDiagnostics.shape[0]
 ParticleProperties = pd.read_csv('../Data/ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
 if (boolAverageFile):
     GlobalDiagnosticsAveraged = pd.read_csv('../Data/GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
-
+endData = pd.read_csv('../Data/SimulationFinalData.dat', skiprows = 1, delim_whitespace=True, names = ['Time(s)', 'Steps', 'NumAdaptiveSteps'])
 grid = np.fromfile('../Data/domainGrid.dat', dtype = 'float', offset = 4)
 dx_dl = np.fromfile('../Data/domainDxDl.dat', dtype = 'float', offset = 4)
 halfGrid = (grid[0:-1] + grid[1::])/2

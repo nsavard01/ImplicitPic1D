@@ -6,7 +6,7 @@ module mod_collisions
     implicit none
 
     real(real64) :: inelasticEnergyLoss = 0.0d0
-    real(real64) :: Power = 2.5d3 !W/m^2 in 1D
+    real(real64) :: Power = 100.d0 !W/m^2 in 1D
     real(real64) :: nu_h = 1.0d8, fraction = 0.1d0 !Hz
     integer(int32) :: heatSkipSteps = 1
     ! Type of collisions, will likely need arrays which you can loop through which has source, target particle, choose from particle list
@@ -103,7 +103,41 @@ contains
         end do
     end subroutine addUniformPowerMaxwellian
 
-    subroutine addUniformPowerMaxwellianNicolas(species, Power, irand, del_t, fraction)
+    subroutine addUniformPowerMaxwellianFraction(species, Power, fraction, irand, del_t)
+        ! Add power to all particles in domain
+        ! make it so nu_h * del_t == fraction
+        type(Particle), intent(in out) :: species
+        integer(int32), intent(in out) :: irand
+        real(real64), intent(in) :: Power, fraction, del_t
+        real(real64) :: T_h, v_replace(3), R
+        integer(int32) :: i
+        T_h = (species%getKEAve() + Power*del_t/e/species%N_p/species%w_p/fraction) * 2.0d0 / 3.0d0
+        do i=1, species%N_p
+            R = ran2(irand)
+            if (R < fraction) then
+                call getMaxwellianSample(v_replace, species%mass, T_h, irand)
+                species%phaseSpace(2:4, i) = v_replace
+            end if
+        end do
+    end subroutine addUniformPowerMaxwellianFraction
+
+    subroutine addUniformPower(species, Power, del_t, irand)
+        type(Particle), intent(in out) :: species
+        integer(int32), intent(in out) :: irand
+        real(real64), intent(in) :: Power, del_t
+        real(real64) :: dE, R(3)
+        integer(int32) :: i
+        dE = Power * del_t/species%N_p/species%w_p
+        do i=1, species%N_p
+            call getRandom(R, irand)
+            R = R / SUM(R)
+            species.phaseSpace(2:4, i) = SIGN(1.0d0, species.phaseSpace(2:4, i)) * SQRT(species.phaseSpace(2:4, i)**2 + 2.0d0 * dE * R / species%mass)
+        end do
+
+
+    end subroutine addUniformPower
+
+    subroutine addUniformPowerMaxwellianNicolas(species, Power, fraction, irand, del_t)
         ! Gwenael's method does not lead to conservation, very shady
         ! Implement uniform power with conservation properties in mind to get improvement
         ! Percent is percentage of particles to sample, isotropic scatter

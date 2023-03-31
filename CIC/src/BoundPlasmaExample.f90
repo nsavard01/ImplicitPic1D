@@ -9,8 +9,7 @@ program BoundPlasmaExample
     use mod_simulation
     implicit none
 
-    integer(int32) :: i, tclock1, tclock2, clock_rate
-    real(real64) :: elapsed_time
+    integer(int32) :: i
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
@@ -54,11 +53,8 @@ program BoundPlasmaExample
     !     stop "Total charge not conserved over time step in sub-step procedure!"
     ! end if
     ! stop
-    call system_clock(tclock1)
+  
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
-    call system_clock(tclock2, clock_rate)
-    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
-    print *, "Elapsed time for simulation is:", elapsed_time/60.0d0, "minutes"
     print *, "Averaging over", stepsAverage, "time steps"
     call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)
     

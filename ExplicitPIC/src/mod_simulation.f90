@@ -16,10 +16,10 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(electrons, NumberXNodes, numDiagnosticSteps, stepsAverage, fractionFreq, n_ave, world, solver, simulationTime)
+    subroutine readInputs(electrons, NumberXNodes, numDiagnosticSteps, stepsAverage, fractionFreq, n_ave, world, solver, simulationTime, heatSkipSteps, Power, nu_h)
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
-        integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, stepsAverage
-        real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime
+        integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, stepsAverage, heatSkipSteps
+        real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h
         integer(int32) :: io, leftBoundary, rightBoundary
         real(real64) :: leftVoltage, rightVoltage, L_domain, debyeL
         type(Particle) :: electrons
@@ -33,11 +33,17 @@ contains
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) fractionFreq
         read(10, *, IOSTAT = io) stepsAverage
+        read(10, *, IOSTAT = io) Power
+        read(10, *, IOSTAT = io) heatSkipSteps
+        read(10, *, IOSTAT = io) nu_h
         close(10)
         print *, "Average initial particle density:", n_ave
         print *, "Number of diagnostic steps is:", numDiagnosticSteps
         print *, "Fraction of 1/w_p for time step:", fractionFreq
         print *, "Number of final steps for averaging:", stepsAverage
+        print *, "Power is (W/m^2):", Power
+        print *, "Heating skip steps number:", heatSkipSteps
+        print *, "Heating frequency:", nu_h
         print *, "------------------"
         debyeL = getDebyeLength(electrons%getKEAve()/1.5d0, n_ave)
         print *, ""
@@ -49,8 +55,8 @@ contains
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
         if (L_domain/debyeL > NumberXNodes) then
-            print *, "STARTING DEBYE LENGTH NOT RESOLVED, REDUCTION BEING DONE OF 0.8 DEBYE LENGTH"
-            NumberXNodes = CEILING(L_domain/debyeL/0.8d0)
+            print *, "STARTING DEBYE LENGTH NOT RESOLVED, REDUCTION BEING DONE OF 0.75 DEBYE LENGTH"
+            NumberXNodes = CEILING(L_domain/debyeL/0.75d0)
         end if
         print *, "Number of nodes:", NumberXNodes
         print *, "Grid length:", L_domain
@@ -321,13 +327,13 @@ contains
         integer(int32), intent(in) :: heatSkipSteps
         integer(int32), intent(in out) :: irand
         integer(int32) :: i, j, CurrentDiagStep
-        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime
+        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, startTime, endTime, elapsedTime
         CurrentDiagStep = 1
 
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX")')
-        write(15,"((I3.3, 1x), 4(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, Power(W/m^2), heatSteps, nu_h")')
+        write(15,"((I3.3, 1x), 5(es16.8,1x), (I3.3, 1x), (es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, Power, heatSkipSteps, nu_h
         close(15)
 
         ! Write Particle properties
@@ -338,6 +344,7 @@ contains
         end do
         close(9)
         i = 0
+        elapsedTime = 0.0d0
         diagTimeDivision = simulationTime/real(numDiagnosticSteps)
         diagTime = diagTimeDivision
         101 format(20(1x,es16.8))
@@ -359,18 +366,24 @@ contains
         currentTime = 0.0d0
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
+                call cpu_time(startTime)
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call cpu_time(endTime)
+                elapsedTime = elapsedTime + (endTime - startTime)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
                 inelasticEnergyLoss = 0.0d0
                 solver%particleEnergyLoss = 0.0d0
                 solver%particleChargeLoss = 0.0d0
+                call cpu_time(startTime)
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call cpu_time(endTime)
+                elapsedTime = elapsedTime + (endTime - startTime)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -394,9 +407,12 @@ contains
         inelasticEnergyLoss = 0.0d0
         solver%particleEnergyLoss = 0.0d0
         solver%particleChargeLoss = 0.0d0
+        call cpu_time(startTime)
         call solver%moveParticles(particleList, world, del_t)
         call solver%solvePotential(particleList, world)
         call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        call cpu_time(endTime)
+        elapsedTime = elapsedTime + (endTime - startTime)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -407,6 +423,13 @@ contains
         end do
         write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t, &
         SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t
+
+        ! Write Final Data
+        open(9,file='../Data/SimulationFinalData.dat')
+        write(9,'("Simulation time (s), Total Steps")')
+        write(9,"(1(es16.8,1x), 1(I6, 1x))") elapsed_time, i+1
+        close(9)
+        print *, "Elapsed time for simulation is:", elapsedTime, "seconds"
 
     end subroutine solveSimulation
 

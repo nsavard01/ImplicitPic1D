@@ -288,9 +288,10 @@ contains
         integer(int32), intent(in) :: maxIter, heatSkipSteps
         integer(int32), intent(in out) :: irand
         integer(int32) :: i, j, CurrentDiagStep
-        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, Etotal
+        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, Etotal, startTime, endTime, elapsed_time
+        real(real64) :: superStart, superEnd
         CurrentDiagStep = 1
-
+        call cpu_time(superStart)
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq")')
@@ -304,6 +305,7 @@ contains
             write(9,"((A, 1x), 3(es16.8,1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p
         end do
         close(9)
+        elapsed_time = 0.0d0
         i = 0
         diagTimeDivision = simulationTime/real(numDiagnosticSteps)
         diagTime = diagTimeDivision
@@ -324,13 +326,17 @@ contains
         currentTime = 0.0d0
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
+                call cpu_time(startTime)
                 call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call cpu_time(endTime)
+                elapsed_time = elasped_time + (endTime - startTime)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
                 inelasticEnergyLoss = 0.0d0
                 solver%particleEnergyLoss = 0.0d0
+                call cpu_time(startTime)
                 call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
                 
                 ! Stop program if catch abnormally large error
@@ -346,6 +352,8 @@ contains
                     stop "Total charge not conserved over time step in sub-step procedure!"
                 end if
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call cpu_time(endTime)
+                elapsed_time = elasped_time + (endTime -startTime)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -364,13 +372,14 @@ contains
                 diagTime = diagTime + diagTimeDivision
             end if
             if (MODULO(i+1, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
             end if
             currentTime = currentTime + del_t
             i = i + 1
         end do
         inelasticEnergyLoss = 0.0d0
         solver%particleEnergyLoss = 0.0d0
+        call cpu_time(startTime)
         call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
         
         ! Stop program if catch abnormally large error
@@ -386,6 +395,8 @@ contains
             stop "Total charge not conserved over time step in sub-step procedure!"
         end if
         call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        call cpu_time(endTime)
+        elapsed_time = elasped_time + (endTime - startTime)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -399,7 +410,15 @@ contains
         write(22,"(7(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
         SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, &
         Etotal, solver%chargeError, solver%energyError, solver%iterNumPicard
+        call cpu_time(superEnd)
+        print *, "Elapsed time for simulation is:", (elapsed_time), "seconds"
         print *, "Percentage of steps adaptive is:", 100.0d0 * real(solver%amountTimeSplits)/real(i + 1)
+
+        ! Write Particle properties
+        open(9,file='../Data/SimulationFinalData.dat')
+        write(9,'("Simulation time (s), Total Steps, Number Adaptive Steps")')
+        write(9,"(1(es16.8,1x), 2(I6, 1x))") elapsed_time, i+1, solver%amountTimeSplits
+        close(9)
 
     end subroutine solveSimulation
 
@@ -432,7 +451,7 @@ contains
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             if (MODULO(i, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, del_t)
+                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
             end if
         end do
         densities = densities/stepsAverage
