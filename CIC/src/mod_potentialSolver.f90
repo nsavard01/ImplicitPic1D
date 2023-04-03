@@ -94,6 +94,7 @@ contains
 
     end function potentialSolver_constructor
 
+
     subroutine depositRho(self, particleList, world) 
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in) :: particleList(:)

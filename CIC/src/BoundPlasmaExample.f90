@@ -11,9 +11,8 @@ program BoundPlasmaExample
 
     integer(int32) :: i
     real(real64) :: E_i, E_f
-    type(Domain) :: world
-    type(Particle), allocatable :: particleList(:)
-    type(potentialSolver) :: solver
+    integer(int32) :: itrmf, ipar(2)
+    real(real64), allocatable :: fcur(:)
     
     particleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
@@ -54,13 +53,15 @@ program BoundPlasmaExample
     !     stop "Total charge not conserved over time step in sub-step procedure!"
     ! end if
     ! stop
+    allocate(fcur(NumberXNodes-2))
+    call solver%solveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
+    stop
     
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", stepsAverage, "time steps"
     call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, stepsAverage, heatSkipSteps)
     
 
-    
 
     
 end program BoundPlasmaExample
