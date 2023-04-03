@@ -5,7 +5,7 @@
 5.0d14 ! Initial number density (1/m^3) of particles
 20 ! number of diagnostic data dumps    
 100 ! Maximum number of outer iterations for picard potential solver
-2.0 ! Fraction of initial 1/w_p for initial time step
+0.5 ! Fraction of initial 1/w_p for initial time step
 10000 ! Amount of steps to average for final diagnostics
 100.0d0 ! Power (W/m^2)
 8 ! heatSkipSteps

@@ -15,8 +15,19 @@ module mod_simulation
     type(potentialSolver) :: solver
     integer(int32) :: numTimeSteps
     real(real64) :: del_t, simulationTime, rpar(2)
+
+    ! Memory allocation needed for nitsol
+    integer(int32) :: input(10), info(6), kdmax, iterm, ipar(2), itrmf
+    real(real64), allocatable :: rwork(:), fcur(:)
     double precision, external :: ddot
     double precision, external :: dnrm2
+    integer iplvl, ipunit
+    common /nitprint/ iplvl, ipunit
+    double precision choice1_exp, choice2_exp, choice2_coef
+    double precision eta_cutoff, etamax
+    double precision thmin, thmax, etafixed
+
+    common /nitparam/ choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed
 
 contains
 
@@ -186,12 +197,16 @@ contains
         real(real64), intent(in) :: rpar(*)
         real(real64), intent(in out) :: fcur(n)
         real(real64) :: d(n)
-        call solver%depositJ(particleList, world, del_t)
-        d = (-solver%J(2:) + solver%J(1:NumberXNodes-2)) * del_t / eps_0 &
-        + arrayDiff(solver%phi(1:NumberXNodes-1), NumberXNodes-1)*2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1)) &
-        - arrayDiff(solver%phi(2:), NumberXNodes-1)*2.0d0/(world%dx_dl(3:NumberXNodes) + world%dx_dl(2:NumberXNodes-1))
-        d(1) = d(1) + solver%phi(1) * solver%coeff_left
-        d(n) = d(n) + solver%phi(NumberXNodes) * solver%coeff_right
+        call solver%depositRho(particleList, world)
+        d = -solver%rho(2:NumberXNodes-1) / eps_0
+        d(1) = d(1) - 2 * solver%phi(1) * solver%coeff_left
+        d(n) = d(n) - 2 * solver%phi(NumberXNodes) * solver%coeff_right
+        ! call solver%depositJ(particleList, world, del_t)
+        ! d = (-solver%J(2:) + solver%J(1:NumberXNodes-2)) * del_t / eps_0 &
+        ! + arrayDiff(solver%phi(1:NumberXNodes-1), NumberXNodes-1)*2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1)) &
+        ! - arrayDiff(solver%phi(2:), NumberXNodes-1)*2.0d0/(world%dx_dl(3:NumberXNodes) + world%dx_dl(2:NumberXNodes-1))
+        ! d(1) = d(1) + solver%phi(1) * solver%coeff_left
+        ! d(n) = d(n) + solver%phi(NumberXNodes) * solver%coeff_right
         fcur = triMul(n, solver%a_tri, solver%c_tri, solver%b_tri, xcur) - d
         itrmf = 0
 

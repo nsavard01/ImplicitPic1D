@@ -3,7 +3,7 @@ CC=mpiifort
 OPT= $(BASE)
 BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -unroll-aggressive -qmkl -mtune=skylake -heap-arrays 8192 -ffloat-store -xHost #-xCORE-AVX512 -mt_mpi 
 DEBUG= -qmkl -g -traceback -check all -fp-stack-check#-traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
-OBJ= constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_Scheme.o mod_simulation.o BoundPlasmaExample.o
+OBJ= constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_Scheme.o mod_simulation.o BoundPlasmaExample.o ../../Libraries/Nitsol/libnitsol.a
 RM = rm -f
 
 all: cleanData clean BoundPlasmaExample
@@ -11,10 +11,10 @@ all: cleanData clean BoundPlasmaExample
 BoundPlasmaExample: $(OBJ)
 	$(FC) $(OPT) -o $@ $(OBJ)
 
-BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_Scheme.o mod_simulation.o
+BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_Scheme.o ../../Libraries/Nitsol/libnitsol.a mod_simulation.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-mod_simulation.o: ../../SharedModules/mod_simulation.f90 mod_Scheme.o mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
+mod_simulation.o: ../../SharedModules/mod_simulation.f90 ../../Libraries/Nitsol/libnitsol.a mod_Scheme.o mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(OPT) -c  -o $@ $<
 
 mod_Scheme.o: mod_Scheme.f90 mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
@@ -38,7 +38,11 @@ mod_BasicFunctions.o: ../../SharedModules/mod_BasicFunctions.f90 constants.o
 constants.o: ../../SharedModules/constants.f90
 	$(FC) $(OPT) -c  -o $@ $<
 
+nitsol_lib:
+	cd ../../Libraries/Nitsol; $(MAKE) "FFLAGS=$(OPT)" "FC=$(FC)"
 
+cleanNitsol:
+	cd ../../Libraries/Nitsol; $(MAKE) clean
 
 clean:
 	$(RM) BoundPlasmaExample *.o *.mod
