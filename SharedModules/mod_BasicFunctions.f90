@@ -74,6 +74,47 @@ contains
         V(3) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
     end subroutine
 
+
+    ! General solver using arrays 
+
+    subroutine solve_tridiag(n, diagLower, diagUpper, diag, b, x)
+        ! General tridiagonal solver
+        integer(int32), intent(in) :: n
+        real(real64), intent(in out) :: x(n)
+        real(real64), intent(in) :: diagLower(n-1), diagUpper(n-1), diag(n), b(n)
+        integer(int32) :: i !n size dependent on how many points are inside (not boundary), so how many in rhs equation
+        real(real64) :: m, cp(n-1),dp(n)
+
+    ! initialize c-prime and d-prime
+        cp(1) = diagUpper(1)/diag(1)
+        dp(1) = b(1)/diag(1)
+    ! solve for vectors c-prime and d-prime
+        do i = 2,n-1
+            m = diag(i)-cp(i-1)*diagLower(i-1)
+            cp(i) = diagUpper(i)/m
+            dp(i) = (b(i)-dp(i-1)*diagLower(i-1))/m
+        end do
+        dp(n) = (b(n)-dp(n-1)*diagLower(n-1))/(diag(n)-cp(n-1)*diagLower(n-1))
+        x(n) = dp(n)
+        do i = n-1, 1, -1
+            x(i) = dp(i)-cp(i)*x(i+1)
+        end do
+    end subroutine solve_tridiag
+
+    function triMul(n, diagLower, diagUpper, diag, x) result(res)
+        integer(int32), intent(in) :: n
+        real(real64), intent(in) :: diag(n), diagUpper(n-1), diagLower(n-1)
+        real(real64), intent(in) :: x(n)
+        integer(int32) :: i
+        real(real64) :: res(n)
+        res(1) = x(1) * diag(1) + x(2) * diagUpper(1)
+        do i = 2, n-1
+            res(i) = x(i) * diag(i) + x(i-1) * diagLower(i-1) + x(i+1) * diagUpper(i)
+        end do
+        res(n) = x(n) * diag(n) + x(n-1) * diagLower(n-1)
+    end function triMul
+
+
     !------------------------ Array Functions -------------------------------------
 
     pure function arrayDiff(x, n) result(res)

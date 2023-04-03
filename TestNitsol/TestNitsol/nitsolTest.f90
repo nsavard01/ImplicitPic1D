@@ -18,16 +18,18 @@ program nitsolTest
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
     integer(int32) :: num_grid_nodes = 64, i,j, ipar(3), itrmf, input(10), info(6), kdmax, iterm, infoLpack
-    real(real64) :: phi(64), grid(64), rho(64), L_domain = 0.1d0, b(62), delx, phi_Pic(62), A_pic(62,62), fcur(62), diag(62), diagLower(61), diagUpper(61), rpar(62,63), ftol, initialNormR, stptol
+    real(real64) :: phi(64), grid(64), rho(64), L_domain = 0.1d0, b(62), delx, phi_Pic(62), A_pic(62,62), fcur(62), diag(62), diagLower(61), diagUpper(61), rpar(62), ftol, initialNormR, stptol
     real(real64), allocatable :: rwork(:)
     double precision, external :: ddot
     double precision, external :: dnrm2
-    iplvl = 4
+    iplvl = 4 ! maximum print
     iterm = 0
-    kdmax = 20 ! maximum krylov subspace dimension
+    kdmax = 60 ! maximum krylov subspace dimension
     input = 0
     input(1) = 50 ! maximum iterations
+    input(2) = 0
     input(4) = kdmax
+    input(5) = 1
     input(10) = 2
     etamax = 0.8d0
     choice2_exp = 1.5d0
@@ -43,9 +45,7 @@ program nitsolTest
     diagLower = 1.0d0
     diagUpper = 1.0d0
     diag = -2.0d0
-    call dgtsv(62, 1, diagLower, diag, diagUpper, b, 62, infoLpack)
-    print *, b
-    stop
+    rpar = solve_tridiag(62, diagLower, diagUpper, diag, b)
     do i=1, 62
         do j=1, 62
             if (ABS(j-i) == 1) then
@@ -56,16 +56,12 @@ program nitsolTest
             end if
         end do
     end do
-    !call nitsol(62, phi_Pic, , jacv)
-    rpar(:, 1:62) = A_pic
-    rpar(:, 63) = b
     fcur = b
     call func(62, phi_Pic, fcur, rpar, ipar, itrmf)
     initialNormR = dnrm2(62, fcur, 1)
     print *, "Initial norm is:", initialNormR
     call nitsol(62, phi_Pic, func, jacv, ftol*initialNormR, stptol,input, info, rwork, rpar, ipar, iterm, ddot, dnrm2)
-    call func(62, phi_Pic, fcur, rpar, ipar, itrmf)
-    initialNormR = dnrm2(62, fcur, 1)
+    print *, ABS((phi_Pic - rpar)/rpar) * 100
     write(6,*) 
     write(6,880) iterm
     write(6,900) info(1)
@@ -84,23 +80,50 @@ program nitsolTest
     950  format(' No. backtracks:               ', i9)
 contains
 
+    function solve_tridiag(n, diagLower, diagUpper, diag, b) result(x)
+        ! Tridiagonal (Thomas algorithm) solver for Ampere
+        integer(int32), intent(in) :: n
+        real(real64), intent(in) :: diagLower(n-1), diagUpper(n-1), diag(n), b(n)
+        integer(int32) :: i !n size dependent on how many points are inside (not boundary), so how many in rhs equation
+        real(real64) :: m, cp(n-1),dp(n), x(n)
+
+    ! initialize c-prime and d-prime
+        cp(1) = diagUpper(1)/diag(1)
+        dp(1) = b(1)/diag(1)
+    ! solve for vectors c-prime and d-prime
+        do i = 2,n-1
+            m = diag(i)-cp(i-1)*diagLower(i-1)
+            cp(i) = diagUpper(i)/m
+            dp(i) = (b(i)-dp(i-1)*diagLower(i-1))/m
+        end do
+        dp(n) = (b(n)-dp(n-1)*diagLower(n-1))/(diag(n)-cp(n-1)*diagLower(n-1))
+        x(n) = dp(n)
+        do i = n-1, 1, -1
+            x(i) = dp(i)-cp(i)*x(i+1)
+        end do
+    end function solve_tridiag
+
+    function triMul(n, diagLower, diagUpper, diag, x) result(res)
+        integer(int32), intent(in) :: n
+        real(real64), intent(in) :: diag(n), diagUpper(n-1), diagLower(n-1)
+        real(real64), intent(in) :: x(n)
+        integer(int32) :: i
+        real(real64) :: res(n)
+        res(1) = x(1) * diag(1) + x(2) * diagUpper(1)
+        do i = 2, n-1
+            res(i) = x(i) * diag(i) + x(i-1) * diagLower(i-1) + x(i+1) * diagUpper(i)
+        end do
+        res(n) = x(n) * diag(n) + x(n-1) * diagLower(n-1)
+    end function triMul
+
     subroutine func(n, xcur, fcur, rpar, ipar, itrmf)
         integer(int32), intent(in) :: n
         integer(int32), intent(in out) :: itrmf, ipar(*)
         real(real64), intent(in) :: xcur(n)
-        real(real64), intent(in out) :: fcur(n), rpar(*)
-        call fOther(n, xcur, fcur, rpar, ipar, itrmf)
-
-    end subroutine
-    subroutine fOther(n, xcur, fcur, rpar, ipar, itrmf)
-        integer(int32), intent(in) :: n
-        integer(int32), intent(in out) :: itrmf, ipar(*)
-        real(real64), intent(in) :: xcur(n)
-        real(real64), intent(in out) :: fcur(n), rpar(n, n+1)
-        fcur = MATMUL(rpar(:, 1:n), xcur) - rpar(:, n+1)
+        real(real64), intent(in) :: rpar(n)
+        real(real64), intent(in out) :: fcur(n)
+        fcur = triMul(n, diagLower, diagUpper, diag, xcur) - b
         itrmf = 0
-        
-    
 
     end subroutine
 
@@ -112,14 +135,15 @@ contains
         integer, intent(in out) :: ipar(*)
 
         real(real64), intent(in) :: fcur(n)
-        real(real64), intent(in out) :: rpar(*)
+        real(real64), intent(in) :: rpar(n)
         real(real64), intent(in) :: v(n)
         real(real64), intent(in) ::  xcur(n)
         real(real64), intent(in out) :: z(n)
-        print *, '-------------------'
-        print *, 'Calling jacv'
-        print *, '-------------------'
-        print *, ''
+        if (ijob == 0) then
+            z = triMul(n, diagLower, diagUpper, diag, v)
+        else if (ijob == 1) then
+            z = solve_tridiag(62, diagLower, diagUpper, diag, v)
+        end if
         itrmjv = 0
     end subroutine jacv
 

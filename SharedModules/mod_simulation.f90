@@ -10,8 +10,11 @@ module mod_simulation
     use mod_collisions
     use mod_Scheme
 
+    type(Domain) :: world
+    type(Particle), allocatable :: particleList(:)
+    type(potentialSolver) :: solver
     integer(int32) :: numTimeSteps
-    real(real64) :: del_t, simulationTime
+    real(real64) :: del_t, simulationTime, rpar(2)
 
 contains
 
@@ -171,6 +174,47 @@ contains
         close(41)
         
     end subroutine writePhi
+
+    ! -------------------- JFNK functions ---------------------------------------
+    subroutine funcNitsol(n, xcur, fcur, rpar, ipar, itrmf)
+        ! Use solver and whatnot as global inputs, I'm sure as hell not combining all data into one rpar and then creating new routines on those!
+        integer(int32), intent(in) :: n
+        integer(int32), intent(in out) :: itrmf, ipar(*)
+        real(real64), intent(in) :: xcur(n)
+        real(real64), intent(in) :: rpar(*)
+        real(real64), intent(in out) :: fcur(n)
+        real(real64) :: d(n)
+        call solver%depositJ(particleList, world, del_t)
+        d = (-solver%J(2:) + solver%J(1:NumberXNodes-2)) * del_t / eps_0 &
+        + arrayDiff(solver%phi(1:NumberXNodes-1), NumberXNodes-1)*2.0d0/(world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1)) &
+        - arrayDiff(solver%phi(2:), NumberXNodes-1)*2.0d0/(world%dx_dl(3:NumberXNodes) + world%dx_dl(2:NumberXNodes-1))
+        d(1) = d(1) + solver%phi(1) * solver%coeff_left
+        d(n) = d(n) + solver%phi(NumberXNodes) * solver%coeff_right
+        fcur = triMul(n, solver%a_tri, solver%c_tri, solver%b_tri, xcur) - d
+        itrmf = 0
+
+    end subroutine funcNitsol
+
+    subroutine jacNitsol(n, xcur, fcur, ijob, v, z, rpar, ipar, itrmjv) 
+        ! If analytical jacobian matrix-vector product or preconditioner needed
+        integer, intent(in) :: ijob
+        integer, intent(in out) :: itrmjv
+        integer, intent(in) :: n
+
+        integer, intent(in out) :: ipar(*)
+
+        real(real64), intent(in) :: fcur(n)
+        real(real64), intent(in) :: rpar(*)
+        real(real64), intent(in) :: v(n)
+        real(real64), intent(in) ::  xcur(n)
+        real(real64), intent(in out) :: z(n)
+        if (ijob == 0) then
+            print *, "in analytical jacobian if block"
+        else if (ijob == 1) then
+            print *, "in preconditioner if block"
+        end if
+        itrmjv = 0
+    end subroutine jacNitsol
     
     ! -------------------------- Simulation ------------------------------------------
 
