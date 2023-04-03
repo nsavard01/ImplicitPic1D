@@ -54,7 +54,6 @@ program BoundPlasmaExample
     ! end if
     ! stop
     allocate(fcur(NumberXNodes-2))
-    call solver%solveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
     stop
     
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)

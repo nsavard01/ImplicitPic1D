@@ -15,6 +15,8 @@ module mod_simulation
     type(potentialSolver) :: solver
     integer(int32) :: numTimeSteps
     real(real64) :: del_t, simulationTime, rpar(2)
+    double precision, external :: ddot
+    double precision, external :: dnrm2
 
 contains
 
