@@ -18,7 +18,7 @@ program BoundPlasmaExample
     particleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(particleList(1), NumberXNodes, numDiagnosticSteps, stepsAverage, fractionFreq, n_ave, world, solver, simulationTime, heatSkipSteps, Power, nu_h)
+    call readInputs(particleList(1), NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, heatSkipSteps, Power, nu_h)
     do i = 1, numberChargedParticles
         call initialize_randUniform(particleList(i), irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
@@ -38,8 +38,8 @@ program BoundPlasmaExample
     
     ! Generate solver object, and then solve for initial rho/potential
     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
-    print *, "Averaging over", stepsAverage, "time steps"
-    call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, stepsAverage, heatSkipSteps)
+    print *, "Averaging over", averagingTime, "seconds"
+    call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, heatSkipSteps)
 
 
     

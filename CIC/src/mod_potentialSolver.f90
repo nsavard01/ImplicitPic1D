@@ -15,8 +15,7 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:,:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, chargeError, particleEnergyLoss, Beta_k
-        integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, m_Anderson, amountTimeSplits
+        real(real64) :: energyError, chargeError, particleEnergyLoss
         real(real64) :: coeff_left, coeff_right ! these are coefficients (from world dimensions) needed with phi_left and phi_right in rhs of matrix equation
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
@@ -33,8 +32,8 @@ module mod_potentialSolver
         procedure, public, pass(self) :: depositJ
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: construct_diagMatrix_Ampere
-        procedure, public, pass(self) :: solveDivAmperePicard
-        procedure, public, pass(self) :: adaptiveSolveDivAmperePicard
+        ! procedure, public, pass(self) :: solveDivAmperePicard
+        ! procedure, public, pass(self) :: adaptiveSolveDivAmperePicard
         procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: getDelTauInitialSubStep
         procedure, public, pass(self) :: getDelTauSubStep
@@ -50,8 +49,8 @@ module mod_potentialSolver
         procedure, public, pass(self) :: depositJSubStepDirichlet
         procedure, public, pass(self) :: moveParticles
         procedure, private, pass(self) :: construct_diagMatrix
-        procedure, public, pass(self) :: adaptiveSolveDivAmpereAnderson
-        procedure, public, pass(self) :: solveDivAmpereAnderson
+        ! procedure, public, pass(self) :: adaptiveSolveDivAmpereAnderson
+        ! procedure, public, pass(self) :: solveDivAmpereAnderson
     end type
 
     interface potentialSolver
@@ -60,25 +59,18 @@ module mod_potentialSolver
    
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, m_Anderson, Beta_k) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
         ! Construct domain object, initialize grid, dx_dl, and dx_dl.
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: leftVoltage, rightVoltage, Beta_k
-        integer(int32), intent(in) :: m_Anderson
+        real(real64), intent(in) :: leftVoltage, rightVoltage
         allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-3), &
         self%b_tri(NumberXNodes-2), self%c_tri(NumberXNodes-3), self%particleChargeLoss(2, numberChargedParticles))
         call construct_diagMatrix(self, world)
         self % rho = 0
         self % J = 0
         self % phi = 0
-        self % amountTimeSplits = 0
-        self % Beta_k = Beta_k
-        self % m_Anderson = m_Anderson
         self % coeff_left = 2/(world%dx_dl(1) + world%dx_dl(2))/world%dx_dl(2)
         self % coeff_right = 2/(world%dx_dl(NumberXNodes-1) + world%dx_dl(NumberXNodes))/world%dx_dl(NumberXNodes-1)
-        self%iterNumPicard = 0
-        self%iterNumAdaptiveSteps = 0
-        self%iterNumParticle = 0
         self%particleEnergyLoss = 0.0d0
         self%particleChargeLoss = 0.0d0
         self%energyError = 0.0d0
@@ -1393,178 +1385,6 @@ contains
 
     end subroutine solveInitialPotential
 
-    !--------------------------- non-linear solver for time step using divergence of ampere ------------------------
-
-    subroutine solveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_r)
-        ! Solve for divergence of ampere using picard iterations
-        class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in out) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: errorCurrent, errorInitial
-        integer(int32) :: i
-        call self%depositJ(particleList, world, del_t)
-        errorInitial = self%getError_tridiag_Ampere(world, del_t)
-        do i = 1, maxIter
-            call self%solve_tridiag_Ampere(world, del_t)
-            call self%depositJ(particleList, world, del_t)
-            errorCurrent = self%getError_tridiag_Ampere(world, del_t)
-            if (i > 2) then
-                if (errorCurrent < eps_r*errorInitial) then
-                    call self%moveParticles(particleList, world, del_t)
-                    self%phi = self%phi_f
-                    exit
-                end if
-            end if
-        end do
-        self%iterNumPicard = i-1
-
-    end subroutine solveDivAmperePicard
-
-    subroutine adaptiveSolveDivAmperePicard(self, particleList, world, del_t, maxIter, eps_r)
-        ! Solve for divergence of ampere's law with picard
-        ! cut del_t in two if non-convergence after maxIter, repeat until convergence
-        class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in out) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: remainDel_t, currDel_t, adaptiveJ(NumberXNodes-1)
-        call self%solveDivAmperePicard(particleList, world, del_t, maxIter, eps_r)
-        remainDel_t = del_t  
-        if (self%iterNumPicard == maxIter) then
-            do while (self%iterNumPicard == maxIter)
-                print *, "Reducing time step adaptively"
-                self%iterNumAdaptiveSteps = 0
-                currDel_t = remainDel_t
-                adaptiveJ = 0.0d0
-                do while (self%iterNumPicard == maxIter)
-                    currDel_t = currDel_t/2.0d0
-                    self%iterNumAdaptiveSteps = self%iterNumAdaptiveSteps + 1
-                    if (self%iterNumAdaptiveSteps > 4) then
-                        stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
-                    end if
-                    call self%solveDivAmperePicard(particleList, world, currDel_t, maxIter, eps_r)   
-                end do
-                adaptiveJ = adaptiveJ + self%J * currDel_t/del_t
-                remainDel_t = remainDel_t - currDel_t 
-                call self%solveDivAmperePicard(particleList, world, remainDel_t, maxIter, eps_r)
-            end do
-            adaptiveJ = adaptiveJ + self%J * remainDel_t/del_t
-            self%J = adaptiveJ
-        end if
-        
-
-    end subroutine adaptiveSolveDivAmperePicard
-
-
-    ! -------------------------- Anderson -------------------
-
-    subroutine solveDivAmpereAnderson(self, particleList, world, del_t, maxIter, eps_r)
-        ! Solve for divergence of ampere using picard iterations
-        class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in out) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: initialR, sumPastResiduals, initialNorm
-        real(real64) :: Residual_k(NumberXNodes-2, self%m_Anderson+1), phi_k(NumberXNodes-2, self%m_Anderson+1), fitMat(NumberXNodes-2, self%m_Anderson)
-        integer(int32) :: lwork
-        real(real64), allocatable :: work(:), alpha(:)
-        integer(int32) :: i, j, index, m_k, info, ldb
-        ldb = MAX(self%m_Anderson, (NumberXNodes -2))
-        lwork= MIN((NumberXNodes -2),self%m_Anderson) + ldb
-        allocate(alpha(ldb), work(lwork))
-        phi_k(:,1) = self%phi(2:NumberXNodes-1)
-        call self%depositJ(particleList, world, del_t)
-        initialNorm = SQRT(SUM(self%phi(2:NumberXNodes-1)**2))
-        call self%solve_tridiag_Ampere(world, del_t)
-        phi_k(:,2) = self%phi_f(2:NumberXNodes-1)
-        initialR = SQRT(SUM((self%phi_f(2:NumberXNodes-1) - phi_k(:,1))**2))
-        Residual_k(:,1) = phi_k(:,2) - phi_k(:,1)
-        
-        do i = 1, maxIter
-            index = MODULO(i, self%m_Anderson+1) + 1
-            m_k = MIN(i, self%m_Anderson)
-            ldb = MAX(m_k, (NumberXNodes -2))
-            call self%depositJ(particleList, world, del_t)
-            if (SQRT(SUM((self%phi_f(2:NumberXNodes-1) - phi_k(:,MODULO(i-1, self%m_Anderson+1) + 1))**2)) < eps_r*(initialR + initialNorm)) then
-                call self%moveParticles(particleList, world, del_t)
-                self%phi = self%phi_f
-                exit
-            end if
-            call self%solve_tridiag_Ampere(world, del_t)
-            Residual_k(:, index) = self%phi_f(2:NumberXNodes-1) - phi_k(:,index)
-            if (i > self%m_Anderson) then
-                if (self%m_anderson > 1) then
-                    sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2) &
-                    + SUM(Residual_k(:, MODULO(i-2, self%m_Anderson+1) + 1)**2)
-                    sumPastResiduals = sumPastResiduals/2.0d0
-                else
-                    sumPastResiduals = SUM(Residual_k(:, MODULO(i-1, self%m_Anderson+1) + 1)**2)
-                end if
-                if (SUM(Residual_k(:, index)**2) > sumPastResiduals) then
-                    self%iterNumPicard = maxIter
-                    goto 75
-                end if
-            end if
-            do j = 0, m_k-1
-                fitMat(:,j+1) = Residual_k(:, MODULO(i - m_k + j, self%m_Anderson+1) + 1) - Residual_k(:, index)
-            end do
-            alpha(1:NumberXNodes-2) = -Residual_k(1:NumberXNodes-2, index)
-            call dgels('N', NumberXNodes-2, m_k, 1, fitMat(:, 1:m_k), NumberXNodes-2, alpha(1:ldb), ldb, work, lwork, info)
-            if (info /= 0) then
-                print *, "Issue with minimization procedure dgels in Anderson Acceleration!"
-                stop
-            end if
-            alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k)) 
-            phi_k(:, MODULO(i+1, self%m_Anderson+1) + 1) = alpha(1) * (self%Beta_k*Residual_k(:, MODULO(i-m_k, self%m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k,self%m_Anderson+1) + 1))
-            do j=1, m_k
-                phi_k(:, MODULO(i+1, self%m_Anderson+1) + 1) = phi_k(:, MODULO(i+1, self%m_Anderson+1) + 1) + alpha(j + 1) * (self%Beta_k*Residual_k(:, MODULO(i-m_k + j, self%m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k + j, self%m_Anderson+1) + 1))
-            end do
-            self%phi_f(2:NumberXNodes-1) = phi_k(:, MODULO(i+1, self%m_Anderson+1) + 1)
-    
-        end do
-        self%iterNumPicard = i-1
-        75 continue
-        
-
-    end subroutine solveDivAmpereAnderson
-
-    subroutine adaptiveSolveDivAmpereAnderson(self, particleList, world, del_t, maxIter, eps_r)
-        ! Solve for divergence of ampere's law with picard
-        ! cut del_t in two if non-convergence after maxIter, repeat until convergence
-        class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in out) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: remainDel_t, currDel_t, adaptiveJ(NumberXNodes-1)
-        call self%solveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
-        remainDel_t = del_t  
-        if (self%iterNumPicard == maxIter) then
-            self%amountTimeSplits = self%amountTimeSplits + 1
-            do while (self%iterNumPicard == maxIter)
-                self%iterNumAdaptiveSteps = 0
-                currDel_t = remainDel_t
-                adaptiveJ = 0.0d0
-                do while (self%iterNumPicard == maxIter)
-                    currDel_t = currDel_t/2.0d0
-                    self%iterNumAdaptiveSteps = self%iterNumAdaptiveSteps + 1
-                    if (self%iterNumAdaptiveSteps > 4) then
-                        stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
-                    end if
-                    call self%solveDivAmpereAnderson(particleList, world, currDel_t, maxIter, eps_r)   
-                end do
-                adaptiveJ = adaptiveJ + self%J * currDel_t/del_t
-                remainDel_t = remainDel_t - currDel_t 
-                call self%solveDivAmpereAnderson(particleList, world, remainDel_t, maxIter, eps_r)
-            end do
-            adaptiveJ = adaptiveJ + self%J * remainDel_t/del_t
-            self%J = adaptiveJ
-        end if
-    end subroutine adaptiveSolveDivAmpereAnderson
 
 
 

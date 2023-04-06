@@ -32,6 +32,7 @@ e = scipy.constants.e
 
 dataFolder = ''
 InitialConditions = None
+EndDiagnostics = None
 GlobalDiagnostics = None
 ParticleProperties = None
 GlobalDiagnosticsAveraged = None
@@ -280,6 +281,10 @@ def plotAveragePhi():
     plt.pause(0.05)        
 
 
+def plotWallPowerVsTime():
+    plt.plot(GlobalDiagnostics['time(s)'].values, GlobalDiagnostics['P_wall(W/m^2)'])
+    plt.xlabel('Time (s)')
+    plt.ylabel('Power loss to walls (W/m^2)')
 
 
 def finalElectronEEDFVsMaxwellian():
@@ -302,6 +307,7 @@ def getData(filename):
     global InitialConditions
     global GlobalDiagnostics
     global ParticleProperties
+    global EndDiagnostics
     global GlobalDiagnosticsAveraged
     global boolAverageFile
     global grid
@@ -309,13 +315,14 @@ def getData(filename):
     
     
     dataFolder = '../' + filename + '/'
-    diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'chargeError', 'energyError', 'numPicardIter']
-    diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+    diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'chargeError', 'energyError', 'numPicardIter', 'diagStep']
+    diagAverageList = ['steps', 'time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+    endDiagList = ['time(s)', 'numSteps', 'numSplitSteps']
     InitialConditionsList = ['n_x', 't_final', 'del_t', 'FracFreq', 'Power', 'heatSteps', 'nu_h']
     # list names in diagnostic file for each time steps
     InitialConditions =  pd.read_csv(dataFolder + 'InitialConditions.dat', skiprows = 1, delim_whitespace=True, names = InitialConditionsList)
     GlobalDiagnostics = pd.read_csv(dataFolder + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
-    
+    EndDiagnostics =  pd.read_csv(dataFolder + 'SimulationFinalData.dat', skiprows = 1, delim_whitespace=True, names = endDiagList)
     ParticleProperties = pd.read_csv(dataFolder + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
     boolAverageFile = os.path.isfile(dataFolder + 'GlobalDiagnosticDataAveraged.dat')
     GlobalDiagnosticsAveraged = pd.DataFrame()
@@ -330,7 +337,8 @@ def saveData(saveFile):
     shutil.copytree('../Data', '../' + saveFile)
 
 getData('Data')
-print("Global power is:", GlobalDiagnosticsAveraged['Ploss(W/m^2)'] + GlobalDiagnosticsAveraged['P_wall(W/m^2)'], 'W/m^2')
+if (boolAverageFile):
+    print("Global power is:", GlobalDiagnosticsAveraged['Ploss(W/m^2)'] + GlobalDiagnosticsAveraged['P_wall(W/m^2)'], 'W/m^2')
 
 
 

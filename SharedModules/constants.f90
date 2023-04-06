@@ -11,7 +11,7 @@ module constants
     real(real64), parameter :: e = 1.602176634d-19 ! C
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
-    integer(int32) :: NumberXNodes, numberChargedParticles, maxIter, numDiagnosticSteps, stepsAverage
+    integer(int32) :: NumberXNodes, numberChargedParticles, maxIter, numDiagnosticSteps
     integer(int32) :: irand = 987888 !Global variable that will need to be changed in-out
     real(real64) :: eps_r, fractionFreq, n_ave
 

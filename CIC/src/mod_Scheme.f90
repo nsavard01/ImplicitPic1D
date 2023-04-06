@@ -6,6 +6,7 @@ module mod_Scheme
     use mod_domain
     use mod_potentialSolver
     use mod_collisions
+    use mod_nonLinSolvers
     implicit none
     ! Scheme module for CIC
 contains
@@ -28,7 +29,7 @@ contains
             KE_i = KE_i + particleList(j)%getTotalKE()
         end do
         call solver%depositRho(particleList, world) 
-        call solver%solveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
+        call solveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
         KE_f = solver%particleEnergyLoss
         do j=1, numberChargedParticles
             KE_f = KE_f + particleList(j)%getTotalKE()
