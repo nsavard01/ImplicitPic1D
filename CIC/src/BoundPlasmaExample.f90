@@ -16,12 +16,12 @@ program BoundPlasmaExample
     particleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(NumberXNodes, maxIter, numDiagnosticSteps, averagingTime, eps_r, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, m_Anderson, Beta_k)
+    call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h)
     do i = 1, numberChargedParticles
         call initialize_randUniform(particleList(i), world, irand)
         call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
     end do
-
+    call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
     print *, "Calulated values:"
     print *, "Number of particles is:", particleList(1)%N_p
     print *, "w_p is:", particleList(1)%w_p
@@ -38,8 +38,11 @@ program BoundPlasmaExample
     call solver%solveInitialPotential(particleList, world)
     ! call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
     ! print *, "number of iterations is:", solver%iterNumPicard
-    ! call solveJFNK(del_t, maxIter, eps_r)
-    ! stop
+    call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
+    print *, "Charge error is:", solver%chargeError
+    print *, "energy error is:", solver%energyError
+    print *, "numIterPicard is:", iterNumPicard
+    stop
     call solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", averagingTime, "seconds"
     call solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)

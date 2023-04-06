@@ -11,16 +11,16 @@ all: cleanData clean BoundPlasmaExample
 BoundPlasmaExample: $(OBJ)
 	$(FC) $(OPT) -o $@ $(OBJ)
 
-BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_Scheme.o ../../Libraries/Nitsol/libnitsol.a mod_simulation.o mod_nonLinSolvers.o
+BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_potentialSolver.o mod_collisions.o mod_Scheme.o mod_simulation.o mod_nonLinSolvers.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-mod_simulation.o: ../../SharedModules/mod_simulation.f90 ../../Libraries/Nitsol/libnitsol.a mod_Scheme.o mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o mod_nonLinSolvers.o
+mod_simulation.o: ../../SharedModules/mod_simulation.f90 mod_Scheme.o mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o mod_nonLinSolvers.o
 	$(FC) $(OPT) -c  -o $@ $<
 
 mod_Scheme.o: mod_Scheme.f90 mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o mod_nonLinSolvers.o
 	$(FC) $(OPT) -c  -o $@ $<
 
-mod_nonLinSolvers.o: ../../SharedModules/mod_nonLinSolvers.f90 mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
+mod_nonLinSolvers.o: ../../SharedModules/mod_nonLinSolvers.f90 ../../Libraries/Nitsol/libnitsol.a mod_collisions.o mod_potentialSolver.o mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(OPT) -c  -o $@ $<
 
 mod_potentialSolver.o: mod_potentialSolver.f90 mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
@@ -41,7 +41,7 @@ mod_BasicFunctions.o: ../../SharedModules/mod_BasicFunctions.f90 constants.o
 constants.o: ../../SharedModules/constants.f90
 	$(FC) $(OPT) -c  -o $@ $<
 
-nitsol_lib:
+../../Libraries/Nitsol/libnitsol.a:
 	cd ../../Libraries/Nitsol; $(MAKE) "FFLAGS=$(OPT)" "FC=$(FC)"
 
 cleanNitsol:

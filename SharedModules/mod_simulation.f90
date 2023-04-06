@@ -20,10 +20,10 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(NumberXNodes, maxIter, numDiagnosticSteps, averagingTime, eps_r, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, m_Anderson, Beta_k)
+    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h)
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
-        integer(int32), intent(in out) :: NumberXNodes, maxIter, numDiagnosticSteps, heatSkipSteps, m_Anderson
-        real(real64), intent(in out) :: eps_r, fractionFreq, n_ave, simulationTime, Power, nu_h, Beta_k, averagingTime
+        integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
+        real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
         integer(int32) :: io, leftBoundary, rightBoundary, gridType
         real(real64) :: leftVoltage, rightVoltage, L_domain, del_l
         type(Domain) :: world
@@ -48,17 +48,6 @@ contains
         print *, "Steps to skip for heating:", heatSkipSteps
         print *, "Heating frequency (Hz):", nu_h
         print *, "------------------"
-        print *, "Reading non-linear solver inputs:"
-        open(10,file='../InputData/SolverState.inp', IOSTAT=io)
-        read(10, *, IOSTAT = io) eps_r
-        read(10, *, IOSTAT = io) m_Anderson
-        read(10, *, IOSTAT = io) Beta_k
-        read(10, *, IOSTAT = io) maxIter
-        close(10)
-        print *, "Relative error:", eps_r
-        print *, "Maximum iteration number:", maxIter
-        print *, "Anderson number m is:", m_Anderson
-        print *, "Relaxation parameter is:", Beta_k
         print *, ""
         print *, "Reading domain inputs:"
         open(10,file='../InputData/Geometry.inp')
@@ -227,7 +216,7 @@ contains
 
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
-                call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
+                call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
@@ -344,7 +333,7 @@ contains
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
                 call cpu_time(startTime)
-                call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
+                call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
                 call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 call cpu_time(endTime)
                 elapsed_time = elapsed_time + (endTime - startTime)
@@ -464,7 +453,7 @@ contains
         i = 0
         currentTime = 0.0d0
         do while(currentTime < averagingTime)
-            call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
+            call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
             call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi

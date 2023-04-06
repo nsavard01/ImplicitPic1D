@@ -29,7 +29,7 @@ contains
             KE_i = KE_i + particleList(j)%getTotalKE()
         end do
         call solver%depositRho(particleList, world) 
-        call solveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
+        call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
         KE_f = solver%particleEnergyLoss
         do j=1, numberChargedParticles
             KE_f = KE_f + particleList(j)%getTotalKE()
