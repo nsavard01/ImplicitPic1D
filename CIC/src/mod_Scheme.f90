@@ -18,8 +18,8 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r
         integer(int32), intent(in) :: maxIter
-        integer(int32) :: j, k
-        real(real64) :: KE_i, KE_f, PE_i, PE_f, rho_f(NumberXNodes)
+        integer(int32) :: j!, k
+        real(real64) :: KE_i, KE_f, PE_i, PE_f!, rho_f(NumberXNodes)
 
         ! Get charge/energy conservation error
         solver%particleEnergyLoss = 0.0d0
@@ -28,7 +28,7 @@ contains
         do j=1, numberChargedParticles
             KE_i = KE_i + particleList(j)%getTotalKE()
         end do
-        call solver%depositRho(particleList, world) 
+        !call solver%depositRho(particleList, world) 
         call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
         KE_f = solver%particleEnergyLoss
         do j=1, numberChargedParticles
@@ -36,20 +36,20 @@ contains
         end do
         PE_f = solver%getTotalPE(world, .false.)
         solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
-        call depositRhoDiag(rho_f, particleList, world)
-        solver%chargeError = 0.0d0
-        j = 0
-        if (world%boundaryConditions(1) == 3) then
-            j = j + 1
-            solver%chargeError = solver%chargeError + (1 + (solver%J(1) - solver%J(NumberXNodes-1)) *del_t/ world%dx_dl(1)/(rho_f(1) - solver%rho(1)))**2
-        end if
-        do k = 1, NumberXNodes -2
-            if ((rho_f(k+1) - solver%rho(k+1)) /= 0) then
-                solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%dx_dl(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
-                j = j + 1
-            end if
-        end do
-        solver%chargeError = SQRT(solver%chargeError/j)
+        ! call depositRhoDiag(rho_f, particleList, world)
+        ! solver%chargeError = 0.0d0
+        ! j = 0
+        ! if (world%boundaryConditions(1) == 3) then
+        !     j = j + 1
+        !     solver%chargeError = solver%chargeError + (1 + (solver%J(1) - solver%J(NumberXNodes-1)) *del_t/ world%dx_dl(1)/(rho_f(1) - solver%rho(1)))**2
+        ! end if
+        ! do k = 1, NumberXNodes -2
+        !     if ((rho_f(k+1) - solver%rho(k+1)) /= 0) then
+        !         solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%dx_dl(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
+        !         j = j + 1
+        !     end if
+        ! end do
+        ! solver%chargeError = SQRT(solver%chargeError/j)
 
     end subroutine solveSingleTimeStepDiagnostic
 

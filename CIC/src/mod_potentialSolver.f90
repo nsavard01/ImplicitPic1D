@@ -31,6 +31,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: depositJ
         procedure, public, pass(self) :: getError_tridiag_Ampere
+        procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix_Ampere
         ! procedure, public, pass(self) :: solveDivAmperePicard
         ! procedure, public, pass(self) :: adaptiveSolveDivAmperePicard
@@ -48,7 +49,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: depositJSubStepPeriodic
         procedure, public, pass(self) :: depositJSubStepDirichlet
         procedure, public, pass(self) :: moveParticles
-        procedure, private, pass(self) :: construct_diagMatrix
+        procedure, public, pass(self) :: construct_diagMatrix
         ! procedure, public, pass(self) :: adaptiveSolveDivAmpereAnderson
         ! procedure, public, pass(self) :: solveDivAmpereAnderson
     end type
@@ -276,6 +277,23 @@ contains
 
     end function getError_tridiag_Ampere
 
+    function getError_tridiag_Poisson(self) result(res)
+        class(potentialSolver), intent(in) :: self
+        integer(int32) :: i
+        real(real64) :: Ax(NumberXNodes-2), d(NumberXNodes-2), res
+        Ax(1) = self%b_tri(1)*self%phi_f(2) + self%c_tri(1) * self%phi_f(3)
+        do i=2, NumberXNodes-3
+            Ax(i) = self%b_tri(i)*self%phi_f(i+1) + self%c_tri(i) * self%phi_f(i+2) + self%a_tri(i-1) * self%phi_f(i)
+        end do
+        Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
+        d = -self%rho(2:NumberXNodes-1)
+        d(1) = d(1) - 2 * self%phi(1) * eps_0 * self%coeff_left
+        d(NumberXNodes - 2) = d(NumberXNodes-2) - 2 * eps_0 * self%phi(NumberXNodes) * self%coeff_right
+        !res = Ax*eps_0 - d
+        res = SQRT(SUM((Ax*eps_0 - d)**2))
+
+    end function getError_tridiag_Poisson
+
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
         ! In 1D is J/m^2
@@ -343,11 +361,11 @@ contains
         EField = SIGN(1.0, d) * (self%phi_f(l_cell) + self%phi(l_cell) - self%phi(l_cell+ INT(SIGN(1.0, d))) - self%phi_f(l_cell + INT(SIGN(1.0, d))))/world%dx_dl(l_cell)/2.0d0
     end function getEFieldDirichlet
 
-    subroutine getDelTauInitialSubStep(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+    subroutine getDelTauInitialSubStep(self, world, part, l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_awayV, a, c
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, a, c
         real(real64), intent(in) :: del_t
         integer(int32), intent(in) :: l_cell
         real(real64) :: del_tau_tmp
@@ -411,11 +429,11 @@ contains
 
     end subroutine getDelTauInitialSubstep
 
-    subroutine getDelTauSubStep(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+    subroutine getDelTauSubStep(self, world, part, l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, a, c
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
         real(real64), intent(in) :: del_t, timePassed
         integer(int32), intent(in) :: l_cell
         real(real64) :: del_tau_tmp
@@ -475,7 +493,6 @@ contains
         else
             !Free particle drift
             del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
             l_f = l_alongV
             if (del_tau <= 0.0d0) then
                 stop "Have issue with del_tau for a = 0"
@@ -484,11 +501,11 @@ contains
 
     end subroutine getDelTauSubstep
 
-    subroutine getDelTauInitialSubStepPeriodic(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+    subroutine getDelTauInitialSubStepPeriodic(self, world, part, l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_awayV, a, c
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, a, c
         real(real64), intent(in) :: del_t
         integer(int32), intent(in) :: l_cell
         real(real64) :: del_tau_tmp
@@ -553,11 +570,11 @@ contains
 
     end subroutine getDelTauInitialSubstepPeriodic
 
-    subroutine getDelTauSubStepPeriodic(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+    subroutine getDelTauSubStepPeriodic(self, world, part, l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, a, c
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
         real(real64), intent(in) :: del_t, timePassed
         integer(int32), intent(in) :: l_cell
         real(real64) :: del_tau_tmp
@@ -617,7 +634,6 @@ contains
         else
             !Free particle drift
             del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
             l_f = l_alongV
             if (del_tau <= 0.0d0) then
                 stop "Have issue with del_tau for a = 0"
@@ -626,11 +642,11 @@ contains
 
     end subroutine getDelTauSubstepPeriodic
 
-    subroutine getDelTauInitialSubStepDirichlet(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, l_awayV, l_alongV, l_cell, a, c)
+    subroutine getDelTauInitialSubStepDirichlet(self, world, part, l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, l_cell, a, c)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_awayV, l_alongV, a, c
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, a, c
         integer(int32), intent(in) :: l_cell
         a = (part%q / part%mass / 2.0d0) * self%getEFieldDirichlet(l_sub, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
@@ -675,11 +691,11 @@ contains
         end if
     end subroutine getDelTauInitialSubStepDirichlet
 
-    subroutine getDelTauSubStepDirichlet(self, world, part, l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_cell, a, c)
+    subroutine getDelTauSubStepDirichlet(self, world, part, l_sub, l_f, v_sub, del_tau, l_alongV, l_cell, a, c)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: part
-        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f, del_tau, l_alongV, a, c
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
         integer(int32), intent(in) :: l_cell
         a = (part%q / part%mass / 2.0d0) * self%getEFieldDirichlet(l_sub, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
@@ -710,7 +726,6 @@ contains
         else
             !Free particle drift
             del_tau = (l_alongV - l_sub) * world%dx_dl(l_cell)/v_sub
-            v_f = (l_alongV - l_sub) * world%dx_dl(l_cell) / del_tau
             l_f = l_alongV
             if (del_tau <= 0.0d0) then
                 stop "Have issue with del_tau for a = 0"
@@ -903,7 +918,7 @@ contains
                     ! Within Domain
                     l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                     l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                    call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                    call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                     if (del_tau >= del_t) then
                         call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                         !call self%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
@@ -930,7 +945,7 @@ contains
                     !Dirichlet
                     l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))/2.0d0
                     l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))/2.0d0
-                    call self%getDelTauInitialSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_awayV, l_alongV, l_cell, a, c)
+                    call self%getDelTauInitialSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, l_cell, a, c)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
                         l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
@@ -960,7 +975,7 @@ contains
                 CASE(3)
                     l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                     l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                    call self%getDelTauInitialSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                    call self%getDelTauInitialSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                     if (del_tau >= del_t-timePassed) then
                         call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)    
                         call self%depositJSubStepPeriodic(world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t) 
@@ -1003,7 +1018,7 @@ contains
                     subStep: SELECT CASE (world%boundaryConditions(l_cell))
                     CASE(0)
                         l_alongV = l_sub + SIGN(1.0d0, v_sub)
-                        call self%getDelTauSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                        call self%getDelTauSubStep(world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
                         if (del_tau >= del_t-timePassed) then
                             ! Add directly to J with no substep
                             call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
@@ -1028,7 +1043,7 @@ contains
                     CASE(1)
                         !Near Dirichlet node
                         l_alongV = l_sub + SIGN(0.5d0, v_sub)
-                        call self%getDelTauSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_cell, a, c)
+                        call self%getDelTauSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, del_tau, l_alongV, l_cell, a, c)
                         if (del_tau >= del_t-timePassed) then
                             ! Add directly to J with no substep
                             l_f = v_sub * (del_t-timePassed) / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * (del_t - timePassed)**2 + l_sub
@@ -1064,7 +1079,7 @@ contains
                         end if
                     CASE(3)
                         l_alongV = l_sub + SIGN(1.0d0, v_sub)
-                        call self%getDelTauSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                        call self%getDelTauSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
                         if (del_tau >= del_t-timePassed) then
                             ! Add directly to J with no substep
                             call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
@@ -1143,7 +1158,7 @@ contains
                     ! Within Domain
                     l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                     l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                    call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                    call self%getDelTauInitialSubStep(world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                     if (del_tau >= del_t) then
                         call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                         !call self%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
@@ -1171,7 +1186,7 @@ contains
                     !Dirichlet
                     l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))/2.0d0
                     l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))/2.0d0
-                    call self%getDelTauInitialSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_awayV, l_alongV, l_cell, a, c)
+                    call self%getDelTauInitialSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, l_cell, a, c)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
                         l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
@@ -1210,7 +1225,7 @@ contains
                 CASE(3)
                     l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                     l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                    call self%getDelTauInitialSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                    call self%getDelTauInitialSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                     if (del_tau >= del_t-timePassed) then
                         call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)    
                         if (NINT(l_f) /= NINT(l_sub)) then
@@ -1254,7 +1269,7 @@ contains
                     subStep: SELECT CASE (world%boundaryConditions(l_cell))
                     CASE(0)
                         l_alongV = l_sub + SIGN(1.0d0, v_sub)
-                        call self%getDelTauSubStep(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                        call self%getDelTauSubStep(world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
                         if (del_tau >= del_t-timePassed) then
                             ! Add directly to J with no substep
                             call self%analyticalParticleMover(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
@@ -1280,7 +1295,7 @@ contains
                     CASE(1)
                         !Near Dirichlet node
                         l_alongV = l_sub + SIGN(0.5d0, v_sub)
-                        call self%getDelTauSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, l_alongV, l_cell, a, c)
+                        call self%getDelTauSubStepDirichlet(world, particleList(j), l_sub, l_f, v_sub, del_tau, l_alongV, l_cell, a, c)
                         if (del_tau >= del_t-timePassed) then
                             ! Add directly to J with no substep
                             l_f = v_sub * (del_t-timePassed) / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * (del_t - timePassed)**2 + l_sub
@@ -1319,7 +1334,7 @@ contains
                         end if
                     CASE(3)
                         l_alongV = l_sub + SIGN(1.0d0, v_sub)
-                        call self%getDelTauSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, v_f, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                        call self%getDelTauSubStepPeriodic(world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
                         if (del_tau >= del_t-timePassed) then
                             ! Add directly to J with no substep
                             call self%analyticalParticleMoverPeriodic(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)

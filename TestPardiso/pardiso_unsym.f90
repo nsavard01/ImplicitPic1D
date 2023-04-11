@@ -6,7 +6,7 @@ program pardiso_unsym
     integer(int32) :: mtype, pt(64), solver, iparm(64), mnum = 1, maxfct = 1, nrhs = 1, msglvl = 0, matDimension = 64, j, phase, idum, error, tclock1, tclock2, clock_rate,i
     real(real64), allocatable :: a(:), b(:), x(:), x_other(:), a_tri(:), b_tri(:), c_tri(:)
     integer(int32), allocatable :: ja(:), ia(:)
-    real(real64) :: elapsed_time
+    real(real64) :: elapsed_time, cpu1, cpu2
 
     allocate(a((matDimension - 2)*3 + 4), ja((matDimension - 2)*3 + 4), ia(matDimension + 1), b(matDimension), x(matDimension), a_tri(matDimension-1), b_tri(matDimension), c_tri(matDimension-1), x_other(matDimension))
     x = 0
@@ -45,23 +45,26 @@ program pardiso_unsym
     print *, error
 
     phase = 33
+    !call cpu_time(cpu1)
     call system_clock(tclock1)
     do i = 1, 100000
         call pardiso(pt, maxfct, mnum, mtype, phase, matDimension, a, ia, ja, idum, nrhs, iparm, msglvl, b, x, error)
     end do
     call system_clock(tclock2, clock_rate)
+    !call cpu_time(cpu2)
     elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
-    print *, "Elapsed time is:", elapsed_time, "seconds"
+    print *, "Elapsed wall time is:", elapsed_time, "seconds"
+    print *, "CPU time is:", cpu2-cpu1, "seconds"
     print *, x
     
-    call system_clock(tclock1)
-    do i = 1, 100000
-        call solve_tridiag(a_tri, b_tri, c_tri, b, x_other, matDimension)
-    end do
-    call system_clock(tclock2, clock_rate)
-    elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
-    print *, "Elapsed time is:", elapsed_time, "seconds"
-    print *, x_other
+    ! call system_clock(tclock1)
+    ! do i = 1, 100000
+    !     call solve_tridiag(a_tri, b_tri, c_tri, b, x_other, matDimension)
+    ! end do
+    ! call system_clock(tclock2, clock_rate)
+    ! elapsed_time = float(tclock2 - tclock1) / float(clock_rate)
+    ! print *, "Elapsed time is:", elapsed_time, "seconds"
+    ! print *, x_other
 
 
 
