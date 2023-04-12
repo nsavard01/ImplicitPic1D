@@ -67,26 +67,30 @@ contains
         end do
     end subroutine derive_DxDl_NodeVol
 
-    subroutine constructGrid(self, del_l, L_domain, gridType)
+    subroutine constructGrid(self, del_x, L_domain, gridType)
         class(Domain), intent(in out) :: self
-        real(real64), intent(in) :: del_l, L_domain
+        real(real64), intent(in) :: del_x, L_domain
         integer(int32), intent(in) :: gridType
         if (gridType == 0) then
             call self%constructUniformGrid(L_domain)
         else
-            call self%constructSineGrid(del_l, L_domain)
+            call self%constructSineGrid(del_x, L_domain)
         end if
     end subroutine constructGrid
 
-    subroutine constructSineGrid(self, del_l, L_domain)
+    subroutine constructSineGrid(self, del_x, L_domain)
         class(Domain), intent(in out) :: self
-        real(real64), intent(in) :: del_l, L_domain
+        real(real64), intent(in) :: del_x, L_domain
         integer(int32) :: i
+        if (del_x/L_domain >= 1.0d0/(real(NumberXNodes) - 1.0d0)) then
+            print *, "The debyeLength is really large, less nodes needed!"
+            stop
+        end if
         self%grid(1) = 0.0d0
         self%grid(NumberXNodes) = L_domain
         do concurrent (i = 2:NumberXNodes-1)
-            self % grid(i) = L_domain * ((i-1) - (NumberXNodes - 1)*(1 - del_l)/pi/2 &
-            * SIN(2 * pi * (i-1) / (NumberXNodes - 1))) / (NumberXNodes - 1)
+            self % grid(i) = L_domain * ((real(i)-1.0d0)/(real(NumberXNodes) - 1.0d0) - (1.0d0/(real(NumberXNodes) - 1.0d0) - del_x/L_domain) &
+            * SIN(2 * pi * (i-1) / (NumberXNodes - 1)) / SIN(2 * pi / (NumberXNodes - 1)) )
         end do
         call self%derive_DxDl_NodeVol()
     end subroutine constructSineGrid

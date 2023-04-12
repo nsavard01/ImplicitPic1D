@@ -13,6 +13,6 @@ module constants
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
     integer(int32) :: NumberXNodes, numberChargedParticles, maxIter, numDiagnosticSteps
     integer(int32) :: irand = 987888 !Global variable that will need to be changed in-out
-    real(real64) :: eps_r, fractionFreq, n_ave
+    real(real64) :: eps_r, fractionFreq, n_ave, T_e
 
 end module constants

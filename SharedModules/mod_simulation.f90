@@ -20,12 +20,13 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h)
+    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e)
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
         integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
+        real(real64), intent(in) :: T_e
         integer(int32) :: io, leftBoundary, rightBoundary, gridType
-        real(real64) :: leftVoltage, rightVoltage, L_domain, del_l
+        real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
         type(Domain) :: world
         type(potentialSolver) :: solver
 
@@ -54,19 +55,17 @@ contains
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) gridType
-        read(10, *, IOSTAT = io) del_l
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
         print *, "Number of nodes:", NumberXNodes
         print *, "Grid length:", L_domain
-        print *, "Type of grid:", gridType
-        print *, "Minimum logical space unit if sinusoidal grid:", del_l
+        print *, "Grid type is:", gridType
         print *, "Left boundary type:", leftBoundary
         print *, "Right boundary type:", rightBoundary
         print *, "------------------"
         print *, ""
-
+        debyeLength = getDebyeLength(T_e, n_ave)
         ! if one boundary is periodic, other must also be
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
@@ -74,15 +73,16 @@ contains
             leftVoltage = rightVoltage
         end if
         world = Domain(leftBoundary, rightBoundary)
-        call world % constructGrid(del_l, L_domain, gridType)
+        call world % constructGrid(debyeLength, L_domain, gridType)
         solver = potentialSolver(world, leftVoltage, rightVoltage)
         
     end subroutine readInputs
 
-    function readParticleInputs(filename, numberChargedParticles, irand) result(particleList)
+    function readParticleInputs(filename, numberChargedParticles, irand, T_e) result(particleList)
         type(Particle), allocatable :: particleList(:)
         character(len=*), intent(in) :: filename
         integer(int32), intent(in out) :: numberChargedParticles, irand
+        real(real64), intent(in out) :: T_e
         integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name
         character(len=8) :: particleNames(100)
@@ -100,6 +100,7 @@ contains
                 read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:4)
                 numSpecies = numSpecies + 1
                 read(10,*,END=101,ERR=100) Ti(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                T_e = Ti(numSpecies)
                 mass(numSpecies) = m_e
                 charge(numSpecies) = -1.0
                 particleNames(numSpecies) = '[e]'
@@ -169,6 +170,48 @@ contains
     end subroutine writePhi
     
     ! -------------------------- Simulation ------------------------------------------
+
+    subroutine solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
+        ! Single time step solver with Divergence of ampere, followed by adding of power, followed by collisions
+        type(Particle), intent(in out) :: particleList(:)
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t, eps_r
+        integer(int32), intent(in) :: maxIter
+        integer(int32) :: j!, k
+        real(real64) :: KE_i, KE_f, PE_i, PE_f!, rho_f(NumberXNodes)
+
+        ! Get charge/energy conservation error
+        solver%particleEnergyLoss = 0.0d0
+        PE_i = solver%getTotalPE(world, .false.)
+        KE_i = 0.0d0
+        do j=1, numberChargedParticles
+            KE_i = KE_i + particleList(j)%getTotalKE()
+        end do
+        !call solver%depositRho(particleList, world) 
+        call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
+        KE_f = solver%particleEnergyLoss
+        do j=1, numberChargedParticles
+            KE_f = KE_f + particleList(j)%getTotalKE()
+        end do
+        PE_f = solver%getTotalPE(world, .false.)
+        solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
+        ! call depositRhoDiag(rho_f, particleList, world)
+        ! solver%chargeError = 0.0d0
+        ! j = 0
+        ! if (world%boundaryConditions(1) == 3) then
+        !     j = j + 1
+        !     solver%chargeError = solver%chargeError + (1 + (solver%J(1) - solver%J(NumberXNodes-1)) *del_t/ world%dx_dl(1)/(rho_f(1) - solver%rho(1)))**2
+        ! end if
+        ! do k = 1, NumberXNodes -2
+        !     if ((rho_f(k+1) - solver%rho(k+1)) /= 0) then
+        !         solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%dx_dl(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
+        !         j = j + 1
+        !     end if
+        ! end do
+        ! solver%chargeError = SQRT(solver%chargeError/j)
+
+    end subroutine solveSingleTimeStepDiagnostic
 
     subroutine solveSimulationOnlyPotential(solver, particleList, world, del_t, maxIter, eps_r, simulationTime)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step

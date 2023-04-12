@@ -7,6 +7,8 @@ module mod_Scheme
     use mod_domain
     use mod_potentialSolver
     use mod_collisions
+    use mod_nonLinSolvers
+    implicit none
 
 contains
 
@@ -43,44 +45,6 @@ contains
     end subroutine initialize_randUniform
 
     ! --------------------------- Diagnostics ------------------------------------
-
-    subroutine solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
-        ! Single time step solver with Divergence of ampere, followed by adding of power, followed by collisions
-        type(Particle), intent(in out) :: particleList(:)
-        type(potentialSolver), intent(in out) :: solver
-        type(Domain), intent(in) :: world
-        real(real64), intent(in) :: del_t, eps_r
-        integer(int32), intent(in) :: maxIter
-        integer(int32) :: j, k
-        real(real64) :: KE_i, KE_f, PE_i, PE_f, rho_f(NumberXNodes)
-
-        ! Get charge/energy conservation error
-        solver%particleEnergyLoss = 0.0d0
-        PE_i = solver%getTotalPE(world, .false.)
-        KE_i = 0.0d0
-        do j=1, numberChargedParticles
-            KE_i = KE_i + particleList(j)%getTotalKE()
-        end do
-        call solver%depositRho(particleList, world) 
-        call solver%adaptiveSolveDivAmpereAnderson(particleList, world, del_t, maxIter, eps_r)
-        KE_f = solver%particleEnergyLoss
-        do j=1, numberChargedParticles
-            KE_f = KE_f + particleList(j)%getTotalKE()
-        end do
-        PE_f = solver%getTotalPE(world, .false.)
-        solver%energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
-        call depositRhoDiag(rho_f, particleList, world)
-        solver%chargeError = 0.0d0
-        j = 0
-        do k = 1, NumberXNodes -2
-            if ((solver%J(k + 1) - solver%J(k) /= 0) .and. (solver%rho(k+1) /= 0)) then
-                solver%chargeError = solver%chargeError + (1 + (solver%J(k + 1) - solver%J(k)) *del_t/ world%nodeVol(k+1)/(rho_f(k+1) - solver%rho(k+1)))**2
-                j = j + 1
-            end if
-        end do
-        solver%chargeError = SQRT(solver%chargeError/j)
-
-    end subroutine solveSingleTimeStepDiagnostic
 
     subroutine depositRhoDiag(rho, particleList, world) 
         real(real64), intent(in out) :: rho(:)
