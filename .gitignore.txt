@@ -1,6 +1,0 @@
-ExplicitPIC/Data
-CIC/Data
-NGP/Data
-
-*.dat
-*.DAT
