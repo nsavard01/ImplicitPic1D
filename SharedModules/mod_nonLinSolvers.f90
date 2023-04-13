@@ -92,11 +92,11 @@ contains
         real(real64) :: errorCurrent, errorInitial
         integer(int32) :: i
         call solver%depositJ(particleList, world, del_t)
-        errorInitial = solver%getError_tridiag_Ampere(world, del_t)
+        errorInitial = SQRT(SUM(solver%getError_tridiag_Ampere(world, del_t)**2))
         do i = 1, maxIter
             call solver%solve_tridiag_Ampere(world, del_t)
             call solver%depositJ(particleList, world, del_t)
-            errorCurrent = solver%getError_tridiag_Ampere(world, del_t)
+            errorCurrent = SQRT(SUM(solver%getError_tridiag_Ampere(world, del_t)**2))
             if (i > 2) then
                 if (errorCurrent < eps_r*errorInitial) then
                     call solver%moveParticles(particleList, world, del_t)
@@ -284,12 +284,7 @@ contains
         real(real64) :: d(n)
         globalSolver%phi_f(2:NumberXNodes-1) = xcur
         call globalSolver%depositJ(globalParticleList, globalWorld, rpar)
-        d = (-globalSolver%J(2:) + globalSolver%J(1:NumberXNodes-2)) * rpar / eps_0 &
-        + arrayDiff(globalSolver%phi(1:NumberXNodes-1), NumberXNodes-1)*2.0d0/(globalWorld%dx_dl(1:NumberXNodes-2) + globalWorld%dx_dl(2:NumberXNodes-1)) &
-        - arrayDiff(globalSolver%phi(2:), NumberXNodes-1)*2.0d0/(globalWorld%dx_dl(3:NumberXNodes) + globalWorld%dx_dl(2:NumberXNodes-1))
-        d(1) = d(1) + globalSolver%phi(1) * globalSolver%coeff_left
-        d(n) = d(n) + globalSolver%phi(NumberXNodes) * globalSolver%coeff_right
-        d = triMul(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, xcur) - d
+        d = globalSolver%getError_tridiag_Ampere(globalWorld, rpar)
         call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, d, fcur)
         itrmf = 0
 

@@ -33,22 +33,12 @@ program BoundPlasmaExample
     print *, "----------------"
     print *, ""
     print *, ""
-
     ! ! Generate solver object, and then solve for initial rho/potential
     
 
     call globalSolver%solveInitialPotential(globalParticleList, globalWorld)
-    ! call system_clock(count_rate = clock_rate)
-    ! call system_clock(time1)
-    ! call cpu_time(cpu1)
-    ! do i=1, 100
-    !     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
-    ! end do
-    ! call cpu_time(cpu2)
-    ! call system_clock(time2)
-    ! print *, "Total time is:", real(time2-time1, kind = real64) / real(clock_rate, kind = real64)
-    ! print *, "Total CPU time is:", cpu2-cpu1
-    ! print *, "Number of time splits is:", amountTimeSplits
+    ! call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
+    ! print *, "Energy error is:", globalSolver%energyError
     ! stop
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", averagingTime, "seconds"

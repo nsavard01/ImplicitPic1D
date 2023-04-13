@@ -219,19 +219,20 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: eps_r, simulationTime, del_t
-        !real(real64), intent(in out) :: del_t
+        real(real64), intent(in) :: del_t, eps_r, simulationTime
         integer(int32), intent(in) :: maxIter
-        integer(int32) :: j, CurrentDiagStep
-        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime
+        integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, startTime, endTime, timingRate
+        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, Etotal, elapsed_time
+        real(real64) :: particleEnergyLossTemp, E_initial, particleEnergyLossTotal
+        integer(int64) :: totalTime
         CurrentDiagStep = 1
-        currentTime = 0.0d0
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq")')
-        write(15,"((I3.3, 1x), 3(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, Power(W/m^2), heatSteps, nu_h")')
+        write(15,"((I3.3, 1x), 4(es16.8,1x), (I3.3, 1x), (es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, Power, heatSkipSteps, nu_h
         close(15)
 
+        call system_clock(count_rate = timingRate)
         ! Write Particle properties
         open(9,file='../Data/ParticleProperties.dat')
         write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2)")')
@@ -239,12 +240,24 @@ contains
             write(9,"((A, 1x), 3(es16.8,1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p
         end do
         close(9)
+        totalTime = 0
+        i = 0
 
+        E_initial = solver%getTotalPE(world, .false.)
+        do j=1, numberChargedParticles
+            call particleList(j)%writePhaseSpace(CurrentDiagStep)
+            E_initial = E_initial + particleList(j)%getTotalKE()
+        end do
+        solver%particleEnergyLoss = 0.0d0
+        solver%particleChargeLoss = 0.0d0
+        particleEnergyLossTotal = 0.0d0
+        inelasticEnergyLoss = 0.0d0
+        diagStepDiff = 1
         diagTimeDivision = simulationTime/real(numDiagnosticSteps)
         diagTime = diagTimeDivision
         101 format(20(1x,es16.8))
         open(22,file='../Data/GlobalDiagnosticData.dat')
-        write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), chargeError (a.u), energyError(a.u), Picard Iteration Number")')
+        write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), EnergyTotal (J/m^2), chargeError (a.u), energyError(a.u), Picard Iteration Number, diagSteps")')
         
         !Save initial particle/field data, along with domain
         densities = 0.0d0
@@ -256,71 +269,131 @@ contains
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(0)
         end do
-
+        currentTime = 0.0d0
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
+                call system_clock(startTime)
                 call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
+                call system_clock(endTime)
+                totalTime = totalTime + (endTime - startTime)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
-                inelasticEnergyLoss = 0.0d0
-                solver%particleEnergyLoss = 0.0d0
+                particleEnergyLossTemp = solver%particleEnergyLoss
+                call system_clock(startTime)
                 call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
-                
-                ! Stop program if catch abnormally large error
-                if (solver%energyError > eps_r) then
-                    print *, "-------------------------WARNING------------------------"
-                    print *, "Energy error is:", solver%energyError
-                    stop "Total energy not conserved over time step in sub-step procedure!"
-                end if
-                
-                if (solver%chargeError > eps_r) then
-                    print *, "-------------------------WARNING------------------------"
-                    print *, "Charge error is:", solver%chargeError
-                    stop "Total charge not conserved over time step in sub-step procedure!"
-                end if
-
+                particleEnergyLossTemp = particleEnergyLossTemp + solver%particleEnergyLoss
+                particleEnergyLossTotal = particleEnergyLossTotal + particleEnergyLossTemp
+                call system_clock(endTime)
+                totalTime = totalTime + (endTime - startTime)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
                 call writePhi(solver%phi, CurrentDiagStep, .false.)
+                solver%rho = 0.0d0
+                do j=1, numberChargedParticles
+                    solver%rho = solver%rho + densities(:, j) * particleList(j)%q
+                end do
+
+                ! Get error gauss' law
+                call solver%construct_diagMatrix(world)
+                solver%chargeError = solver%getError_tridiag_Poisson()
+                solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho(2:NumberXNodes-1)**2))
+                call solver%construct_diagMatrix_Ampere(world)
+
+                ! Stop program if catch abnormally large error
+                if (solver%energyError > eps_r) then
+                    print *, "-------------------------WARNING------------------------"
+                    print *, "Energy error is:", solver%energyError
+                    print *, "Total energy not conserved over time step in sub-step procedure!"
+                end if
+                
+                if (solver%chargeError > 1.0d-4) then
+                    print *, "-------------------------WARNING------------------------"
+                    print *, "Charge error is:", solver%chargeError
+                    stop "Total charge not conserved over time step in sub-step procedure!"
+                end if
+                
+                
                 call particleList(1)%writeLocalTemperature(CurrentDiagStep)
+                Etotal = solver%getTotalPE(world, .false.)
                 do j=1, numberChargedParticles
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
+                    Etotal = Etotal + particleList(j)%getTotalKE()
                 end do
-                write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
-                SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, iterNumPicard
+                write(22,"(7(es16.8,1x), 2(I4, 1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
+                SUM(solver%particleChargeLoss)/del_t/diagStepDiff, particleEnergyLossTemp/del_t/diagStepDiff, Etotal, &
+                solver%chargeError, solver%energyError, iterNumPicard, diagStepDiff
                 CurrentDiagStep = CurrentDiagStep + 1
+                solver%particleEnergyLoss = 0.0d0
+                solver%particleChargeLoss = 0.0d0
+                inelasticEnergyLoss = 0.0d0
+                print *, "Number of electrons is:", particleList(1)%N_p
+                diagStepDiff = 0
                 diagTime = diagTime + diagTimeDivision
             end if
             currentTime = currentTime + del_t
+            i = i + 1
+            diagStepDiff = diagStepDiff + 1
         end do
-        inelasticEnergyLoss = 0.0d0
-        solver%particleEnergyLoss = 0.0d0
+        call system_clock(startTime)
+        particleEnergyLossTemp = solver%particleEnergyLoss
         call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
+        particleEnergyLossTemp = particleEnergyLossTemp + solver%particleEnergyLoss
+        particleEnergyLossTotal = particleEnergyLossTotal + particleEnergyLossTemp
+        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        call system_clock(endTime)
+        totalTime = totalTime + (endTime - startTime)
+        densities = 0.0d0
+        call loadParticleDensity(densities, particleList, world)
+        call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
+        call writePhi(solver%phi, CurrentDiagStep, .false.)
+        solver%rho = 0.0d0
+        do j=1, numberChargedParticles
+            solver%rho = solver%rho + densities(:, j) * particleList(j)%q
+        end do
+
+        ! Get error gauss' law
+        call solver%construct_diagMatrix(world)
+        solver%chargeError = solver%getError_tridiag_Poisson()
+        solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho(2:NumberXNodes-1)**2))
+        call solver%construct_diagMatrix_Ampere(world)
+
         ! Stop program if catch abnormally large error
         if (solver%energyError > eps_r) then
             print *, "-------------------------WARNING------------------------"
             print *, "Energy error is:", solver%energyError
             stop "Total energy not conserved over time step in sub-step procedure!"
         end if
-        
-        if (solver%chargeError > eps_r) then
+      
+        if (solver%chargeError > 1.0d-4) then
             print *, "-------------------------WARNING------------------------"
             print *, "Charge error is:", solver%chargeError
             stop "Total charge not conserved over time step in sub-step procedure!"
         end if
-        densities = 0.0d0
-        call loadParticleDensity(densities, particleList, world)
-        call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
-        call writePhi(solver%phi, CurrentDiagStep, .false.)
+
         call particleList(1)%writeLocalTemperature(CurrentDiagStep)
+        Etotal = solver%getTotalPE(world, .false.)
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(CurrentDiagStep)
+            Etotal = Etotal + particleList(j)%getTotalKE()
         end do
-        write(22,"(6(es16.8,1x), (I4, 1x))") currentTime, inelasticEnergyLoss/del_t, &
-                SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t, solver%chargeError, solver%energyError, iterNumPicard
-        close(22)
+
+        ! See what final charge error is
+        print *, "Final error in energy is:", ABS((E_initial - particleEnergyLossTotal - Etotal)/E_initial)
+
+        write(22,"(7(es16.8,1x), 2(I4, 1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
+        SUM(solver%particleChargeLoss)/del_t/diagStepDiff, particleEnergyLossTemp/del_t/diagStepDiff, &
+        Etotal, solver%chargeError, solver%energyError, iterNumPicard, diagStepDiff
+        elapsed_time = real(totalTime, kind = real64) / real(timingRate, kind = real64)
+        print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
+        print *, "Percentage of steps adaptive is:", 100.0d0 * real(amountTimeSplits)/real(i + 1)
+
+        ! Write Particle properties
+        open(9,file='../Data/SimulationFinalData.dat')
+        write(9,'("Simulation time (s), Total Steps, Number Adaptive Steps")')
+        write(9,"(1(es16.8,1x), 2(I6, 1x))") elapsed_time, i+1, amountTimeSplits
+        close(9)
 
     end subroutine solveSimulationOnlyPotential
 

@@ -202,7 +202,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes-2), d(NumberXNodes-2), res
+        real(real64) :: Ax(NumberXNodes-2), d(NumberXNodes-2), res(NumberXNodes-2)
         Ax(1) = self%b_tri(1)*self%phi_f(2) + self%c_tri(1) * self%phi_f(3)
         do i=2, NumberXNodes-3
             Ax(i) = self%b_tri(i)*self%phi_f(i+1) + self%c_tri(i) * self%phi_f(i+2) + self%a_tri(i-1) * self%phi_f(i)
@@ -212,7 +212,7 @@ contains
         d(1) = d(1) + self%phi(1) * self%coeff_left
         d(NumberXNodes-2) = d(NumberXNodes-2) + self%phi(NumberXNodes) * self%coeff_right
         !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(NumberXNodes-2))
-        res = SQRT(SUM((Ax- d)**2))
+        res = Ax- d
 
     end function getError_tridiag_Ampere
 
