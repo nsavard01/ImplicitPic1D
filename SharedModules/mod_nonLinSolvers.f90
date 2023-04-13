@@ -281,11 +281,13 @@ contains
         real(real64), intent(in) :: xcur(n)
         real(real64), intent(in) :: rpar
         real(real64), intent(in out) :: fcur(n)
-        real(real64) :: d(n)
+        !real(real64) :: d(n)
         globalSolver%phi_f(2:NumberXNodes-1) = xcur
         call globalSolver%depositJ(globalParticleList, globalWorld, rpar)
-        d = globalSolver%getError_tridiag_Ampere(globalWorld, rpar)
-        call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, d, fcur)
+        ! d = globalSolver%getError_tridiag_Ampere(globalWorld, rpar)
+        ! call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, d, fcur)
+        call globalSolver%solve_tridiag_Ampere(globalWorld, rpar)
+        fcur = xcur - globalSolver%phi_f(2:NumberXNodes-1)
         itrmf = 0
 
     end subroutine funcNitsol

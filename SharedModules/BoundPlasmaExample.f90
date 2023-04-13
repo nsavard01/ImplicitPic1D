@@ -32,7 +32,6 @@ program BoundPlasmaExample
     print *, "Time step (sec) is:", del_t
     print *, "----------------"
     print *, ""
-    print *, ""
     ! ! Generate solver object, and then solve for initial rho/potential
     
 
