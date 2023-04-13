@@ -13,7 +13,7 @@ program BoundPlasmaExample
 
     integer(int32) :: i
     
-    globalParticleList = readParticleInputs('BoundExample.dat',numberChargedParticles, irand, T_e) 
+    globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
     ! Initialize constants with inputs
     ! create the world the particles live in
     call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, globalWorld, globalSolver, simulationTime, Power, heatSkipSteps, nu_h, T_e)
