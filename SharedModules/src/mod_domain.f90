@@ -8,14 +8,15 @@ module mod_domain
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
-        real(real64), allocatable :: grid(:) !Physical grid where phi is evaluated
-        real(real64), allocatable :: dx_dl(:) !physical size between E-Field grids compared to logical space units. Also nodeVol in 1D for grid nodes which is centered between E-field grids
+        real(real64), allocatable :: grid(:) !array representing values at grid in m
+        real(real64), allocatable :: dx_dl(:) !ratio of grid differences from physical to logical, assume logical separated by 1
+        real(real64), allocatable :: nodeVol(:) !node vol, or difference between half grid in physical space
         integer(int32), allocatable :: boundaryConditions(:) ! Boundary condition flags for fields and particles
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
-        procedure, public, pass(self) :: constructSineGrid
         procedure, public, pass(self) :: constructHalfSineGrid
+        procedure, public, pass(self) :: constructSineGrid
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: writeDomain
@@ -30,16 +31,18 @@ contains
 
     ! Initialization procedures
     type(Domain) function domain_constructor(leftBoundary, rightBoundary) result(self)
-        ! Construct domain object, initialize grid, dx_dl, and dx_dl.
+        ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         integer(int32), intent(in) :: leftBoundary, rightBoundary
         integer(int32) :: i
-        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes), self%boundaryConditions(NumberXNodes))
+        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes-1), self % nodeVol(NumberXNodes), self%boundaryConditions(NumberXNodes))
         self % grid = (/(i, i=1, NumberXNodes)/)
         self % dx_dl = 1.0d0
+        self % nodeVol = 1.0d0
         self % boundaryConditions = 0
         self%boundaryConditions(1) = leftBoundary
         self%boundaryConditions(NumberXNodes) = rightBoundary
     end function domain_constructor
+
 
     subroutine constructGrid(self, del_x, L_domain, gridType)
         class(Domain), intent(in out) :: self
@@ -69,16 +72,35 @@ contains
         end if
         self%grid(1) = 0.0d0
         self%grid(NumberXNodes) = L_domain
-        do i = 2,NumberXNodes
-            gridField(i) = L_domain * (real(i-1)/real(NumberXNodes) - (1.0d0/real(NumberXNodes) - del_x/L_domain/2.0d0) &
-            * SIN(2 * pi * real(i-1) / real(NumberXNodes)) / SIN(2 * pi / real(NumberXNodes)) )
-        end do
-        gridField(1) = self%grid(1) - (gridField(2) - self%grid(1))
-        gridField(NumberXNodes + 1) = self%grid(NumberXNodes) + (self%grid(NumberXNodes) - gridField(NumberXNodes))
-        self%grid(2:NumberXNodes-1) = (gridField(2:NumberXNodes-1) + gridField(3:NumberXNodes))/2.0d0
-        do i = 1,NumberXNodes
-            self%dx_dl(i) = gridField(i+1) - gridField(i)
-        end do
+        if (boolCIC) then
+            do i = 2,NumberXNodes
+                gridField(i) = (L_domain + del_x) * (real(i-1)/real(NumberXNodes) - (1.0d0/real(NumberXNodes) - del_x/(L_domain + del_x)) &
+                * SIN(2.0d0 * pi * real(i-1)/real(NumberXNodes)) / SIN(2.0d0 * pi / real(NumberXNodes)) ) - del_x/2.0d0
+            end do
+            gridField(1) = self%grid(1) - (gridField(2) - self%grid(1))
+            gridField(NumberXNodes + 1) = self%grid(NumberXNodes) + (self%grid(NumberXNodes) - gridField(NumberXNodes))
+            self%grid(2:NumberXNodes-1) = (gridField(2:NumberXNodes-1) + gridField(3:NumberXNodes))/2.0d0
+            do i = 1,NumberXNodes
+                self%nodeVol(i) = gridField(i+1) - gridField(i)
+            end do
+            do i = 1, NumberXNodes-1
+                self%dx_dl(i) = self%grid(i+1) - self%grid(i)
+            end do
+        else
+            do i = 2,NumberXNodes-1
+                self % grid(i) = L_domain * ((real(i)-1.0d0)/(real(NumberXNodes) - 1.0d0) - (1.0d0/(real(NumberXNodes) - 1.0d0) - del_x/L_domain) &
+                * SIN(2 * pi * (i-1) / (NumberXNodes - 1)) / SIN(2 * pi / (NumberXNodes - 1)) )
+            end do
+            do i = 1, NumberXNodes-1
+                self%dx_dl(i) = self%grid(i+1) - self%grid(i)
+            end do
+            do i = 2, NumberXNodes-1
+                self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
+            end do
+            self%nodeVol(1) = self%dx_dl(1)
+            self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
+        end if
+
     end subroutine constructSineGrid
 
     subroutine constructHalfSineGrid(self, del_x, L_domain)
@@ -95,7 +117,7 @@ contains
         if (boolCIC) then
             do i = 2,NumberXNodes
                 gridField(i) = (L_domain + del_x) * ((real(i)-1.0d0)/(2.0d0*real(NumberXNodes) - 1.0d0) - (1.0d0/(2.0d0*real(NumberXNodes) - 1.0d0) - del_x/(L_domain + del_x)) &
-                * SIN(2 * pi * (real(i)-1)/(2.0d0*real(NumberXNodes) - 1)) / SIN(2 * pi / (2.0d0*real(NumberXNodes) - 1)) ) - del_x/2.0d0
+                * SIN(2.0d0 * pi * (real(i)-1)/(2.0d0*real(NumberXNodes) - 1)) / SIN(2.0d0 * pi / (2.0d0*real(NumberXNodes) - 1)) ) - del_x/2.0d0
             end do
             gridField(1) = self%grid(1) - (gridField(2) - self%grid(1))
             gridField(NumberXNodes + 1) = self%grid(NumberXNodes) + (self%grid(NumberXNodes) - gridField(NumberXNodes))
@@ -103,8 +125,27 @@ contains
             do i = 1,NumberXNodes
                 self%nodeVol(i) = gridField(i+1) - gridField(i)
             end do
+            do i = 1, NumberXNodes-1
+                self%dx_dl(i) = self%grid(i+1) - self%grid(i)
+            end do
         else
+            do i = 2,NumberXNodes-1
+                self % grid(i) = L_domain * ((real(i)-1.0d0)/(real(NumberXNodes) - 1.0d0)/2.0d0 - (1.0d0/(real(NumberXNodes) - 1.0d0)/2.0d0 - del_x/L_domain) &
+                * SIN(pi * (real(i)-1)/(real(NumberXNodes) - 1)) / SIN(pi / (real(NumberXNodes) - 1.0d0)) )
+            end do
+            do i = 1, NumberXNodes-1
+                self%dx_dl(i) = self%grid(i+1) - self%grid(i)
+            end do
+            do i = 2, NumberXNodes-1
+                self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
+            end do
+            self%nodeVol(1) = self%dx_dl(1)
+            self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
+        end if
 
+        if (self%boundaryConditions(1) == 3 .or. self%boundaryConditions(NumberXNodes) == 3) then
+            print *, "Mesh is not periodic, cannot have periodic boundary!"
+            stop
         end if
     end subroutine constructHalfSineGrid
 
@@ -112,30 +153,28 @@ contains
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: L_domain
         integer(int32) :: i
-        real(real64) :: gridField(NumberXNodes+1)
         self%grid(1) = 0.0d0
         self%grid(NumberXNodes) = L_domain
         do i = 2, NumberXNodes-1
             self % grid(i) =  (i-1) * L_domain / (NumberXNodes - 1)
         end do
-        gridField(2:NumberXNodes) = (self%grid(1:NumberXNodes-1) + self%grid(2:NumberXNodes))/2.0d0
-        gridField(1) = self%grid(1) - (self%grid(2) - self%grid(1))/2.0d0
-        gridField(NumberXNodes + 1) = self%grid(NumberXNodes) + (self%grid(NumberXNodes) - self%grid(NumberXNodes-1))/2.0d0
-        do i = 1,NumberXNodes
-            self%dx_dl(i) = gridField(i+1) - gridField(i)
+        do i = 1, NumberXNodes-1
+            self%dx_dl(i) = self%grid(i+1) - self%grid(i)
         end do
+        do i = 2, NumberXNodes-1
+            self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
+        end do
+        self%nodeVol(1) = self%dx_dl(1)
+        self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
     end subroutine constructUniformGrid
 
-    subroutine writeDomain(self)
-        ! Writes domain data into binary file under Data
-        class(Domain), intent(in) :: self
-        open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
-        write(41) self%grid
-        close(41)
 
-        open(41,file="../Data/domainDxDl.dat", form='UNFORMATTED')
-        write(41) self%dx_dl
-        close(41)
+    subroutine writeDomain(self)
+    ! Writes domain data into binary file under Data
+    class(Domain), intent(in) :: self
+    open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
+    write(41) self%grid
+    close(41)
     end subroutine writeDomain
 
 

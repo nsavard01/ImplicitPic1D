@@ -1,0 +1,14 @@
+ELECTRONS
+name	T_e(eV)	 NumParticles   ArraySizeMultiplication
+-------------------------------------------
+[e]		5.0		5000		3
+-------------------------------------------
+
+
+IONS
+name   mass  charge  temp.(eV)	NumParticles   ArraySizeMultiplication
+--------------------------------------------------
+[H+]     1.     1.     0.1		5000     3
+--------------------------------------------------
+
+ENDFILE

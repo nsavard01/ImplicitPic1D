@@ -14,5 +14,6 @@ module constants
     integer(int32) :: NumberXNodes, numberChargedParticles, maxIter, numDiagnosticSteps
     integer(int32) :: irand = 987888 !Global variable that will need to be changed in-out
     real(real64) :: eps_r, fractionFreq, n_ave, T_e
+    logical :: boolCIC ! False for NGP, True for CIC
 
 end module constants
