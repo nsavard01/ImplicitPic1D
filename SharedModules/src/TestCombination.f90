@@ -10,16 +10,15 @@ program BoundPlasmaExample
     type(Domain) :: world
     type(potentialSolver) :: solver
     integer(int32) :: gridType, i
-    boolCIC = .false.
+    boolCIC = .true.
     gridType = 1
     NumberXNodes = 32
     world = Domain(1, 1)
     call world%constructGrid(7.0d-4, 0.1d0, gridType)
     print *, ""
-    do i = 1, NumberXNodes-1
+    do i = 2, NumberXNodes-1
         print *, world%grid(i+1), world%grid(i) + (world%nodeVol(i) + world%nodeVol(i+1))/2.0d0, world%grid(i) + world%dx_dl(i)
     end do
-    stop
     solver = potentialSolver(world, 0.0d0, 0.0d0)
     print *, "a_tri:"
     print *, solver%a_tri
