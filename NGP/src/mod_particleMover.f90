@@ -7,7 +7,6 @@ module mod_particleMover
     use mod_potentialSolver
     implicit none
     ! Procedures for moving particles and depositing J 
-    boolCIC = .false.
 
 contains
 
