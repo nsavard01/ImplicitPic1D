@@ -11,6 +11,11 @@ module mod_Scheme
     ! Scheme module for CIC
 contains
 
+    subroutine initializeScheme(boolCIC)
+        logical, intent(in out) :: boolCIC
+        boolCIC = .true.
+    end subroutine initializeScheme
+
 
     subroutine initialize_randUniform(part, world, irand)
         ! place particles randomly in each dx_dl based on portion of volume it take up
@@ -26,7 +31,7 @@ contains
             ! Use int to make sure always have a bit left over, otherwise will fill up before getting to end
             if (world%boundaryConditions(i) /= 0) then
                 ! if near boundary, cell volume divided by two
-                numInCell = INT(part%N_p * world%dx_dl(i)/L_domain/2.0d0)
+                numInCell = INT(part%N_p * world%nodeVol(i)/L_domain/2.0d0)
                 call getRandom(part%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
                 numPerCell(i) = numInCell
                 if (i == 1) then
@@ -35,7 +40,7 @@ contains
                     part%phaseSpace(1, idxLower:idxLower + numInCell - 1) = NumberXNodes - part%phaseSpace(1, idxLower:idxLower + numInCell - 1) * 0.5d0
                 end if
             else
-                numInCell = INT(part%N_p * world%dx_dl(i)/L_domain)
+                numInCell = INT(part%N_p * world%nodeVol(i)/L_domain)
                 call getRandom(part%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
                 part%phaseSpace(1, idxLower:idxLower + numInCell - 1) = part%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i - 0.5d0
                 numPerCell(i) = numInCell
@@ -95,7 +100,7 @@ contains
             rho(1) = rho(1) + rho(NumberXNodes)
             rho(NumberXNodes) = rho(1)
         end if
-        rho = rho / world%dx_dl
+        rho = rho / world%nodeVol
     end subroutine depositRhoDiag
 
     subroutine loadParticleDensity(densities, particleList, world)
@@ -148,7 +153,7 @@ contains
                 densities(1,i) = densities(1,i) + densities(NumberXNodes, i)
                 densities(NumberXNodes, i) = densities(1, i)
             end if
-            densities(:,i) = densities(:,i)/world%dx_dl
+            densities(:,i) = densities(:,i)/world%nodeVol
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file='../Data/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

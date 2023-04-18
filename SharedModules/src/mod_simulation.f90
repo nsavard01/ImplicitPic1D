@@ -7,6 +7,7 @@ module mod_simulation
     use mod_particle
     use mod_domain
     use mod_potentialSolver
+    use mod_particleMover
     use mod_collisions
     use mod_Scheme
     use mod_nonLinSolvers
@@ -25,13 +26,13 @@ contains
         integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
         real(real64), intent(in) :: T_e
-        integer(int32) :: io, leftBoundary, rightBoundary, gridType
+        integer(int32) :: io, leftBoundary, rightBoundary, gridType!, schemeType
         real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
         type(Domain) :: world
         type(potentialSolver) :: solver
 
         print *, "Reading initial inputs:"
-        open(10,file='../InputData/InitialConditions.inp', IOSTAT=io)
+        open(10,file='../../SharedModules/InputData/InitialConditions.inp', IOSTAT=io)
         read(10, *, IOSTAT = io) simulationTime
         read(10, *, IOSTAT = io) n_ave
         read(10, *, IOSTAT = io) numDiagnosticSteps
@@ -51,13 +52,18 @@ contains
         print *, "------------------"
         print *, ""
         print *, "Reading domain inputs:"
-        open(10,file='../InputData/Geometry.inp')
+        open(10,file='../../SharedModules/InputData/Geometry.inp')
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) gridType
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
+        if (boolCIC) then
+            print *, "Scheme is CIC"
+        else
+            print *, "Scheme is NGP"
+        end if
         print *, "Number of nodes:", NumberXNodes
         print *, "Grid length:", L_domain
         print *, "Grid type is:", gridType
@@ -89,7 +95,7 @@ contains
         real(real64) :: mass(100), charge(100), Ti(100)
 
         print *, "Reading particle inputs:"
-        open(10,file='../InputData/'//filename, action = 'read')
+        open(10,file='../../SharedModules/InputData/'//filename, action = 'read')
 
         do j=1, 10000
             read(10,*,END=101,ERR=100) name
@@ -297,8 +303,8 @@ contains
 
                 ! Get error gauss' law
                 call solver%construct_diagMatrix(world)
-                solver%chargeError = solver%getError_tridiag_Poisson()
-                solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho(2:NumberXNodes-1)**2))
+                solver%chargeError = solver%getError_tridiag_Poisson(world)
+                solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho**2))
                 call solver%construct_diagMatrix_Ampere(world)
 
                 ! Stop program if catch abnormally large error
@@ -355,8 +361,8 @@ contains
 
         ! Get error gauss' law
         call solver%construct_diagMatrix(world)
-        solver%chargeError = solver%getError_tridiag_Poisson()
-        solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho(2:NumberXNodes-1)**2))
+        solver%chargeError = solver%getError_tridiag_Poisson(world)
+        solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho**2))
         call solver%construct_diagMatrix_Ampere(world)
 
         ! Stop program if catch abnormally large error
@@ -477,8 +483,8 @@ contains
 
                 ! Get error gauss' law
                 call solver%construct_diagMatrix(world)
-                solver%chargeError = solver%getError_tridiag_Poisson()
-                solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho(2:NumberXNodes-1)**2))
+                solver%chargeError = solver%getError_tridiag_Poisson(world)
+                solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho**2))
                 call solver%construct_diagMatrix_Ampere(world)
 
                 ! Stop program if catch abnormally large error
@@ -539,8 +545,8 @@ contains
 
         ! Get error gauss' law
         call solver%construct_diagMatrix(world)
-        solver%chargeError = solver%getError_tridiag_Poisson()
-        solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho(2:NumberXNodes-1)**2))
+        solver%chargeError = solver%getError_tridiag_Poisson(world)
+        solver%chargeError = solver%chargeError / SQRT(SUM(solver%rho**2))
         call solver%construct_diagMatrix_Ampere(world)
 
         ! Stop program if catch abnormally large error

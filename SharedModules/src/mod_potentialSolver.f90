@@ -78,22 +78,53 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_left
+        integer(int32) :: i, j, l_left, l_center
         real(real64) :: d
         self % rho = 0.0d0
-        do i=1, numberChargedParticles
-            do j = 1, particleList(i)%N_p
-                l_left = INT(particleList(i)%phaseSpace(1, j))
-                d = MOD(particleList(i)%phaseSpace(1, j), 1.0d0)
-                self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
+        if (boolCIC) then
+            do i=1, numberChargedParticles
+                do j = 1, particleList(i)%N_p
+                    l_center = NINT(particleList(i)%phaseSpace(1, j))
+                    d = particleList(i)%phaseSpace(1, j) - l_center
+                    if (world%boundaryConditions(l_center) == 0) then
+                        ! Inside domain
+                        self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                        self % rho(l_center + 1) = self % rho(l_center + 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                        self % rho(l_center - 1) = self % rho(l_center - 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    else if (world%boundaryConditions(l_center) == 1) then
+                        !Dirichlet
+                        self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
+                        self % rho(l_center + INT(SIGN(1.0, d))) = self % rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
+                    
+                    else if (world%boundaryConditions(l_center) == 3) then
+                        ! Periodic
+                        self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                        ! towards domain
+                        self % rho(l_center+INT(SIGN(1.0, d))) = self % rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
+                        ! across periodic boundary
+                        self % rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = self % rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
+                    end if
+                end do
             end do
-        end do
+        else
+            do i=1, numberChargedParticles
+                do j = 1, particleList(i)%N_p
+                    l_left = INT(particleList(i)%phaseSpace(1, j))
+                    d = MOD(particleList(i)%phaseSpace(1, j), 1.0d0)
+                    self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
+                    self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
+                end do
+            end do
+        end if
         self % rho = self % rho / world%nodeVol
         if (world%boundaryConditions(1) == 3) then
             self%rho(1) = self%rho(1) + self%rho(NumberXNodes)
             self%rho(NumberXNodes) = self%rho(1)
+        else if (world%boundaryConditions(1) == 2) then
+            self%rho(1) = self%rho(1)*2.0d0
         end if
+
+        if (world%boundaryConditions(NumberXNodes) == 2) self%rho(NumberXNodes) = self%rho(NumberXNodes)*2.0d0
     end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
@@ -139,9 +170,36 @@ contains
         ! construct diagonal components for thomas algorithm, for Ampere (after initial Poisson)
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        self % a_tri = -1.0d0/world%dx_dl(2:NumberXNodes-2)
-        self % c_tri = -1.0d0/world%dx_dl(2:NumberXNodes-2)
-        self % b_tri = (world%dx_dl(1:NumberXNodes-2) + world%dx_dl(2:NumberXNodes-1))/ (world%dx_dl(1:NumberXNodes-2) * world%dx_dl(2:NumberXNodes-1))
+        integer(int32) :: i
+        do i = 1,NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0)
+                if (i < NumberXNodes) then
+                    self % c_tri(i) = -1.0d0/world%dx_dl(i)
+                end if
+                if (i > 1) then
+                    self%a_tri(i-1) = -1.0d0/world%dx_dl(i-1)
+                end if
+                self%b_tri(i) = (world%dx_dl(i-1) + world%dx_dl(i))/ (world%dx_dl(i-1) * world%dx_dl(i))
+            CASE(1)
+                self%b_tri(1) = 1.0d0
+            CASE(2)
+                if (i == 1) then
+                    self % c_tri(i) = -2.0d0/world%dx_dl(i)
+                    self%b_tri(i) = 2.0d0/world%dx_dl(i)
+                else if (i == NumberXNodes) then
+                    self % a_tri(i - 1) = -2.0d0/world%dx_dl(i-1)
+                    self%b_tri(i) = 2.0d0/world%dx_dl(i-1)
+                else
+                    print *, "Neumann boundary not on left or right most index!"
+                    stop
+                end if
+            CASE(3)
+                self%b_tri(i) = 1.0d0
+            CASE default
+                print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
+            END SELECT
+        end do
 
     end subroutine construct_diagMatrix_Ampere
 
@@ -181,16 +239,20 @@ contains
 
     end subroutine solve_tridiag_Poisson
 
-    function getError_tridiag_Poisson(self) result(res)
+    function getError_tridiag_Poisson(self, world) result(res)
         class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes-2), d(NumberXNodes-2), res
-        Ax(1) = self%b_tri(1)*self%phi_f(2) + self%c_tri(1) * self%phi_f(3)
-        do i=2, NumberXNodes-3
-            Ax(i) = self%b_tri(i)*self%phi_f(i+1) + self%c_tri(i) * self%phi_f(i+2) + self%a_tri(i-1) * self%phi_f(i)
+        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
+        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+        do i = 1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0,2)
+                d(i) = -self%rho(i)
+            CASE(1,3)
+                d(i) = self%phi_f(i)*eps_0
+            END SELECT
         end do
-        Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
-        d = -self%rho(2:NumberXNodes-1)
         !res = Ax*eps_0 - d
         res = SQRT(SUM((Ax*eps_0 - d)**2))
 
@@ -201,26 +263,39 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
-        integer(int32) :: i, n !n size dependent on how many points are inside (not boundary), so how many in rhs equation
-        real(real64) :: m, d(NumberXNodes - 2), cp(NumberXNodes - 3),dp(NumberXNodes- 2)
-        n = NumberXNodes - 2
+        integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
+        real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
 
-        d = (-self%J(2:) + self%J(1:n)) * del_t / eps_0 + arrayDiff(self%phi(1:n+1), n+1)/world%dx_dl(1:n) - arrayDiff(self%phi(2:), n+1)/world%dx_dl(2:)
+        do i =1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0)
+                d(i) = (-self%J(i) + self%J(i-1)) * del_t / eps_0 + (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) - (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+            CASE(1,3)
+                d(i) = self%phi_f(i)
+            CASE(2)
+                if (i == 1) then
+                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                else if (i == NumberXNodes) then
+                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i-1) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
+                end if
+            END SELECT
+        end do
     ! initialize c-prime and d-prime
         cp(1) = self%c_tri(1)/self%b_tri(1)
         dp(1) = d(1)/self%b_tri(1)
     ! solve for vectors c-prime and d-prime
-        do i = 2,n-1
+        do i = 2,NumberXNodes-1
             m = self%b_tri(i)-cp(i-1)*self%a_tri(i-1)
             cp(i) = self%c_tri(i)/m
             dp(i) = (d(i)-dp(i-1)*self%a_tri(i-1))/m
         end do
-        dp(n) = (d(n)-dp(n-1)*self%a_tri(n-1))/(self%b_tri(n)-cp(n-1)*self%a_tri(n-1))
+        m = self%b_tri(NumberXNodes)-cp(NumberXNodes-1)*self%a_tri(NumberXNodes-1)
+        dp(NumberXNodes) = (d(NumberXNodes)-dp(NumberXNodes-1)*self%a_tri(NumberXNodes-1))/m
     ! initialize phi_f
-        self%phi_f(2:n+1) = dp(n)
+        self%phi_f(NumberXNodes) = dp(NumberXNodes)
     ! solve for x from the vectors c-prime and d-prime
-        do i = n-1, 1, -1
-            self%phi_f(i+1) = dp(i)-cp(i)*self%phi_f(i+2)
+        do i = NumberXNodes-1, 1, -1
+            self%phi_f(i) = dp(i)-cp(i)*self%phi_f(i+1)
         end do
 
     end subroutine solve_tridiag_Ampere
@@ -230,14 +305,22 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes-2), d(NumberXNodes-2), res(NumberXNodes-2)
-        Ax(1) = self%b_tri(1)*self%phi_f(2) + self%c_tri(1) * self%phi_f(3)
-        do i=2, NumberXNodes-3
-            Ax(i) = self%b_tri(i)*self%phi_f(i+1) + self%c_tri(i) * self%phi_f(i+2) + self%a_tri(i-1) * self%phi_f(i)
+        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res(NumberXNodes)
+        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
+        do i =1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0)
+                d(i) = (-self%J(i) + self%J(i-1)) * del_t / eps_0 + (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) - (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+            CASE(1,3)
+                d(i) = self%phi_f(i)
+            CASE(2)
+                if (i == 1) then
+                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                else if (i == NumberXNodes) then
+                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i-1) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
+                end if
+            END SELECT
         end do
-        Ax(NumberXNodes-2) = self%b_tri(NumberXNodes-2)*self%phi_f(NumberXNodes-1) + self%a_tri(NumberXNodes-3) * self%phi_f(NumberXNodes-2)
-        d = (-self%J(2:) + self%J(1:NumberXNodes-2)) * del_t / eps_0 + arrayDiff(self%phi(1:NumberXNodes-1), NumberXNodes-1)/world%dx_dl(1:NumberXNodes-2) - arrayDiff(self%phi(2:), NumberXNodes-1)/world%dx_dl(2:)
-        !res = SQRT(SUM(((Ax- d)/self%minEField)**2)/(NumberXNodes-2))
         res = Ax- d
 
     end function getError_tridiag_Ampere

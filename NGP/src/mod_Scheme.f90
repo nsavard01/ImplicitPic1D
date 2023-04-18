@@ -6,11 +6,14 @@ module mod_Scheme
     use mod_particle
     use mod_domain
     use mod_potentialSolver
-    use mod_collisions
-    use mod_nonLinSolvers
     implicit none
 
 contains
+
+    subroutine initializeScheme(boolCIC)
+        logical, intent(in out) :: boolCIC
+        boolCIC = .false.
+    end subroutine initializeScheme
 
     subroutine initialize_randUniform(part, world, irand)
         ! place particles randomly in each dx_dl based on portion of volume it take up

@@ -114,17 +114,17 @@ contains
         res(n) = x(n) * diag(n) + x(n-1) * diagLower(n-1)
     end function triMul
 
-    double precision function normFunc(n, x, incx) result(res)
-        integer(int32), intent(in) :: n, incx
-        real(real64), intent(in) :: x(n)
-        res = SQRT(SUM(x**2))
-    end function normFunc
+    ! double precision function normFunc(n, x, incx) result(res)
+    !     integer(int32), intent(in) :: n, incx
+    !     real(real64), intent(in) :: x(n)
+    !     res = SQRT(SUM(x**2))
+    ! end function normFunc
 
-    double precision function innerProduct(n, x, incx, y, incy) result(res)
-        integer(int32), intent(in) :: n, incx, incy
-        real(real64), intent(in) :: x(n), y(n)
-        res = SUM(x * y)
-    end function innerProduct
+    ! double precision function innerProduct(n, x, incx, y, incy) result(res)
+    !     integer(int32), intent(in) :: n, incx, incy
+    !     real(real64), intent(in) :: x(n), y(n)
+    !     res = SUM(x * y)
+    ! end function innerProduct
 
 
     !------------------------ Array Functions -------------------------------------

@@ -175,6 +175,12 @@ contains
     open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
     write(41) self%grid
     close(41)
+    open(41,file="../Data/domainDxDl.dat", form='UNFORMATTED')
+    write(41) self%dx_dl
+    close(41)
+    open(41,file="../Data/domainNodeVol.dat", form='UNFORMATTED')
+    write(41) self%nodeVol
+    close(41)
     end subroutine writeDomain
 
 

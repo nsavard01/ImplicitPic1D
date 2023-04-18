@@ -39,6 +39,7 @@ GlobalDiagnosticsAveraged = None
 boolAverageFile = None
 grid = None
 dx_dl = None
+nodeVol = None
 numDiagnosticTimes = None
 
 def getDebyeLength(T_e, n_e):
@@ -311,6 +312,7 @@ def getData(filename):
     global GlobalDiagnosticsAveraged
     global boolAverageFile
     global grid
+    global nodeVol
     global numDiagnosticTimes
     
     
@@ -331,6 +333,7 @@ def getData(filename):
     
     grid = np.fromfile(dataFolder + 'domainGrid.dat', dtype = 'float', offset = 4)
     dx_dl = np.fromfile('../Data/domainDxDl.dat', dtype = 'float', offset = 4)
+    nodeVol = np.fromfile('../Data/domainNodeVol.dat', dtype = 'float', offset = 4)
     numDiagnosticTimes = GlobalDiagnostics.shape[0]
 
 def saveData(saveFile):

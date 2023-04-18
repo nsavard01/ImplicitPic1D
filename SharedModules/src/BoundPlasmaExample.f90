@@ -12,6 +12,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i
+    call initializeScheme(boolCIC)
     
     globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
     ! Initialize constants with inputs
@@ -38,6 +39,12 @@ program BoundPlasmaExample
     call globalSolver%solveInitialPotential(globalParticleList, globalWorld)
     ! call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
     ! print *, "Energy error is:", globalSolver%energyError
+    ! call globalSolver%construct_diagMatrix(globalWorld)
+    ! call globalSolver%depositRho(globalParticleList, globalWorld)
+    ! globalSolver%chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)
+    ! globalSolver%chargeError = globalSolver%chargeError / SQRT(SUM(globalSolver%rho**2))
+    ! call globalSolver%construct_diagMatrix_Ampere(globalWorld)
+    ! print *, "Charge error is:", globalSolver%chargeError
     ! stop
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", averagingTime, "seconds"
