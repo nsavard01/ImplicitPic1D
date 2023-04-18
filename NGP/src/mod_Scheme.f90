@@ -5,7 +5,6 @@ module mod_Scheme
     use mod_BasicFunctions
     use mod_particle
     use mod_domain
-    use mod_potentialSolver
     implicit none
 
 contains
@@ -49,8 +48,8 @@ contains
 
     ! --------------------------- Diagnostics ------------------------------------
 
-    subroutine depositRhoDiag(rho, particleList, world) 
-        real(real64), intent(in out) :: rho(:)
+    subroutine depositRho(rho, particleList, world) 
+        real(real64), intent(in out) :: rho(NumberXNodes)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32) :: i, j, l_left
@@ -68,8 +67,12 @@ contains
         if (world%boundaryConditions(1) == 3) then
             rho(1) = rho(1) + rho(NumberXNodes)
             rho(NumberXNodes) = rho(1)
+        else if (world%boundaryConditions(1) == 2) then
+            rho(1) = rho(1)*2.0d0
         end if
-    end subroutine depositRhoDiag
+
+        if (world%boundaryConditions(NumberXNodes) == 2) rho(NumberXNodes) = rho(NumberXNodes)*2.0d0
+    end subroutine depositRho
 
     subroutine loadParticleDensity(densities, particleList, world)
         type(Particle), intent(in) :: particleList(:)
@@ -105,9 +108,13 @@ contains
         do i=1, numberChargedParticles
             densities(:,i) = densities(:,i)/world%nodeVol
             if (world%boundaryConditions(1) == 3) then
-                densities(1,i) = densities(1,i) + densities(NumberXNodes, i)
-                densities(NumberXNodes, i) = densities(1, i)
+                densities(1,i) = densities(1,i) + densities(NumberXNodes,i)
+                densities(NumberXNodes,i) = densities(1, i)
+            else if (world%boundaryConditions(1) == 2) then
+                densities(1,i) = densities(1,i)*2.0d0
             end if
+    
+            if (world%boundaryConditions(NumberXNodes) == 2) densities(NumberXNodes, i) = densities(NumberXNodes, i)*2.0d0
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file='../Data/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

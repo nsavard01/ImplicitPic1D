@@ -182,7 +182,9 @@ contains
                     CASE(0)
                         continue
                     CASE(1)
-                    timePassed = del_t
+                        timePassed = del_t
+                    CASE(2)
+                        v_f = -v_f
                     CASE(3)
                         l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                     CASE default
@@ -231,6 +233,8 @@ contains
                             continue
                         CASE(1)
                             exit
+                        CASE(2)
+                            v_f = -v_f
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                         CASE default
@@ -306,9 +310,11 @@ contains
                         solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                         if (l_f == 1) then
                             solver%particleChargeLoss(1, j) = solver%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
-                        else
+                        else if (l_f == NumberXNodes) then
                             solver%particleChargeLoss(2, j) = solver%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
                         end if
+                    CASE(2)
+                        v_f = -v_f
                     CASE(3)
                         l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                     CASE default
@@ -351,10 +357,12 @@ contains
                             solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                             if (l_f == 1) then
                                 solver%particleChargeLoss(1, j) = solver%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
-                            else
+                            else if (l_f == NumberXNodes) then
                                 solver%particleChargeLoss(2, j) = solver%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
                             end if
                             exit
+                        CASE(2)
+                            v_f = -v_f
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                         CASE default

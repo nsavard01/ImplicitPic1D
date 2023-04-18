@@ -2,7 +2,6 @@ module mod_potentialSolver
     use iso_fortran_env, only: int32, real64, output_unit
     use constants
     use mod_BasicFunctions
-    use mod_particle
     use mod_domain
     implicit none
 
@@ -21,14 +20,12 @@ module mod_potentialSolver
 
 
     contains
-        procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix_Ampere
-        procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: construct_diagMatrix
     end type
 
@@ -73,59 +70,6 @@ contains
         self%phi_f = self%phi  
 
     end function potentialSolver_constructor
-
-    subroutine depositRho(self, particleList, world) 
-        class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_left, l_center
-        real(real64) :: d
-        self % rho = 0.0d0
-        if (boolCIC) then
-            do i=1, numberChargedParticles
-                do j = 1, particleList(i)%N_p
-                    l_center = NINT(particleList(i)%phaseSpace(1, j))
-                    d = particleList(i)%phaseSpace(1, j) - l_center
-                    if (world%boundaryConditions(l_center) == 0) then
-                        ! Inside domain
-                        self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
-                        self % rho(l_center + 1) = self % rho(l_center + 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
-                        self % rho(l_center - 1) = self % rho(l_center - 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                    else if (world%boundaryConditions(l_center) == 1) then
-                        !Dirichlet
-                        self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
-                        self % rho(l_center + INT(SIGN(1.0, d))) = self % rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
-                    
-                    else if (world%boundaryConditions(l_center) == 3) then
-                        ! Periodic
-                        self % rho(l_center) = self % rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
-                        ! towards domain
-                        self % rho(l_center+INT(SIGN(1.0, d))) = self % rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
-                        ! across periodic boundary
-                        self % rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = self % rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
-                    end if
-                end do
-            end do
-        else
-            do i=1, numberChargedParticles
-                do j = 1, particleList(i)%N_p
-                    l_left = INT(particleList(i)%phaseSpace(1, j))
-                    d = MOD(particleList(i)%phaseSpace(1, j), 1.0d0)
-                    self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                    self % rho(l_left + 1) = self % rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
-                end do
-            end do
-        end if
-        self % rho = self % rho / world%nodeVol
-        if (world%boundaryConditions(1) == 3) then
-            self%rho(1) = self%rho(1) + self%rho(NumberXNodes)
-            self%rho(NumberXNodes) = self%rho(1)
-        else if (world%boundaryConditions(1) == 2) then
-            self%rho(1) = self%rho(1)*2.0d0
-        end if
-
-        if (world%boundaryConditions(NumberXNodes) == 2) self%rho(NumberXNodes) = self%rho(NumberXNodes)*2.0d0
-    end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
         ! construct diagonal components for thomas algorithm
@@ -182,11 +126,12 @@ contains
                 end if
                 self%b_tri(i) = (world%dx_dl(i-1) + world%dx_dl(i))/ (world%dx_dl(i-1) * world%dx_dl(i))
             CASE(1)
-                self%b_tri(1) = 1.0d0
+                self%b_tri(i) = 1.0d0
             CASE(2)
                 if (i == 1) then
                     self % c_tri(i) = -2.0d0/world%dx_dl(i)
                     self%b_tri(i) = 2.0d0/world%dx_dl(i)
+                    print *, self%b_tri(i)
                 else if (i == NumberXNodes) then
                     self % a_tri(i - 1) = -2.0d0/world%dx_dl(i-1)
                     self%b_tri(i) = 2.0d0/world%dx_dl(i-1)
@@ -274,9 +219,9 @@ contains
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = 2.0d0 * (-del_t * self%J(i)/eps_0 + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i-1) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
+                    d(i) = 2.0d0 * (del_t * self%J(i-1)/eps_0 + (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do
@@ -339,19 +284,7 @@ contains
         end if
     end function getTotalPE
 
-    ! ---------------- Initial Poisson Solver -------------------------------------------------
-
-    subroutine solveInitialPotential(self, particleList, world)
-        ! Solve for initial potential
-        class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in) :: particleList(:)
-        type(Domain), intent(in) :: world
-        call self%depositRho(particleList, world)
-        call self%solve_tridiag_Poisson(world)
-        ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
-        call self%construct_diagMatrix_Ampere(world)
-
-    end subroutine solveInitialPotential
+    
 
 
 

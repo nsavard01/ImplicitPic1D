@@ -4,9 +4,6 @@ module mod_Scheme
     use mod_BasicFunctions
     use mod_particle
     use mod_domain
-    use mod_potentialSolver
-    use mod_collisions
-    use mod_nonLinSolvers
     implicit none
     ! Scheme module for CIC
 contains
@@ -65,8 +62,8 @@ contains
     end subroutine initialize_randUniform
 
 
-    subroutine depositRhoDiag(rho, particleList, world) 
-        real(real64), intent(in out) :: rho(:)
+    subroutine depositRho(rho, particleList, world) 
+        real(real64), intent(in out) :: rho(NumberXNodes)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32) :: i, j, l_center
@@ -96,12 +93,16 @@ contains
                 end if
             end do
         end do
+        rho = rho / world%nodeVol
         if (world%boundaryConditions(1) == 3) then
             rho(1) = rho(1) + rho(NumberXNodes)
             rho(NumberXNodes) = rho(1)
+        else if (world%boundaryConditions(1) == 2) then
+            rho(1) = rho(1)*2.0d0
         end if
-        rho = rho / world%nodeVol
-    end subroutine depositRhoDiag
+
+        if (world%boundaryConditions(NumberXNodes) == 2) rho(NumberXNodes) = rho(NumberXNodes)*2.0d0
+    end subroutine depositRho
 
     subroutine loadParticleDensity(densities, particleList, world)
         type(Particle), intent(in) :: particleList(:)

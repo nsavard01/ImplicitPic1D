@@ -7,6 +7,7 @@ module mod_nonLinSolvers
     use mod_domain
     use mod_potentialSolver
     use mod_particleMover
+    use mod_Scheme
     implicit none
 
     ! Initialize objects needed
@@ -35,6 +36,22 @@ module mod_nonLinSolvers
     common /nitinfo/ avrate, fcurnrm, instep, newstep, krystat
 
 contains
+
+    ! ---------------- Initial Poisson Solver -------------------------------------------------
+
+    subroutine solveInitialPotential(solver, particleList, world)
+        ! Solve for initial potential
+        class(potentialSolver), intent(in out) :: solver
+        type(Particle), intent(in) :: particleList(:)
+        type(Domain), intent(in) :: world
+        call depositRho(solver%rho, particleList, world)
+        call solver%solve_tridiag_Poisson(world)
+        ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
+        call solver%construct_diagMatrix_Ampere(world)
+
+    end subroutine solveInitialPotential
+
+    ! Non-linear solver stuff -------------------------------------------------------------
 
     subroutine initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
         real(real64), intent(in out) :: eps_r, Beta_k
