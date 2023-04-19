@@ -150,11 +150,15 @@ contains
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            if (world%boundaryConditions(1) == 3) then
-                densities(1,i) = densities(1,i) + densities(NumberXNodes, i)
-                densities(NumberXNodes, i) = densities(1, i)
-            end if
             densities(:,i) = densities(:,i)/world%nodeVol
+            if (world%boundaryConditions(1) == 3) then
+                densities(1,i) = densities(1,i) + densities(NumberXNodes,i)
+                densities(NumberXNodes,i) = densities(1, i)
+            else if (world%boundaryConditions(1) == 2) then
+                densities(1,i) = densities(1,i)*2.0d0
+            end if
+    
+            if (world%boundaryConditions(NumberXNodes) == 2) densities(NumberXNodes, i) = densities(NumberXNodes, i)*2.0d0
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file='../Data/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

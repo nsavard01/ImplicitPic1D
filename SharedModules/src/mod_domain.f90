@@ -73,19 +73,32 @@ contains
         self%grid(1) = 0.0d0
         self%grid(NumberXNodes) = L_domain
         if (boolCIC) then
-            do i = 2,NumberXNodes
-                gridField(i) = (L_domain + del_x) * (real(i-1)/real(NumberXNodes) - (1.0d0/real(NumberXNodes) - del_x/(L_domain + del_x)) &
-                * SIN(2.0d0 * pi * real(i-1)/real(NumberXNodes)) / SIN(2.0d0 * pi / real(NumberXNodes)) ) - del_x/2.0d0
-            end do
-            gridField(1) = self%grid(1) - (gridField(2) - self%grid(1))
-            gridField(NumberXNodes + 1) = self%grid(NumberXNodes) + (self%grid(NumberXNodes) - gridField(NumberXNodes))
-            self%grid(2:NumberXNodes-1) = (gridField(2:NumberXNodes-1) + gridField(3:NumberXNodes))/2.0d0
-            do i = 1,NumberXNodes
-                self%nodeVol(i) = gridField(i+1) - gridField(i)
+            ! do i = 2,NumberXNodes
+            !     gridField(i) = (L_domain + del_x) * (real(i-1)/real(NumberXNodes) - (1.0d0/real(NumberXNodes) - del_x/(L_domain + del_x)) &
+            !     * SIN(2.0d0 * pi * real(i-1)/real(NumberXNodes)) / SIN(2.0d0 * pi / real(NumberXNodes)) ) - del_x/2.0d0
+            ! end do
+            ! gridField(1) = self%grid(1) - (gridField(2) - self%grid(1))
+            ! gridField(NumberXNodes + 1) = self%grid(NumberXNodes) + (self%grid(NumberXNodes) - gridField(NumberXNodes))
+            ! self%grid(2:NumberXNodes-1) = (gridField(2:NumberXNodes-1) + gridField(3:NumberXNodes))/2.0d0
+            ! do i = 1,NumberXNodes
+            !     self%nodeVol(i) = gridField(i+1) - gridField(i)
+            ! end do
+            ! do i = 1, NumberXNodes-1
+            !     self%dx_dl(i) = (self%nodeVol(i+1) + self%nodeVol(i))/2.0d0
+            ! end do
+
+            do i = 2,NumberXNodes-1
+                self % grid(i) = L_domain * ((real(i)-1.0d0)/(real(NumberXNodes) - 1.0d0) - (1.0d0/(real(NumberXNodes) - 1.0d0) - del_x/L_domain) &
+                * SIN(2 * pi * (i-1) / (NumberXNodes - 1)) / SIN(2 * pi / (NumberXNodes - 1)) )
             end do
             do i = 1, NumberXNodes-1
-                self%dx_dl(i) = (self%nodeVol(i+1) + self%nodeVol(i))/2.0d0
+                self%dx_dl(i) = self%grid(i+1) - self%grid(i)
             end do
+            do i = 2, NumberXNodes-1
+                self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2.0d0
+            end do
+            self%nodeVol(1) = self%dx_dl(1)
+            self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
         else
             do i = 2,NumberXNodes-1
                 self % grid(i) = L_domain * ((real(i)-1.0d0)/(real(NumberXNodes) - 1.0d0) - (1.0d0/(real(NumberXNodes) - 1.0d0) - del_x/L_domain) &

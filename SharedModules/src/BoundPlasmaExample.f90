@@ -37,17 +37,17 @@ program BoundPlasmaExample
     
     
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
-    call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
-    print *, "Energy error is:", globalSolver%energyError
-    print *, "Took", iterNumPicard, "iterations"
-    call globalSolver%construct_diagMatrix(globalWorld)
-    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
-    globalSolver%chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)
-    globalSolver%chargeError = globalSolver%chargeError / SQRT(SUM(globalSolver%rho**2))
-    call globalSolver%construct_diagMatrix_Ampere(globalWorld)
-    print *, "Charge error is:", globalSolver%chargeError
-    print *, globalSolver%rho
-    stop
+    ! call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
+    ! print *, "Energy error is:", globalSolver%energyError
+    ! print *, "Took", iterNumPicard, "iterations"
+    ! call globalSolver%construct_diagMatrix(globalWorld)
+    ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
+    ! globalSolver%chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)
+    ! globalSolver%chargeError = globalSolver%chargeError / SQRT(SUM(globalSolver%rho**2))
+    ! call globalSolver%construct_diagMatrix_Ampere(globalWorld)
+    ! print *, "Charge error is:", globalSolver%chargeError
+    ! print *, globalSolver%rho
+    ! stop
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", averagingTime, "seconds"
     call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)
