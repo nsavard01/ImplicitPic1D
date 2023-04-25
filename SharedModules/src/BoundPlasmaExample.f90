@@ -32,7 +32,6 @@ program BoundPlasmaExample
     del_t = fractionFreq/getPlasmaFreq(n_ave)   
     print *, "Time step (sec) is:", del_t
     print *, "----------------"
-    print *, ""
     ! ! Generate solver object, and then solve for initial rho/potential
     
     
@@ -40,6 +39,7 @@ program BoundPlasmaExample
     ! call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
     ! print *, "Energy error is:", globalSolver%energyError
     ! print *, "Took", iterNumPicard, "iterations"
+    ! stop
     ! call globalSolver%construct_diagMatrix(globalWorld)
     ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     ! globalSolver%chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)

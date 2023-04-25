@@ -11,7 +11,7 @@ all: cleanData clean cleanNitsol BoundPlasmaExample
 debug: cleanData clean cleanNitsol setDebug BoundPlasmaExample
 
 setDebug: 
-	$(eval BASE = -qmkl -g -traceback -check all -fp-stack-check -warn all -traceback -CB -fp-stack-check -check uninit -check pointers -check output_conversion -check format -check stack -check arg_temp_created)
+	$(eval BASE = -qmkl -g -traceback -check all -fp-stack-check -warn all -traceback -CB -fp-stack-check -check uninit -check pointers -check output_conversion -check format -check stack -check arg_temp_created -heap-arrays 8192)
 	
 
 BoundPlasmaExample: $(OBJ)

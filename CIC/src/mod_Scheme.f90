@@ -62,6 +62,7 @@ contains
     end subroutine initialize_randUniform
 
 
+
     subroutine depositRho(rho, particleList, world) 
         real(real64), intent(in out) :: rho(NumberXNodes)
         type(Particle), intent(in) :: particleList(:)
@@ -100,7 +101,6 @@ contains
         else if (world%boundaryConditions(1) == 2) then
             rho(1) = rho(1)*2.0d0
         end if
-
         if (world%boundaryConditions(NumberXNodes) == 2) rho(NumberXNodes) = rho(NumberXNodes)*2.0d0
     end subroutine depositRho
 

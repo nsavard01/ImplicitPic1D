@@ -10,20 +10,40 @@ module mod_particleMover
 contains
     
     pure function getEField(solver, l_p, l_cell, world) result(EField)
+        !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
+        type(potentialSolver), intent(in) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: l_p
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: EField, d
+        d = l_p - real(l_cell, kind = real64) + 0.5d0
+        EField = ((solver%phi_f(l_cell) + solver%phi(l_cell) - solver%phi(l_cell+1) - solver%phi_f(l_cell + 1)) * d +  &
+        (solver%phi_f(l_cell-1) + solver%phi(l_cell-1) - solver%phi(l_cell) - solver%phi_f(l_cell)) * (1.0d0 - d)) * 0.5d0/world%nodeVol(l_cell)
+    end function getEField
+
+    function getEFieldNeumann(solver, l_p, l_cell, world) result(EField)
     !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
-    class(potentialSolver), intent(in) :: solver
+    type(potentialSolver), intent(in) :: solver
     type(Domain), intent(in) :: world
     real(real64), intent(in) :: l_p
     integer(int32), intent(in) :: l_cell
     real(real64) :: EField, d
-    d = l_p - real(l_cell, kind = real64) + 0.5d0
-    EField = ((solver%phi_f(l_cell) + solver%phi(l_cell) - solver%phi(l_cell+1) - solver%phi_f(l_cell + 1)) * d/2.0d0 +  &
-    (solver%phi_f(l_cell-1) + solver%phi(l_cell-1) - solver%phi(l_cell) - solver%phi_f(l_cell)) * (1.0d0 - d)/2.0d0)/world%nodeVol(l_cell)
-    end function getEField
+    integer(int32) :: l_inner
+    d = l_p - real(l_cell, kind = real64)
+    if (l_cell == NumberXNodes) then
+        l_inner = -1
+    else if (l_cell == 1) then
+        l_inner = 1
+    else
+        print *, "l_cell in _getEFieldNeumann_ is incorrect!"
+        stop
+    end if
+    EField = ((solver%phi_f(l_cell) + solver%phi(l_cell) - solver%phi(l_cell + l_inner) - solver%phi_f(l_cell + l_inner)) * (d))/world%nodeVol(l_cell)
+    end function getEFieldNeumann
 
     pure function getEFieldPeriodic(solver, l_p, l_cell, world) result(EField)
     !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
-    class(potentialSolver), intent(in) :: solver
+    type(potentialSolver), intent(in) :: solver
     type(Domain), intent(in) :: world
     real(real64), intent(in) :: l_p
     integer(int32), intent(in) :: l_cell
@@ -35,7 +55,7 @@ contains
 
     pure function getEFieldDirichlet(solver, l_p, l_cell, world) result(EField)
     !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
-    class(potentialSolver), intent(in) :: solver
+    type(potentialSolver), intent(in) :: solver
     type(Domain), intent(in) :: world
     real(real64), intent(in) :: l_p
     integer(int32), intent(in) :: l_cell
@@ -45,7 +65,7 @@ contains
     end function getEFieldDirichlet
 
     subroutine getDelTauInitialSubStep(solver, world, part, l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
-    class(potentialSolver), intent(in) :: solver
+    type(potentialSolver), intent(in) :: solver
     type(Domain), intent(in) :: world
     type(Particle), intent(in) :: part
     real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, a, c
@@ -112,80 +132,81 @@ contains
 
     end subroutine getDelTauInitialSubstep
 
+
     subroutine getDelTauSubStep(solver, world, part, l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
-    class(potentialSolver), intent(in) :: solver
-    type(Domain), intent(in) :: world
-    type(Particle), intent(in) :: part
-    real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
-    real(real64), intent(in) :: del_t, timePassed
-    integer(int32), intent(in) :: l_cell
-    real(real64) :: del_tau_tmp
-    del_tau = del_t - timePassed
-    ! get index cell where field and dx_dl is evaluated
-    a = (part%q / part%mass / 2.0d0) * getEField(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
-    ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-    if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
-        c = (l_sub - l_alongV) * world%nodeVol(l_cell)
-        l_f = l_alongV
-        if (a*v_sub > 0) then
-            ! velocity and acceleration in same direction
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+        type(potentialSolver), intent(in) :: solver
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
+        real(real64), intent(in) :: del_t, timePassed
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau_tmp
+        del_tau = del_t - timePassed
+        ! get index cell where field and dx_dl is evaluated
+        a = (part%q / part%mass / 2.0d0) * getEField(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
             l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v,a in same direction"
+            if (a*v_sub > 0) then
+                ! velocity and acceleration in same direction
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    print *, "In regular substep routine"
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
             end if
-        else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
-            ! v and a opposite direction, but particle can still reach boundary along v
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                print *, "In regular substep routine"
-                stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
-            end if
-        end if
-        if (del_tau >= del_t-timePassed) then
-            ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
-            if (ABS((del_t - timePassed) *v_sub/4.0d0/world%nodeVol(l_cell)) < 1.0) then
-                a = (part%q / part%mass / 2.0d0) * getEField(solver,l_sub + (del_t - timePassed) *v_sub/8.0d0/world%nodeVol(l_cell), l_cell, world)
-                if (a*v_sub < 0) then
-                    del_tau_tmp = ABS(v_sub/a)
-                    if (del_tau_tmp < del_tau) then
-                        del_tau = del_tau_tmp
-                        l_f = l_sub
+            if (del_tau >= del_t-timePassed) then
+                ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
+                if (ABS((del_t - timePassed) *v_sub/4.0d0/world%nodeVol(l_cell)) < 1.0) then
+                    a = (part%q / part%mass / 2.0d0) * getEField(solver,l_sub + (del_t - timePassed) *v_sub/8.0d0/world%nodeVol(l_cell), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                        end if
                     end if
-                    if (del_tau <= 0) then
-                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                end if
+                ! try for minimum distance particle can go
+                if (del_tau >= del_t - timePassed) then
+                    a = (part%q / part%mass / 2.0d0) * getEField(solver,l_sub + SIGN(1.0d-8, v_sub), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v, second try close to boundary"
+                        end if
                     end if
                 end if
             end if
-            ! try for minimum distance particle can go
-            if (del_tau >= del_t - timePassed) then
-                a = (part%q / part%mass / 2.0d0) * getEField(solver,l_sub + SIGN(1.0d-8, v_sub), l_cell, world)
-                if (a*v_sub < 0) then
-                    del_tau_tmp = ABS(v_sub/a)
-                    if (del_tau_tmp < del_tau) then
-                        del_tau = del_tau_tmp
-                        l_f = l_sub
-                    end if
-                    if (del_tau <= 0) then
-                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v, second try close to boundary"
-                    end if
-                end if
+        else
+            !Free particle drift
+            del_tau = (l_alongV - l_sub) * world%nodeVol(l_cell)/v_sub
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for a = 0"
             end if
         end if
-    else
-        !Free particle drift
-        del_tau = (l_alongV - l_sub) * world%nodeVol(l_cell)/v_sub
-        l_f = l_alongV
-        if (del_tau <= 0.0d0) then
-            stop "Have issue with del_tau for a = 0"
-        end if
-    end if
 
     end subroutine getDelTauSubstep
 
     subroutine getDelTauInitialSubStepPeriodic(solver, world, part, l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
-    class(potentialSolver), intent(in) :: solver
+    type(potentialSolver), intent(in) :: solver
     type(Domain), intent(in) :: world
     type(Particle), intent(in) :: part
     real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, a, c
@@ -254,167 +275,307 @@ contains
     end subroutine getDelTauInitialSubstepPeriodic
 
     subroutine getDelTauSubStepPeriodic(solver, world, part, l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
-    class(potentialSolver), intent(in) :: solver
-    type(Domain), intent(in) :: world
-    type(Particle), intent(in) :: part
-    real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
-    real(real64), intent(in) :: del_t, timePassed
-    integer(int32), intent(in) :: l_cell
-    real(real64) :: del_tau_tmp
-    del_tau = del_t - timePassed
-    ! get index cell where field and dx_dl is evaluated
-    a = (part%q / part%mass / 2.0d0) * getEFieldPeriodic(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
-    ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-    if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
-        c = (l_sub - l_alongV) * world%nodeVol(l_cell)
-        l_f = l_alongV
-        if (a*v_sub > 0) then
-            ! velocity and acceleration in same direction
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+        type(potentialSolver), intent(in) :: solver
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
+        real(real64), intent(in) :: del_t, timePassed
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau_tmp
+        del_tau = del_t - timePassed
+        ! get index cell where field and dx_dl is evaluated
+        a = (part%q / part%mass / 2.0d0) * getEFieldPeriodic(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
             l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v,a in same direction"
+            if (a*v_sub > 0) then
+                ! velocity and acceleration in same direction
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    print *, "In regular substep routine"
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
             end if
-        else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
-            ! v and a opposite direction, but particle can still reach boundary along v
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                print *, "In regular substep routine"
-                stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
-            end if
-        end if
-        if (del_tau >= del_t-timePassed) then
-            ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
-            if (ABS((del_t - timePassed) *v_sub/4.0d0/world%nodeVol(l_cell)) < 1.0) then
-                a = (part%q / part%mass / 2.0d0) * getEFieldPeriodic(solver,l_sub + (del_t - timePassed) *v_sub/8.0d0/world%nodeVol(l_cell), l_cell, world)
-                if (a*v_sub < 0) then
-                    del_tau_tmp = ABS(v_sub/a)
-                    if (del_tau_tmp < del_tau) then
-                        del_tau = del_tau_tmp
-                        l_f = l_sub
+            if (del_tau >= del_t-timePassed) then
+                ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
+                if (ABS((del_t - timePassed) *v_sub/4.0d0/world%nodeVol(l_cell)) < 1.0) then
+                    a = (part%q / part%mass / 2.0d0) * getEFieldPeriodic(solver,l_sub + (del_t - timePassed) *v_sub/8.0d0/world%nodeVol(l_cell), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                        end if
                     end if
-                    if (del_tau <= 0) then
-                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                end if
+                ! try for minimum distance particle can go
+                if (del_tau >= del_t - timePassed) then
+                    a = (part%q / part%mass / 2.0d0) * getEFieldPeriodic(solver,l_sub + SIGN(1.0d-10, v_sub), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v, second try close to boundary"
+                        end if
                     end if
                 end if
             end if
-            ! try for minimum distance particle can go
-            if (del_tau >= del_t - timePassed) then
-                a = (part%q / part%mass / 2.0d0) * getEFieldPeriodic(solver,l_sub + SIGN(1.0d-10, v_sub), l_cell, world)
-                if (a*v_sub < 0) then
-                    del_tau_tmp = ABS(v_sub/a)
-                    if (del_tau_tmp < del_tau) then
-                        del_tau = del_tau_tmp
-                        l_f = l_sub
-                    end if
-                    if (del_tau <= 0) then
-                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v, second try close to boundary"
-                    end if
-                end if
+        else
+            !Free particle drift
+            del_tau = (l_alongV - l_sub) * world%nodeVol(l_cell)/v_sub
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for a = 0"
             end if
         end if
-    else
-        !Free particle drift
-        del_tau = (l_alongV - l_sub) * world%nodeVol(l_cell)/v_sub
-        l_f = l_alongV
-        if (del_tau <= 0.0d0) then
-            stop "Have issue with del_tau for a = 0"
-        end if
-    end if
 
     end subroutine getDelTauSubstepPeriodic
 
     subroutine getDelTauInitialSubStepDirichlet(solver, world, part, l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, l_cell, a, c)
-    class(potentialSolver), intent(in) :: solver
-    type(Domain), intent(in) :: world
-    type(Particle), intent(in) :: part
-    real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, a, c
-    integer(int32), intent(in) :: l_cell
-    a = (part%q / part%mass / 2.0d0) * getEFieldDirichlet(solver,l_sub, l_cell, world)
-    ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-    if ((v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
-        c = (l_sub - l_alongV) * world%nodeVol(l_cell)
-        if (a*v_sub > 0) then
-            ! velocity and acceleration in same direction
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v,a in same direction"
-            end if
-        else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
-            ! v and a opposite direction, but particle can still reach boundary along v
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+        type(potentialSolver), intent(in) :: solver
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, a, c
+        integer(int32), intent(in) :: l_cell
+        a = (part%q / part%mass / 2.0d0) * getEFieldDirichlet(solver,l_sub, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if ((v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
+            if (a*v_sub > 0) then
+                ! velocity and acceleration in same direction
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
+            else
+                ! v and a opposite direction, boundary opposite direction of v
+                c = (l_sub - l_awayV) * world%nodeVol(l_cell)
+                del_tau = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
+                l_f = l_awayV
+                if (del_tau <= 0) then
+                    stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                end if
             end if
         else
-            ! v and a opposite direction, boundary opposite direction of v
-            c = (l_sub - l_awayV) * world%nodeVol(l_cell)
-            del_tau = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
-            l_f = l_awayV
-            if (del_tau <= 0) then
-                stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+            ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
+            if (a > 0) then
+                l_alongV = real(INT(l_sub) + 1, kind = real64)
+            else
+                l_alongV = real(INT(l_sub), kind = real64)
+            end if
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
+            del_tau = SQRT(-c/a)
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for v = 0"
             end if
         end if
-    else
-        ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
-        if (a > 0) then
-            l_alongV = real(INT(l_sub) + 1, kind = real64)
-        else
-            l_alongV = real(INT(l_sub), kind = real64)
-        end if
-        c = (l_sub - l_alongV) * world%nodeVol(l_cell)
-        del_tau = SQRT(-c/a)
-        l_f = l_alongV
-        if (del_tau <= 0.0d0) then
-            stop "Have issue with del_tau for v = 0"
-        end if
-    end if
     end subroutine getDelTauInitialSubStepDirichlet
 
     subroutine getDelTauSubStepDirichlet(solver, world, part, l_sub, l_f, v_sub, del_tau, l_alongV, l_cell, a, c)
-    class(potentialSolver), intent(in) :: solver
-    type(Domain), intent(in) :: world
-    type(Particle), intent(in) :: part
-    real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
-    integer(int32), intent(in) :: l_cell
-    a = (part%q / part%mass / 2.0d0) * getEFieldDirichlet(solver,l_sub, l_cell, world)
-    ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-    if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
-        c = (l_sub - l_alongV) * world%nodeVol(l_cell)
-        if (a*v_sub > 0.0d0) then
-            ! velocity and acceleration in same direction
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v,a in same direction"
-            end if
-        else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
-            ! v and a opposite direction, but particle can still reach boundary along v
-            del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
-            l_f = l_alongV
-            if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+        type(potentialSolver), intent(in) :: solver
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
+        integer(int32), intent(in) :: l_cell
+        a = (part%q / part%mass / 2.0d0) * getEFieldDirichlet(solver,l_sub, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
+            if (a*v_sub > 0.0d0) then
+                ! velocity and acceleration in same direction
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
+            else
+                ! v and a opposite direction, reverses back to initial position
+                del_tau = ABS(v_sub)/ABS(a)
+                l_f = l_sub
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                end if
             end if
         else
-            ! v and a opposite direction, reverses back to initial position
-            del_tau = ABS(v_sub)/ABS(a)
-            l_f = l_sub
+            !Free particle drift
+            del_tau = (l_alongV - l_sub) * world%nodeVol(l_cell)/v_sub
+            l_f = l_alongV
             if (del_tau <= 0.0d0) then
-                stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                stop "Have issue with del_tau for a = 0"
             end if
         end if
-    else
-        !Free particle drift
-        del_tau = (l_alongV - l_sub) * world%nodeVol(l_cell)/v_sub
-        l_f = l_alongV
-        if (del_tau <= 0.0d0) then
-            stop "Have issue with del_tau for a = 0"
-        end if
-    end if
     end subroutine getDelTauSubStepDirichlet
+
+    subroutine getDelTauInitialSubStepNeumann(solver, world, part, l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+        type(potentialSolver), intent(in) :: solver
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, a, c
+        real(real64), intent(in) :: del_t
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau_tmp
+        del_tau = del_t
+        a = (part%q / part%mass / 2.0d0) * getEFieldNeumann(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if (v_sub/=0.0d0) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
+            if (a*v_sub > 0) then
+                ! velocity and acceleration in same direction
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    print *, "l_sub is:", l_sub
+                    print *, "v_sub is:", v_sub
+                    print *, "a is:", a
+                    print *, "In initial sub-step routine"
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
+            end if
+            if (del_tau >= del_t) then
+                ! boundary opposite direction of v
+                a = (part%q / part%mass / 2.0d0) * getEFieldNeumann(solver,(l_sub + l_awayV)/2.0d0, l_cell, world)
+                if (a*v_sub < 0) then
+                    c = (l_sub - l_awayV) * world%nodeVol(l_cell)
+                    del_tau_tmp = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
+                    if (del_tau_tmp < del_tau) then
+                        ! If del_tau isn't reduced, then want to keep saved l_f since might make picard iteration more stable as initial condition
+                        del_tau = del_tau_tmp
+                        l_f = l_awayV
+                    end if
+                    if (del_tau <= 0) then
+                        stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                    end if
+                end if  
+            end if
+        else
+            ! only in direction of field: USE l_alongV AS BOUNDARY ALONG DIRECTION OF a SINCE VELOCITY = 0!!!
+            if (world%boundaryConditions(l_cell) == 0) then
+                l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, a)
+            else if (world%boundaryConditions(l_cell) == 1) then
+                !Dirichlet
+                l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, a))/2.0d0
+            else if (world%boundaryConditions(l_cell) == 1) then
+                l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, a)
+            end if
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
+            del_tau = SQRT(-c/a)
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for v = 0"
+            end if
+        end if
+
+    end subroutine getDelTauInitialSubstepNeumann
+
+    subroutine getDelTauSubStepNeumann(solver, world, part, l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+        type(potentialSolver), intent(in) :: solver
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: part
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
+        real(real64), intent(in) :: del_t, timePassed
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau_tmp
+        del_tau = del_t - timePassed
+        ! get index cell where field and dx_dl is evaluated
+        a = (part%q / part%mass / 2.0d0) * getEFieldNeumann(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
+            c = (l_sub - l_alongV) * world%nodeVol(l_cell)
+            l_f = l_alongV
+            if (a*v_sub > 0) then
+                ! velocity and acceleration in same direction
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    stop "Have issue with del_tau for v,a in same direction"
+                end if
+            else if (v_sub**2 - 4.0d0*a*c > 0.0d0) then
+                ! v and a opposite direction, but particle can still reach boundary along v
+                del_tau = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(v_sub**2 - 4.0d0*a*c))
+                l_f = l_alongV
+                if (del_tau <= 0.0d0) then
+                    print *, "In regular substep routine"
+                    stop "Have issue with del_tau for v,a in opposite direction, but still reach boundary along v"
+                end if
+            end if
+            if (del_tau >= del_t-timePassed) then
+                ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
+                if (ABS((del_t - timePassed) *v_sub/4.0d0/world%nodeVol(l_cell)) < 1.0) then
+                    a = (part%q / part%mass / 2.0d0) * getEFieldNeumann(solver,l_sub + (del_t - timePassed) *v_sub/8.0d0/world%nodeVol(l_cell), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                        end if
+                    end if
+                end if
+                ! try for minimum distance particle can go
+                if (del_tau >= del_t - timePassed) then
+                    a = (part%q / part%mass / 2.0d0) * getEFieldNeumann(solver,l_sub + SIGN(1.0d-8, v_sub), l_cell, world)
+                    if (a*v_sub < 0) then
+                        del_tau_tmp = ABS(v_sub/a)
+                        if (del_tau_tmp < del_tau) then
+                            del_tau = del_tau_tmp
+                            l_f = l_sub
+                        end if
+                        if (del_tau <= 0) then
+                            stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v, second try close to boundary"
+                        end if
+                    end if
+                end if
+            end if
+        else
+            !Free particle drift
+            del_tau = (l_alongV - l_sub) * world%nodeVol(l_cell)/v_sub
+            l_f = l_alongV
+            if (del_tau <= 0.0d0) then
+                stop "Have issue with del_tau for a = 0"
+            end if
+        end if
+
+    end subroutine getDelTauSubstepNeumann
 
     function getAlpha(l_sub, l_f, world) result(res)
     type(Domain), intent(in) :: world
@@ -431,7 +592,7 @@ contains
     end function getAlpha
 
     subroutine analyticalParticleMover(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-    class(potentialSolver), intent(in out) :: solver
+    type(potentialSolver), intent(in out) :: solver
     type(Domain), intent(in) :: world
     real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
     real(real64), intent(in out) :: l_f, v_f
@@ -465,7 +626,7 @@ contains
     end subroutine analyticalParticleMover
 
     subroutine analyticalParticleMoverPeriodic(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-    class(potentialSolver), intent(in out) :: solver
+    type(potentialSolver), intent(in out) :: solver
     type(Domain), intent(in) :: world
     real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
     real(real64), intent(in out) :: l_f, v_f
@@ -494,8 +655,47 @@ contains
     end if
     end subroutine analyticalParticleMoverPeriodic
 
+    subroutine analyticalParticleMoverNeumann(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+    type(potentialSolver), intent(in out) :: solver
+    type(Domain), intent(in) :: world
+    real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
+    real(real64), intent(in out) :: l_f, v_f
+    integer(int32), intent(in) :: l_cell
+    real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
+    integer(int32) :: l_inner
+    dx = world%nodeVol(l_cell)
+    del_tau = del_t - timePassed
+    del_tau_sqr = del_tau**2
+    if (l_cell == NumberXNodes) then
+        l_inner = NumberXNodes - 1
+    else
+        l_inner = 2
+    end if
+    real_l_cell = real(l_cell, kind = real64)
+    l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(l_cell)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(l_inner)*q + & 
+    2.0d0* del_tau_sqr *real_l_cell*solver%phi(l_inner)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(l_cell)*q + &
+    2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + &
+    2.0d0*del_tau_sqr  *l_sub*solver%phi(l_cell)*q - del_tau_sqr *l_sub*solver%phi(l_inner)*q - &
+    del_tau_sqr *l_sub*solver%phi(l_inner)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(l_cell)*q - &
+    del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - &
+    del_tau_sqr *solver%phi(l_inner)*q + del_tau_sqr *solver%phi(l_inner)*q - del_tau_sqr *solver%phi_f(l_inner)*q + &
+    del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
+    8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(l_cell)*q + del_tau_sqr *solver%phi(l_inner)*q + &
+    del_tau_sqr *solver%phi(l_inner)*q - 2.0d0*del_tau_sqr *solver%phi_f(l_cell)*q + del_tau_sqr *solver%phi_f(l_inner)*q + &
+    del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*mass*dx**2)
+    v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
+    if (NINT(l_f) /= l_cell) then
+        print *, "Have final l_f outside initial cell"
+        print *, "particle charge is:", q
+        print *, "l_sub is:", l_sub
+        print *, "l_f is:", l_f
+        print *, "v_sub is:", v_sub
+        print *, "v_f is:", v_f
+    end if
+    end subroutine analyticalParticleMoverNeumann
+
     subroutine picardIterParticles(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-    class(potentialSolver), intent(in out) :: solver
+    type(potentialSolver), intent(in out) :: solver
     type(Domain), intent(in) :: world
     real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f
     real(real64), intent(in) :: del_t, timePassed, q, mass
@@ -541,34 +741,44 @@ contains
     end subroutine picardIterParticles
 
     subroutine depositJSubStep(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
-    class(potentialSolver), intent(in out) :: solver
-    type(Domain), intent(in) :: world
-    real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
-    integer(int32), intent(in) :: l_cell
-    real(real64) :: d
-    d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-    solver%J(l_cell-1) = solver%J(l_cell-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
-    solver%J(l_cell) = solver%J(l_cell) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: d
+        d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
+        solver%J(l_cell-1) = solver%J(l_cell-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
+        solver%J(l_cell) = solver%J(l_cell) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
     end subroutine depositJSubStep
 
+    subroutine depositJSubStepNeumann(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: l_half
+        l_half = 0.5d0*(l_sub + l_f)
+        solver%J(INT(l_half)) = solver%J(INT(l_half)) + ABS(l_half - l_cell) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
+    end subroutine depositJSubStepNeumann
+
     subroutine depositJSubStepPeriodic(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
-    class(potentialSolver), intent(in out) :: solver
-    type(Domain), intent(in) :: world
-    real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
-    integer(int32), intent(in) :: l_cell
-    real(real64) :: d
-    d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-    solver%J(NumberXNodes-1) = solver%J(NumberXNodes-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
-    solver%J(1) = solver%J(1) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: d
+        d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
+        solver%J(NumberXNodes-1) = solver%J(NumberXNodes-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
+        solver%J(1) = solver%J(1) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
 
     end subroutine depositJSubStepPeriodic
 
     subroutine depositJSubStepDirichlet(solver, world, q, w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t)
-    class(potentialSolver), intent(in out) :: solver
-    type(Domain), intent(in) :: world
-    real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub
-    integer(int32), intent(in) :: l_cell
-    solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub
+        integer(int32), intent(in) :: l_cell
+        solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
     end subroutine depositJSubStepDirichlet
 
 
@@ -576,7 +786,7 @@ contains
     ! particle substepping procedure which deposits J, also used for general moving of particles
     ! boolDepositJ = true : deposit J
     ! boolDepositJ = false: only move particles (done after non-linear iteration), also delete particles for wall collisions (saves extra loop in collisions)
-    class(potentialSolver), intent(in out) :: solver
+    type(potentialSolver), intent(in out) :: solver
     type(Domain), intent(in) :: world
     type(Particle), intent(in out) :: particleList(:)
     real(real64), intent(in) :: del_t
@@ -650,6 +860,34 @@ contains
                         print *, "l_sub is:", l_sub
                         print *, "l_f is:", l_f
                         stop "l_f is not correct boundary after initial dirichlet domain substep"
+                    end if
+                    ! now final position/velocity becomes next starting position/velocity
+                    l_sub = l_f
+                    v_sub = v_f
+                end if
+            CASE(2)
+                !Neumann-symmetric
+                l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))/2.0d0
+                l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))/2.0d0
+                call getDelTauInitialSubStepNeumann(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                if (del_tau >= del_t) then
+                    call analyticalParticleMoverNeumann(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                    !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                    call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t) 
+                    if (NINT(l_f) /= NINT(l_sub)) then
+                        print *, "After initial domain substep, l_f is not in correct cell"
+                        stop
+                    end if
+                    timePassed = del_t  
+                else
+                    v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
+                    call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+                    if (l_f == l_cell) v_f = -v_f
+                    timePassed = timePassed + del_tau
+                    if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
+                        print *, "l_sub is:", l_sub
+                        print *, "l_f is:", l_f
+                        stop "l_f is not correct boundary after initial domain substep"
                     end if
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
@@ -760,6 +998,32 @@ contains
                         l_sub = l_f
                         v_sub = v_f
                     end if
+                CASE(2)
+                    !Neumann Symmetric
+                    l_alongV = l_sub + SIGN(0.5d0, v_sub)
+                    call getDelTauSubStepNeumann(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                    if (del_tau >= del_t-timePassed) then
+                        ! Add directly to J with no substep
+                        call analyticalParticleMoverNeumann(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                        !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                        call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t)
+                        if (NINT(l_f) /= l_cell) then
+                            print *, "After ongoing substep, l_f is not in correct cell"
+                        end if
+                        timePassed = del_t  
+                    else
+                        v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
+                        call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
+                        if (l_f == l_cell) v_f = -v_f
+                        timePassed = timePassed + del_tau
+                        if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
+                            print *, l_f
+                            stop "l_f is not half integer after subStep or it is too far away"
+                        end if
+                        ! now final position/velocity becomes next starting position/velocity
+                        l_sub = l_f
+                        v_sub = v_f
+                    end if
                 CASE(3)
                     l_alongV = l_sub + SIGN(1.0d0, v_sub)
                     call getDelTauSubStepPeriodic(solver, world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
@@ -816,7 +1080,7 @@ contains
 
     subroutine moveParticles(solver, particleList, world, del_t)
     ! particle mover to avoid the boolean checks which mostly don't happen when depositing J
-    class(potentialSolver), intent(in out) :: solver
+    type(potentialSolver), intent(in out) :: solver
     type(Domain), intent(in) :: world
     type(Particle), intent(in out) :: particleList(:)
     real(real64), intent(in) :: del_t
@@ -900,6 +1164,34 @@ contains
                         print *, "l_sub is:", l_sub
                         print *, "l_f is:", l_f
                         stop "l_f is not correct boundary after initial dirichlet domain substep"
+                    end if
+                    ! now final position/velocity becomes next starting position/velocity
+                    l_sub = l_f
+                    v_sub = v_f
+                end if
+            CASE(2)
+                l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))/2.0d0
+                l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))/2.0d0
+                call getDelTauInitialSubStepNeumann(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
+                if (del_tau >= del_t) then
+                    call analyticalParticleMoverNeumann(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                    !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                    if (NINT(l_f) /= NINT(l_sub)) then
+                        print *, "After initial domain substep, l_f is not in correct cell"
+                        stop
+                    end if
+                    timePassed = del_t
+                    particleList(j)%phaseSpace(1, i-delIdx) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)  
+                else
+                    v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
+                    if (l_f == l_cell) v_f = -v_f
+                    timePassed = timePassed + del_tau
+                    if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
+                        print *, "l_sub is:", l_sub
+                        print *, "l_f is:", l_f
+                        stop "l_f is not correct boundary after initial domain substep"
                     end if
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
@@ -1010,6 +1302,32 @@ contains
                             print *, "v_sub is:", v_sub
                             print *, "v_f is:", v_f
                             stop "l_f is not correct boundary after ongoing dirichlet substep"
+                        end if
+                        ! now final position/velocity becomes next starting position/velocity
+                        l_sub = l_f
+                        v_sub = v_f
+                    end if
+                CASE(2)
+                    l_alongV = l_sub + SIGN(0.5d0, v_sub)
+                    call getDelTauSubStepNeumann(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, l_cell, a, c)
+                    if (del_tau >= del_t-timePassed) then
+                        ! Add directly to J with no substep
+                        call analyticalParticleMoverNeumann(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                        !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                        if (NINT(l_f) /= l_cell) then
+                            print *, "After ongoing substep, l_f is not in correct cell"
+                        end if
+                        timePassed = del_t 
+                        particleList(j)%phaseSpace(1, i-delIdx) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i) 
+                    else
+                        v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
+                        if (l_f == l_cell) v_f = -v_f
+                        timePassed = timePassed + del_tau
+                        if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
+                            print *, l_f
+                            stop "l_f is not half integer after subStep or it is too far away"
                         end if
                         ! now final position/velocity becomes next starting position/velocity
                         l_sub = l_f
