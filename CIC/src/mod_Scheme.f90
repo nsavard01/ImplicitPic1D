@@ -70,38 +70,44 @@ contains
         integer(int32) :: i, j, l_center
         real(real64) :: d
         rho = 0.0d0
-        do i=1, numberChargedParticles
+        do i=1, 1
             do j = 1, particleList(i)%N_p
                 l_center = NINT(particleList(i)%phaseSpace(1, j))
                 d = particleList(i)%phaseSpace(1, j) - l_center
-                if (world%boundaryConditions(l_center) == 0) then
+                SELECT CASE (world%boundaryConditions(l_center))
+                CASE(0)
                     ! Inside domain
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     rho(l_center + 1) = rho(l_center + 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
                     rho(l_center - 1) = rho(l_center - 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                else if (world%boundaryConditions(l_center) == 1) then
+                CASE(1)
                     !Dirichlet
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
                     rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
-                
-                else if (world%boundaryConditions(l_center) == 3) then
+                CASE(2)
+                    !Neumann symmetric
+                    rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                    rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
+                CASE(3)
                     ! Periodic
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
                     rho(l_center+INT(SIGN(1.0, d))) = rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
                     ! across periodic boundary
                     rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) = rho(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes)) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
-                end if
+                END SELECT
             end do
         end do
         rho = rho / world%nodeVol
         if (world%boundaryConditions(1) == 3) then
             rho(1) = rho(1) + rho(NumberXNodes)
             rho(NumberXNodes) = rho(1)
-        else if (world%boundaryConditions(1) == 2) then
-            rho(1) = rho(1)*2.0d0
         end if
-        if (world%boundaryConditions(NumberXNodes) == 2) rho(NumberXNodes) = rho(NumberXNodes)*2.0d0
+        if (world%boundaryConditions(1) == 2) then
+            rho(1) = 2.0d0 * rho(1)
+        else if (world%boundaryConditions(NumberXNodes) == 2) then
+            rho(NumberXNodes) = 2.0d0 * rho(NumberXNodes)
+        end if
     end subroutine depositRho
 
     subroutine loadParticleDensity(densities, particleList, world)

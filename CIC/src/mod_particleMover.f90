@@ -592,106 +592,106 @@ contains
     end function getAlpha
 
     subroutine analyticalParticleMover(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-    type(potentialSolver), intent(in out) :: solver
-    type(Domain), intent(in) :: world
-    real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
-    real(real64), intent(in out) :: l_f, v_f
-    integer(int32), intent(in) :: l_cell
-    real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
-    dx = world%nodeVol(l_cell)
-    del_tau = del_t - timePassed
-    del_tau_sqr = del_tau**2
-    real_l_cell = real(l_cell, kind = real64)
-    l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(l_cell)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(l_cell+1)*q + & 
-    2.0d0* del_tau_sqr *real_l_cell*solver%phi(l_cell-1)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(l_cell)*q + &
-    2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_cell+1)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_cell-1)*q + &
-    2.0d0*del_tau_sqr  *l_sub*solver%phi(l_cell)*q - del_tau_sqr *l_sub*solver%phi(l_cell+1)*q - &
-    del_tau_sqr *l_sub*solver%phi(l_cell-1)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(l_cell)*q - &
-    del_tau_sqr *l_sub*solver%phi_f(l_cell+1)*q - del_tau_sqr *l_sub*solver%phi_f(l_cell-1)*q - &
-    del_tau_sqr *solver%phi(l_cell+1)*q + del_tau_sqr *solver%phi(l_cell-1)*q - del_tau_sqr *solver%phi_f(l_cell+1)*q + &
-    del_tau_sqr *solver%phi_f(l_cell-1)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
-    8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(l_cell)*q + del_tau_sqr *solver%phi(l_cell+1)*q + &
-    del_tau_sqr *solver%phi(l_cell-1)*q - 2.0d0*del_tau_sqr *solver%phi_f(l_cell)*q + del_tau_sqr *solver%phi_f(l_cell+1)*q + &
-    del_tau_sqr *solver%phi_f(l_cell-1)*q + 8.0d0*mass*dx**2)
-    v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
-    if (NINT(l_f) /= l_cell) then
-        print *, "Have final l_f outside initial cell"
-        print *, "particle charge is:", q
-        print *, "l_sub is:", l_sub
-        print *, "l_f is:", l_f
-        print *, "v_sub is:", v_sub
-        print *, "v_f is:", v_f
-    end if
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
+        real(real64), intent(in out) :: l_f, v_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
+        dx = world%nodeVol(l_cell)
+        del_tau = del_t - timePassed
+        del_tau_sqr = del_tau**2
+        real_l_cell = real(l_cell, kind = real64)
+        l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(l_cell)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(l_cell+1)*q + & 
+        2.0d0* del_tau_sqr *real_l_cell*solver%phi(l_cell-1)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(l_cell)*q + &
+        2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_cell+1)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_cell-1)*q + &
+        2.0d0*del_tau_sqr  *l_sub*solver%phi(l_cell)*q - del_tau_sqr *l_sub*solver%phi(l_cell+1)*q - &
+        del_tau_sqr *l_sub*solver%phi(l_cell-1)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(l_cell)*q - &
+        del_tau_sqr *l_sub*solver%phi_f(l_cell+1)*q - del_tau_sqr *l_sub*solver%phi_f(l_cell-1)*q - &
+        del_tau_sqr *solver%phi(l_cell+1)*q + del_tau_sqr *solver%phi(l_cell-1)*q - del_tau_sqr *solver%phi_f(l_cell+1)*q + &
+        del_tau_sqr *solver%phi_f(l_cell-1)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
+        8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(l_cell)*q + del_tau_sqr *solver%phi(l_cell+1)*q + &
+        del_tau_sqr *solver%phi(l_cell-1)*q - 2.0d0*del_tau_sqr *solver%phi_f(l_cell)*q + del_tau_sqr *solver%phi_f(l_cell+1)*q + &
+        del_tau_sqr *solver%phi_f(l_cell-1)*q + 8.0d0*mass*dx**2)
+        v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
+        if (NINT(l_f) /= l_cell) then
+            print *, "Have final l_f outside initial cell"
+            print *, "particle charge is:", q
+            print *, "l_sub is:", l_sub
+            print *, "l_f is:", l_f
+            print *, "v_sub is:", v_sub
+            print *, "v_f is:", v_f
+        end if
 
     end subroutine analyticalParticleMover
 
     subroutine analyticalParticleMoverPeriodic(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-    type(potentialSolver), intent(in out) :: solver
-    type(Domain), intent(in) :: world
-    real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
-    real(real64), intent(in out) :: l_f, v_f
-    integer(int32), intent(in) :: l_cell
-    real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
-    dx = world%nodeVol(l_cell)
-    del_tau = del_t - timePassed
-    del_tau_sqr = del_tau**2
-    real_l_cell = real(l_cell, kind = real64)
-    l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(1)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(2)*q + & 
-    2.0d0* del_tau_sqr *real_l_cell*solver%phi(NumberXNodes-1)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(1)*q + &
-    2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(2)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(NumberXNodes-1)*q + &
-    2.0d0*del_tau_sqr  *l_sub*solver%phi(1)*q - del_tau_sqr *l_sub*solver%phi(2)*q - &
-    del_tau_sqr *l_sub*solver%phi(NumberXNodes-1)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(1)*q - &
-    del_tau_sqr *l_sub*solver%phi_f(2)*q - del_tau_sqr *l_sub*solver%phi_f(NumberXNodes-1)*q - &
-    del_tau_sqr *solver%phi(2)*q + del_tau_sqr *solver%phi(NumberXNodes-1)*q - del_tau_sqr *solver%phi_f(2)*q + &
-    del_tau_sqr *solver%phi_f(NumberXNodes-1)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
-    8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(1)*q + del_tau_sqr *solver%phi(2)*q + &
-    del_tau_sqr *solver%phi(NumberXNodes-1)*q - 2.0d0*del_tau_sqr *solver%phi_f(1)*q + del_tau_sqr *solver%phi_f(2)*q + &
-    del_tau_sqr *solver%phi_f(NumberXNodes-1)*q + 8.0d0*mass*dx**2)
-    v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
-    if (NINT(l_f) /= l_cell) then
-        print *, "Have final l_f outside initial cell"
-        print *, "particle charge is:", q
-        stop 
-    end if
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
+        real(real64), intent(in out) :: l_f, v_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
+        dx = world%nodeVol(l_cell)
+        del_tau = del_t - timePassed
+        del_tau_sqr = del_tau**2
+        real_l_cell = real(l_cell, kind = real64)
+        l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(1)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(2)*q + & 
+        2.0d0* del_tau_sqr *real_l_cell*solver%phi(NumberXNodes-1)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(1)*q + &
+        2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(2)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(NumberXNodes-1)*q + &
+        2.0d0*del_tau_sqr  *l_sub*solver%phi(1)*q - del_tau_sqr *l_sub*solver%phi(2)*q - &
+        del_tau_sqr *l_sub*solver%phi(NumberXNodes-1)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(1)*q - &
+        del_tau_sqr *l_sub*solver%phi_f(2)*q - del_tau_sqr *l_sub*solver%phi_f(NumberXNodes-1)*q - &
+        del_tau_sqr *solver%phi(2)*q + del_tau_sqr *solver%phi(NumberXNodes-1)*q - del_tau_sqr *solver%phi_f(2)*q + &
+        del_tau_sqr *solver%phi_f(NumberXNodes-1)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
+        8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(1)*q + del_tau_sqr *solver%phi(2)*q + &
+        del_tau_sqr *solver%phi(NumberXNodes-1)*q - 2.0d0*del_tau_sqr *solver%phi_f(1)*q + del_tau_sqr *solver%phi_f(2)*q + &
+        del_tau_sqr *solver%phi_f(NumberXNodes-1)*q + 8.0d0*mass*dx**2)
+        v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
+        if (NINT(l_f) /= l_cell) then
+            print *, "Have final l_f outside initial cell"
+            print *, "particle charge is:", q
+            stop 
+        end if
     end subroutine analyticalParticleMoverPeriodic
 
     subroutine analyticalParticleMoverNeumann(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-    type(potentialSolver), intent(in out) :: solver
-    type(Domain), intent(in) :: world
-    real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
-    real(real64), intent(in out) :: l_f, v_f
-    integer(int32), intent(in) :: l_cell
-    real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
-    integer(int32) :: l_inner
-    dx = world%nodeVol(l_cell)
-    del_tau = del_t - timePassed
-    del_tau_sqr = del_tau**2
-    if (l_cell == NumberXNodes) then
-        l_inner = NumberXNodes - 1
-    else
-        l_inner = 2
-    end if
-    real_l_cell = real(l_cell, kind = real64)
-    l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(l_cell)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(l_inner)*q + & 
-    2.0d0* del_tau_sqr *real_l_cell*solver%phi(l_inner)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(l_cell)*q + &
-    2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + &
-    2.0d0*del_tau_sqr  *l_sub*solver%phi(l_cell)*q - del_tau_sqr *l_sub*solver%phi(l_inner)*q - &
-    del_tau_sqr *l_sub*solver%phi(l_inner)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(l_cell)*q - &
-    del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - &
-    del_tau_sqr *solver%phi(l_inner)*q + del_tau_sqr *solver%phi(l_inner)*q - del_tau_sqr *solver%phi_f(l_inner)*q + &
-    del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
-    8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(l_cell)*q + del_tau_sqr *solver%phi(l_inner)*q + &
-    del_tau_sqr *solver%phi(l_inner)*q - 2.0d0*del_tau_sqr *solver%phi_f(l_cell)*q + del_tau_sqr *solver%phi_f(l_inner)*q + &
-    del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*mass*dx**2)
-    v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
-    if (NINT(l_f) /= l_cell) then
-        print *, "Have final l_f outside initial cell"
-        print *, "particle charge is:", q
-        print *, "l_sub is:", l_sub
-        print *, "l_f is:", l_f
-        print *, "v_sub is:", v_sub
-        print *, "v_f is:", v_f
-    end if
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: l_sub, v_sub, del_t, timePassed, q, mass
+        real(real64), intent(in out) :: l_f, v_f
+        integer(int32), intent(in) :: l_cell
+        real(real64) :: del_tau, del_tau_sqr, real_l_cell, dx
+        integer(int32) :: l_inner
+        dx = world%nodeVol(l_cell)
+        del_tau = del_t - timePassed
+        del_tau_sqr = del_tau**2
+        if (l_cell == NumberXNodes) then
+            l_inner = NumberXNodes - 1
+        else
+            l_inner = 2
+        end if
+        real_l_cell = real(l_cell, kind = real64)
+        l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(l_cell)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(l_inner)*q + & 
+        2.0d0* del_tau_sqr *real_l_cell*solver%phi(l_inner)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(l_cell)*q + &
+        2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + &
+        2.0d0*del_tau_sqr  *l_sub*solver%phi(l_cell)*q - del_tau_sqr *l_sub*solver%phi(l_inner)*q - &
+        del_tau_sqr *l_sub*solver%phi(l_inner)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(l_cell)*q - &
+        del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - &
+        del_tau_sqr *solver%phi(l_inner)*q + del_tau_sqr *solver%phi(l_inner)*q - del_tau_sqr *solver%phi_f(l_inner)*q + &
+        del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
+        8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(l_cell)*q + del_tau_sqr *solver%phi(l_inner)*q + &
+        del_tau_sqr *solver%phi(l_inner)*q - 2.0d0*del_tau_sqr *solver%phi_f(l_cell)*q + del_tau_sqr *solver%phi_f(l_inner)*q + &
+        del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*mass*dx**2)
+        v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
+        if (NINT(l_f) /= l_cell) then
+            print *, "Have final l_f outside initial cell"
+            print *, "particle charge is:", q
+            print *, "l_sub is:", l_sub
+            print *, "l_f is:", l_f
+            print *, "v_sub is:", v_sub
+            print *, "v_f is:", v_f
+        end if
     end subroutine analyticalParticleMoverNeumann
 
     subroutine picardIterParticles(solver, world, q, mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
@@ -871,7 +871,14 @@ contains
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))/2.0d0
                 call getDelTauInitialSubStepNeumann(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c)
                 if (del_tau >= del_t) then
+                    ! print *, "-------------------------"
+                    ! print *, "Entering Neumann final deposit:"
+                    ! print *, 'l_sub is:', l_sub
+                    ! print *, "v_sub is:", v_sub
                     call analyticalParticleMoverNeumann(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                    ! print *, "l_f is:", l_f
+                    ! print *, "v_f is:", v_f
+                    ! stop
                     !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                     call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t) 
                     if (NINT(l_f) /= NINT(l_sub)) then
