@@ -758,7 +758,7 @@ contains
         integer(int32), intent(in) :: l_cell
         real(real64) :: l_half
         l_half = 0.5d0*(l_sub + l_f)
-        solver%J(INT(l_half)) = solver%J(INT(l_half)) + ABS(l_half - l_cell) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
+        solver%J(INT(l_half)) = solver%J(INT(l_half)) + ABS(l_half - real(l_cell, kind = real64)) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
     end subroutine depositJSubStepNeumann
 
     subroutine depositJSubStepPeriodic(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)

@@ -70,7 +70,7 @@ contains
         integer(int32) :: i, j, l_center
         real(real64) :: d
         rho = 0.0d0
-        do i=1, 1
+        do i=1, numberChargedParticles
             do j = 1, particleList(i)%N_p
                 l_center = NINT(particleList(i)%phaseSpace(1, j))
                 d = particleList(i)%phaseSpace(1, j) - l_center
@@ -87,7 +87,7 @@ contains
                 CASE(2)
                     !Neumann symmetric
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
-                    rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
+                    rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * (0.25d0 + d**2)
                 CASE(3)
                     ! Periodic
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
