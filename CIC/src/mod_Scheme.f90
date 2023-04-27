@@ -67,26 +67,52 @@ contains
         real(real64), intent(in out) :: rho(NumberXNodes)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_center
+        integer(int32) :: i, j, l_center, l_left, l_right
         real(real64) :: d
         rho = 0.0d0
         do i=1, numberChargedParticles
             do j = 1, particleList(i)%N_p
                 l_center = NINT(particleList(i)%phaseSpace(1, j))
                 d = particleList(i)%phaseSpace(1, j) - l_center
+                l_left = l_center -1
+                l_right = l_center + 1
                 SELECT CASE (world%boundaryConditions(l_center))
                 CASE(0)
                     ! Inside domain
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
-                    rho(l_center + 1) = rho(l_center + 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
-                    rho(l_center - 1) = rho(l_center - 1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    if (l_right /= NumberXNodes) then
+                        rho(l_right) = rho(l_right) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    else
+                        SELECT CASE (world%boundaryConditions(l_right))
+                        CASE(1)
+                            rho(l_right) = rho(l_right) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                        CASE(2)
+                            rho(l_right) = rho(l_right) + particleList(i)%q * particleList(i)%w_p * (0.5d0 + d)**2
+                        CASE(3)
+                            rho(l_right) = rho(l_right) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                            rho(1) = rho(1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                        END SELECT
+                    end if
+                    if (l_left /= 1) then
+                        rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    else
+                        SELECT CASE (world%boundaryConditions(l_left))
+                        CASE(1)
+                            rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                        CASE(2)
+                            rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * (0.5d0 - d)**2
+                        CASE(3)
+                            rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                            rho(NumberXNodes) = rho(NumberXNodes) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                        END SELECT
+                    end if
                 CASE(1)
                     !Dirichlet
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (1.0d0-ABS(d))
                     rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * ABS(d)
                 CASE(2)
                     !Neumann symmetric
-                    rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                    rho(l_center) = rho(l_center) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     rho(l_center + INT(SIGN(1.0, d))) = rho(l_center + INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * (0.25d0 + d**2)
                 CASE(3)
                     ! Periodic
@@ -99,45 +125,75 @@ contains
             end do
         end do
         rho = rho / world%nodeVol
-        if (world%boundaryConditions(1) == 3) then
-            rho(1) = rho(1) + rho(NumberXNodes)
-            rho(NumberXNodes) = rho(1)
-        end if
-        if (world%boundaryConditions(1) == 2) then
-            rho(1) = 2.0d0 * rho(1)
-        else if (world%boundaryConditions(NumberXNodes) == 2) then
-            rho(NumberXNodes) = 2.0d0 * rho(NumberXNodes)
-        end if
+        ! if (world%boundaryConditions(1) == 3) then
+        !     rho(1) = rho(1) + rho(NumberXNodes)
+        !     rho(NumberXNodes) = rho(1)
+        ! end if
+        ! if (world%boundaryConditions(1) == 2) then
+        !     rho(1) = 2.0d0 * rho(1)
+        ! else if (world%boundaryConditions(NumberXNodes) == 2) then
+        !     rho(NumberXNodes) = 2.0d0 * rho(NumberXNodes)
+        ! end if
     end subroutine depositRho
 
     subroutine loadParticleDensity(densities, particleList, world)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         real(real64), intent(in out) :: densities(:,:)
-        integer(int32) :: i,j, l_center
+        integer(int32) :: i,j, l_center, l_left, l_right
         real(real64) :: d
         do i=1, numberChargedParticles
             do j = 1, particleList(i)%N_p
                 l_center = NINT(particleList(i)%phaseSpace(1, j))
+                l_left = l_center -1 
+                l_right = l_center + 1
                 d = particleList(i)%phaseSpace(1, j) - l_center
-                if (world%boundaryConditions(l_center) == 0) then
+                SELECT CASE (world%boundaryConditions(l_center))
+                CASE(0)
                     ! Inside domain
                     densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (0.75 - d**2)
-                    densities(l_center + 1, i) = densities(l_center + 1, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
-                    densities(l_center - 1, i) = densities(l_center - 1, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                else if (world%boundaryConditions(l_center) == 1) then
+                    if (l_right /= NumberXNodes) then
+                        densities(l_right, i) = densities(l_right, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                    else
+                        SELECT CASE (world%boundaryConditions(l_right))
+                        CASE(1)
+                            densities(l_right, i) = densities(l_right, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                        CASE(2)
+                            densities(l_right, i) = densities(l_right, i) +particleList(i)%w_p * (0.5d0 + d)**2
+                        CASE(3)
+                            densities(l_right, i) = densities(l_right, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                            densities(1, i) = densities(1, i) +  particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
+                        END SELECT
+                    end if
+                    if (l_left /= 1) then
+                        densities(l_left, i) = densities(l_left, i) +  particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                    else
+                        SELECT CASE (world%boundaryConditions(l_left))
+                        CASE(1)
+                            densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                        CASE(2)
+                            densities(l_left, i) = densities(l_left, i) +  particleList(i)%w_p * (0.5d0 - d)**2
+                        CASE(3)
+                            densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                            densities(NumberXNodes, i) = densities(NumberXNodes, i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
+                        END SELECT
+                    end if
+                CASE(1)
                     !Dirichlet
                     densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (1.0d0-ABS(d))
                     densities(l_center + INT(SIGN(1.0, d)), i) = densities(l_center + INT(SIGN(1.0, d)), i) + particleList(i)%w_p * ABS(d)
-                
-                else if (world%boundaryConditions(l_center) == 3) then
+                CASE(2)
+                    !Neumann symmetric
+                    densities(l_center, i) = densities(l_center, i) + 2.0d0 * particleList(i)%w_p * (0.75 - d**2)
+                    densities(l_center + INT(SIGN(1.0, d)), i) = densities(l_center + INT(SIGN(1.0, d)), i) + particleList(i)%w_p * (0.25d0 + d**2)
+                CASE(3)
                     ! Periodic
                     densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
                     densities(l_center+INT(SIGN(1.0, d)), i) = densities(l_center+INT(SIGN(1.0, d)), i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
                     ! across periodic boundary
                     densities(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), i) = densities(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), i) + particleList(i)%w_p * 0.5d0 * (0.5d0 - ABS(d))**2
-                end if
+                END SELECT
             end do
         end do
 
@@ -157,14 +213,14 @@ contains
         
         do i=1, numberChargedParticles
             densities(:,i) = densities(:,i)/world%nodeVol
-            if (world%boundaryConditions(1) == 3) then
-                densities(1,i) = densities(1,i) + densities(NumberXNodes,i)
-                densities(NumberXNodes,i) = densities(1, i)
-            else if (world%boundaryConditions(1) == 2) then
-                densities(1,i) = densities(1,i)*2.0d0
-            end if
+            ! if (world%boundaryConditions(1) == 3) then
+            !     densities(1,i) = densities(1,i) + densities(NumberXNodes,i)
+            !     densities(NumberXNodes,i) = densities(1, i)
+            ! else if (world%boundaryConditions(1) == 2) then
+            !     densities(1,i) = densities(1,i)*2.0d0
+            ! end if
     
-            if (world%boundaryConditions(NumberXNodes) == 2) densities(NumberXNodes, i) = densities(NumberXNodes, i)*2.0d0
+            ! if (world%boundaryConditions(NumberXNodes) == 2) densities(NumberXNodes, i) = densities(NumberXNodes, i)*2.0d0
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file='../Data/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
