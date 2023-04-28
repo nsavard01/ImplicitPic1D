@@ -98,7 +98,19 @@ contains
     real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, a, c
     real(real64), intent(in) :: del_t
     integer(int32), intent(in) :: l_cell
-    real(real64), external :: fieldFunc
+    interface
+        function fieldFunc(solver, l_p, l_cell, world) result(res)
+            use iso_fortran_env, only: int32, real64
+            use mod_domain
+            use mod_potentialSolver
+            type(potentialSolver), intent(in) :: solver
+            type(Domain), intent(in) :: world
+            real(real64), intent(in) :: l_p
+            integer(int32), intent(in) :: l_cell
+            real(real64) :: res
+        end function fieldFunc
+    end interface
+    !real(real64), external :: fieldFunc
     real(real64) :: del_tau_tmp
     del_tau = del_t
     a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
@@ -150,7 +162,19 @@ contains
         real(real64), intent(in) :: del_t, timePassed
         integer(int32), intent(in) :: l_cell
         real(real64) :: del_tau_tmp
-        real(real64), external :: fieldFunc
+        interface
+            function fieldFunc(solver, l_p, l_cell, world) result(res)
+                use iso_fortran_env, only: int32, real64
+                use mod_domain
+                use mod_potentialSolver
+                type(potentialSolver), intent(in) :: solver
+                type(Domain), intent(in) :: world
+                real(real64), intent(in) :: l_p
+                integer(int32), intent(in) :: l_cell
+                real(real64) :: res
+            end function fieldFunc
+        end interface
+        !real(real64), external :: fieldFunc
         del_tau = del_t - timePassed
         ! get index cell where field and dx_dl is evaluated
         a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
