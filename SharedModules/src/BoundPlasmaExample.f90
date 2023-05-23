@@ -12,7 +12,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i
-    call initializeScheme(boolCIC)
+    call initializeScheme(schemeNum)
     
     globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
     ! Initialize constants with inputs

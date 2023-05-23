@@ -9,9 +9,9 @@ module mod_Scheme
 
 contains
 
-    subroutine initializeScheme(boolCIC)
-        logical, intent(in out) :: boolCIC
-        boolCIC = .false.
+    subroutine initializeScheme(schemeNum)
+        integer(int32), intent(in out) :: schemeNum
+        schemeNum = 0
     end subroutine initializeScheme
 
     subroutine initialize_randUniform(part, world, irand)

@@ -8,9 +8,9 @@ module mod_Scheme
     ! Scheme module for CIC
 contains
 
-    subroutine initializeScheme(schemeNum)
-        integer(int32), intent(in out) :: schemeNum
-        schemeNum = 1
+    subroutine initializeScheme(boolCIC)
+        logical, intent(in out) :: boolCIC
+        boolCIC = .true.
     end subroutine initializeScheme
 
 

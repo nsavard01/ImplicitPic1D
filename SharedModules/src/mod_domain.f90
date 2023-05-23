@@ -72,7 +72,7 @@ contains
         end if
         self%grid(1) = 0.0d0
         self%grid(NumberXNodes) = L_domain
-        if (boolCIC) then
+        if (schemeNum == 1) then
             self%grid(2) = self%grid(1) + del_x
             self%grid(NumberXNodes-1) = self%grid(NumberXNodes) - del_x
             do i = 1,NumberXNodes-1
@@ -118,7 +118,7 @@ contains
         end if
         self%grid(1) = 0.0d0
         self%grid(NumberXNodes) = L_domain/2.0d0
-        if (boolCIC) then
+        if (schemeNum == 1) then
             self%grid(2) = self%grid(1) + del_x
             do i = 1,NumberXNodes-1
                 gridField(i) = (L_domain - del_x) * (real(i-1)/(2.0d0 * real(NumberXNodes) - 3.0d0) - (1.0d0/(2.0d0 * real(NumberXNodes) - 3.0d0) - del_x/(L_domain - del_x)) &

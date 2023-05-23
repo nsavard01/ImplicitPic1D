@@ -59,7 +59,7 @@ contains
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
-        if (boolCIC) then
+        if (schemeNum == 1) then
             print *, "Scheme is CIC"
         else
             print *, "Scheme is NGP"
