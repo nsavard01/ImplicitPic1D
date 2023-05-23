@@ -8,56 +8,41 @@ module mod_Scheme
     ! Scheme module for CIC
 contains
 
-    subroutine initializeScheme(boolCIC)
-        logical, intent(in out) :: boolCIC
-        boolCIC = .true.
+    subroutine initializeScheme(schemeNum)
+        integer(int32), intent(in out) :: schemeNum
+        schemeNum = 2
     end subroutine initializeScheme
 
 
     subroutine initialize_randUniform(part, world, irand)
         ! place particles randomly in each dx_dl based on portion of volume it take up
-        ! 
         type(Particle), intent(in out) :: part
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand
-        integer(int32) :: i, numInCell, idxLower, numPerCell(NumberXNodes)
-        real(real64) :: L_domain
+        integer(int32) :: i, numInCell, idxLower, numPerCell(NumberXNodes-1)
+        real(real64) :: sumDxDl, L_domain
         idxLower = 1
+        sumDxDl = 0
         L_domain = world%grid(NumberXNodes) - world%grid(1)
-        do i=1, NumberXNodes
+        do i=1, NumberXNodes-1
             ! Use int to make sure always have a bit left over, otherwise will fill up before getting to end
-            if (world%boundaryConditions(i) /= 0) then
-                ! if near boundary, cell volume divided by two
-                numInCell = INT(part%N_p * world%nodeVol(i)/L_domain/2.0d0)
-                call getRandom(part%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
-                numPerCell(i) = numInCell
-                if (i == 1) then
-                    part%phaseSpace(1, idxLower:idxLower + numInCell - 1) = part%phaseSpace(1, idxLower:idxLower + numInCell - 1) * 0.5d0 + 1.0d0
-                else
-                    part%phaseSpace(1, idxLower:idxLower + numInCell - 1) = NumberXNodes - part%phaseSpace(1, idxLower:idxLower + numInCell - 1) * 0.5d0
-                end if
-            else
-                numInCell = INT(part%N_p * world%nodeVol(i)/L_domain)
-                call getRandom(part%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
-                part%phaseSpace(1, idxLower:idxLower + numInCell - 1) = part%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i - 0.5d0
-                numPerCell(i) = numInCell
-            end if
-            if (idxLower + numInCell> part % N_P + 1) then
-                print *, "numInCell is:", numInCell
-                print *, "on", i, "cell"
+            numInCell = INT(part%N_p * world%dx_dl(i)/L_domain)
+            if (idxLower + numInCell > part % N_P + 1) then
                 stop "You are putting too many particles for the uniform particle case"
-            end if  
-            if (numInCell < 1) then
-                print *, "You are placing 0 particles in a cell."
-                print *, "Either the cell size is very small with respect to the domain, or too few particles."
             end if
+
+            
+            call getRandom(part%phaseSpace(1,idxLower:idxLower + numInCell-1), irand)
+            part%phaseSpace(1, idxLower:idxLower + numInCell - 1) = part%phaseSpace(1, idxLower:idxLower + numInCell - 1) + i
             idxLower = idxLower + numInCell
+            numPerCell(i) = numInCell
             
         end do
         if (idxLower < part%N_p + 1) then
             call getRandom(part%phaseSpace(1, idxLower:part%N_p), irand)
-            part%phaseSpace(1, idxLower:part%N_p) = part%phaseSpace(1, idxLower:part%N_p) * (NumberXNodes-1) + 1
+            part%phaseSpace(1, idxLower:part%N_p) = part%phaseSpace(1, idxLower:part%N_p) * (NumberXNodes - 1) + 1
         end if
+        
         
     end subroutine initialize_randUniform
 

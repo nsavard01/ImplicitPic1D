@@ -59,10 +59,10 @@ contains
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
-        if (schemeNum == 1) then
-            print *, "Scheme is CIC"
-        else
+        if (schemeNum == 0) then
             print *, "Scheme is NGP"
+        else
+            print *, "Scheme is CIC"
         end if
         print *, "Number of nodes:", NumberXNodes
         print *, "Grid length:", L_domain
