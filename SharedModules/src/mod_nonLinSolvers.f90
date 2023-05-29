@@ -226,7 +226,7 @@ contains
                 phi_k(:, MODULO(i+1, m_Anderson+1) + 1) = phi_k(:, MODULO(i+1, m_Anderson+1) + 1) + alpha(j + 1) * (Beta_k*Residual_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1))
             end do
             solver%phi_f = phi_k(:, MODULO(i+1, m_Anderson+1) + 1)
-    
+            
         end do
         iterNumPicard = i-1
         75 continue

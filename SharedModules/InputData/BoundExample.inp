@@ -5,7 +5,7 @@ name	T_e(eV)	 NumParticles   ArraySizeMultiplication
 -------------------------------------------
 
 
-#IONS
+IONS
 name   mass  charge  temp.(eV)	NumParticles   ArraySizeMultiplication
 --------------------------------------------------
 [H+]     1.     1.     0.1		5000     2
