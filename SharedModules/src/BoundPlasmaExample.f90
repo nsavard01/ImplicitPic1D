@@ -5,6 +5,7 @@ program BoundPlasmaExample
     use mod_domain
     use mod_particle
     use mod_potentialSolver
+    use mod_particleMover
     use mod_collisions
     use mod_nonLinSolvers
     use mod_Scheme
@@ -12,7 +13,6 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i
-    real(real64), allocatable :: rho_f(:)
     call initializeScheme(schemeNum)
     
     globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
@@ -35,15 +35,11 @@ program BoundPlasmaExample
     print *, "----------------"
     ! Generate solver object, and then solve for initial rho/potential
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
-    allocate(rho_f(NumberXNodes))
     call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
     print *, "Energy error is:", globalSolver%energyError
     print *, "Took", iterNumPicard, "iterations"
-    call depositRho(rho_f, globalParticleList, globalWorld)
-    print *, (arrayDiff(globalSolver%J, NumberXNodes-1) * del_t/globalWorld%nodeVol(2:NumberXNodes-1))/(rho_f(2:NumberXNodes-1) - globalSolver%rho(2:NumberXNodes-1)) + 1.0d0
-    print *, "At Neumann node:", (- 2.0d0 *  globalSolver%J(NumberXNodes-1) * del_t/globalWorld%nodeVol(NumberXNodes))/(rho_f(NumberXNodes) - globalSolver%rho(NumberXNodes)) + 1.0d0
-    stop
     ! Get error gauss' law
+    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     call globalSolver%construct_diagMatrix(globalWorld)
     globalSolver%chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)
     globalSolver%chargeError = globalSolver%chargeError / SQRT(SUM(globalSolver%rho**2))

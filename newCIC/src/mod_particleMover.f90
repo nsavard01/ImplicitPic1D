@@ -491,10 +491,9 @@ contains
     real(real64), intent(in) :: del_t
     !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
     real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
-    integer(int32) :: subStepNum, j, i, delIdx, l_cell, int_l_sub
+    integer(int32) :: subStepNum, j, i, l_cell, int_l_sub
     solver%J = 0.0d0
     loopSpecies: do j = 1, numberChargedParticles
-        delIdx = 0
         loopParticles: do i = 1, particleList(j)%N_p
             v_sub = particleList(j)%phaseSpace(2,i)
             l_sub = particleList(j)%phaseSpace(1,i)
@@ -502,7 +501,6 @@ contains
             l_f = l_sub
             timePassed = 0.0d0
             subStepNum = 0
-
             ! First substep
             l_cell = NINT(l_sub)
             int_l_sub = INT(l_sub)
@@ -552,9 +550,10 @@ contains
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_tau - v_sub
                     call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, int_l_sub, v_f, v_sub, del_tau, del_t)
-                    timePassed = del_tau
-                    if (INT(l_f) == l_cell) then ! if particle is now on node, must be boundary, exit
+                    if (l_f == l_cell) then ! if particle is now on node, must be boundary, exit
                         timePassed = del_t
+                    else
+                        timePassed = del_tau
                     end if
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
                         print *, "l_sub is:", l_sub
@@ -677,12 +676,8 @@ contains
                         end if
                         timePassed = del_t  
                     else
-                        if (l_f /= l_sub) then
-                            v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_tau - v_sub
-                            call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, int_l_sub, v_f, v_sub, del_tau, del_t)
-                        else
-                            v_f = -v_sub
-                        end if
+                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_tau - v_sub
+                        call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, int_l_sub, v_f, v_sub, del_tau, del_t)
                         if (l_f == l_cell) then
                             exit ! if particle is now on node, must be boundary, exit
                         end if
@@ -768,7 +763,6 @@ contains
                 stop "Have particles travelling outside domain!"
             end if
         end do loopParticles
-        
     end do loopSpecies
     end subroutine depositJ
 
@@ -843,7 +837,7 @@ contains
                     particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_tau - v_sub
-                    if (INT(l_f) == l_cell) then ! if particle is now on node, must be boundary, exit
+                    if (l_f == l_cell) then ! if particle is now on node, must be boundary, exit
                         delIdx = delIdx + 1
                         timePassed = del_t
                         solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
@@ -944,7 +938,11 @@ contains
                         particleList(j)%phaseSpace(2,i-delIdx) = v_f
                         particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)  
                     else
-                        v_f = 2.0d0 * getDx(l_sub, l_f, world, int_l_sub) / del_tau - v_sub
+                        if (l_f /= l_sub) then
+                            v_f = 2.0d0 * getDx(l_sub, l_f, world, int_l_sub) / del_tau - v_sub
+                        else
+                            v_f = -v_sub
+                        end if
                         timePassed = timePassed + del_tau
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
                             print *, l_f
@@ -978,7 +976,7 @@ contains
                         particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)   
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_tau - v_sub
-                        if (INT(l_f) == l_cell) then 
+                        if (l_f == l_cell) then 
                             delIdx = delIdx + 1
                             solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                             if (l_cell == 1) then
@@ -1015,7 +1013,11 @@ contains
                         particleList(j)%phaseSpace(2,i-delIdx) = v_f
                         particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i) 
                     else
-                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_tau - v_sub
+                        if (l_f /= l_sub) then
+                            v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_tau - v_sub
+                        else
+                            v_f = -v_sub
+                        end if
                         if (INT(l_f) == l_cell) v_f = -v_f
                         timePassed = timePassed + del_tau
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
@@ -1063,8 +1065,6 @@ contains
             if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                 stop "Have particles travelling outside domain!"
             end if
-            ! When not depositing, then updating particles, overwrite deleted indices
-
         end do loopParticles
         particleList(j)%N_p = particleList(j)%N_p - delIdx
     end do loopSpecies
