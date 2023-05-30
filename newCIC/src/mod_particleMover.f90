@@ -376,6 +376,80 @@ contains
         end if
     end subroutine picardIterParticles
 
+    subroutine andersonIterParticles(solver, world, q, mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, fieldFunc)
+        ! Have m_anderson == 2
+        type(potentialSolver), intent(in out) :: solver
+        type(Domain), intent(in) :: world
+        real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f
+        real(real64), intent(in) :: del_t, timePassed, q, mass
+        integer(int32), intent(in) :: l_cell, int_l_sub
+        integer(int32) :: i, info, ldb, lwork, index, m_k, j
+        real(real64) :: dl_dx, Residual_k(3), l_f_k(3), fitArray(2), normResidual(3), initialR
+        real(real64) :: work(3), alpha(3)
+        interface
+            function fieldFunc(solver, l_p, l_cell) result(res)
+                use iso_fortran_env, only: int32, real64
+                use mod_potentialSolver
+                type(potentialSolver), intent(in) :: solver
+                real(real64), intent(in) :: l_p
+                integer(int32), intent(in) :: l_cell
+                real(real64) :: res
+            end function fieldFunc
+        end interface
+        ldb = 2
+        lwork = 3
+        l_f_k(1) = l_sub
+        dl_dx = 1.0d0/world%dx_dl(int_l_sub)
+        v_f = v_sub + (q/mass) * fieldFunc(solver,l_sub, l_cell) * (del_t - timePassed) * dl_dx
+        l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * dl_dx + l_sub
+        l_f_k(2) = l_f
+        initialR = ABS(l_f - l_sub)
+        normResidual(1) = initialR
+        Residual_k(1) = l_f_k(2) - l_f_k(1)
+
+        ! m_k == 1
+        do i = 1, 50
+            index = MODULO(i, 3) + 1
+            m_k = MIN(i, 2)
+            lbd = MAX(m_k, 1)
+            dl_dx = (l_f - l_sub) / getDx(l_sub, l_f, world, int_l_sub)
+            v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (del_t - timePassed) * dl_dx
+            l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * dl_dx + l_sub
+            Residual_k(index) = l_f - l_f_k(index)
+            normResidual(index) = ABS(Residual_k(index))
+            if (normResidual(index) < 1.0d-8 * (initialR + 1)) exit
+            do j = 0, m_k-1
+                fitArray(j+1) = Residual_k(MODULO(i - m_k + j, 3) + 1) - Residual_k(index)
+            end do
+            alpha(1) = -Residual_k(index)
+            call dgels('N', 1, m_k, 1, fitArray(1:m_k), 1, alpha(1:lbd), lbd, work, lwork, info)
+            if (info /= 0) then
+                print *, "Issue with minimization procedure dgels in Anderson Acceleration!"
+            end if
+            alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k))
+            l_f_k(MODULO(i+1, 3) + 1) = alpha(1) * (0.5d0*Residual_k(MODULO(i-m_k, 3) + 1) + l_f_k(MODULO(i-m_k,3) + 1))
+            do j=1, m_k
+                l_f_k(MODULO(i+1, 3) + 1) = l_f_k(MODULO(i+1, 3) + 1) + alpha(j + 1) * (0.5d0*Residual_k(MODULO(i-m_k + j, 3) + 1) + l_f_k(MODULO(i-m_k + j, 3) + 1))
+            end do
+            l_f = l_f_k(MODULO(i+1, 3) + 1)
+        end do
+        if (NINT(l_f) /= l_cell) then
+            print *, "Have final l_f outside initial cell"
+            print *, "particle charge is:", q
+            print *, "a direction is:", (q/mass/2.0d0) * getEField(solver,(l_sub + l_f)/2.0d0, l_cell) * dl_dx
+            print *, "del_t remaining is:", del_t - timePassed
+            print *, "l_sub is:", l_sub
+            print *, "l_f is:", l_f
+            print *, "v_sub is:", v_sub
+            print *, "v_f is:", v_f
+            print *, "l_f analytical is:", l_f
+            stop 
+        end if
+        if (i == 51) then
+            stop "anderson particle iteration not converged"
+        end if
+    end subroutine andersonIterParticles
+
     subroutine depositJSubStep(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_tau, del_t)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
