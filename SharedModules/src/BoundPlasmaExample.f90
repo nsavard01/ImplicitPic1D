@@ -12,6 +12,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i
+    real(real64), allocatable :: rho_f(:)
     call initializeScheme(schemeNum)
     
     globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
@@ -34,19 +35,21 @@ program BoundPlasmaExample
     print *, "----------------"
     ! Generate solver object, and then solve for initial rho/potential
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
-    call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
-    stop
+    allocate(rho_f(NumberXNodes))
     call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
     print *, "Energy error is:", globalSolver%energyError
     print *, "Took", iterNumPicard, "iterations"
-    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
+    call depositRho(rho_f, globalParticleList, globalWorld)
+    print *, (arrayDiff(globalSolver%J, NumberXNodes-1) * del_t/globalWorld%nodeVol(2:NumberXNodes-1))/(rho_f(2:NumberXNodes-1) - globalSolver%rho(2:NumberXNodes-1)) + 1.0d0
+    print *, "At Neumann node:", (- 2.0d0 *  globalSolver%J(NumberXNodes-1) * del_t/globalWorld%nodeVol(NumberXNodes))/(rho_f(NumberXNodes) - globalSolver%rho(NumberXNodes)) + 1.0d0
+    stop
     ! Get error gauss' law
     call globalSolver%construct_diagMatrix(globalWorld)
     globalSolver%chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)
     globalSolver%chargeError = globalSolver%chargeError / SQRT(SUM(globalSolver%rho**2))
     call globalSolver%construct_diagMatrix_Ampere(globalWorld)
     print *, "Charge error is:", globalSolver%chargeError
-        
+    stop  
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
     print *, "Averaging over", averagingTime, "seconds"
     call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)

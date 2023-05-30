@@ -490,10 +490,9 @@ contains
     type(Particle), intent(in out) :: particleList(:)
     real(real64), intent(in) :: del_t
     !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-    real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c, rho_f(NumberXNodes), chargerError
-    integer(int32) :: subStepNum, j, i, delIdx, l_cell, int_l_sub, k
+    real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
+    integer(int32) :: subStepNum, j, i, delIdx, l_cell, int_l_sub
     solver%J = 0.0d0
-    rho_f = 0.0d0
     loopSpecies: do j = 1, numberChargedParticles
         delIdx = 0
         loopParticles: do i = 1, particleList(j)%N_p
@@ -768,27 +767,9 @@ contains
             if ((l_f < 1) .or. (l_f > NumberXNodes)) then
                 stop "Have particles travelling outside domain!"
             end if
-            call depositRhoSingle(rho_f, l_f, particleList(j)%q, particleList(j)%w_p, world)  
         end do loopParticles
         
     end do loopSpecies
-    chargerError = 0.0d0
-    j = 0
-    print *, "rho_i is:"
-    print *, solver%rho
-    print *, "rho_f is:"
-    print *, rho_f
-    print *, "J is:"
-    print *, solver%J
-    do i = 2, NumberXNodes-1
-        if ((rho_f(i) - solver%rho(i)*world%nodeVol(i)) /= 0.0) then
-            print *, "i is:", I
-            print *, 'indidual charge error is:', (solver%J(i) - solver%J(i-1))*del_t/(rho_f(i) - solver%rho(i)*world%nodeVol(i)) + 1.0d0
-            chargerError = chargerError + ((solver%J(i) - solver%J(i-1))*del_t/(rho_f(i) - solver%rho(i)*world%nodeVol(i)) + 1.0d0)**2
-            j = j + 1
-        end if
-    end do
-    print *, "Charge Error is:", SQRT(chargerError/j)
     end subroutine depositJ
 
 
