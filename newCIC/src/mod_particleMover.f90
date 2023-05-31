@@ -6,6 +6,9 @@ module mod_particleMover
     use mod_domain
     use mod_potentialSolver
     implicit none
+    integer(int32) :: m_anderson_mover = 1
+    integer(int32) :: numParticleMover = 0
+    real(real64) :: numIterationsAnderson = 0
 
 contains
     
@@ -336,7 +339,7 @@ contains
         real(real64), intent(in) :: del_t, timePassed, q, mass
         integer(int32), intent(in) :: l_cell, int_l_sub
         integer(int32) :: i
-        real(real64) :: l_initialR, alpha, l_f_previous
+        real(real64) :: previousRes, currentRes, alpha, l_f_previous
         interface
             function fieldFunc(solver, l_p, l_cell) result(res)
                 use iso_fortran_env, only: int32, real64
@@ -347,17 +350,23 @@ contains
                 real(real64) :: res
             end function fieldFunc
         end interface
+        numParticleMover = numParticleMover + 1
         l_f_previous = l_sub
         alpha = 1.0d0/world%dx_dl(int_l_sub)
-        v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (del_t - timePassed) * alpha
+        v_f = v_sub + (q/mass) * fieldFunc(solver,l_sub, l_cell) * (del_t - timePassed) * alpha
         l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
-        l_initialR = ABS(l_f - l_sub)
-        do i = 1, 50
+        previousRes = ABS(l_f - l_sub)
+        do i = 1, 20
             l_f_previous = l_f
             alpha = (l_f - l_sub) / getDx(l_sub, l_f, world, int_l_sub)
             v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (del_t - timePassed) * alpha
             l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
-            if (ABS(l_f - l_f_previous) < 1.0d-8*(l_initialR + 1.0d0)) exit
+            currentRes = ABS(l_f - l_f_previous)
+            numIterationsAnderson = numIterationsAnderson + 1
+            if (currentRes < 1.0d-8) then
+                exit
+            end if
+            previousRes = currentRes
         end do
         if (NINT(l_f) /= l_cell) then
             print *, "Have final l_f outside initial cell"
@@ -368,10 +377,31 @@ contains
             print *, "l_f is:", l_f
             print *, "v_sub is:", v_sub
             print *, "v_f is:", v_f
-            print *, "l_f analytical is:", l_f
-            stop 
+            print *, "l_f is:", l_f 
         end if
-        if (i == 51) then
+        if (i == 21) then
+            print *, 'l_sub is:', l_sub
+            print *, 'v_sub is:', v_sub
+            l_f_previous = l_sub
+            alpha = 1.0d0/world%dx_dl(int_l_sub)
+            v_f = v_sub + (q/mass) * fieldFunc(solver,l_sub, l_cell) * (del_t - timePassed) * alpha
+            l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
+            previousRes = ABS(l_f - l_sub)
+            print *, 'first res is:', previousRes
+            do i = 1, 20
+                l_f_previous = l_f
+                alpha = (l_f - l_sub) / getDx(l_sub, l_f, world, int_l_sub)
+                v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (del_t - timePassed) * alpha
+                l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
+                currentRes = ABS(l_f - l_f_previous)
+                print *, 'current res diff:', currentRes/previousRes
+                if (ABS(currentRes) < 1.0d-8) then
+                    exit
+                else if (currentRes/previousRes > 0.9) then
+                    exit
+                end if
+                previousRes = currentRes
+            end do
             stop "Picard not converged"
         end if
     end subroutine picardIterParticles
@@ -384,8 +414,8 @@ contains
         real(real64), intent(in) :: del_t, timePassed, q, mass
         integer(int32), intent(in) :: l_cell, int_l_sub
         integer(int32) :: i, info, ldb, lwork, index, m_k, j
-        real(real64) :: dl_dx, Residual_k(3), l_f_k(3), fitArray(2), normResidual(3), initialR
-        real(real64) :: work(3), alpha(3)
+        real(real64) :: dl_dx, Residual_k(m_anderson_mover+1), l_f_k(m_anderson_mover+1), fitArray(m_anderson_mover), normResidual(m_anderson_mover+1), initialR
+        real(real64) :: work(m_anderson_mover+1), alpha(m_anderson_mover+1)
         interface
             function fieldFunc(solver, l_p, l_cell) result(res)
                 use iso_fortran_env, only: int32, real64
@@ -396,8 +426,8 @@ contains
                 real(real64) :: res
             end function fieldFunc
         end interface
-        ldb = 2
-        lwork = 3
+        numParticleMover = numParticleMover + 1
+        lwork = m_anderson_mover+1
         l_f_k(1) = l_sub
         dl_dx = 1.0d0/world%dx_dl(int_l_sub)
         v_f = v_sub + (q/mass) * fieldFunc(solver,l_sub, l_cell) * (del_t - timePassed) * dl_dx
@@ -406,32 +436,29 @@ contains
         initialR = ABS(l_f - l_sub)
         normResidual(1) = initialR
         Residual_k(1) = l_f_k(2) - l_f_k(1)
-
+        
         ! m_k == 1
-        do i = 1, 50
-            index = MODULO(i, 3) + 1
-            m_k = MIN(i, 2)
-            lbd = MAX(m_k, 1)
+        do i = 1, 20
+            index = MODULO(i, lwork) + 1
+            m_k = MIN(i, m_anderson_mover)
+            ldb = MAX(m_k, 1)
             dl_dx = (l_f - l_sub) / getDx(l_sub, l_f, world, int_l_sub)
             v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (del_t - timePassed) * dl_dx
             l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * dl_dx + l_sub
             Residual_k(index) = l_f - l_f_k(index)
             normResidual(index) = ABS(Residual_k(index))
-            if (normResidual(index) < 1.0d-8 * (initialR + 1)) exit
+            numIterationsAnderson = numIterationsAnderson + 1
+            if (normResidual(index) < 1.0d-8) exit
             do j = 0, m_k-1
-                fitArray(j+1) = Residual_k(MODULO(i - m_k + j, 3) + 1) - Residual_k(index)
+                fitArray(j+1) = Residual_k(MODULO(i - m_k + j, lwork) + 1) - Residual_k(index)
             end do
-            alpha(1) = -Residual_k(index)
-            call dgels('N', 1, m_k, 1, fitArray(1:m_k), 1, alpha(1:lbd), lbd, work, lwork, info)
-            if (info /= 0) then
-                print *, "Issue with minimization procedure dgels in Anderson Acceleration!"
-            end if
+            alpha(1:ldb) = - fitArray(1:m_k) * Residual_k(index) / SUM(fitArray(1:m_k)**2)
             alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k))
-            l_f_k(MODULO(i+1, 3) + 1) = alpha(1) * (0.5d0*Residual_k(MODULO(i-m_k, 3) + 1) + l_f_k(MODULO(i-m_k,3) + 1))
+            l_f_k(MODULO(i+1, lwork) + 1) = alpha(1) * (0.5d0*Residual_k(MODULO(i-m_k, lwork) + 1) + l_f_k(MODULO(i-m_k,lwork) + 1))
             do j=1, m_k
-                l_f_k(MODULO(i+1, 3) + 1) = l_f_k(MODULO(i+1, 3) + 1) + alpha(j + 1) * (0.5d0*Residual_k(MODULO(i-m_k + j, 3) + 1) + l_f_k(MODULO(i-m_k + j, 3) + 1))
+                l_f_k(MODULO(i+1, lwork) + 1) = l_f_k(MODULO(i+1, lwork) + 1) + alpha(j + 1) * (0.5d0*Residual_k(MODULO(i-m_k + j, lwork) + 1) + l_f_k(MODULO(i-m_k + j, lwork) + 1))
             end do
-            l_f = l_f_k(MODULO(i+1, 3) + 1)
+            l_f = l_f_k(MODULO(i+1, lwork) + 1)
         end do
         if (NINT(l_f) /= l_cell) then
             print *, "Have final l_f outside initial cell"
@@ -445,7 +472,12 @@ contains
             print *, "l_f analytical is:", l_f
             stop 
         end if
-        if (i == 51) then
+        if (i == 21) then
+            print *, 'last l_f are:'
+            print *, l_f_k
+            print *, 'l_sub is:', l_sub
+            print *, 'v_sub is:', v_sub
+            print *, 'v_f is:', v_f
             stop "anderson particle iteration not converged"
         end if
     end subroutine andersonIterParticles
@@ -585,8 +617,8 @@ contains
                 l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
                 call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEField)
                 if (del_tau >= del_t) then
-                    call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
-                    !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
+                    call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
+                    !call solver%andersonIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                     call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t, del_t) 
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
@@ -644,7 +676,7 @@ contains
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
                 call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldNeumann)
                 if (del_tau >= del_t) then
-                    call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
+                    call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
                     call depositJSubStepNeumann(solver, world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t, del_t)  
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
@@ -670,7 +702,7 @@ contains
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
                 call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
                 if (del_tau >= del_t-timePassed) then
-                    call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)   
+                    call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)   
                     call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t, del_t) 
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial periodic substep, l_f is not in correct cell"
@@ -707,7 +739,7 @@ contains
                     call getDelTauSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, int_l_sub, l_cell, a, c, getEField)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
-                        call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
+                        call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
                         call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t - timePassed, del_t)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After ongoing substep, l_f is not in correct cell"
@@ -773,7 +805,7 @@ contains
                     call getDelTauSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, int_l_sub, l_cell, a, c, getEFieldNeumann)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
-                        call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
+                        call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
                         call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t - timePassed, del_t)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After ongoing substep, l_f is not in correct cell"
@@ -801,7 +833,7 @@ contains
                     call getDelTauSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
-                        call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)
+                        call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)
                         call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t - timePassed, del_t)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After final periodic substep, l_f is not in correct cell"
@@ -871,7 +903,7 @@ contains
                 l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
                 call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEField)
                 if (del_tau >= del_t) then
-                    call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
+                    call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
                         stop
@@ -938,7 +970,7 @@ contains
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
                 call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldNeumann)
                 if (del_tau >= del_t) then
-                    call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
+                    call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
                         stop
@@ -965,7 +997,7 @@ contains
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
                 call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
                 if (del_tau >= del_t-timePassed) then
-                    call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)   
+                    call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)   
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial periodic substep, l_f is not in correct cell"
                         stop
@@ -1003,7 +1035,7 @@ contains
                     call getDelTauSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, int_l_sub, l_cell, a, c, getEField)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
-                        call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
+                        call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
@@ -1078,7 +1110,7 @@ contains
                     call getDelTauSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, int_l_sub, l_cell, a, c, getEFieldNeumann)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
-                        call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
+                        call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
@@ -1107,7 +1139,7 @@ contains
                     call getDelTauSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, timePassed, del_t, l_alongV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
-                        call picardIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)
+                        call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After final periodic substep, l_f is not in correct cell"
                             stop

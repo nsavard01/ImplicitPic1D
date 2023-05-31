@@ -14,7 +14,6 @@ program BoundPlasmaExample
 
     integer(int32) :: i
     call initializeScheme(schemeNum)
-    
     globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
     ! Initialize constants with inputs
     ! create the world the particles live in
@@ -38,6 +37,7 @@ program BoundPlasmaExample
     call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
     print *, "Energy error is:", globalSolver%energyError
     print *, "Took", iterNumPicard, "iterations"
+    print *, "Took", real(numIterationsAnderson)/real(numParticleMover), "average anderson iterations"
     ! Get error gauss' law
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     call globalSolver%construct_diagMatrix(globalWorld)
