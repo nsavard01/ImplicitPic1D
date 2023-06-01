@@ -6,7 +6,7 @@ module mod_particleMover
     use mod_domain
     use mod_potentialSolver
     implicit none
-    integer(int32) :: m_anderson_mover = 1
+    integer(int32) :: m_anderson_mover = 10
     integer(int32) :: numParticleMover = 0
     real(real64) :: numIterationsAnderson = 0
 
@@ -122,15 +122,16 @@ contains
     real(real64) :: del_tau_tmp, delX
     integer(int32) :: int_l_alongV, int_l_awayV
     del_tau = del_t
+    if (SIGN() fieldFunc(solver,(l_sub + l_alongV)*0.5d0, l_cell))
     delX = getDx(l_sub, l_alongV, world, int_l_sub)
-    a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,(l_sub + l_alongV)*0.5d0, l_cell) * (l_alongV - l_sub) / delX
+    a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,(l_sub + l_alongV)*0.5d0, l_cell) * (l_alongV - l_sub) / delX
     ! Particle first between nodes, so solve quadratic for that particle depending on conditions
     if (v_sub/=0.0d0) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
         call getDelTauAlongVelocity(delX, a, l_alongV, l_sub, l_f, v_sub, l_cell, del_tau)
         if (del_tau >= del_t) then
             ! boundary opposite direction of v
             delX = getDx(l_sub, l_awayV, world, int_l_sub)
-            a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,(l_sub + l_awayV)*0.5d0, l_cell) * (l_awayV - l_sub) / delX
+            a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,(l_sub + l_awayV)*0.5d0, l_cell) * (l_awayV - l_sub) / delX
             if (a*v_sub < 0) then
                 del_tau_tmp = 2.0d0 * ABS(delX)/(SQRT(v_sub**2 + 4.0d0*a*delX) - ABS(v_sub))
                 if (del_tau_tmp < del_tau) then
@@ -407,7 +408,6 @@ contains
     end subroutine picardIterParticles
 
     subroutine andersonIterParticles(solver, world, q, mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, fieldFunc)
-        ! Have m_anderson == 2
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in out) :: l_sub, l_f, v_sub, v_f
@@ -415,7 +415,7 @@ contains
         integer(int32), intent(in) :: l_cell, int_l_sub
         integer(int32) :: i, info, ldb, lwork, index, m_k, j
         real(real64) :: dl_dx, Residual_k(m_anderson_mover+1), l_f_k(m_anderson_mover+1), fitArray(m_anderson_mover), normResidual(m_anderson_mover+1), initialR
-        real(real64) :: work(m_anderson_mover+1), alpha(m_anderson_mover+1)
+        real(real64) :: work(m_anderson_mover+1), alpha(m_anderson_mover+1), sumPastResiduals
         interface
             function fieldFunc(solver, l_p, l_cell) result(res)
                 use iso_fortran_env, only: int32, real64
@@ -426,7 +426,7 @@ contains
                 real(real64) :: res
             end function fieldFunc
         end interface
-        numParticleMover = numParticleMover + 1
+        !numParticleMover = numParticleMover + 1
         lwork = m_anderson_mover+1
         l_f_k(1) = l_sub
         dl_dx = 1.0d0/world%dx_dl(int_l_sub)
@@ -447,8 +447,18 @@ contains
             l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * dl_dx + l_sub
             Residual_k(index) = l_f - l_f_k(index)
             normResidual(index) = ABS(Residual_k(index))
-            numIterationsAnderson = numIterationsAnderson + 1
+            !numIterationsAnderson = numIterationsAnderson + 1
             if (normResidual(index) < 1.0d-8) exit
+            ! if (i > m_anderson_mover) then
+            !     if (m_anderson_mover > 1) then
+            !         sumPastResiduals = normResidual(MODULO(i-1, lwork) + 1) &
+            !         + normResidual(MODULO(i-2, lwork) + 1)
+            !         sumPastResiduals = sumPastResiduals/2.0d0
+            !     else
+            !         sumPastResiduals = normResidual(MODULO(i-1, lwork) + 1)
+            !     end if
+            !     if (normResidual(index) > sumPastResiduals) exit
+            ! end if
             do j = 0, m_k-1
                 fitArray(j+1) = Residual_k(MODULO(i - m_k + j, lwork) + 1) - Residual_k(index)
             end do
@@ -478,6 +488,7 @@ contains
             print *, 'l_sub is:', l_sub
             print *, 'v_sub is:', v_sub
             print *, 'v_f is:', v_f
+            print *, "Field is:", fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell)
             stop "anderson particle iteration not converged"
         end if
     end subroutine andersonIterParticles
