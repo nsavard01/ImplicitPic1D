@@ -1,0 +1,6 @@
+64 ! number of grid nodes
+0.0002572099123144409d0 ! Domain length in meters 
+0 ! (0 == even grid, 1 = sinusoidal grid. 2 = half-grid) 0.0002572099123144409d0 for two stream
+3 3 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, <=-4 dielectric)
+0. 0. ! Voltage for left and right side boundary, used for dirichlet and periodic conditions
+END

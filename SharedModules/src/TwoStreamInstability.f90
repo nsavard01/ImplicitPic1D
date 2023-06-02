@@ -1,4 +1,4 @@
-program BoundPlasmaExample
+program TwoStreamInstability
     use iso_fortran_env, only: int32, real64, output_unit, int64
     use constants
     use mod_BasicFunctions
@@ -14,14 +14,15 @@ program BoundPlasmaExample
 
     integer(int32) :: i
     call initializeScheme(schemeNum)
-    globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
+    globalParticleList = readParticleInputs('ParticlesTwoStream.inp',numberChargedParticles, irand, T_e) 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, globalWorld, globalSolver, simulationTime, Power, heatSkipSteps, nu_h, T_e, 'Geometry.inp', 'InitialConditions.inp')
+    call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, globalWorld, globalSolver, simulationTime, Power, heatSkipSteps, nu_h, T_e, 'TwoStreamGeometry.inp', 'TwoStreamInitialConditions.inp')
     do i = 1, numberChargedParticles
         call initialize_randUniform(globalParticleList(i), globalWorld, irand)
         call globalParticleList(i) % initialize_n_ave(n_ave, globalWorld%grid(NumberXNodes) - globalWorld%grid(1))
     end do
+    globalSolver%rho = n_ave * e
     call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
     print *, "Calulated values:"
     print *, "Number of particles is:", globalParticleList(1)%N_p
@@ -55,7 +56,7 @@ program BoundPlasmaExample
         print *, "Averaging over", averagingTime, "seconds"
         call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)
     end if
-    
+            
 
-    
-end program BoundPlasmaExample
+
+end program TwoStreamInstability

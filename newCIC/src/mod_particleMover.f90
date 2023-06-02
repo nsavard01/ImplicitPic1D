@@ -6,7 +6,7 @@ module mod_particleMover
     use mod_domain
     use mod_potentialSolver
     implicit none
-    integer(int32) :: m_anderson_mover = 10
+    integer(int32) :: m_anderson_mover = 3
     integer(int32) :: numParticleMover = 0
     real(real64) :: numIterationsAnderson = 0
 
@@ -101,11 +101,11 @@ contains
         end if
     end subroutine getDelTauAlongVelocity
 
-    subroutine getDelTauInitialSubStep(solver, world, part, l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, fieldFunc)
+    subroutine getDelTauInitialSubStep(solver, world, part, l_sub, l_f, v_sub, del_tau, del_t, timePassed, l_alongV, l_awayV, int_l_sub, l_cell, a, c, fieldFunc)
     type(potentialSolver), intent(in) :: solver
     type(Domain), intent(in) :: world
     type(Particle), intent(in) :: part
-    real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, a, c
+    real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, timePassed, a, c
     real(real64), intent(in) :: del_t
     integer(int32), intent(in) :: l_cell, int_l_sub
     interface
@@ -119,19 +119,69 @@ contains
         end function fieldFunc
     end interface
     !real(real64), external :: fieldFunc
-    real(real64) :: del_tau_tmp, delX
+    real(real64) :: del_tau_tmp, delX, x_f, l_temp
     integer(int32) :: int_l_alongV, int_l_awayV
-    del_tau = del_t
-    if (SIGN() fieldFunc(solver,(l_sub + l_alongV)*0.5d0, l_cell))
+314 continue
+    del_tau = del_t - timePassed
     delX = getDx(l_sub, l_alongV, world, int_l_sub)
     a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,(l_sub + l_alongV)*0.5d0, l_cell) * (l_alongV - l_sub) / delX
     ! Particle first between nodes, so solve quadratic for that particle depending on conditions
     if (v_sub/=0.0d0) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
         call getDelTauAlongVelocity(delX, a, l_alongV, l_sub, l_f, v_sub, l_cell, del_tau)
-        if (del_tau >= del_t) then
-            ! boundary opposite direction of v
+        if (del_tau >= del_t - timePassed) then
+            ! Assume we have total time del_tau for particle to come to stop
+            ! If a particle goes to stop, have: delX/del_tau = v_i/2, since v_f = 0
+            ! This means the distance travelled for such a particle given del_tau is v_i * del_tau/2
+            ! Now assume we've chosen del_tau so that it is del_t/2, then the distance traveled by the particle to stop is: v_i * del_t/4 = maxDist
+            ! We have two factors. First, we want maxDist < delX_bound, with delX_bound the length to the boundary
+            ! We also want to make sure that this works for del_tau < del_t/2. In this case, then maxDist goes down, so still fits criteria. 
+            ! We then use l_f derived from this max dist to find the field at this spot, and see if it brings it back. Then if this doesn't work, test at minimum distance (l_sub)
+            if (0.25d0*ABS((del_t - timePassed) *v_sub/delX) < 1.0) then
+                delX = 0.25d0*v_sub * (del_t - timePassed)
+                if (INT(l_alongV) /= int_l_sub) then
+                    int_l_alongV = INT(l_alongV)
+                    if (ABS(delX) > ABS((l_cell - l_sub) * world%dx_dl(int_l_sub))) then
+                        l_f = l_cell + (delX + (l_sub - l_cell)*world%dx_dl(int_l_sub))/world%dx_dl(int_l_alongV)
+                        a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (l_f - l_sub)/delX
+                    else
+                        l_f = l_sub + delX/world%dx_dl(int_l_sub)
+                        a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,(l_sub + l_f) * 0.5d0, l_cell)/world%dx_dl(int_l_sub)
+                    end if
+                else
+                    l_f = l_sub + delX/world%dx_dl(int_l_sub)
+                    a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,(l_sub + l_f) * 0.5d0, l_cell)/world%dx_dl(int_l_sub)
+                end if
+                if (a*v_sub < 0) then
+                    del_tau_tmp = ABS(v_sub/a)
+                    if (del_tau_tmp < del_t-timePassed) then
+                        timePassed = del_tau_tmp + timePassed
+                        v_sub = -v_sub
+                        l_temp = l_alongV
+                        l_alongV = l_awayV
+                        l_awayV = l_temp
+                        goto 314
+                    end if
+                end if
+            end if
+            ! Test for field very close to particle
+            a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,l_sub, l_cell)/world%dx_dl(int_l_sub)
+            if (a*v_sub < 0) then
+                del_tau_tmp = ABS(v_sub/a)
+                if (del_tau_tmp < del_t-timePassed) then
+                    timePassed = del_tau_tmp + timePassed
+                    v_sub = -v_sub
+                    l_temp = l_alongV
+                    l_alongV = l_awayV
+                    l_awayV = l_temp
+                    goto 314
+                end if
+                if (del_tau <= 0) then
+                    stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v, second try close to boundary"
+                end if
+            end if
+            ! Check for boundary away from boundary
             delX = getDx(l_sub, l_awayV, world, int_l_sub)
-            a = 0.5d0*(part%q / part%mass) * fieldFunc(solver,(l_sub + l_awayV)*0.5d0, l_cell) * (l_awayV - l_sub) / delX
+            a = 0.5d0 * (part%q / part%mass) * fieldFunc(solver,(l_sub + l_awayV)*0.5d0, l_cell) * (l_awayV - l_sub) / delX
             if (a*v_sub < 0) then
                 del_tau_tmp = 2.0d0 * ABS(delX)/(SQRT(v_sub**2 + 4.0d0*a*delX) - ABS(v_sub))
                 if (del_tau_tmp < del_tau) then
@@ -140,6 +190,10 @@ contains
                     l_f = l_awayV
                 end if
                 if (del_tau <= 0) then
+                    print *, "In Initial Substep"
+                    print *, 'l_sub is:', l_sub
+                    print *, 'v_sub is:', v_sub
+                    print *, 'l_awayV is:', l_awayV
                     stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
                 end if
             end if  
@@ -340,7 +394,7 @@ contains
         real(real64), intent(in) :: del_t, timePassed, q, mass
         integer(int32), intent(in) :: l_cell, int_l_sub
         integer(int32) :: i
-        real(real64) :: previousRes, currentRes, alpha, l_f_previous
+        real(real64) :: previousRes, currentRes, alpha, l_f_previous, v_f_previous
         interface
             function fieldFunc(solver, l_p, l_cell) result(res)
                 use iso_fortran_env, only: int32, real64
@@ -353,15 +407,17 @@ contains
         end interface
         numParticleMover = numParticleMover + 1
         l_f_previous = l_sub
+        v_f_previous = v_sub
         alpha = 1.0d0/world%dx_dl(int_l_sub)
         v_f = v_sub + (q/mass) * fieldFunc(solver,l_sub, l_cell) * (del_t - timePassed) * alpha
-        l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
+        l_f = (v_sub) * (del_t - timePassed) * alpha + l_sub
         previousRes = ABS(l_f - l_sub)
-        do i = 1, 20
+        do i = 1, 50
             l_f_previous = l_f
-            alpha = (l_f - l_sub) / getDx(l_sub, l_f, world, int_l_sub)
-            v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (del_t - timePassed) * alpha
-            l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
+            v_f_previous = v_f
+            alpha = (l_f_previous - l_sub) / getDx(l_sub, l_f_previous, world, int_l_sub)
+            v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f_previous)*0.5d0, l_cell) * (del_t - timePassed) * alpha
+            l_f = (v_f_previous + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
             currentRes = ABS(l_f - l_f_previous)
             numIterationsAnderson = numIterationsAnderson + 1
             if (currentRes < 1.0d-8) then
@@ -380,29 +436,11 @@ contains
             print *, "v_f is:", v_f
             print *, "l_f is:", l_f 
         end if
-        if (i == 21) then
+        if (i == 51) then
             print *, 'l_sub is:', l_sub
             print *, 'v_sub is:', v_sub
-            l_f_previous = l_sub
-            alpha = 1.0d0/world%dx_dl(int_l_sub)
-            v_f = v_sub + (q/mass) * fieldFunc(solver,l_sub, l_cell) * (del_t - timePassed) * alpha
-            l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
-            previousRes = ABS(l_f - l_sub)
-            print *, 'first res is:', previousRes
-            do i = 1, 20
-                l_f_previous = l_f
-                alpha = (l_f - l_sub) / getDx(l_sub, l_f, world, int_l_sub)
-                v_f = v_sub + (q/mass) * fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell) * (del_t - timePassed) * alpha
-                l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * alpha + l_sub
-                currentRes = ABS(l_f - l_f_previous)
-                print *, 'current res diff:', currentRes/previousRes
-                if (ABS(currentRes) < 1.0d-8) then
-                    exit
-                else if (currentRes/previousRes > 0.9) then
-                    exit
-                end if
-                previousRes = currentRes
-            end do
+            print *, 'l_f is:', l_f
+            print *, 'v_f is:', v_f
             stop "Picard not converged"
         end if
     end subroutine picardIterParticles
@@ -426,7 +464,7 @@ contains
                 real(real64) :: res
             end function fieldFunc
         end interface
-        !numParticleMover = numParticleMover + 1
+        numParticleMover = numParticleMover + 1
         lwork = m_anderson_mover+1
         l_f_k(1) = l_sub
         dl_dx = 1.0d0/world%dx_dl(int_l_sub)
@@ -447,7 +485,7 @@ contains
             l_f = (v_f + v_sub) * (del_t - timePassed) * 0.5d0 * dl_dx + l_sub
             Residual_k(index) = l_f - l_f_k(index)
             normResidual(index) = ABS(Residual_k(index))
-            !numIterationsAnderson = numIterationsAnderson + 1
+            numIterationsAnderson = numIterationsAnderson + 1
             if (normResidual(index) < 1.0d-8) exit
             ! if (i > m_anderson_mover) then
             !     if (m_anderson_mover > 1) then
@@ -488,8 +526,9 @@ contains
             print *, 'l_sub is:', l_sub
             print *, 'v_sub is:', v_sub
             print *, 'v_f is:', v_f
-            print *, "Field is:", fieldFunc(solver,(l_sub + l_f)*0.5d0, l_cell)
-            stop "anderson particle iteration not converged"
+            print *, "remaining time is:", del_t - timePassed
+            print *, "del_tau if backtrack is:", ABS(v_sub/(0.5d0*(q / mass) * fieldFunc(solver,l_sub, l_cell) /world%dx_dl(int_l_sub)))
+            !stop "anderson particle iteration not converged"
         end if
     end subroutine andersonIterParticles
 
@@ -626,11 +665,11 @@ contains
                 ! Within Domain
                 l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                 l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEField)
-                if (del_tau >= del_t) then
+                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, timePassed, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEField)
+                if (del_tau >= del_t-timePassed) then
                     call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
                     !call solver%andersonIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-                    call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t, del_t) 
+                    call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t-timePassed, del_t) 
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
                         stop
@@ -642,7 +681,11 @@ contains
                     timePassed = timePassed + del_tau
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
                         print *, "l_sub is:", l_sub
+                        print *, 'v_sub is:', v_sub
                         print *, "l_f is:", l_f
+                        print *, 'v_f is:', v_f
+                        print *, 'l_alongV is:', l_alongV
+                        print *, "Warning Alpha!"
                         stop "l_f is not correct boundary after initial domain substep"
                     end if
                     ! now final position/velocity becomes next starting position/velocity
@@ -658,7 +701,7 @@ contains
                     ! Add directly to J with no substep
                     l_f = v_sub * del_t / world%dx_dl(int_l_sub) + (a/ world%dx_dl(int_l_sub)) * del_t**2 + l_sub
                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(int_l_sub) / del_t - v_sub
-                    call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, int_l_sub, v_f, v_sub, del_t, del_t)
+                    call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, int_l_sub, v_f, v_sub, del_t-timePassed, del_t)
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial Dirichlet substep, l_f is not in correct cell"
                         stop
@@ -685,10 +728,10 @@ contains
                 !Neumann-symmetric
                 l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))*0.5d0
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
-                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldNeumann)
-                if (del_tau >= del_t) then
+                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, timePassed, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldNeumann)
+                if (del_tau >= del_t-timePassed) then
                     call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
-                    call depositJSubStepNeumann(solver, world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t, del_t)  
+                    call depositJSubStepNeumann(solver, world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t-timePassed, del_t)  
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
                         stop
@@ -711,10 +754,10 @@ contains
             CASE(3)
                 l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))*0.5d0
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
-                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
+                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, timePassed, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
                 if (del_tau >= del_t-timePassed) then
                     call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)   
-                    call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t, del_t) 
+                    call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, int_l_sub, l_cell, del_t-timePassed, del_t) 
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial periodic substep, l_f is not in correct cell"
                         stop
@@ -912,8 +955,8 @@ contains
                 ! Within Domain
                 l_alongV = real(l_cell, kind = real64) + SIGN(0.5d0, v_sub)
                 l_awayV = real(l_cell, kind = real64) - SIGN(0.5d0, v_sub)
-                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEField)
-                if (del_tau >= del_t) then
+                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, timePassed, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEField)
+                if (del_tau >= del_t-timePassed) then
                     call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEField)
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
@@ -979,8 +1022,8 @@ contains
                 !Neumann-symmetric
                 l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))*0.5d0
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
-                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldNeumann)
-                if (del_tau >= del_t) then
+                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, timePassed, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldNeumann)
+                if (del_tau >= del_t-timePassed) then
                     call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldNeumann)
                     if (NINT(l_f) /= l_cell) then
                         print *, "After initial domain substep, l_f is not in correct cell"
@@ -1006,7 +1049,7 @@ contains
             CASE(3)
                 l_alongV = NINT(2.0d0*l_sub + SIGN(0.5d0, v_sub))*0.5d0
                 l_awayV = NINT(2.0d0*l_sub - SIGN(0.5d0, v_sub))*0.5d0
-                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
+                call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, timePassed, l_alongV, l_awayV, int_l_sub, l_cell, a, c, getEFieldPeriodic)
                 if (del_tau >= del_t-timePassed) then
                     call andersonIterParticles(solver, world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, int_l_sub, l_cell, del_t, timePassed, getEFieldPeriodic)   
                     if (NINT(l_f) /= l_cell) then

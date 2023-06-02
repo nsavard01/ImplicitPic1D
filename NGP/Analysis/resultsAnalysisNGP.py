@@ -179,8 +179,9 @@ def TwoStreamEnergyIncrease():
     t[1::] = GlobalDiagnostics['time(s)']
     for y in range(numDiagnosticTimes+1):
         phi = np.fromfile('../Data/Phi/phi_' + str(y) + '.dat', dtype = 'float', offset = 4)
-        PE[y] = 0.5 * eps_0 * np.sum((np.diff(phi)**2) * 2 / (dx_dl[0:-1] + dx_dl[1::]))
-     
+        PE[y] = 0.5 * eps_0 * np.sum((np.diff(phi)**2 /dx_dl))
+        
+    plasmaPeriod = InitialConditions['del_t'].values/InitialConditions['FracFreq'].values
     PE_growth = PE[0] * np.exp( 0.5 * (1/plasmaPeriod) * t)
 
     plt.figure()
@@ -312,6 +313,7 @@ def getData(filename):
     global boolAverageFile
     global grid
     global numDiagnosticTimes
+    global dx_dl
     
     
     dataFolder = '../' + filename + '/'

@@ -21,18 +21,19 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e)
+    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, GeomFilename, InitFilename)
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
         integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
         real(real64), intent(in) :: T_e
+        character(len=*), intent(in) :: GeomFilename, InitFilename
         integer(int32) :: io, leftBoundary, rightBoundary, gridType!, schemeType
         real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
         type(Domain) :: world
         type(potentialSolver) :: solver
 
         print *, "Reading initial inputs:"
-        open(10,file='../../SharedModules/InputData/InitialConditions.inp', IOSTAT=io)
+        open(10,file='../../SharedModules/InputData/'//InitFilename, IOSTAT=io)
         read(10, *, IOSTAT = io) simulationTime
         read(10, *, IOSTAT = io) n_ave
         read(10, *, IOSTAT = io) numDiagnosticSteps
@@ -52,7 +53,7 @@ contains
         print *, "------------------"
         print *, ""
         print *, "Reading domain inputs:"
-        open(10,file='../../SharedModules/InputData/Geometry.inp')
+        open(10,file='../../SharedModules/InputData/'//GeomFilename)
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) gridType

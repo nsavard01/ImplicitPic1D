@@ -69,7 +69,6 @@ contains
         type(Domain), intent(in) :: world
         integer(int32) :: i, j, l_center, l_left, l_right
         real(real64) :: d
-        rho = 0.0d0
         do i=1, numberChargedParticles
             do j = 1, particleList(i)%N_p
                 l_center = NINT(particleList(i)%phaseSpace(1, j))
