@@ -15,7 +15,7 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:,:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, chargeError, particleEnergyLoss
+        real(real64) :: energyError, chargeError, particleEnergyLoss, rho_const
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
 
@@ -42,9 +42,10 @@ contains
         allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%particleChargeLoss(2, numberChargedParticles))
         call construct_diagMatrix(self, world)
-        self % rho = 0
-        self % J = 0
-        self % phi = 0
+        self % rho = 0.0d0
+        self % J = 0.0d0
+        self % phi = 0.0d0
+        self % rho_const = 0.0d0
         ! self%coeff_left = 0.0d0
         ! self%coeff_left = 0.0d0
         self%particleEnergyLoss = 0.0d0
@@ -158,7 +159,7 @@ contains
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                d(i) = -self%rho(i) / eps_0
+                d(i) = (-self%rho(i) - self%rho_const) / eps_0
             CASE(1,3)
                 d(i) = self%phi(i)
             END SELECT
@@ -193,7 +194,7 @@ contains
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                d(i) = -self%rho(i)
+                d(i) = -self%rho(i) - self%rho_const
             CASE(1,3)
                 d(i) = self%phi_f(i)*eps_0
             END SELECT

@@ -191,7 +191,7 @@ def TwoStreamEnergyIncrease():
     plt.yscale('log')
     plt.xlabel(r'Time (normalized to $\frac{1}{\omega_p}$)')
     plt.ylabel('Potential Energy (J)')
-    plt.title(r'Two Stream Instability with $\Delta t$ = ' + "{:.{}f}".format(FracFreq, 1) + r"$(\frac{1}{\omega_p})$")
+    plt.title(r'Two Stream Instability with $\Delta t$ = ' + "{:.{}f}".format(InitialConditions['FracFreq'].values[0], 1) + r"$(\frac{1}{\omega_p})$")
     plt.legend(loc = 'best')
     plt.savefig('PostProcessing/twoStreamGrowth.png')
         

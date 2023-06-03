@@ -238,6 +238,9 @@ contains
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                         CASE default
+                            print *, "l_sub is:", l_sub
+                            print *, 'l_f is:', l_f
+                            print *, world%boundaryConditions(INT(l_f))
                             print *, "Case does not exist in ongoing substep, depositJ"
                             stop
                         END SELECT subStep

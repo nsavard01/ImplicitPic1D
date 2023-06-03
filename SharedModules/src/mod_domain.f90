@@ -68,6 +68,8 @@ contains
         real(real64) :: gridField(NumberXNodes-1)
         if (del_x/L_domain >= 1.0d0/(real(NumberXNodes) - 1.0d0)) then
             print *, "The debyeLength is really large, less nodes needed!"
+            print *, "debyeLength is:", del_x
+            print *, "L_domain is:", L_domain
             stop
         end if
         self%grid(1) = 0.0d0
