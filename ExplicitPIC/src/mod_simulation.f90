@@ -16,71 +16,74 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(electrons, NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, heatSkipSteps, Power, nu_h)
-        ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
-        integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
-        real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
-        integer(int32) :: io, leftBoundary, rightBoundary
-        real(real64) :: leftVoltage, rightVoltage, L_domain, debyeL
-        type(Particle) :: electrons
-        type(Domain) :: world
-        type(potentialSolver) :: solver
+subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, GeomFilename, InitFilename)
+    ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
+    integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
+    real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
+    real(real64), intent(in) :: T_e
+    character(len=*), intent(in) :: GeomFilename, InitFilename
+    integer(int32) :: io, leftBoundary, rightBoundary
+    real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
+    type(Domain) :: world
+    type(potentialSolver) :: solver
 
-        print *, "Reading solver inputs:"
-        open(10,file='../InputData/InitialConditions.inp', IOSTAT=io)
-        read(10, *, IOSTAT = io) simulationTime
-        read(10, *, IOSTAT = io) n_ave
-        read(10, *, IOSTAT = io) numDiagnosticSteps
-        read(10, *, IOSTAT = io) fractionFreq
-        read(10, *, IOSTAT = io) averagingTime
-        read(10, *, IOSTAT = io) Power
-        read(10, *, IOSTAT = io) heatSkipSteps
-        read(10, *, IOSTAT = io) nu_h
-        close(10)
-        print *, "Average initial particle density:", n_ave
-        print *, "Number of diagnostic steps is:", numDiagnosticSteps
-        print *, "Fraction of 1/w_p for time step:", fractionFreq
-        print *, "Averaging time final is:", averagingTime
-        print *, "Power is (W/m^2):", Power
-        print *, "Heating skip steps number:", heatSkipSteps
-        print *, "Heating frequency:", nu_h
-        print *, "------------------"
-        debyeL = getDebyeLength(electrons%getKEAve()/1.5d0, n_ave)
-        print *, ""
-        print *, "Reading domain inputs:"
-        open(10,file='../InputData/Geometry.inp')
-        read(10, *, IOSTAT = io) NumberXNodes
-        read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) leftBoundary, rightBoundary
-        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
-        close(10)
-        if (L_domain/debyeL > NumberXNodes) then
-            print *, "STARTING DEBYE LENGTH NOT RESOLVED, REDUCTION BEING DONE OF 0.75 DEBYE LENGTH"
-            NumberXNodes = CEILING(L_domain/debyeL/0.75d0)
-        end if
-        print *, "Number of nodes:", NumberXNodes
-        print *, "Grid length:", L_domain
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
-        print *, "------------------"
-        print *, ""
+    print *, "Reading initial inputs:"
+    open(10,file='../InputData/'//InitFilename, IOSTAT=io)
+    read(10, *, IOSTAT = io) simulationTime
+    read(10, *, IOSTAT = io) n_ave
+    read(10, *, IOSTAT = io) numDiagnosticSteps
+    read(10, *, IOSTAT = io) fractionFreq
+    read(10, *, IOSTAT = io) averagingTime
+    read(10, *, IOSTAT = io) Power
+    read(10, *, IOSTAT = io) heatSkipSteps
+    read(10, *, IOSTAT = io) nu_h
+    close(10)
+    print *, "Average initial particle density:", n_ave
+    print *, "Number of diagnostic steps is:", numDiagnosticSteps
+    print *, "Fraction of 1/w_p for time step:", fractionFreq
+    print *, "Final averaging time is:", averagingTime
+    print *, "Power input (W/m^2):", Power
+    print *, "Steps to skip for heating:", heatSkipSteps
+    print *, "Heating frequency (Hz):", nu_h
+    print *, "------------------"
+    print *, ""
+    print *, "Reading domain inputs:"
+    open(10,file='../InputData/'//GeomFilename)
+    read(10, *, IOSTAT = io) NumberXNodes
+    read(10, *, IOSTAT = io) L_domain
+    read(10, *, IOSTAT = io) leftBoundary, rightBoundary
+    read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+    close(10)
+    debyeLength = getDebyeLength(T_e, n_ave)
+    if (L_domain / (NumberXNodes-1) > debyeLength) then
+        print *, "Insufficient amount of nodes to resolve initial debyeLength"
+        print *, "Changing amount of nodes to have 0.75 * debyeLength"
+        NumberXNodes = NINT(L_domain/debyLength/0.8d0) + 1
+    end if
+    print *, "Number of nodes:", NumberXNodes
+    print *, "Grid length:", L_domain
+    print *, "Left boundary type:", leftBoundary
+    print *, "Right boundary type:", rightBoundary
+    print *, "------------------"
+    print *, ""
+    ! if one boundary is periodic, other must also be
+    if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
+        leftBoundary = 3
+        rightBoundary = 3
+        leftVoltage = rightVoltage
+    end if
+    world = Domain(leftBoundary, rightBoundary)
+    call world % constructGrid(L_domain)
+    solver = potentialSolver(world, leftVoltage, rightVoltage)
+    call solver%construct_diagMatrix(world)
+    
+end subroutine readInputs
 
-        ! if one boundary is periodic, other must also be
-        if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
-            leftBoundary = 3
-            rightBoundary = 3
-            leftVoltage = rightVoltage
-        end if
-        world = Domain(leftBoundary, rightBoundary)
-        call world % constructGrid(L_domain)
-        solver = potentialSolver(world, leftVoltage, rightVoltage)
-        
-    end subroutine readInputs
-
-    function readParticleInputs(filename, numberChargedParticles, irand) result(particleList)
+    function readParticleInputs(filename, numberChargedParticles, irand, T_e) result(particleList)
         type(Particle), allocatable :: particleList(:)
         character(len=*), intent(in) :: filename
         integer(int32), intent(in out) :: numberChargedParticles, irand
+        real(real64), intent(in out) :: T_e
         integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name
         character(len=8) :: particleNames(100)
@@ -88,7 +91,6 @@ contains
 
         print *, "Reading particle inputs:"
         open(10,file='../InputData/'//filename, action = 'read')
-
         do j=1, 10000
             read(10,*,END=101,ERR=100) name
 
@@ -98,6 +100,7 @@ contains
                 read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:4)
                 numSpecies = numSpecies + 1
                 read(10,*,END=101,ERR=100) Ti(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                T_e = Ti(numSpecies)
                 mass(numSpecies) = m_e
                 charge(numSpecies) = -1.0
                 particleNames(numSpecies) = '[e]'
@@ -166,6 +169,7 @@ contains
         
     end subroutine writePhi
 
+
     subroutine initialize_randUniform(part, irand)
         ! place particles randomly in each dx_dl based on portion of volume it take up
         type(Particle), intent(in out) :: part
@@ -180,17 +184,43 @@ contains
 
 
 
-    subroutine loadParticleDensity(densities, particleList)
+    subroutine loadParticleDensity(densities, particleList, world)
         type(Particle), intent(in) :: particleList(:)
+        type(Domain), intent(in) :: world
         real(real64), intent(in out) :: densities(:,:)
-        integer(int32) :: i,j, l_left
+        integer(int32) :: i,j, l_left, l_right
         real(real64) :: d
         do i=1, numberChargedParticles
             do j = 1, particleList(i)%N_p
                 l_left = INT(particleList(i)%phaseSpace(1,j))
-                d = MOD(particleList(i)%phaseSpace(1,j), 1.0d0)
-                densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * (1.0d0-d)
-                densities(l_left + 1, i) = densities(l_left + 1, i) + particleList(i)%w_p * d
+                l_right = l_left + 1
+                d = particleList(i)%phaseSpace(1,j) - l_left
+                if (l_left > 1) then
+                    densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * (1.0d0-d)
+                else
+                    SELECT CASE (world%boundaryConditions(l_left))
+                    CASE(1)
+                        densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * (1.0d0-d)
+                    CASE(2)
+                        densities(l_left, i) = densities(l_left, i) + 2.0d0 * particleList(i)%w_p * (1.0d0-d)
+                    CASE(3)
+                        densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * (1.0d0-d)
+                        densities(NumberXNodes, i) = densities(NumberXNodes, i) + particleList(i)%w_p * (1.0d0-d)
+                    END SELECT
+                end if
+                if (l_right < NumberXNodes) then
+                    densities(l_right, i) = densities(l_right, i) + particleList(i)%w_p * d
+                else
+                    SELECT CASE (world%boundaryConditions(l_right))
+                    CASE(1)
+                        densities(l_right, i) = densities(l_right, i) + particleList(i)%w_p * d
+                    CASE(2)
+                        densities(l_right, i) = densities(l_right, i) + 2.0d0 * particleList(i)%w_p * d
+                    CASE(3)
+                        densities(l_right, i) = densities(l_right, i) + particleList(i)%w_p * d
+                        densities(1, i) = densities(1, i) + particleList(i)%w_p * (1.0d0-d)
+                    END SELECT
+                end if
             end do
         end do
 
@@ -209,10 +239,6 @@ contains
         
         do i=1, numberChargedParticles
             densities(:,i) = densities(:,i)/world%delX
-            if (world%boundaryConditions(1) == 3) then
-                densities(1,i) = densities(1,i) + densities(NumberXNodes, i)
-                densities(NumberXNodes, i) = densities(1, i)
-            end if
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file='../Data/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
@@ -240,8 +266,8 @@ contains
         currentTime = 0.0d0
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX")')
-        write(15,"((I3.3, 1x), 4(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, Power(W/m^2), heatSteps, nu_h")')
+        write(15,"((I3.3, 1x), 5(es16.8,1x), (I3.3, 1x), (es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, Power, heatSkipSteps, nu_h
         close(15)
 
         ! Write Particle properties
@@ -262,7 +288,7 @@ contains
         call solver%solvePotential(particleList, world)
         call solver%initialVRewind(particleList, del_t)
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, 0, .false.) 
         call writePhi(solver%phi, 0, .false.)
         call particleList(1)%writeLocalTemperature(0)
@@ -284,7 +310,7 @@ contains
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
                 densities = 0.0d0
-                call loadParticleDensity(densities, particleList)
+                call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
                 call writePhi(solver%phi, CurrentDiagStep, .false.)
                 call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -304,7 +330,7 @@ contains
         call solver%moveParticles(particleList, world, del_t)
         call solver%solvePotential(particleList, world)
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
         call writePhi(solver%phi, CurrentDiagStep, .false.)
         call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -359,7 +385,7 @@ contains
         call solver%solvePotential(particleList, world)
         call solver%initialVRewind(particleList, del_t)
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, 0, .false.) 
         call writePhi(solver%phi, 0, .false.)
         call particleList(1)%writeLocalTemperature(0)
@@ -386,7 +412,7 @@ contains
                 call cpu_time(endTime)
                 elapsedTime = elapsedTime + (endTime - startTime)
                 densities = 0.0d0
-                call loadParticleDensity(densities, particleList)
+                call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
                 call writePhi(solver%phi, CurrentDiagStep, .false.)
                 call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -417,7 +443,7 @@ contains
         call cpu_time(endTime)
         elapsedTime = elapsedTime + (endTime - startTime)
         densities = 0.0d0
-        call loadParticleDensity(densities, particleList)
+        call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
         call writePhi(solver%phi, CurrentDiagStep, .false.)
         call particleList(1)%writeLocalTemperature(CurrentDiagStep)
@@ -465,7 +491,7 @@ contains
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world)
             call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-            call loadParticleDensity(densities, particleList)
+            call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             if (MODULO(i, heatSkipSteps) == 0) then
                 call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)

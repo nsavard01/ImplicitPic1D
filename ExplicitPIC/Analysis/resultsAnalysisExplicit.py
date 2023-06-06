@@ -39,10 +39,11 @@ ParticleProperties = None
 GlobalDiagnosticsAveraged = None
 boolAverageFile = None
 grid = None
+delX = None
 numDiagnosticTimes = None
 
 
-def extractPhaseSpace(filename, delX):
+def extractPhaseSpace(filename):
     phaseSpace = np.fromfile(filename, dtype = 'float', offset = 4)
     phaseSpace = phaseSpace.reshape((int(phaseSpace.size/4), 4))
     phaseSpace[:,0] = (phaseSpace[:,0]-1) * delX
@@ -130,7 +131,7 @@ def PhaseSpaceAnimation(ParticleName, boolMakeAnimation):
     if boolMakeAnimation:
         numframes = numDiagnosticTimes+1
         filename = dataFolder + 'PhaseSpace/phaseSpace_'+ ParticleName + '_0.dat'
-        phaseSpace = extractPhaseSpace(filename, grid)
+        phaseSpace = extractPhaseSpace(filename)
         fig = plt.figure()
         scat = plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
         plt.xlabel('Distance (m)')
@@ -145,7 +146,7 @@ def PhaseSpaceAnimation(ParticleName, boolMakeAnimation):
         for y in range(numDiagnosticTimes+1):
             plt.cla()
             filename = dataFolder + 'PhaseSpace/phaseSpace_'+ ParticleName + '_' + str(y) +'.dat'
-            phaseSpace = extractPhaseSpace(filename, grid)
+            phaseSpace = extractPhaseSpace(filename)
             plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
             plt.xlabel('Distance (m)')
             plt.ylabel('Particle velocity (m/s)')
@@ -160,8 +161,13 @@ def TwoStreamEnergyIncrease():
     t[1::] = GlobalDiagnostics['time(s)']
     for y in range(numDiagnosticTimes+1):
         phi = np.fromfile(dataFolder + 'Phi/phi_' + str(y) + '.dat', dtype = 'float', offset = 4)
-        PE[y] = 0.5 * eps_0 * np.sum((np.diff(phi)**2) * 2 / (dx_dl[0:-1] + dx_dl[1::]))
-     
+        PE[y] = 0.0 #0.5 * eps_0 * np.sum((np.diff(phi)**2)) / delX
+        for i in range(InitialConditions['n_x'].values[0]-1):
+            PE[y] = PE[y] + ((phi[i-1] + phi[i + 1])/2/delX)**2
+        PE[y] = 0.5 * eps_0 * PE[y]
+        
+        
+    plasmaPeriod = InitialConditions['del_t'].values/InitialConditions['FracFreq'].values 
     PE_growth = PE[0] * np.exp( 0.5 * (1/plasmaPeriod) * t)
 
     plt.figure()
@@ -171,7 +177,7 @@ def TwoStreamEnergyIncrease():
     plt.yscale('log')
     plt.xlabel(r'Time (normalized to $\frac{1}{\omega_p}$)')
     plt.ylabel('Potential Energy (J)')
-    plt.title(r'Two Stream Instability with $\Delta t$ = ' + "{:.{}f}".format(FracFreq, 1) + r"$(\frac{1}{\omega_p})$")
+    plt.title(r'Two Stream Instability with $\Delta t$ = ' + "{:.{}f}".format(InitialConditions['FracFreq'].values[0] , 1) + r"$(\frac{1}{\omega_p})$")
     plt.legend(loc = 'best')
     plt.savefig('PostProcessing/twoStreamGrowth.png')
         
@@ -270,6 +276,7 @@ def getData(filename):
     global GlobalDiagnosticsAveraged
     global boolAverageFile
     global grid
+    global delX
     global numDiagnosticTimes
     
     
@@ -288,6 +295,7 @@ def getData(filename):
         GlobalDiagnosticsAveraged = pd.read_csv(dataFolder + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
     
     grid = np.fromfile(dataFolder + 'domainGrid.dat', dtype = 'float', offset = 4)
+    delX = InitialConditions['delX'].values[0]
     numDiagnosticTimes = GlobalDiagnostics.shape[0]
 
 def saveData(saveFile):
