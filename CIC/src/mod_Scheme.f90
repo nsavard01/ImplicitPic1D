@@ -117,6 +117,7 @@ contains
                 CASE(3)
                     ! Periodic
                     rho(l_center) = rho(l_center) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
+                    rho(ABS(l_center - NumberXNodes) + 1) = rho(ABS(l_center - NumberXNodes) + 1) + particleList(i)%q * particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
                     rho(l_center+INT(SIGN(1.0, d))) = rho(l_center+INT(SIGN(1.0, d))) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
                     ! across periodic boundary
@@ -189,6 +190,7 @@ contains
                 CASE(3)
                     ! Periodic
                     densities(l_center, i) = densities(l_center, i) + particleList(i)%w_p * (0.75 - d**2)
+                    densities(ABS(l_center - NumberXNodes) + 1, i) = densities(ABS(l_center - NumberXNodes) + 1, i) + particleList(i)%w_p * (0.75 - d**2)
                     ! towards domain
                     densities(l_center+INT(SIGN(1.0, d)), i) = densities(l_center+INT(SIGN(1.0, d)), i) + particleList(i)%w_p * 0.5d0 * (0.5d0 + ABS(d))**2
                     ! across periodic boundary

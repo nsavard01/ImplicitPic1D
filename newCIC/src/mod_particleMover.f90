@@ -559,7 +559,7 @@ contains
         real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
         integer(int32), intent(in) :: l_cell, int_l_sub
         real(real64) :: d
-        d = (l_sub + l_f)*0.5d0 - REAL(l_cell, kind = real64) + 0.5d0
+        d = (l_sub + l_f)*0.5d0 - REAL(l_cell, kind = real64) + 0.5d0+
         solver%J(NumberXNodes-1) = solver%J(NumberXNodes-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*0.5d0*del_tau/world%dx_dl(int_l_sub)/del_t
         solver%J(1) = solver%J(1) + d * w_p * q * (v_f + v_sub)*0.5d0*del_tau/world%dx_dl(int_l_sub)/del_t
 
@@ -771,7 +771,7 @@ contains
                         print *, "l_f is:", l_f
                         stop "l_f is not correct boundary after initial periodic substep"
                     end if
-                    if (INT(l_f) == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
+                    if (l_f == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
                     timePassed = del_tau
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
@@ -905,7 +905,7 @@ contains
                             print *, l_f
                             stop "l_f is not half integer after ogoing periodic subStep or it is too far away"
                         end if
-                        if (INT(l_f) == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
+                        if (l_f == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
                         timePassed = timePassed + del_tau
                         ! now final position/velocity becomes next starting position/velocity
                         l_sub = l_f
@@ -1067,7 +1067,7 @@ contains
                         print *, "l_f is:", l_f
                         stop "l_f is not correct boundary after initial periodic substep"
                     end if
-                    if (INT(l_f) == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
+                    if (l_f == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
                     timePassed = del_tau
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
@@ -1208,7 +1208,7 @@ contains
                             print *, l_f
                             stop "l_f is not half integer after ogoing periodic subStep or it is too far away"
                         end if
-                        if (INT(l_f) == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
+                        if (l_f == l_cell) l_f = ABS(l_f - NumberXNodes) + 1
                         timePassed = timePassed + del_tau
                         ! now final position/velocity becomes next starting position/velocity
                         l_sub = l_f

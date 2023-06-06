@@ -52,7 +52,7 @@ contains
         real(real64), intent(in out) :: rho(NumberXNodes)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_left
+        integer(int32) :: i, j, l_left, l_right
         real(real64) :: d
         rho = 0.0d0
         do i=1, numberChargedParticles

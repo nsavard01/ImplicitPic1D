@@ -180,8 +180,9 @@ def TwoStreamEnergyIncrease():
     t[1::] = GlobalDiagnostics['time(s)']
     for y in range(numDiagnosticTimes+1):
         phi = np.fromfile('../Data/Phi/phi_' + str(y) + '.dat', dtype = 'float', offset = 4)
-        PE[y] = 0.5 * eps_0 * np.sum((np.diff(phi)**2) * 2 / (dx_dl[0:-1] + dx_dl[1::]))
-     
+        PE[y] = 0.5 * eps_0 * np.sum((np.diff(phi)**2 /dx_dl))
+        
+    plasmaPeriod = InitialConditions['del_t'].values/InitialConditions['FracFreq'].values
     PE_growth = PE[0] * np.exp( 0.5 * (1/plasmaPeriod) * t)
 
     plt.figure()
@@ -191,7 +192,7 @@ def TwoStreamEnergyIncrease():
     plt.yscale('log')
     plt.xlabel(r'Time (normalized to $\frac{1}{\omega_p}$)')
     plt.ylabel('Potential Energy (J)')
-    plt.title(r'Two Stream Instability with $\Delta t$ = ' + "{:.{}f}".format(FracFreq, 1) + r"$(\frac{1}{\omega_p})$")
+    plt.title(r'Two Stream Instability with $\Delta t$ = ' + "{:.{}f}".format(InitialConditions['FracFreq'].values[0], 1) + r"$(\frac{1}{\omega_p})$")
     plt.legend(loc = 'best')
     plt.savefig('PostProcessing/twoStreamGrowth.png')
         
@@ -312,6 +313,7 @@ def getData(filename):
     global GlobalDiagnosticsAveraged
     global boolAverageFile
     global grid
+    global dx_dl
     global nodeVol
     global numDiagnosticTimes
     
