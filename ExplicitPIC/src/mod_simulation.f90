@@ -58,7 +58,7 @@ subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionF
     if (L_domain / (NumberXNodes-1) > debyeLength) then
         print *, "Insufficient amount of nodes to resolve initial debyeLength"
         print *, "Changing amount of nodes to have 0.75 * debyeLength"
-        NumberXNodes = NINT(L_domain/debyLength/0.8d0) + 1
+        NumberXNodes = NINT(L_domain/debyeLength/0.75d0) + 1
     end if
     print *, "Number of nodes:", NumberXNodes
     print *, "Grid length:", L_domain

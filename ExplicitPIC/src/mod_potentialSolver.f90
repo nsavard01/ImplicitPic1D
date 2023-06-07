@@ -79,12 +79,13 @@ contains
                 CASE(1)
                     self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                 CASE(2)
-                    self % rho(l_left) = 2.0d0 * self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
+                    self % rho(l_left) = self % rho(l_left) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                 CASE(3)
                     self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                     self % rho(ABS(l_left - NumberXNodes)+1) = self % rho(ABS(l_left - NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                 CASE default
                     print *, "case doesn't exist in deposit rho"
+                    print *, 'particle position:', particleList(i)%phaseSpace(1, j)
                     stop
                 END SELECT
 
@@ -94,12 +95,13 @@ contains
                 CASE(1)
                     self % rho(l_right) = self % rho(l_right) + particleList(i)%q * particleList(i)%w_p * d
                 CASE(2)
-                    self % rho(l_right) = 2.0d0 * self % rho(l_right) + particleList(i)%q * particleList(i)%w_p * d
+                    self % rho(l_right) = self % rho(l_right) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * d
                 CASE(3)
                     self % rho(l_right) = self % rho(l_right) + particleList(i)%q * particleList(i)%w_p * d
                     self % rho(ABS(l_right - NumberXNodes)+1) = self % rho(ABS(l_right-NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * d
                 CASE default
                     print *, "case doesn't exist in deposit rho"
+                    print *, 'particle position:', particleList(i)%phaseSpace(1, j)
                     stop
                 END SELECT
             end do
@@ -275,6 +277,7 @@ contains
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx) = 2.0d0 - particleList(j)%phaseSpace(1, i-delIdx)
+                        particleList(j)%phaseSpace(2, i-delIdx) = -particleList(j)%phaseSpace(2, i-delIdx)
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx) = MODULO(particleList(j)%phaseSpace(1, i-delIdx) - 2.0d0, real(NumberXNodes, kind = real64)) + 1
                     CASE default
@@ -289,6 +292,7 @@ contains
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx) = 2.0d0 * NumberXNodes - particleList(j)%phaseSpace(1, i-delIdx)
+                        particleList(j)%phaseSpace(2, i-delIdx) = -particleList(j)%phaseSpace(2, i-delIdx)
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx) = MODULO(particleList(j)%phaseSpace(1, i-delIdx), real(NumberXNodes, kind = real64)) + 1
                     CASE default

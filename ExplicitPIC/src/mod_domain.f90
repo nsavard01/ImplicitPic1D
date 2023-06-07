@@ -30,7 +30,7 @@ contains
         ! Construct domain object, initialize grid, dx_dl, and dx_dl.
         integer(int32), intent(in) :: leftBoundary, rightBoundary
         integer(int32) :: i
-        allocate(self % grid(NumberXNodes), self%boundaryConditions(NumberXNodes+1))
+        allocate(self % grid(NumberXNodes), self%boundaryConditions(NumberXNodes))
         self % grid = (/(i, i=0, NumberXNodes-1)/)
         self % delX = 0.0d0
         self % boundaryConditions = 0

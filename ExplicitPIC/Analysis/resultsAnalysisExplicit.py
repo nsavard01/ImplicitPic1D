@@ -258,9 +258,9 @@ def temperatureAnimation(boolMakeAnimation):
             plt.pause(0.05)        
 
     
-def plotAveragePhi(label):
+def plotAveragePhi():
     phi = np.fromfile(dataFolder + 'Phi/phi_Average.dat', dtype = 'float', offset = 4)
-    plt.plot(grid, phi, 'o-', label = label)
+    plt.plot(grid, phi, 'o-')
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
     if label != '':
