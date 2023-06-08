@@ -28,25 +28,26 @@ program BoundPlasmaExample
     print *, "w_p is:", particleList(1)%w_p
     print *, "Debye length is:", getDebyeLength(particleList(1)%getKEAve()*2.0d0/3.0d0, n_ave)
     print *, 'delX grid is:', world%delX
-    print *, "Plasma frequency is:", getPlasmaFreq(2.0d0 *  n_ave)
+    print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
     print *, "Average density is ", particleList(1)%N_p * particleList(1)%w_p / (world%grid(NumberXNodes) - world%grid(1)), "should be", n_ave
     del_t = fractionFreq/getPlasmaFreq(n_ave)  
     print *, "rho_const is:", solver%rho_const 
     print *, "Time step (sec) is:", del_t
     print *, "----------------"
     print *, ""
-    call solver%solvePotential(particleList, world)
 
+    call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
+    call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, heatSkipSteps)
     ! call solver%construct_diagMatrix_Ampere(world)
-    if (Power /= 0.0d0) then
-        call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
-    else
-        call solveSimulationOnlyPotential(solver, particleList, world, del_t, simulationTime)
-    end if
-    if (averagingTime /= 0.0d0) then
-        print *, "Averaging over", averagingTime, "seconds"
-        call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, heatSkipSteps)
-    end if
+    ! if (Power /= 0.0d0) then
+    !     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
+    ! else
+    !     call solveSimulationOnlyPotential(solver, particleList, world, del_t, simulationTime)
+    ! end if
+    ! if (averagingTime /= 0.0d0) then
+    !     print *, "Averaging over", averagingTime, "seconds"
+    !     call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, heatSkipSteps)
+    ! end if
 
 
     

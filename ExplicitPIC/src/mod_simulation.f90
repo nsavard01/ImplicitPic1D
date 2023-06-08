@@ -399,7 +399,8 @@ end subroutine readInputs
                 call cpu_time(startTime)
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
-                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx)
                 call cpu_time(endTime)
                 elapsedTime = elapsedTime + (endTime - startTime)
             else  
@@ -408,7 +409,8 @@ end subroutine readInputs
                 call cpu_time(startTime)
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
-                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx)
                 call cpu_time(endTime)
                 elapsedTime = elapsedTime + (endTime - startTime)
                 densities = 0.0d0
@@ -429,9 +431,9 @@ end subroutine readInputs
                 diagStepDiff = 0
                 diagTime = diagTime + diagTimeDivision
             end if
-            if (MODULO(i+1, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
-            end if
+            ! if (MODULO(i+1, heatSkipSteps) == 0) then
+            !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
+            ! end if
             currentTime = currentTime + del_t
             i = i + 1
             diagStepDiff = diagStepDiff + 1
@@ -439,7 +441,8 @@ end subroutine readInputs
         call cpu_time(startTime)
         call solver%moveParticles(particleList, world, del_t)
         call solver%solvePotential(particleList, world)
-        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx)
         call cpu_time(endTime)
         elapsedTime = elapsedTime + (endTime - startTime)
         densities = 0.0d0
@@ -490,12 +493,13 @@ end subroutine readInputs
         do while(currentTime < averagingTime)
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world)
-            call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+            !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+            call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
-            if (MODULO(i, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
-            end if
+            ! if (MODULO(i, heatSkipSteps) == 0) then
+            !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
+            ! end if
             i = i + 1
             currentTime = currentTime + del_t
         end do

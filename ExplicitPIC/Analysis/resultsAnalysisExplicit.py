@@ -226,7 +226,7 @@ def temperatureAnimation(boolMakeAnimation):
     if boolMakeAnimation:
         numframes = numDiagnosticTimes + 1
         fig, ax = plt.subplots()
-        phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(i) +'.dat', delX)
+        phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(i) +'.dat')
         KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
         E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
         num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
@@ -248,7 +248,7 @@ def temperatureAnimation(boolMakeAnimation):
         
             plt.cla()
             
-            phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(y) +'.dat', delX)
+            phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(y) +'.dat')
             KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
             E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
             num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
@@ -263,8 +263,6 @@ def plotAveragePhi():
     plt.plot(grid, phi, 'o-')
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
-    if label != '':
-        plt.legend(loc = 'lower center')
     plt.xlim([0, grid[-1]])
     plt.pause(0.05)        
 
@@ -304,7 +302,7 @@ def saveData(saveFile):
 # ---------------------- Final Plots --------------------------
 
 def finalElectronEEDFVsMaxwellian():
-    phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', delX)
+    phaseSpace = extractPhaseSpace(dataFolder + 'PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat')
     KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
     Ehist = np.histogram(KE, bins = 100, density = True)
     T_elec = np.mean(KE)* (2/3)
