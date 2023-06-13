@@ -228,7 +228,6 @@ contains
             if (normResidual(index) < eps_r*(initialR + initialNorm)) then
                 call moveParticles(solver,particleList, world, del_t)
                 solver%phi = solver%phi_f
-                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, world)
                 exit
             end if
             if (i > m_Anderson) then
