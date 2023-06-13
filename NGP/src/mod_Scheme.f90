@@ -69,6 +69,39 @@ contains
         
     end function getLFromX
 
+    subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, delIdx, idxReFlux, reFluxMaxIdx, x_lower, world)
+        ! Add power to all particles in domain
+        type(Particle), intent(in out) :: particleList(2)
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in out) :: irand
+        real(real64), intent(in) :: T_e, T_i, x_lower
+        integer(int32), intent(in) :: delIdx(2), idxReFlux(1000, 2), reFluxMaxIdx(2)
+        integer(int32) :: i,j
+        real(real64) :: x_random
+        do i=1, delIdx(1)
+            call getMaxwellianFluxSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p + i), particleList(1)%mass, T_e, irand)
+            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p + i), particleList(2)%mass, T_i, irand)
+            x_random = world%grid(NumberXNodes) - ran2(irand) * (world%grid(NumberXNodes) - x_lower)
+            particleList(1)%phaseSpace(1, particleList(1)%N_p + i) = getLFromX(x_random, world)
+            particleList(2)%phaseSpace(1, particleList(2)%N_p + i) = particleList(1)%phaseSpace(1, particleList(1)%N_p + i)
+        end do
+        particleList(2)%N_p = particleList(2)%N_p + delIdx(1)
+        particleList(1)%N_p = particleList(1)%N_p + delIdx(1)
+        do j = 1, 2
+            do i = 1, reFluxMaxIdx(j)
+                if (j == 1) then
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_e, irand)
+                else
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_i, irand)
+                end if
+                particleList(j)%phaseSpace(2:4, idxReFlux(i, j)) = -ABS(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)))
+            end do
+        end do
+
+    end subroutine addMaxwellianLostParticles
+
+
+
     ! --------------------------- Diagnostics ------------------------------------
 
     subroutine depositRho(rho, particleList, world) 

@@ -51,38 +51,6 @@ contains
 
     end subroutine solveInitialPotential
 
-    subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, delIdx, idxReFlux, reFluxMaxIdx, x_lower, world)
-        ! Add power to all particles in domain
-        type(Particle), intent(in out) :: particleList(2)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in out) :: irand
-        real(real64), intent(in) :: T_e, T_i, x_lower
-        integer(int32), intent(in) :: delIdx(2), idxReFlux(1000, 2), reFluxMaxIdx(2)
-        integer(int32) :: i,j
-        real(real64) :: x_random
-        do i=1, delIdx(1)
-            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p + i), particleList(1)%mass, T_e, irand)
-            call getMaxwellianSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p + i), particleList(2)%mass, T_i, irand)
-            x_random = world%grid(NumberXNodes) - ran2(irand) * (world%grid(NumberXNodes) - x_lower)
-            particleList(1)%phaseSpace(1, particleList(1)%N_p + i) = getLFromX(x_random, world)
-            particleList(2)%phaseSpace(1, particleList(2)%N_p + i) = particleList(1)%phaseSpace(1, particleList(1)%N_p + i)
-        end do
-        particleList(2)%N_p = particleList(2)%N_p + delIdx(1)
-        particleList(1)%N_p = particleList(1)%N_p + delIdx(1)
-        do j = 1, 2
-            do i = 1, reFluxMaxIdx(j)
-                if (j == 1) then
-                    call getMaxwellianSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_e, irand)
-                else
-                    call getMaxwellianSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_i, irand)
-                end if
-                particleList(j)%phaseSpace(2, idxReFlux(i, j)) = - ABS(particleList(j)%phaseSpace(2, idxReFlux(i, j)))
-            end do
-        end do
-
-    end subroutine addMaxwellianLostParticles
-
-
     ! Non-linear solver stuff -------------------------------------------------------------
 
     subroutine initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
@@ -266,7 +234,7 @@ contains
 
     end subroutine solveDivAmpereAnderson
 
-    subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
+    subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
         ! Solve for divergence of ampere's law with picard
         ! cut del_t in two if non-convergence after maxIter, repeat until convergence
         type(potentialSolver), intent(in out) :: solver
@@ -274,45 +242,39 @@ contains
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: remainDel_t, currDel_t!, adaptiveJ(NumberXNodes-1)
-        call solveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
-        remainDel_t = del_t  
-        if (iterNumPicard == maxIter) then
+        real(real64), intent(in out) :: remainDel_t, currDel_t
+        currDel_t = remainDel_t
+        call solveDivAmpereAnderson(solver, particleList, world, remainDel_t, maxIter, eps_r) 
+        if (iterNumPicard < maxIter) then
+            remainDel_t = del_t  
+        else
             amountTimeSplits = amountTimeSplits + 1
+            iterNumAdaptiveSteps = 0
+            !adaptiveJ = 0.0d0
             do while (iterNumPicard == maxIter)
-                !print *, "Reducing time step"
-                iterNumAdaptiveSteps = 0
-                currDel_t = remainDel_t
-                !adaptiveJ = 0.0d0
-                do while (iterNumPicard == maxIter)
-                    currDel_t = currDel_t/2.0d0
-                    iterNumAdaptiveSteps = iterNumAdaptiveSteps + 1
-                    if (iterNumAdaptiveSteps > 4) then
-                        stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
-                    end if
-                    call solveDivAmpereAnderson(solver, particleList, world, currDel_t, maxIter, eps_r)   
-                end do
-                !adaptiveJ = adaptiveJ + solver%J * currDel_t/del_t
-                remainDel_t = remainDel_t - currDel_t 
-                call solveDivAmpereAnderson(solver, particleList, world, remainDel_t, maxIter, eps_r)
-            end do
-            !adaptiveJ = adaptiveJ + solver%J * remainDel_t/del_t
-            !solver%J = adaptiveJ
-            
+                currDel_t = currDel_t/2.0d0
+                iterNumAdaptiveSteps = iterNumAdaptiveSteps + 1
+                if (iterNumAdaptiveSteps > 4) then
+                    stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
+                end if
+                call solveDivAmpereAnderson(solver, particleList, world, currDel_t, maxIter, eps_r)   
+            end do 
+            remainDel_t = remainDel_t - currDel_t 
         end if
     end subroutine adaptiveSolveDivAmpereAnderson
 
-    subroutine solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
+    subroutine solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
         type(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
+        real(real64), intent(in out) :: remainDel_t, currDel_t
         SELECT CASE (solverType)
         CASE(0)
-            call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
+            call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
         CASE(1)
-            call adaptiveSolveDivAmpereJFNK(del_t, maxIter, eps_r)
+            call adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r)
         CASE default
             print *, "Solver type doesn't exit!"
             stop
@@ -386,35 +348,28 @@ contains
         END SELECT
     end subroutine solveJFNK
 
-    subroutine adaptiveSolveDivAmpereJFNK(del_t, maxIter, eps_r)
+    subroutine adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r)
         ! Solve for divergence of ampere's law with picard
         ! cut del_t in two if non-convergence after maxIter, repeat until convergence
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: remainDel_t, currDel_t!, adaptiveJ(NumberXNodes-1)
-        call solveJFNK(del_t, maxIter, eps_r)
-        remainDel_t = del_t  
-        if (iterNumPicard == maxIter) then
+        real(real64), intent(in out) :: remainDel_t, currDel_t
+        currDel_t = remainDel_t
+        call solveJFNK(remainDel_t, maxIter, eps_r)
+        if (iterNumPicard < maxIter) then
+            remainDel_t = del_t
+        else
             amountTimeSplits = amountTimeSplits + 1
+            iterNumAdaptiveSteps = 0
             do while (iterNumPicard == maxIter)
-                !print *, "Reducing time step"
-                iterNumAdaptiveSteps = 0
-                currDel_t = remainDel_t
-                !adaptiveJ = 0.0d0
-                do while (iterNumPicard == maxIter)
-                    currDel_t = currDel_t/2.0d0
-                    iterNumAdaptiveSteps = iterNumAdaptiveSteps + 1
-                    if (iterNumAdaptiveSteps > 4) then
-                        stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
-                    end if
-                    call solveJFNK(currDel_t, maxIter, eps_r)
-                end do
-                !adaptiveJ = adaptiveJ + globalSolver%J * currDel_t/del_t
-                remainDel_t = remainDel_t - currDel_t 
-                call solveJFNK(remainDel_t, maxIter, eps_r)
+                currDel_t = currDel_t/2.0d0
+                iterNumAdaptiveSteps = iterNumAdaptiveSteps + 1
+                if (iterNumAdaptiveSteps > 4) then
+                    stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
+                end if
+                call solveJFNK(currDel_t, maxIter, eps_r)
             end do
-            ! adaptiveJ = adaptiveJ + globalSolver%J * remainDel_t/del_t
-            ! globalSolver%J = adaptiveJ
+            remainDel_t = remainDel_t - currDel_t 
         end if
     end subroutine adaptiveSolveDivAmpereJFNK
 
