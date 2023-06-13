@@ -71,19 +71,6 @@ contains
         inelasticEnergyLoss = inelasticEnergyLoss + e*E_thres * addIdx * electron%w_p
     end subroutine ionizationCollisionIsotropic
 
-    subroutine getMaxwellianSample(v, M, T_gas, irand)
-        ! Use to sample a single neutral background particle at some temperature T_gas (eV)
-        real(real64), intent(in out) :: v(3)
-        real(real64), intent(in) :: T_gas, M
-        integer(int32), intent(in out) :: irand
-        real(real64) :: U(4)
-        call getRandom(U, irand)
-        v(1) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
-        v(2) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
-        v(3) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
-
-    end subroutine getMaxwellianSample
-
 
     !-------------------------- add Power in form of re-maxwellianizing collision ---------------------------------------------
     subroutine addUniformPowerMaxwellian(species, Power, nu_h, irand, del_t)

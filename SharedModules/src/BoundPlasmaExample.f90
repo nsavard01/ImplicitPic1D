@@ -37,7 +37,11 @@ program BoundPlasmaExample
     ! call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
     ! print *, "Energy error is:", globalSolver%energyError
     ! print *, "Took", iterNumPicard, "iterations"
-    ! print *, "Took", real(numIterationsAnderson)/real(numParticleMover), "average anderson iterations"
+    ! print *, 'electron number:', globalParticleList(1)%N_P
+    ! print *, 'ion number:', globalParticleList(2)%N_p
+    ! call addMaxwellianLostParticles(globalParticleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, globalWorld)
+    ! print *, 'electron number:', globalParticleList(1)%N_P
+    ! print *, 'ion number:', globalParticleList(2)%N_p
     ! ! Get error gauss' law
     ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     ! call globalSolver%construct_diagMatrix(globalWorld)
@@ -46,15 +50,11 @@ program BoundPlasmaExample
     ! call globalSolver%construct_diagMatrix_Ampere(globalWorld)
     ! print *, "Charge error is:", globalSolver%chargeError
     ! stop 
-    if (Power /= 0.0d0) then
-        call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
-    else
-        call solveSimulationOnlyPotential(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, simulationTime)
-    end if
-    if (averagingTime /= 0.0d0) then
-        print *, "Averaging over", averagingTime, "seconds"
-        call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)
-    end if
+    call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
+
+    print *, "Averaging over", averagingTime, "seconds"
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)
+
     
 
     

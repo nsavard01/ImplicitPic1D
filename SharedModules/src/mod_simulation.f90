@@ -459,7 +459,8 @@ contains
             if (currentTime < diagTime) then
                 call system_clock(startTime)
                 call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
-                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                !call addMaxwellianLostParticles(globalParticleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, globalWorld)
                 call system_clock(endTime)
                 totalTime = totalTime + (endTime - startTime)
             else  
@@ -470,7 +471,8 @@ contains
                 call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
                 particleEnergyLossTemp = particleEnergyLossTemp + solver%particleEnergyLoss
             
-                call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                !call addMaxwellianLostParticles(globalParticleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, globalWorld)
                 call system_clock(endTime)
                 totalTime = totalTime + (endTime - startTime)
                 densities = 0.0d0
@@ -519,9 +521,9 @@ contains
                 diagStepDiff = 0
                 diagTime = diagTime + diagTimeDivision
             end if
-            if (MODULO(i+1, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
-            end if
+            ! if (MODULO(i+1, heatSkipSteps) == 0) then
+            !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
+            ! end if
             currentTime = currentTime + del_t
             i = i + 1
             diagStepDiff = diagStepDiff + 1
@@ -531,8 +533,8 @@ contains
         call solveSingleTimeStepDiagnostic(solver, particleList, world, del_t, maxIter, eps_r)
         particleEnergyLossTemp = particleEnergyLossTemp + solver%particleEnergyLoss
         
-    
-        call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        !call addMaxwellianLostParticles(globalParticleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, globalWorld)
         call system_clock(endTime)
         totalTime = totalTime + (endTime - startTime)
         densities = 0.0d0
@@ -554,7 +556,7 @@ contains
         if (solver%energyError > eps_r) then
             print *, "-------------------------WARNING------------------------"
             print *, "Energy error is:", solver%energyError
-            stop "Total energy not conserved over time step in sub-step procedure!"
+            print*, "Total energy not conserved over time step in sub-step procedure!"
         end if
       
         if (solver%chargeError > 1.0d-4) then
@@ -607,12 +609,13 @@ contains
         currentTime = 0.0d0
         do while(currentTime < averagingTime)
             call solvePotential(solver, particleList, world, del_t, maxIter, eps_r)
-            call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+            !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+            !call addMaxwellianLostParticles(globalParticleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, globalWorld)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
-            if (MODULO(i+1, heatSkipSteps) == 0) then
-                call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
-            end if
+            ! if (MODULO(i+1, heatSkipSteps) == 0) then
+            !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
+            ! end if
             currentTime = currentTime + del_t
             i = i + 1
         end do

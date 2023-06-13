@@ -161,7 +161,7 @@ end subroutine readInputs
         integer(int32) :: i,j
         do i=1, delIdx(1)
             call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p + i), particleList(1)%mass, T_e, irand)
-            call getMaxwellianSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p + i), particleList(2)%mass, T_i, irand)
+            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p + i), particleList(2)%mass, T_i, irand)
             particleList(1)%phaseSpace(1, particleList(1)%N_p + i) = NumberXNodes - ran2(irand) * (world%grid(NumberXNodes) - x_lower) / world%delX
             particleList(2)%phaseSpace(1, particleList(2)%N_p + i) = particleList(1)%phaseSpace(1, particleList(1)%N_p + i)
         end do
@@ -170,11 +170,11 @@ end subroutine readInputs
         do j = 1, 2
             do i = 1, reFluxMaxIdx(j)
                 if (j == 1) then
-                    call getMaxwellianSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_e, irand)
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_e, irand)
                 else
-                    call getMaxwellianSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_i, irand)
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_i, irand)
                 end if
-                particleList(j)%phaseSpace(2, idxReFlux(i, j)) = - ABS(particleList(j)%phaseSpace(2, idxReFlux(i, j)))
+                particleList(j)%phaseSpace(2:4, idxReFlux(i, j)) = -ABS(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)))
             end do
         end do
 
@@ -429,7 +429,7 @@ end subroutine readInputs
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, world)
+                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
                 call cpu_time(endTime)
                 elapsedTime = elapsedTime + (endTime - startTime)
             else  
@@ -439,7 +439,7 @@ end subroutine readInputs
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, world)
+                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
                 call cpu_time(endTime)
                 elapsedTime = elapsedTime + (endTime - startTime)
                 densities = 0.0d0
@@ -471,7 +471,7 @@ end subroutine readInputs
         call solver%moveParticles(particleList, world, del_t)
         call solver%solvePotential(particleList, world)
         !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-        call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, world)
+        call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
         call cpu_time(endTime)
         elapsedTime = elapsedTime + (endTime - startTime)
         densities = 0.0d0
@@ -523,11 +523,11 @@ end subroutine readInputs
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-            call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, world)
+            call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i, heatSkipSteps) == 0) then
-            !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
+            !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSksipSteps*del_t)
             ! end if
             i = i + 1
             currentTime = currentTime + del_t

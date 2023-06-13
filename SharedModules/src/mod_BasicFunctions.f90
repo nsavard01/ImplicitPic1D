@@ -74,6 +74,32 @@ contains
         V(3) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
     end subroutine
 
+    subroutine getMaxwellianSample(v, M, T_gas, irand)
+        ! Use to sample a single neutral background particle at some temperature T_gas (eV)
+        real(real64), intent(in out) :: v(3)
+        real(real64), intent(in) :: T_gas, M
+        integer(int32), intent(in out) :: irand
+        real(real64) :: U(4)
+        call getRandom(U, irand)
+        v(1) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
+        v(2) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
+        v(3) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
+
+    end subroutine getMaxwellianSample
+
+    subroutine getMaxwellianFluxSample(v, M, T_gas, irand)
+        ! Use to sample a single neutral background particle at some temperature T_gas (eV)
+        real(real64), intent(in out) :: v(3)
+        real(real64), intent(in) :: T_gas, M
+        integer(int32), intent(in out) :: irand
+        real(real64) :: U(4)
+        call getRandom(U, irand)
+        v(1) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * SIGN(1.0d0, U(2)-0.5d0)
+        v(2) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * COS(2 * pi * U(4))
+        v(3) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
+
+    end subroutine getMaxwellianFluxSample
+
 
     ! General solver using arrays 
 

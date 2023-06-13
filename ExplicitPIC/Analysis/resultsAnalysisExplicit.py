@@ -252,6 +252,7 @@ def temperatureAnimation(boolMakeAnimation):
             KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
             E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
             num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
+            plt.plot(grid[0:-1], E_binned*2.0/num_binned/3.0, 'o-')
             plt.xlabel('Distance (m)')
             plt.ylabel(r'$T_e$ (eV)')
             plt.xlim([0, grid[-1]])
