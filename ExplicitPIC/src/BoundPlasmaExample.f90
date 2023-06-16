@@ -16,9 +16,9 @@ program BoundPlasmaExample
 
     ! Initialize constants with inputs
     ! create the world the particles live in
-    call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, 'Geometry.inp', 'InitialConditions.inp')
+    call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, T_i, 'Geometry.inp', 'InitialConditions.inp')
     !initialize the particles in this world, at some point will be read from input file or something
-    particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e) 
+    particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i) 
     
     do i = 1, numberChargedParticles
         call getRandom(particleList(i)%phaseSpace(1, 1:particleList(i)%N_p), irand)

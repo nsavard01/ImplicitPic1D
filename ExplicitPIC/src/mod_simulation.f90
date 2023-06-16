@@ -16,11 +16,11 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, GeomFilename, InitFilename)
+    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, T_i, GeomFilename, InitFilename)
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
         integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
-        real(real64), intent(in out) :: T_e
+        real(real64), intent(in out) :: T_e, T_i
         character(len=*), intent(in) :: GeomFilename, InitFilename
         integer(int32) :: io, leftBoundary, rightBoundary
         real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
@@ -32,6 +32,7 @@ contains
         read(10, *, IOSTAT = io) simulationTime
         read(10, *, IOSTAT = io) n_ave
         read(10, *, IOSTAT = io) T_e
+        read(10, *, IOSTAT = io) T_i
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) fractionFreq
         read(10, *, IOSTAT = io) averagingTime
@@ -41,6 +42,7 @@ contains
         close(10)
         print *, "Average initial electron density:", n_ave
         print *, "Initial electron temperature:", T_e
+        print *, "Initial ion temperature:", T_i
         print *, "Number of diagnostic steps is:", numDiagnosticSteps
         print *, "Fraction of 1/w_p for time step:", fractionFreq
         print *, "Final averaging time is:", averagingTime
@@ -81,11 +83,11 @@ contains
         
     end subroutine readInputs
 
-    function readParticleInputs(filename, numberChargedParticles, irand, T_e) result(particleList)
+    function readParticleInputs(filename, numberChargedParticles, irand, T_e, T_i) result(particleList)
         type(Particle), allocatable :: particleList(:)
         character(len=*), intent(in) :: filename
         integer(int32), intent(in out) :: numberChargedParticles, irand
-        real(real64), intent(in) :: T_e
+        real(real64), intent(in) :: T_e, T_i
         integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name
         character(len=8) :: particleNames(100)
@@ -120,7 +122,8 @@ contains
                     close(10)
                 else
                     numSpecies = numSpecies + 1
-                    read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), Ti(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                    read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                    Ti(numSpecies) = T_i
                     mass(numSpecies) = mass(numSpecies) * m_p
                     particleNames(numSpecies) = trim(name)
                     goto 200
@@ -432,7 +435,7 @@ contains
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
+                call addMaxwellianLostParticles(particleList, T_e, T_i, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
                 call cpu_time(endTime)
                 elapsedTime = elapsedTime + (endTime - startTime)
             else  
@@ -442,7 +445,7 @@ contains
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-                call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
+                call addMaxwellianLostParticles(particleList, T_e, T_i, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
                 call cpu_time(endTime)
                 elapsedTime = elapsedTime + (endTime - startTime)
                 densities = 0.0d0
@@ -474,7 +477,7 @@ contains
         call solver%moveParticles(particleList, world, del_t)
         call solver%solvePotential(particleList, world)
         !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-        call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
+        call addMaxwellianLostParticles(particleList, T_e, T_i, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
         call cpu_time(endTime)
         elapsedTime = elapsedTime + (endTime - startTime)
         densities = 0.0d0
@@ -526,7 +529,7 @@ contains
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-            call addMaxwellianLostParticles(particleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
+            call addMaxwellianLostParticles(particleList, T_e, T_i, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.0d0, world)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i, heatSkipSteps) == 0) then
