@@ -14,11 +14,12 @@ program BoundPlasmaExample
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
 
-    !initialize the particles in this world, at some point will be read from input file or something
-    particleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
     ! Initialize constants with inputs
     ! create the world the particles live in
     call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, 'Geometry.inp', 'InitialConditions.inp')
+    !initialize the particles in this world, at some point will be read from input file or something
+    particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e) 
+    
     do i = 1, numberChargedParticles
         call getRandom(particleList(i)%phaseSpace(1, 1:particleList(i)%N_p), irand)
         particleList(i)%phaseSpace(1, 1:particleList(i)%N_p) = particleList(i)%phaseSpace(1, 1:particleList(i)%N_p) * real(NumberXNodes-1) + 1.0d0
@@ -35,7 +36,6 @@ program BoundPlasmaExample
     print *, "Time step (sec) is:", del_t
     print *, "----------------"
     print *, ""
-
     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
     call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, heatSkipSteps)
     ! call solver%construct_diagMatrix_Ampere(world)

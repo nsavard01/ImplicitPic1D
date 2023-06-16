@@ -14,10 +14,10 @@ program BoundPlasmaExample
 
     integer(int32) :: i
     call initializeScheme(schemeNum)
-    globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
     ! Initialize constants with inputs
     ! create the world the particles live in
     call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, globalWorld, globalSolver, simulationTime, Power, heatSkipSteps, nu_h, T_e, 'Geometry.inp', 'InitialConditions.inp')
+    globalParticleList = readParticleInputs('BoundExample.inp',numberChargedParticles, irand, T_e) 
     do i = 1, numberChargedParticles
         call initialize_randUniform(globalParticleList(i), globalWorld, irand)
         call globalParticleList(i) % initialize_n_ave(n_ave, globalWorld%grid(NumberXNodes) - globalWorld%grid(1))

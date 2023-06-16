@@ -61,6 +61,32 @@ contains
         
     end subroutine initialize_randUniform
 
+    function getLFromX(x, world) result(l)
+        real(real64), intent(in) :: x
+        type(Domain), intent(in) :: world
+        integer(int32) :: idxLower, idxHigher, idxMiddle
+        real(real64) :: l
+        idxLower = 1
+        idxHigher = NumberXNodes
+        if ((x<world%grid(1)) .or. (x > world%grid(NumberXNodes))) then
+            print *, 'x value outside of grid range in getLFromX!'
+            stop
+        end if
+        do while (idxLower /= idxHigher-1)
+            idxMiddle = (idxLower + idxHigher)/2
+            if (world%grid(idxMiddle) <= x) then
+                idxLower = idxMiddle
+            else
+                idxHigher = idxMiddle
+            end if
+        end do
+        if (x >= world%grid(idxLower) + 0.5d0 * world%nodeVol(idxLower)) then
+            l = idxHigher + (x - world%grid(idxHigher))/world%nodeVol(idxHigher)
+        else
+            l = idxLower + (x - world%grid(idxLower))/world%nodeVol(idxLower)
+        end if   
+    end function getLFromX
+
 
 
     subroutine depositRho(rho, particleList, world) 

@@ -16,74 +16,76 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, GeomFilename, InitFilename)
-    ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
-    integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
-    real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
-    real(real64), intent(in) :: T_e
-    character(len=*), intent(in) :: GeomFilename, InitFilename
-    integer(int32) :: io, leftBoundary, rightBoundary
-    real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
-    type(Domain) :: world
-    type(potentialSolver) :: solver
+    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, GeomFilename, InitFilename)
+        ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
+        integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
+        real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
+        real(real64), intent(in out) :: T_e
+        character(len=*), intent(in) :: GeomFilename, InitFilename
+        integer(int32) :: io, leftBoundary, rightBoundary
+        real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
+        type(Domain) :: world
+        type(potentialSolver) :: solver
 
-    print *, "Reading initial inputs:"
-    open(10,file='../InputData/'//InitFilename, IOSTAT=io)
-    read(10, *, IOSTAT = io) simulationTime
-    read(10, *, IOSTAT = io) n_ave
-    read(10, *, IOSTAT = io) numDiagnosticSteps
-    read(10, *, IOSTAT = io) fractionFreq
-    read(10, *, IOSTAT = io) averagingTime
-    read(10, *, IOSTAT = io) Power
-    read(10, *, IOSTAT = io) heatSkipSteps
-    read(10, *, IOSTAT = io) nu_h
-    close(10)
-    print *, "Average initial particle density:", n_ave
-    print *, "Number of diagnostic steps is:", numDiagnosticSteps
-    print *, "Fraction of 1/w_p for time step:", fractionFreq
-    print *, "Final averaging time is:", averagingTime
-    print *, "Power input (W/m^2):", Power
-    print *, "Steps to skip for heating:", heatSkipSteps
-    print *, "Heating frequency (Hz):", nu_h
-    print *, "------------------"
-    print *, ""
-    print *, "Reading domain inputs:"
-    open(10,file='../InputData/'//GeomFilename)
-    read(10, *, IOSTAT = io) NumberXNodes
-    read(10, *, IOSTAT = io) L_domain
-    read(10, *, IOSTAT = io) leftBoundary, rightBoundary
-    read(10, *, IOSTAT = io) leftVoltage, rightVoltage
-    close(10)
-    debyeLength = getDebyeLength(T_e, n_ave)
-    if (L_domain / (NumberXNodes-1) > debyeLength) then
-        print *, "Insufficient amount of nodes to resolve initial debyeLength"
-        print *, "Changing amount of nodes to have 0.75 * debyeLength"
-        NumberXNodes = NINT(L_domain/debyeLength/0.75d0) + 1
-    end if
-    print *, "Number of nodes:", NumberXNodes
-    print *, "Grid length:", L_domain
-    print *, "Left boundary type:", leftBoundary
-    print *, "Right boundary type:", rightBoundary
-    print *, "------------------"
-    print *, ""
-    ! if one boundary is periodic, other must also be
-    if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
-        leftBoundary = 3
-        rightBoundary = 3
-        leftVoltage = rightVoltage
-    end if
-    world = Domain(leftBoundary, rightBoundary)
-    call world % constructGrid(L_domain)
-    solver = potentialSolver(world, leftVoltage, rightVoltage)
-    call solver%construct_diagMatrix(world)
-    
-end subroutine readInputs
+        print *, "Reading initial inputs:"
+        open(10,file='../InputData/'//InitFilename, IOSTAT=io)
+        read(10, *, IOSTAT = io) simulationTime
+        read(10, *, IOSTAT = io) n_ave
+        read(10, *, IOSTAT = io) T_e
+        read(10, *, IOSTAT = io) numDiagnosticSteps
+        read(10, *, IOSTAT = io) fractionFreq
+        read(10, *, IOSTAT = io) averagingTime
+        read(10, *, IOSTAT = io) Power
+        read(10, *, IOSTAT = io) heatSkipSteps
+        read(10, *, IOSTAT = io) nu_h
+        close(10)
+        print *, "Average initial electron density:", n_ave
+        print *, "Initial electron temperature:", T_e
+        print *, "Number of diagnostic steps is:", numDiagnosticSteps
+        print *, "Fraction of 1/w_p for time step:", fractionFreq
+        print *, "Final averaging time is:", averagingTime
+        print *, "Power input (W/m^2):", Power
+        print *, "Steps to skip for heating:", heatSkipSteps
+        print *, "Heating frequency (Hz):", nu_h
+        print *, "------------------"
+        print *, ""
+        print *, "Reading domain inputs:"
+        open(10,file='../InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io) NumberXNodes
+        read(10, *, IOSTAT = io) L_domain
+        read(10, *, IOSTAT = io) leftBoundary, rightBoundary
+        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+        close(10)
+        debyeLength = getDebyeLength(T_e, n_ave)
+        if (L_domain / (NumberXNodes-1) > debyeLength) then
+            print *, "Insufficient amount of nodes to resolve initial debyeLength"
+            print *, "Changing amount of nodes to have 0.75 * debyeLength"
+            NumberXNodes = NINT(L_domain/debyeLength/0.75d0) + 1
+        end if
+        print *, "Number of nodes:", NumberXNodes
+        print *, "Grid length:", L_domain
+        print *, "Left boundary type:", leftBoundary
+        print *, "Right boundary type:", rightBoundary
+        print *, "------------------"
+        print *, ""
+        ! if one boundary is periodic, other must also be
+        if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
+            leftBoundary = 3
+            rightBoundary = 3
+            leftVoltage = rightVoltage
+        end if
+        world = Domain(leftBoundary, rightBoundary)
+        call world % constructGrid(L_domain)
+        solver = potentialSolver(world, leftVoltage, rightVoltage)
+        call solver%construct_diagMatrix(world)
+        
+    end subroutine readInputs
 
     function readParticleInputs(filename, numberChargedParticles, irand, T_e) result(particleList)
         type(Particle), allocatable :: particleList(:)
         character(len=*), intent(in) :: filename
         integer(int32), intent(in out) :: numberChargedParticles, irand
-        real(real64), intent(in out) :: T_e
+        real(real64), intent(in) :: T_e
         integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name
         character(len=8) :: particleNames(100)
@@ -99,8 +101,8 @@ end subroutine readInputs
                 read(10,*,END=101,ERR=100) name
                 read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:4)
                 numSpecies = numSpecies + 1
-                read(10,*,END=101,ERR=100) Ti(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
-                T_e = Ti(numSpecies)
+                read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
+                Ti(numSpecies) = T_e
                 mass(numSpecies) = m_e
                 charge(numSpecies) = -1.0
                 particleNames(numSpecies) = '[e]'
@@ -136,9 +138,10 @@ end subroutine readInputs
         numberChargedParticles = numSpecies
         allocate(particleList(numberChargedParticles))
         do j=1, numberChargedParticles
-            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)))
+            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j) * (NumberXNodes-1), numParticles(j) * particleIdxFactor(j) * (NumberXNodes - 1), trim(particleNames(j)))
             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
             print *, 'Initializing ', particleList(j) % name
+            print *, 'Amount of macroparticles is:', particleList(j) % N_p
             print *, "Particle mass is:", particleList(j)%mass
             print *, "Particle charge is:", particleList(j)%q
             print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
@@ -174,7 +177,7 @@ end subroutine readInputs
                 else
                     call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_i, irand)
                 end if
-                particleList(j)%phaseSpace(2:4, idxReFlux(i, j)) = -ABS(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)))
+                particleList(j)%phaseSpace(2, idxReFlux(i, j)) = -ABS(particleList(j)%phaseSpace(2, idxReFlux(i, j)))
             end do
         end do
 

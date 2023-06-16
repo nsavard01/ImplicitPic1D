@@ -6,6 +6,7 @@ module mod_particleMover
     use mod_domain
     use mod_potentialSolver
     implicit none
+    integer(int32) :: idxReFlux(1000, 2), reFluxMaxIdx(2), delIdx(2)
 
 contains
     
@@ -830,11 +831,10 @@ contains
     real(real64), intent(in) :: del_t
     !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
     real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
-    integer(int32) :: subStepNum, j, i, delIdx, l_cell
-    logical :: delParticle
-    delParticle = .false.
+    integer(int32) :: subStepNum, j, i, l_cell
+    delIdx = 0
+    reFluxMaxIdx = 0
     loopSpecies: do j = 1, numberChargedParticles
-        delIdx = 0
         loopParticles: do i = 1, particleList(j)%N_p
             v_sub = particleList(j)%phaseSpace(2,i)
             l_sub = particleList(j)%phaseSpace(1,i)
@@ -858,9 +858,9 @@ contains
                         stop
                     end if
                     timePassed = del_t 
-                    particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i) 
+                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                     timePassed = timePassed + del_tau
@@ -887,13 +887,13 @@ contains
                         stop
                     end if
                     timePassed = del_t 
-                    particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i) 
+                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                     if (l_f == l_cell) then ! if particle is now on node, must be boundary, exit
-                        delIdx = delIdx + 1
+                        delIdx(j) = delIdx(j) + 1
                         timePassed = del_t
                         solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                         if (l_f == 1) then
@@ -925,12 +925,16 @@ contains
                         stop
                     end if
                     timePassed = del_t
-                    particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)  
+                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                    if (l_f == l_cell) v_f = -v_f
+                    if (l_f == l_cell) then
+                        v_f = -v_f
+                        reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
+                        idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                    end if
                     timePassed = timePassed + del_tau
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
                         print *, "l_sub is:", l_sub
@@ -957,9 +961,9 @@ contains
                         l_f = l_f - l_cell + 1
                     end if
                     timePassed = del_t
-                    particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)  
+                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
@@ -997,9 +1001,9 @@ contains
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
                         timePassed = del_t 
-                        particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i) 
+                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                         timePassed = timePassed + del_tau
@@ -1024,13 +1028,13 @@ contains
                             stop
                         end if
                         timePassed = del_t 
-                        particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i) 
+                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                         if (l_f == l_cell) then 
-                            delIdx = delIdx + 1
+                            delIdx(j) = delIdx(j) + 1
                             solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                             if (l_f == 1) then
                                 solver%particleChargeLoss(1, j) = solver%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
@@ -1062,12 +1066,16 @@ contains
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
                         timePassed = del_t 
-                        particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i) 
+                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                        if (l_f == l_cell) v_f = -v_f
+                        if (l_f == l_cell) then
+                            v_f = -v_f
+                            reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
+                            idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                        end if
                         timePassed = timePassed + del_tau
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
                             print *, l_f
@@ -1093,9 +1101,9 @@ contains
                             l_f = l_f - l_cell + 1
                         end if
                         timePassed = del_t
-                        particleList(j)%phaseSpace(1, i-delIdx) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)  
+                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)  
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
@@ -1127,7 +1135,7 @@ contains
             ! When not depositing, then updating particles, overwrite deleted indices
 
         end do loopParticles
-        particleList(j)%N_p = particleList(j)%N_p - delIdx
+        particleList(j)%N_p = particleList(j)%N_p - delIdx(j)
     end do loopSpecies
     end subroutine moveParticles
 

@@ -84,6 +84,8 @@ contains
                 CASE(3)
                     self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                     self % rho(ABS(l_left - NumberXNodes)+1) = self % rho(ABS(l_left - NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
+                CASE(4)
+                    self % rho(l_left) = self % rho(l_left) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
                 CASE default
                     print *, "case doesn't exist in deposit rho"
                     print *, 'particle position:', particleList(i)%phaseSpace(1, j)
@@ -100,6 +102,8 @@ contains
                 CASE(3)
                     self % rho(l_right) = self % rho(l_right) + particleList(i)%q * particleList(i)%w_p * d
                     self % rho(ABS(l_right - NumberXNodes)+1) = self % rho(ABS(l_right-NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * d
+                CASE(4)
+                    self % rho(l_right) = self % rho(l_right) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * d
                 CASE default
                     print *, "case doesn't exist in deposit rho"
                     print *, 'particle position:', particleList(i)%phaseSpace(1, j)
@@ -137,11 +141,24 @@ contains
                     !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
                     self%b_tri(i) = - 2.0d0 / (world%delX**2)
                 else
-                    print *, "Neumann boundary not on left or right most index!"
+                    print *, "Neumann boundary reflecting not on left or right most index!"
                     stop
                 end if
             CASE(3)
                 self%b_tri(i) = 1.0d0
+            CASE(4)
+                if (i == 1) then
+                    self % c_tri(i) = -1.0d0
+                    !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
+                    self%b_tri(i) = 1.0d0
+                else if (i == NumberXNodes) then
+                    self % a_tri(i-1) = -1.0d0
+                    !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
+                    self%b_tri(i) = 1.0d0
+                else
+                    print *, "Neumann boundary absorbing not on left or right most index!"
+                    stop
+                end if
             CASE default
                 print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
             END SELECT
@@ -162,6 +179,8 @@ contains
                 d(i) = (-self%rho(i) - self%rho_const) / eps_0
             CASE(1,3)
                 d(i) = self%phi(i)
+            CASE(4)
+                d(i) = 0.0d0
             END SELECT
         end do
     ! initialize c-prime and d-prime
@@ -213,6 +232,8 @@ contains
             self%EField(1) = 0.0d0
         CASE(3)
             self%EField(1) = (self%phi(NumberXNodes-1) - self%phi(2))/2.0d0/world%delX
+        CASE(4)
+            self%EField(1) = 0.0d0
         CASE default
             print *, "No case makeEField"
             stop
@@ -225,6 +246,8 @@ contains
             self%EField(NumberXNodes) = 0.0d0
         CASE(3)
             self%EField(NumberXNodes) = (self%phi(NumberXNodes-1) - self%phi(2))/2.0d0/world%delX
+        CASE(4)
+            self%EField(NumberXNodes) = 0.0d0
         CASE default
             print *, "No case makeEField"
             stop

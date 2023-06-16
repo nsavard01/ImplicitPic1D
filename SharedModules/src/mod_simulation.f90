@@ -25,7 +25,7 @@ contains
         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
         integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
-        real(real64), intent(in) :: T_e
+        real(real64), intent(in out) :: T_e
         character(len=*), intent(in) :: GeomFilename, InitFilename
         integer(int32) :: io, leftBoundary, rightBoundary, gridType!, schemeType
         real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
@@ -36,6 +36,7 @@ contains
         open(10,file='../../SharedModules/InputData/'//InitFilename, IOSTAT=io)
         read(10, *, IOSTAT = io) simulationTime
         read(10, *, IOSTAT = io) n_ave
+        read(10, *, IOSTAT = io) T_e
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) fractionFreq
         read(10, *, IOSTAT = io) averagingTime
@@ -44,6 +45,7 @@ contains
         read(10, *, IOSTAT = io) nu_h
         close(10)
         print *, "Average initial particle density:", n_ave
+        print *, "Initial T_e:", T_e
         print *, "Number of diagnostic steps is:", numDiagnosticSteps
         print *, "Fraction of 1/w_p for time step:", fractionFreq
         print *, "Final averaging time is:", averagingTime
@@ -60,18 +62,6 @@ contains
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
-        if (schemeNum == 0) then
-            print *, "Scheme is NGP"
-        else
-            print *, "Scheme is CIC"
-        end if
-        print *, "Number of nodes:", NumberXNodes
-        print *, "Grid length:", L_domain
-        print *, "Grid type is:", gridType
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
-        print *, "------------------"
-        print *, ""
         debyeLength = getDebyeLength(T_e, n_ave)
         ! if one boundary is periodic, other must also be
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
@@ -82,6 +72,18 @@ contains
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(debyeLength, L_domain, gridType)
         solver = potentialSolver(world, leftVoltage, rightVoltage)
+        if (schemeNum == 0) then
+            print *, "Scheme is NGP"
+        else
+            print *, "Scheme is CIC"
+        end if
+        print *, "Number of nodes:", NumberXNodes
+        print *, "Grid Length is:", world%grid(NumberXNodes) - world%grid(1)
+        print *, "Grid type is:", gridType
+        print *, "Left boundary type:", world%boundaryConditions(1)
+        print *, "Right boundary type:", world%boundaryConditions(NumberXNodes)
+        print *, "------------------"
+        print *, ""
         
     end subroutine readInputs
 
@@ -89,7 +91,7 @@ contains
         type(Particle), allocatable :: particleList(:)
         character(len=*), intent(in) :: filename
         integer(int32), intent(in out) :: numberChargedParticles, irand
-        real(real64), intent(in out) :: T_e
+        real(real64), intent(in) :: T_e
         integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name
         character(len=8) :: particleNames(100)
@@ -106,8 +108,8 @@ contains
                 read(10,*,END=101,ERR=100) name
                 read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:4)
                 numSpecies = numSpecies + 1
-                read(10,*,END=101,ERR=100) Ti(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
-                T_e = Ti(numSpecies)
+                read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
+                Ti(numSpecies) = T_e
                 mass(numSpecies) = m_e
                 charge(numSpecies) = -1.0
                 particleNames(numSpecies) = '[e]'
@@ -143,9 +145,10 @@ contains
         numberChargedParticles = numSpecies
         allocate(particleList(numberChargedParticles))
         do j=1, numberChargedParticles
-            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)))
+            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j) * (NumberXNodes-1), numParticles(j) * particleIdxFactor(j) * (NumberXNodes-1), trim(particleNames(j)))
             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
             print *, 'Initializing ', particleList(j) % name
+            print *, 'Number of particles is:', particleList(j)%N_p
             print *, "Particle mass is:", particleList(j)%mass
             print *, "Particle charge is:", particleList(j)%q
             print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
@@ -157,6 +160,37 @@ contains
 
 
     end function readParticleInputs
+
+    subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, delIdx, idxReFlux, reFluxMaxIdx, x_lower, world)
+        ! Add power to all particles in domain
+        type(Particle), intent(in out) :: particleList(2)
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in out) :: irand
+        real(real64), intent(in) :: T_e, T_i, x_lower
+        integer(int32), intent(in) :: delIdx(2), idxReFlux(1000, 2), reFluxMaxIdx(2)
+        integer(int32) :: i,j
+        real(real64) :: x_random
+        do i=1, delIdx(1)
+            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p + i), particleList(1)%mass, T_e, irand)
+            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p + i), particleList(2)%mass, T_i, irand)
+            x_random = world%grid(NumberXNodes) - ran2(irand) * (world%grid(NumberXNodes) - x_lower)
+            particleList(1)%phaseSpace(1, particleList(1)%N_p + i) = getLFromX(x_random, world)
+            particleList(2)%phaseSpace(1, particleList(2)%N_p + i) = particleList(1)%phaseSpace(1, particleList(1)%N_p + i)
+        end do
+        particleList(2)%N_p = particleList(2)%N_p + delIdx(1)
+        particleList(1)%N_p = particleList(1)%N_p + delIdx(1)
+        do j = 1, 2
+            do i = 1, reFluxMaxIdx(j)
+                if (j == 1) then
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_e, irand)
+                else
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, idxReFlux(i, j)), particleList(j)%mass, T_i, irand)
+                end if
+                particleList(j)%phaseSpace(2, idxReFlux(i, j)) = -ABS(particleList(j)%phaseSpace(2, idxReFlux(i, j)))
+            end do
+        end do
+
+    end subroutine addMaxwellianLostParticles
     
     subroutine writePhi(phi, CurrentDiagStep, boolAverage) 
         ! For diagnostics, deposit single particle density

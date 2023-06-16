@@ -19,6 +19,7 @@ import matplotlib.animation as animation
 import itertools
 import shutil
 import sys
+import BoundAnalytical
 
 
 

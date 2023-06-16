@@ -7,18 +7,15 @@ Created on Mon Dec  5 15:07:18 2022
 
 import numpy as np
 import matplotlib.pyplot as plt
-import math
 import scipy
-import scipy.optimize as opt
-from scipy.stats import cosine
-import scipy.sparse as sp
-import time
+
 import pandas as pd
 import glob, os
 import matplotlib.animation as animation
 import itertools
 import shutil
 import sys
+import BoundAnalytical
 
 
 eps_0 = scipy.constants.epsilon_0
@@ -244,6 +241,7 @@ def temperatureAnimation(boolMakeAnimation):
         KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
         E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
         num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
+        halfGrid = (grid[0:-1] + grid[1:])/2
         ax.plot(halfGrid, E_binned*2.0/num_binned/3.0, 'o-')
             
         ax.set_xlabel('Distance (m)')
@@ -266,6 +264,7 @@ def temperatureAnimation(boolMakeAnimation):
             KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
             E_binned = np.histogram(phaseSpace[:,0], bins = grid, weights = KE)[0]
             num_binned = np.clip(np.histogram(phaseSpace[:,0], bins = grid)[0], a_min = 1, a_max = None)
+            halfGrid = (grid[0:-1] + grid[1:])/2
             plt.plot(halfGrid, E_binned*2.0/num_binned/3.0, 'o-')
             plt.xlabel('Distance (m)')
             plt.ylabel(r'$T_e$ (eV)')
