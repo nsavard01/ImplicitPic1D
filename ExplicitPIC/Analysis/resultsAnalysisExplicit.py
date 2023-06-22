@@ -183,7 +183,7 @@ def TwoStreamEnergyIncrease():
     plt.savefig('PostProcessing/twoStreamGrowth.png')
         
     
-def update_plot_Phi(i, ax):
+def update_plot_Phi(i, ax, upperLimit):
     ax.clear()
     phi = np.fromfile(dataFolder + 'Phi/phi_'+str(i) + '.dat', dtype = 'float', offset = 4)
     ax.plot(grid, phi, 'o-')
@@ -191,9 +191,9 @@ def update_plot_Phi(i, ax):
     ax.set_xlabel('Distance (m)')
     ax.set_ylabel('Potential (V)')
     ax.set_xlim([0, grid[-1]])
-    ax.set_ylim([0, 30])
+    ax.set_ylim([0, upperLimit])
     
-def phiAnimation(boolMakeAnimation):
+def phiAnimation(boolMakeAnimation, upperLimit):
     if boolMakeAnimation:
         numframes = numDiagnosticTimes + 1
         fig, ax = plt.subplots()
@@ -203,8 +203,8 @@ def phiAnimation(boolMakeAnimation):
         ax.set_xlabel('Distance (m)')
         ax.set_ylabel('Potential (V)')
         ax.set_xlim([0, grid[-1]])
-        ax.set_ylim([0, 30])
-        ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(ax,))
+        ax.set_ylim([0, upperLimit])
+        ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(ax,upperLimit))
         
         ani.save('PostProcessing/BoundPlasmaPhi.gif')
         plt.show()

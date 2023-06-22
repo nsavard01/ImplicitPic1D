@@ -6,9 +6,9 @@ name	 NumParticles/cell   ArraySizeMultiplication
 
 
 IONS
-name   mass  charge  temp.(eV)	NumParticles/cell   ArraySizeMultiplication
+name   mass  charge	NumParticles/cell   ArraySizeMultiplication
 --------------------------------------------------
-[H+]     1.     1.     0.1		100     2
+[H+]     1.     1.		100     2
 --------------------------------------------------
 
 ENDFILE
