@@ -6,7 +6,6 @@ module mod_particleMover
     use mod_domain
     use mod_potentialSolver
     implicit none
-    integer(int32) :: idxReFlux(1000, 2), reFluxMaxIdx(2), delIdx(2)
     ! Procedures for moving particles and depositing J 
 
 contains
@@ -269,10 +268,10 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a
-        integer(int32) :: subStepNum, j, i, l_cell
-        delIdx = 0
-        reFluxMaxIdx = 0
+        integer(int32) :: subStepNum, j, i, l_cell, delIdx
         loopSpecies: do j = 1, numberChargedParticles
+            delIdx = 0
+            particleList(j)%refIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p
                 v_sub = particleList(j)%phaseSpace(2,i)
                 l_sub = particleList(j)%phaseSpace(1,i)
@@ -287,9 +286,9 @@ contains
                     ! Add directly to J with no substep
                     l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
                     v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_t - v_sub
-                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)
+                    particleList(j)%phaseSpace(1, i-delIdx) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)
                     timePassed = del_t
                     if (INT(l_f) /= l_cell) then
                         stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
@@ -307,17 +306,18 @@ contains
                         continue
                     CASE(1)
                         timePassed = del_t
-                        delIdx(j) = delIdx(j) + 1
-                        solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                        delIdx = delIdx + 1
                         if (l_f == 1) then
-                            solver%particleChargeLoss(1, j) = solver%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                            particleList(j)%energyLoss(1) = particleList(j)%energyLoss(1) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                            particleList(j)%wallLoss(1) = particleList(j)%wallLoss(1) + 1 !C/m^2 in 1D
                         else if (l_f == NumberXNodes) then
-                            solver%particleChargeLoss(2, j) = solver%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                            particleList(j)%energyLoss(2) = particleList(j)%energyLoss(2) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                            particleList(j)%wallLoss(2) = particleList(j)%wallLoss(2) + 1 !C/m^2 in 1D
                         end if
                     CASE(2)
                         v_f = -v_f
-                        reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
-                        idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                        particleList(j)%refIdx = particleList(j)%refIdx + 1
+                        particleList(j)%refRecordIdx(particleList(j)%refIdx) = i - delIdx
                     CASE(3)
                         l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                     CASE default
@@ -340,9 +340,9 @@ contains
                         if (ABS(l_f - l_sub) >= 1) then
                             stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
                         end if
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)
+                        particleList(j)%phaseSpace(1, i-delIdx) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)
                         timePassed = del_t
                         
                     else
@@ -356,18 +356,19 @@ contains
                         CASE(0)
                             continue
                         CASE(1)
-                            delIdx(j) = delIdx(j) + 1
-                            solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                            delIdx = delIdx + 1
                             if (l_f == 1) then
-                                solver%particleChargeLoss(1, j) = solver%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                                particleList(j)%energyLoss(1) = particleList(j)%energyLoss(1) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                                particleList(j)%wallLoss(1) = particleList(j)%wallLoss(1) + 1 !C/m^2 in 1D
                             else if (l_f == NumberXNodes) then
-                                solver%particleChargeLoss(2, j) = solver%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                                particleList(j)%energyLoss(2) = particleList(j)%energyLoss(2) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                                particleList(j)%wallLoss(2) = particleList(j)%wallLoss(2) + 1 !C/m^2 in 1D
                             end if
                             exit
                         CASE(2)
                             v_f = -v_f
-                            reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
-                            idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                            particleList(j)%refIdx = particleList(j)%refIdx + 1
+                            particleList(j)%refRecordIdx(particleList(j)%refIdx) = i - delIdx
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                         CASE default
@@ -385,8 +386,8 @@ contains
                 end if
                 
             end do loopParticles
-            particleList(j)%N_p = particleList(j)%N_p - delIdx(j)
-            
+            particleList(j)%N_p = particleList(j)%N_p - delIdx
+            particleList(j)%delIdx = delIdx
         end do loopSpecies
     end subroutine moveParticles
 

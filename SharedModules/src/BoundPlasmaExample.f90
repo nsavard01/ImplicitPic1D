@@ -52,7 +52,7 @@ program BoundPlasmaExample
     ! stop 
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
 
-    print *, "Averaging over", averagingTime, "seconds"
+    print *, "Averaging up to", averagingTime, "simulation seconds"
     call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)
 
     

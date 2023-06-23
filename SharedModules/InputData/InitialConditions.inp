@@ -4,7 +4,7 @@
 1.0d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
 2.0 ! Fraction of initial 1/w_p for initial time step
-22e-6 ! amount of time to average final Diagnostics
+22d-6 ! amount of time to average final Diagnostics
 50.0d0 ! Power (W/m^2)
 1 ! heatSkipSteps
 1.0d8 ! heating frequency Hz

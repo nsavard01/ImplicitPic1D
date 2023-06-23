@@ -14,6 +14,8 @@ module mod_particle
         integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
         real(real64), allocatable :: phaseSpace(:,:) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
+        real(real64) :: delIdx, wallLoss(2), energyLoss(2), refIdx !keep track particle losses at boundaries
+        real(real64), allocatable :: refRecordIdx(:) 
 
     contains
         procedure, public, pass(self) :: initialize_n_ave
@@ -36,6 +38,7 @@ contains
 
     type(Particle) function particle_constructor(mass, q, w_p, N_p, finalIdx, particleName) result(self)
         ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
+        ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
         real(real64), intent(in) :: mass, q, w_p
         integer(int32), intent(in) :: N_p, finalIdx
         character(*), intent(in) :: particleName
@@ -45,8 +48,7 @@ contains
         self % w_p = w_p
         self % N_p = N_p
         self % finalIdx = finalIdx
-        allocate(self%phaseSpace(4,finalIdx))
-
+        allocate(self%phaseSpace(4,finalIdx), self%refRecordIdx(INT(N_p/10)))
     end function particle_constructor
 
     pure subroutine initialize_n_ave(self, n_ave, L_domain)

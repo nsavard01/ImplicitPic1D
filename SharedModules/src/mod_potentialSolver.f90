@@ -14,8 +14,8 @@ module mod_potentialSolver
     public :: potentialSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), particleChargeLoss(:,:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, chargeError, particleEnergyLoss, rho_const
+        real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64) :: rho_const
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
 
@@ -40,7 +40,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
         allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
-        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%particleChargeLoss(2, numberChargedParticles))
+        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
         call construct_diagMatrix(self, world)
         self % rho = 0.0d0
         self % J = 0.0d0
@@ -48,10 +48,6 @@ contains
         self % rho_const = 0.0d0
         ! self%coeff_left = 0.0d0
         ! self%coeff_left = 0.0d0
-        self%particleEnergyLoss = 0.0d0
-        self%particleChargeLoss = 0.0d0
-        self%energyError = 0.0d0
-        self%chargeError = 0.0d0
         SELECT CASE (world%boundaryConditions(1))
         CASE(1)
             self%phi(1) = leftVoltage

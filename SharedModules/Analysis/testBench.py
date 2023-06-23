@@ -7,4 +7,4 @@ Created on Wed Jun 21 16:39:21 2023
 from import_libraries_constants import *
 from dataSet import *
 
-test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/Data/')
+test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/testDiag/')
