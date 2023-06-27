@@ -287,7 +287,7 @@ def plotWallPowerVsTime():
 
 
 def finalElectronEEDFVsMaxwellian():
-    phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_[e]_' + str(numDiagnosticTimes) +'.dat', grid)
+    phaseSpace = extractPhaseSpace('../Data/PhaseSpace/phaseSpace_e_' + str(numDiagnosticTimes) +'.dat', grid)
     KE = np.sum(phaseSpace[:, 1::]**2, axis = 1) * 0.5 * m_e / e
     Ehist = np.histogram(KE, bins = 100, density = True)
     T_elec = np.mean(KE)* (2/3)

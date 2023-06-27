@@ -187,16 +187,19 @@ contains
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+        res = 0.0d0
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                d(i) = -self%rho(i) - self%rho_const
+                res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + 1d-15) - 1.0d0)**2
+                !d(i) = -self%rho(i) - self%rho_const
             CASE(1,3)
-                d(i) = self%phi_f(i)*eps_0
+                res = res + ((Ax(i) + 1d-15)/(self.phi_f(i) + 1d-15) - 1.0d0)**2
+                !d(i) = self%phi_f(i)*eps_0
             END SELECT
         end do
-        !res = Ax*eps_0 - d
-        res = SQRT(SUM((Ax*eps_0 - d)**2))
+        !res = Ax*eps_0 - 
+        res = SQRT(res/NumberXNodes)
 
     end function getError_tridiag_Poisson
 

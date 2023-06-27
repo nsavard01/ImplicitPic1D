@@ -13,6 +13,7 @@ program BoundPlasmaExample
     implicit none
 
     integer(int32) :: i
+    !real(real64) :: remainDel_t, currDel_t
     call initializeScheme(schemeNum)
     ! Initialize constants with inputs
     ! create the world the particles live in
@@ -34,26 +35,27 @@ program BoundPlasmaExample
     print *, "----------------"
     ! Generate solver object, and then solve for initial rho/potential
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
-    ! call solveSingleTimeStepDiagnostic(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r)
-    ! print *, "Energy error is:", globalSolver%energyError
+    ! currDel_t = del_t
+    ! remainDel_t = del_t
+    ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
     ! print *, "Took", iterNumPicard, "iterations"
     ! print *, 'electron number:', globalParticleList(1)%N_P
     ! print *, 'ion number:', globalParticleList(2)%N_p
-    ! call addMaxwellianLostParticles(globalParticleList, T_e, 0.1d0, irand, delIdx, idxReFlux, reFluxMaxIdx, 0.03d0, globalWorld)
+    ! call addMaxwellianLostParticles(globalParticleList, T_e, T_i, irand, globalWorld)
     ! print *, 'electron number:', globalParticleList(1)%N_P
     ! print *, 'ion number:', globalParticleList(2)%N_p
     ! ! Get error gauss' law
     ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     ! call globalSolver%construct_diagMatrix(globalWorld)
-    ! globalSolver%chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)
-    ! globalSolver%chargeError = globalSolver%chargeError / SQRT(SUM(globalSolver%rho**2))
+    ! chargeError = globalSolver%getError_tridiag_Poisson(globalWorld)
+    ! !chargeError = chargeError / SQRT(SUM(globalSolver%rho**2))
     ! call globalSolver%construct_diagMatrix_Ampere(globalWorld)
-    ! print *, "Charge error is:", globalSolver%chargeError
+    ! print *, "Charge error is:", chargeError
     ! stop 
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
 
     print *, "Averaging up to", averagingTime, "simulation seconds"
-    call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, heatSkipSteps)
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
 
     
 
