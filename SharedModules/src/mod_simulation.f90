@@ -770,7 +770,11 @@ contains
             currentTime = currentTime + currDel_t
             i = i + 1
             windowNum = windowNum + 1
-            wallLoss(windowNum) = SUM(particleList(1)%energyLoss)/currentTime
+            wallLoss(windowNum) = 0.0d0
+            do j = 1, numberChargedParticles
+                wallLoss(windowNum) = wallLoss(windowNum) + SUM(particleList(j)%energyLoss)
+            end do
+            wallLoss(windowNum) = wallLoss(windowNum)/currentTime
             if ((currentTime - lastCheckTime) > checkTimeDivision) then
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))

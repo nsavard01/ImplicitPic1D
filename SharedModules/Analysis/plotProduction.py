@@ -7,7 +7,6 @@ Created on Wed Jun 21 16:39:21 2023
 from import_libraries_constants import *
 from dataSet import *
 
-test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/testDiag/')
 
 # ---------------------------- Averages -------------------------------------
 def plotAveDensity(dataSet, name = "", label = ""):
@@ -25,27 +24,33 @@ def plotAveDensity(dataSet, name = "", label = ""):
             raise Warning("For average density, particle", name, "does not exist in the dataSet!")
         else:
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = '-', marker = 'o', label = "")
+            plt.plot(dataSet.grid, n,  linestyle = '-', marker = 'o', label = label)
             plt.xlabel('Distance (m)')
-            plt.ylabel('Particle Density (1/m^3)')
+            plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([0, dataSet.grid[-1]])
  
 def plotAvePhi(dataSet):
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid, phi, 'o-')
+    plt.plot(dataSet.grid, phi, 'o-', label = 'PIC')
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
     plt.xlim([0, dataSet.grid[-1]]) 
+    
+def maxwellEDVF(x, T):
+    return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)  
     
 def plotAveEVDF(dataSet):
     Vbins, VHist = dataSet.getAveEVDF()
     dv = Vbins[1] - Vbins[0]
     Norm = np.sum(VHist * dv)
-    plt.plot(Vbins, VHist/Norm, 'o-')
+    VHist = VHist/Norm
+    popt, pcov = opt.curve_fit(maxwellEDVF, Vbins, VHist, p0 = [test.T_e])
+    print('popt is', popt)
+    plt.plot(Vbins, VHist, 'o-', label = 'Global EDVF')
+    plt.plot(Vbins, maxwellEDVF(Vbins, popt[0]), label = 'Best Fit T_e = ' + '{:2.2f}'.format(popt[0]))
+    plt.legend(loc = 'best')
     
-def plotMaxwellV(v_x, T, m):
-    f= np.sqrt(m/2/np.pi / e/ T) * np.exp(- m * v_x**2 / 2 / e/ T)
-    plt.plot(v_x, f)
+
     
 #-------------------------- Time Dependent ---------------------
     
@@ -97,27 +102,28 @@ def update_plot_PhaseSpace(i, scat, dataSet, name):
     return scat,
 
 def PhaseSpaceAnimation(dataSet, name, boolMakeAnimation = False, savePath = 'PhaseSpaceAnimation.gif'): 
+    if name not in dataSet.particles.keys():
+        raise Warning("Particle", name, "does not exist in the dataSet!")
     if boolMakeAnimation:
-        numframes = numDiagnosticTimes+1
-        filename = '../Data/PhaseSpace/phaseSpace_'+ ParticleName + '_0.dat'
-        phaseSpace = extractPhaseSpace(filename, grid)
+        numframes = dataSet.numDiag
+        phaseSpace = dataSet.getPhaseSpace(name, 0)
         fig = plt.figure()
         scat = plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
         plt.xlabel('Distance (m)')
         plt.ylabel('Speed (m/s)')
-        plt.axis([0, grid[-1], -6500, 6500])
+        vmax = abs(np.max(phaseSpace[:,1]))*2.0
+        plt.axis([dataSet.grid[0], dataSet.grid[-1], -vmax, vmax])
         ani = animation.FuncAnimation(fig, update_plot_PhaseSpace, frames=range(numframes), interval = 100,
-                                      fargs=(scat, ParticleName))
-        ani.save('PostProcessing/twoStreamAnimation.gif')
+                                      fargs=(scat, dataSet, name))
+        ani.save(savePath)
         plt.show()
     else:
         plt.figure(figsize = (5,4), dpi = 80)
-        for y in range(numDiagnosticTimes+1):
+        for y in range(dataSet.numDiag):
             plt.cla()
-            filename = '../Data/PhaseSpace/phaseSpace_'+ ParticleName + '_' + str(y) +'.dat'
-            phaseSpace = extractPhaseSpace(filename, grid)
+            phaseSpace = dataSet.getPhaseSpace(name, y)
             plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
             plt.xlabel('Distance (m)')
             plt.ylabel('Particle velocity (m/s)')
-            plt.xlim([0, grid[-1]])
+            plt.xlim([0, dataSet.grid[-1]])
             plt.pause(0.1)

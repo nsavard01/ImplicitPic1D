@@ -77,7 +77,7 @@ class dataSet:
             
             
     def getPhaseSpace(self, name, i):
-        if (name not in self.particles,keys()):
+        if (name not in self.particles.keys()):
             raise Warning('No such particle', name, 'in simulation!')
         if (i <= self.numDiag - 1):
             phaseSpace = np.fromfile(self.path + 'PhaseSpace/phaseSpace_'+ name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
