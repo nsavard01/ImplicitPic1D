@@ -329,6 +329,7 @@ contains
                 end if
             end do loopParticles
             particleList(j)%N_p = particleList(j)%N_p - delIdx
+            particleList(j)%delIdx = delIdx
         end do loopSpecies
     end subroutine moveParticles
 

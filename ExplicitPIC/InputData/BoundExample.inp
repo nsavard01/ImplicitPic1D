@@ -1,14 +1,14 @@
 ELECTRONS
 name	 NumParticles/cell   ArraySizeMultiplication
 -------------------------------------------
-[e]		10		2
+[e]		33		2
 -------------------------------------------
 
 
 IONS
 name   mass  charge 	NumParticles/cell   ArraySizeMultiplication
 --------------------------------------------------
-[H+]     1.     1. 		10     2
+[H+]     1.     1. 		33     2
 --------------------------------------------------
 
 ENDFILE

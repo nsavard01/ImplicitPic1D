@@ -472,7 +472,6 @@ contains
         close(9)
         collisionTime = 0
         potentialTime = 0
-        i = 0
         do i = 1, numberChargedParticles
             particleList(i)%energyLoss = 0.0d0
             particleList(i)%wallLoss = 0
