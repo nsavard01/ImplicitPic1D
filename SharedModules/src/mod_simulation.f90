@@ -442,7 +442,8 @@ contains
         real(real64), intent(in) :: del_t, eps_r, simulationTime
         integer(int32), intent(in) :: maxIter, heatSkipSteps
         integer(int32), intent(in out) :: irand
-        integer(int32) :: i, j, CurrentDiagStep, startTime, endTime, timingRate, startTotal, endTotal, k
+        integer(int32) :: i, j, CurrentDiagStep, k
+        integer(int64) :: startTime, endTime, startTotal, endTotal, timingRate
         real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime
         real(real64) :: particleEnergyLossTemp, currDel_t, remainDel_t
         real(real64) :: KE_i, KE_f, PE_i, PE_f
@@ -778,7 +779,7 @@ contains
             if ((currentTime - lastCheckTime) > checkTimeDivision) then
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
-                if (stdLoss/meanLoss < 1d-4) exit
+                if (stdLoss/meanLoss < 1d-5) exit
                 windowNum = 0
                 lastCheckTime = currentTime
             end if

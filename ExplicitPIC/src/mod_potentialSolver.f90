@@ -11,12 +11,11 @@ module mod_potentialSolver
     ! Will contain particle to mesh gathers (J, rho) and potential which comes from them (phi)
     ! Will also contain particle mover, since needed to store to J, and cannot be separate
     ! Assume dirichlet boundaries at ends for now, so matrix solver can go down by two dimensions
-    integer(int32) :: idxReFlux(1000, 2), reFluxMaxIdx(2), delIdx(2)
     public :: potentialSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), rho(:), EField(:), particleChargeLoss(:,:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, particleEnergyLoss, rho_const
+        real(real64), allocatable :: phi(:), rho(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64) :: energyError, rho_const
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
 
@@ -43,7 +42,7 @@ contains
         real(real64), intent(in) :: leftVoltage, rightVoltage
         type(Domain), intent(in) :: world
         allocate(self % rho(NumberXNodes), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
-        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%particleChargeLoss(2, numberChargedParticles))
+        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
         self % a_tri = 0.0d0
         self % c_tri = 0.0d0
         self % b_tri = 0.0d0
@@ -52,7 +51,6 @@ contains
         self % phi = 0.0d0
         self % EField = 0.0d0
         self%energyError = 0.0d0
-        self%particleEnergyLoss = 0.0d0
         if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
         if (world%boundaryConditions(NumberXNodes) == 1) self%phi(NumberXNodes) = rightVoltage
         if (world%boundaryConditions(1) == 3) then
@@ -286,51 +284,51 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        integer(int32) :: j, i
-        delIdx = 0
-        reFluxMaxIdx = 0
+        integer(int32) :: j, i, delIdx
         loopSpecies: do j = 1, numberChargedParticles
+            delIdx = 0
+            particleList(j)%refIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p
-                particleList(j)%phaseSpace(2, i-delIdx(j)) = particleList(j)%phaseSpace(2, i) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i)) * del_t
-                particleList(j)%phaseSpace(1, i-delIdx(j)) = particleList(j)%phaseSpace(1, i) + particleList(j)%phaseSpace(2, i-delIdx(j)) * del_t/world%delX
-                particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)
-                if (particleList(j)%phaseSpace(1, i-delIdx(j)) <= 1) then
+                particleList(j)%phaseSpace(2, i-delIdx) = particleList(j)%phaseSpace(2, i) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i)) * del_t
+                particleList(j)%phaseSpace(1, i-delIdx) = particleList(j)%phaseSpace(1, i) + particleList(j)%phaseSpace(2, i-delIdx) * del_t/world%delX
+                particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)
+                if (particleList(j)%phaseSpace(1, i-delIdx) <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1)
-                        self%particleChargeLoss(1, j) = self%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
-                        self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx(j))**2) * particleList(j)%mass * 0.5d0
-                        delIdx(j) = delIdx(j) + 1
+                        particleList(j)%energyLoss(1) = particleList(j)%energyLoss(1) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx)**2) * particleList(j)%mass * 0.5d0
+                        particleList(j)%wallLoss(1) = particleList(j)%wallLoss(1) + 1 !C/m^2 in 1D
+                        delIdx = delIdx + 1
                     CASE(2)
-                        reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = 2.0d0 - particleList(j)%phaseSpace(1, i-delIdx(j))
-                        particleList(j)%phaseSpace(2, i-delIdx(j)) = -particleList(j)%phaseSpace(2, i-delIdx(j))
-                        idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                        particleList(j)%phaseSpace(1, i-delIdx) = 2.0d0 - particleList(j)%phaseSpace(1, i-delIdx)
+                        particleList(j)%phaseSpace(2, i-delIdx) = -particleList(j)%phaseSpace(2, i-delIdx)
+                        particleList(j)%refIdx = particleList(j)%refIdx + 1
+                        particleList(j)%refRecordIdx(particleList(j)%refIdx) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = MODULO(particleList(j)%phaseSpace(1, i-delIdx(j)) - 2.0d0, real(NumberXNodes, kind = real64)) + 1
+                        particleList(j)%phaseSpace(1, i-delIdx) = MODULO(particleList(j)%phaseSpace(1, i-delIdx) - 2.0d0, real(NumberXNodes, kind = real64)) + 1
                     CASE default
                         print *, 'no case, moveParticles'
                         stop
                     END SELECT
-                else if ((particleList(j)%phaseSpace(1, i-delIdx(j)) >= NumberXNodes)) then
+                else if ((particleList(j)%phaseSpace(1, i-delIdx) >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
                     CASE(1)
-                        self%particleChargeLoss(2, j) = self%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
-                        self%particleEnergyLoss = self%particleEnergyLoss + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx(j))**2) * particleList(j)%mass * 0.5d0
-                        delIdx(j) = delIdx(j) + 1
+                        particleList(j)%energyLoss(2) = particleList(j)%energyLoss(2) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx)**2) * particleList(j)%mass * 0.5d0
+                        particleList(j)%wallLoss(2) = particleList(j)%wallLoss(2) + 1 !C/m^2 in 1D
+                        delIdx = delIdx + 1
                     CASE(2)
-                        reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = 2.0d0 * NumberXNodes - particleList(j)%phaseSpace(1, i-delIdx(j))
-                        particleList(j)%phaseSpace(2, i-delIdx(j)) = -particleList(j)%phaseSpace(2, i-delIdx(j))
-                        idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                        particleList(j)%phaseSpace(1, i-delIdx) = 2.0d0 * NumberXNodes - particleList(j)%phaseSpace(1, i-delIdx)
+                        particleList(j)%phaseSpace(2, i-delIdx) = -particleList(j)%phaseSpace(2, i-delIdx)
+                        particleList(j)%refIdx = particleList(j)%refIdx + 1
+                        particleList(j)%refRecordIdx(particleList(j)%refIdx) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = MODULO(particleList(j)%phaseSpace(1, i-delIdx(j)), real(NumberXNodes, kind = real64)) + 1
+                        particleList(j)%phaseSpace(1, i-delIdx) = MODULO(particleList(j)%phaseSpace(1, i-delIdx), real(NumberXNodes, kind = real64)) + 1
                     CASE default
                         print *, 'no case, moveParticles'
                         stop
                     END SELECT
                 end if
             end do loopParticles
-            particleList(j)%N_p = particleList(j)%N_p - delIdx(j)
+            particleList(j)%N_p = particleList(j)%N_p - delIdx
         end do loopSpecies
     end subroutine moveParticles
 
