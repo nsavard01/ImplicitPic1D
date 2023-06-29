@@ -193,7 +193,7 @@ contains
             call solver%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
-            if (normResidual(index) < eps_r*(initialR + initialNorm)) then
+            if (normResidual(index) < eps_r*(initialNorm)) then
                 call moveParticles(solver,particleList, world, del_t)
                 solver%phi = solver%phi_f
                 exit
