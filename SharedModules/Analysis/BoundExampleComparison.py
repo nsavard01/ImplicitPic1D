@@ -8,7 +8,7 @@ Created on Tue Jun 27 14:32:42 2023
 from plotProduction import *
 from generateBoundExample import *
 
-data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/test_1e18_1000PartPerCell/')
+data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/Data/')
 
 def compareModelToData(data):
     for name in data.particles.keys():
