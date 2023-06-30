@@ -181,7 +181,7 @@ contains
         initialNorm = SQRT(SUM(solver%phi**2))
         call solver%solve_tridiag_Ampere(world, del_t)
         phi_k(:,2) = solver%phi_f
-        initialR = SQRT(SUM((solver%phi_f - phi_k(:,1))**2))
+        initialR = SQRT(real(NumberXNodes))!SQRT(SUM((solver%phi_f - phi_k(:,1))**2))
         normResidual(1) = initialR
         Residual_k(:,1) = phi_k(:,2) - phi_k(:,1)
         !print *, "Initial norm is:", initialR
@@ -193,7 +193,7 @@ contains
             call solver%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
-            if (normResidual(index) < eps_r*(initialNorm)) then
+            if (normResidual(index) < eps_r*(initialR)) then
                 call moveParticles(solver,particleList, world, del_t)
                 solver%phi = solver%phi_f
                 exit
