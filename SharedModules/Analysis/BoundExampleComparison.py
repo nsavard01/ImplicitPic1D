@@ -8,7 +8,8 @@ Created on Tue Jun 27 14:32:42 2023
 from plotProduction import *
 from generateBoundExample import *
 
-data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/Data/')
+data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/DataTest/')
+dataExplicit = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Data/')
 
 def compareModelToData(data):
     for name in data.particles.keys():
@@ -17,6 +18,7 @@ def compareModelToData(data):
             break
     M = data.particles[ion]['mass']
     model = getBoundPlasmaSolutions(data.grid[-1] - data.grid[0], 100, data.n_ave, data.T_e, data.T_i, M)
+    plt.figure()
     plotAveDensity(data, name = 'e', label = 'PIC')
     plt.plot(model[0], model[2], label = 'Model')
     plt.legend(loc = 'best')

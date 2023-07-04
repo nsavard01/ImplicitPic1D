@@ -119,21 +119,23 @@ contains
 
     ! --------------------------- Writing Particle Data to File -----------------------------------
 
-    subroutine writePhaseSpace(self, CurrentDiagStep)
+    subroutine writePhaseSpace(self, CurrentDiagStep, dirName)
         ! Writes particle phase space into binary file
         class(Particle), intent(in) :: self
         integer(int32), intent(in) :: CurrentDiagStep
+        character(*), intent(in) :: dirName
         character(len=5) :: char_i
         write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file='../Data/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        open(10,file='../'//dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
         write(10) self%phaseSpace(:, 1:self%N_p)
         close(10)
     end subroutine writePhaseSpace
 
-    subroutine writeLocalTemperature(self, CurrentDiagStep)
+    subroutine writeLocalTemperature(self, CurrentDiagStep, dirName)
         ! Write particle temperature averaged over local grid
         class(Particle), intent(in) :: self
         integer(int32), intent(in) :: CurrentDiagStep
+        character(*), intent(in) :: dirName
         character(len=5) :: char_i
         integer(int32) :: j, index, counter(NumberXNodes-1)
         real(real64) :: temp(NumberXNodes-1)
@@ -151,7 +153,7 @@ contains
             end if
         end do
         write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file='../Data/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        open(10,file='../'//dirName//'/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
         write(10) temp
         close(10)
         

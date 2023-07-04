@@ -11,10 +11,12 @@ module mod_simulation
     use mod_collisions
     use mod_Scheme
     use mod_nonLinSolvers
+    use ifport, only: makedirqq
     implicit none
 
     integer(int32) :: numTimeSteps
     real(real64) :: del_t, simulationTime, averagingTime, energyError, chargeError, gaussError
+    character(len=:), allocatable :: directoryName
 
 
 contains
@@ -31,6 +33,7 @@ contains
         real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
         type(Domain) :: world
         type(potentialSolver) :: solver
+        character(len=100) :: tempName
 
         print *, "Reading initial inputs:"
         open(10,file='../../SharedModules/InputData/'//InitFilename, IOSTAT=io)
@@ -44,7 +47,13 @@ contains
         read(10, *, IOSTAT = io) Power
         read(10, *, IOSTAT = io) heatSkipSteps
         read(10, *, IOSTAT = io) nu_h
+        read(10, *, IOSTAT = io) tempName
         close(10)
+        directoryName = trim(tempName)
+        if (len(directoryName) < 2) then
+            stop "Directory name length less than 2 characters!"
+        end if
+        print *, "Save data folder: ", directoryName
         print *, "Average initial particle density:", n_ave
         print *, "Initial T_e:", T_e
         print *, "Initial T_i:", T_i
@@ -198,18 +207,19 @@ contains
 
     end subroutine addMaxwellianLostParticles
     
-    subroutine writePhi(phi, CurrentDiagStep, boolAverage) 
+    subroutine writePhi(phi, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
         ! Re-use rho array since it doesn't get used after first Poisson
         real(real64), intent(in) :: phi(:)
         integer(int32), intent(in) :: CurrentDiagStep
+        character(*), intent(in) :: dirName
         character(len=5) :: char_i
         logical, intent(in) :: boolAverage
         write(char_i, '(I3)') CurrentDiagStep
         if (boolAverage) then
-            open(41,file='../Data/Phi/phi_Average.dat', form='UNFORMATTED')
+            open(41,file='../'//dirName//'/Phi/phi_Average.dat', form='UNFORMATTED')
         else
-            open(41,file='../Data/Phi/phi_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+            open(41,file='../'//dirName//'/Phi/phi_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
         end if
         write(41) phi
         close(41)
@@ -433,6 +443,31 @@ contains
 
     ! end subroutine solveSimulationOnlyPotential
 
+    subroutine generateSaveDirectory(dirName)
+        character(*), intent(in) :: dirName
+        logical :: bool
+        bool = makedirqq('../'//dirName)
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq('../'//dirName//'/Density')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq('../'//dirName//'/ElectronTemperature')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq('../'//dirName//'/PhaseSpace')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq('../'//dirName//'/Phi')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+    end subroutine generateSaveDirectory
+
     subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
@@ -451,20 +486,21 @@ contains
         real(real64) :: rho_i(NumberXNodes)
         CurrentDiagStep = 1
         unitPart1 = 100
+        call generateSaveDirectory(directoryName)
         !Wrtie Initial conditions
-        open(15,file='../Data/InitialConditions.dat')
+        open(15,file='../'//directoryName//'/InitialConditions.dat')
         write(15,'("Scheme, Number Grid Nodes, T_e, T_i, n_ave, Final Expected Time(s), Delta t(s), FractionFreq, Power(W/m^2), heatSteps, nu_h, numDiag")')
         write(15,"(2(I3.3, 1x), 7(es16.8,1x), (I3.3, 1x), (es16.8,1x), (I3.3, 1x))") schemeNum, NumberXNodes, T_e, T_i, n_ave, simulationTime, del_t, FractionFreq, Power, heatSkipSteps, nu_h, numDiagnosticSteps
         close(15)
 
-        open(15,file='../Data/SolverState.dat')
+        open(15,file='../'//directoryName//'/SolverState.dat')
         write(15,'("Solver Type, eps_r, m_Anderson, Beta_k, maximum iterations")')
         write(15,"(1(I3.3, 1x), 1(es16.8,1x), 1(I3.3, 1x), 1(es16.8,1x), 1(I3.3, 1x))") solverType, eps_r, m_Anderson, Beta_k, maxIter
         close(15)
 
         call system_clock(count_rate = timingRate)
         ! Write Particle properties
-        open(9,file='../Data/ParticleProperties.dat')
+        open(9,file='../'//directoryName//'/ParticleProperties.dat')
         write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2)")')
         do j=1, numberChargedParticles
             write(9,"((A, 1x), 3(es16.8,1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p
@@ -475,24 +511,24 @@ contains
         do i = 1, numberChargedParticles
             particleList(i)%energyLoss = 0.0d0
             particleList(i)%wallLoss = 0
-            open(unitPart1+i,file='../Data/ParticleDiagnostic_'//particleList(i)%name//'.dat')
+            open(unitPart1+i,file='../'//directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat')
             write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2)")')
         end do
         inelasticEnergyLoss = 0.0d0
         diagTimeDivision = simulationTime/real(numDiagnosticSteps)
         diagTime = diagTimeDivision
-        open(22,file='../Data/GlobalDiagnosticData.dat')
+        open(22,file='../'//directoryName//'/GlobalDiagnosticData.dat')
         write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), EnergyTotal (J/m^2), gaussError (a.u), chargeError (a.u), energyError(a.u), Picard Iteration Number")')
         
         !Save initial particle/field data, along with domain
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
-        call writeParticleDensity(densities, particleList, world, 0, .false.) 
-        call writePhi(solver%phi, 0, .false.)
-        call particleList(1)%writeLocalTemperature(0)
-        call world%writeDomain()
+        call writeParticleDensity(densities, particleList, world, 0, .false., directoryName) 
+        call writePhi(solver%phi, 0, .false., directoryName)
+        call particleList(1)%writeLocalTemperature(0, directoryName)
+        call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
-            call particleList(j)%writePhaseSpace(0)
+            call particleList(j)%writePhaseSpace(0, directoryName)
         end do
         currentTime = 0.0d0
         pastDiagTime = 0.0d0
@@ -562,8 +598,8 @@ contains
                 collisionTime = collisionTime + (endTime - startTime)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList, world)
-                call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
-                call writePhi(solver%phi, CurrentDiagStep, .false.)
+                call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false., directoryName) 
+                call writePhi(solver%phi, CurrentDiagStep, .false., directoryName)
                 solver%rho = 0.0d0
                 do j=1, numberChargedParticles
                     solver%rho = solver%rho + densities(:, j) * particleList(j)%q
@@ -589,12 +625,12 @@ contains
                 end if
                 
                 call solver%construct_diagMatrix_Ampere(world)
-                call particleList(1)%writeLocalTemperature(CurrentDiagStep)
+                call particleList(1)%writeLocalTemperature(CurrentDiagStep, directoryName)
                 Etotal = solver%getTotalPE(world, .false.)
                 chargeTotal = 0.0d0
                 particleEnergyLossTemp = 0.0d0
                 do j=1, numberChargedParticles
-                    call particleList(j)%writePhaseSpace(CurrentDiagStep)
+                    call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
                     particleEnergyLossTemp = particleEnergyLossTemp + SUM(particleList(j)%energyLoss)
                     Etotal = Etotal + particleList(j)%getTotalKE()
@@ -668,8 +704,8 @@ contains
         collisionTime = collisionTime + (endTime-startTime)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
-        call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
-        call writePhi(solver%phi, CurrentDiagStep, .false.)
+        call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false., directoryName) 
+        call writePhi(solver%phi, CurrentDiagStep, .false., directoryName)
         solver%rho = 0.0d0
         do j=1, numberChargedParticles
             solver%rho = solver%rho + densities(:, j) * particleList(j)%q
@@ -695,12 +731,12 @@ contains
         end if
 
         call solver%construct_diagMatrix_Ampere(world)
-        call particleList(1)%writeLocalTemperature(CurrentDiagStep)
+        call particleList(1)%writeLocalTemperature(CurrentDiagStep, directoryName)
         Etotal = solver%getTotalPE(world, .false.)
         chargeTotal = 0.0d0
         particleEnergyLossTemp = 0.0d0
         do j=1, numberChargedParticles
-            call particleList(j)%writePhaseSpace(CurrentDiagStep)
+            call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
             particleEnergyLossTemp = particleEnergyLossTemp + SUM(particleList(j)%energyLoss)
             chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
             Etotal = Etotal + particleList(j)%getTotalKE()
@@ -719,7 +755,7 @@ contains
         print *, "Percentage of steps adaptive is:", 100.0d0 * real(amountTimeSplits)/real(i + 1)
 
         ! Write Particle properties
-        open(9,file='../Data/SimulationFinalData.dat')
+        open(9,file='../'//directoryName//'/SimulationFinalData.dat')
         write(9,'("Elapsed Times(s), Potential Time (s), Collision Time (s), Total Steps, Number Adaptive Steps")')
         write(9,"(3(es16.8,1x), 2(I6, 1x))") elapsed_time, real(potentialTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1, amountTimeSplits
         close(9)
@@ -786,8 +822,8 @@ contains
         deallocate(wallLoss)
         print *, "Averaging finished over", currentTime, 'simulation time (s)'
         densities = densities/i
-        call writeParticleDensity(densities, particleList, world, 0, .true.) 
-        call writePhi(phi_average/i, 0, .true.)
+        call writeParticleDensity(densities, particleList, world, 0, .true., directoryName) 
+        call writePhi(phi_average/i, 0, .true., directoryName)
         chargeLossTotal = 0.0d0
         ELossTotal = 0.0d0
         do j = 1, numberChargedParticles
@@ -802,7 +838,7 @@ contains
         call solver%construct_diagMatrix(world)
         gaussError = solver%getError_tridiag_Poisson(world)
         print *, 'gaussError average is:', gaussError
-        open(22,file='../Data/GlobalDiagnosticDataAveraged.dat')
+        open(22,file='../'//directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Steps Averaged, Averaging Time, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), gaussError")')
         write(22,"((I6, 1x), 5(es16.8,1x))") i, currentTime, inelasticEnergyLoss/currentTime, chargeLossTotal/currentTime, ELossTotal/currentTime, gaussError
         close(22)
@@ -825,7 +861,7 @@ contains
             end do
             currentTime = currentTime + currDel_t
         end do
-        open(10,file="../Data/ElectronTemperature/EVDF_average.dat", form='UNFORMATTED')
+        open(10,file='../'//directoryName//'/ElectronTemperature/EVDF_average.dat', form='UNFORMATTED')
         write(10) real(VHist, kind = real64), VMax
         close(10)
 

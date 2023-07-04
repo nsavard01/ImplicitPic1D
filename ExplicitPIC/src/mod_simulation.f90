@@ -1,7 +1,7 @@
 module mod_simulation
     ! module which actually uses others to run a simulation (single or multiple time steps)
     ! will contain diagnostics as well
-    use iso_fortran_env, only: int32, real64
+    use iso_fortran_env, only: int32, real64, int64
     use constants
     use mod_BasicFunctions
     use mod_particle
@@ -102,13 +102,13 @@ contains
             if( name(1:9).eq.'ELECTRONS') then
                 read(10,*,END=101,ERR=100) name
                 read(10,*,END=101,ERR=100) name
-                read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:4)
+                read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:2)
                 numSpecies = numSpecies + 1
                 read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
                 Ti(numSpecies) = T_e
                 mass(numSpecies) = m_e
                 charge(numSpecies) = -1.0
-                particleNames(numSpecies) = '[e]'
+                particleNames(numSpecies) = 'e'
                 read(10,*,END=101,ERR=100) name
                 read(10,*,END=101,ERR=100) name
             endif
@@ -391,16 +391,18 @@ contains
         real(real64), intent(in) :: del_t, simulationTime
         integer(int32), intent(in) :: heatSkipSteps
         integer(int32), intent(in out) :: irand
-        integer(int32) :: i, j, CurrentDiagStep, diagStepDiff
-        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, startTime, endTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
+        integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
+        real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
+        integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, startTotal, endTotal
         CurrentDiagStep = 1
+        unitPart1 = 100
 
         !Wrtie Initial conditions
         open(15,file='../Data/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, Power(W/m^2), heatSteps, nu_h")')
-        write(15,"((I3.3, 1x), 5(es16.8,1x), (I3.3, 1x), (es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, Power, heatSkipSteps, nu_h
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, n_ave, T_e, T_i, numDiag")')
+        write(15,"((I3.3, 1x), 7(es16.8,1x), (I3.3, 1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps
         close(15)
-
+        call system_clock(count_rate = timingRate)
         ! Write Particle properties
         open(9,file='../Data/ParticleProperties.dat')
         write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2)")')
@@ -408,6 +410,14 @@ contains
             write(9,"((A, 1x), 3(es16.8,1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p
         end do
         close(9)
+        do i = 1, numberChargedParticles
+            particleList(i)%energyLoss = 0.0d0
+            particleList(i)%wallLoss = 0
+            open(unitPart1+i,file='../Data/ParticleDiagnostic_'//particleList(i)%name//'.dat')
+            write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2)")')
+        end do
+        collisionTime = 0
+        potentialTime = 0
         i = 0
         elapsedTime = 0.0d0
         diagStepDiff = 1
@@ -435,25 +445,32 @@ contains
             call particleList(j)%writePhaseSpace(0)
         end do
         currentTime = 0.0d0
+        call system_clock(startTotal)
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
-                call cpu_time(startTime)
+                call system_clock(startTime)
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
+                call system_clock(endTime)
+                potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call system_clock(startTime)
                 call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-                call cpu_time(endTime)
-                elapsedTime = elapsedTime + (endTime - startTime)
+                call system_clock(endTime)
+                collisionTime = collisionTime + (endTime - startTime)
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
-                call cpu_time(startTime)
+                call system_clock(startTime)
                 call solver%moveParticles(particleList, world, del_t)
                 call solver%solvePotential(particleList, world)
+                call system_clock(endTime)
+                potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+                call system_clock(startTime)
                 call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-                call cpu_time(endTime)
-                elapsedTime = elapsedTime + (endTime - startTime)
+                call system_clock(endTime)
+                collisionTime = collisionTime + (endTime - startTime)
                 densities = 0.0d0
                 call loadParticleDensity(densities, particleList, world)
                 call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -465,16 +482,17 @@ contains
                     call particleList(j)%writePhaseSpace(CurrentDiagStep)
                     chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
                     energyLoss = energyLoss + SUM(particleList(j)%energyLoss)
+                    write(unitPart1+j,"(5(es16.8,1x))") currentTime, &
+                        particleList(j)%wallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%wallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
+                        particleList(j)%energyLoss(1)/del_t/diagStepDiff, particleList(j)%energyLoss(2)/del_t/diagStepDiff
+                    particleList(j)%energyLoss = 0.0d0
+                    particleList(j)%wallLoss = 0
                 end do
                 write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
                 chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff
                 CurrentDiagStep = CurrentDiagStep + 1
                 print *, "Number of electrons is:", particleList(1)%N_p
                 inelasticEnergyLoss = 0.0d0
-                do i = 1, numberChargedParticles
-                    particleList(i)%energyLoss = 0.0d0
-                    particleList(i)%wallLoss = 0
-                end do
                 diagStepDiff = 0
                 diagTime = diagTime + diagTimeDivision
             end if
@@ -485,13 +503,16 @@ contains
             i = i + 1
             diagStepDiff = diagStepDiff + 1
         end do
-        call cpu_time(startTime)
+        call system_clock(startTime)
         call solver%moveParticles(particleList, world, del_t)
         call solver%solvePotential(particleList, world)
+        call system_clock(endTime)
+        potentialTime = potentialTime + (endTime - startTime)
         !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
+        call system_clock(startTime)
         call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-        call cpu_time(endTime)
-        elapsedTime = elapsedTime + (endTime - startTime)
+        call system_clock(endTime)
+        collisionTime = collisionTime + (endTime-startTime)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
@@ -506,16 +527,21 @@ contains
             call particleList(j)%writePhaseSpace(CurrentDiagStep)
             chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
             energyLoss = energyLoss + SUM(particleList(j)%energyLoss)
+            write(unitPart1+j,"(5(es16.8,1x))") currentTime, &
+                particleList(j)%wallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%wallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
+                particleList(j)%energyLoss(1)/del_t/diagStepDiff, particleList(j)%energyLoss(2)/del_t/diagStepDiff
         end do
         write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
         chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff
-
+        close(22)
+        call system_clock(endTotal)
+        elapsed_time = real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
         ! Write Final Data
         open(9,file='../Data/SimulationFinalData.dat')
-        write(9,'("Simulation time (s), Total Steps")')
-        write(9,"(1(es16.8,1x), 1(I6, 1x))") elapsed_time, i+1
+        write(9,'("Elapsed Times(s), Potential Time (s), Collision Time (s), Total Steps")')
+        write(9,"(3(es16.8,1x), 1(I6, 1x))") elapsed_time, real(potentialTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1
         close(9)
-        print *, "Elapsed time for simulation is:", elapsedTime, "seconds"
+        print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
 
     end subroutine solveSimulation
 

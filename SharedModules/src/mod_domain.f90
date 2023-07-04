@@ -176,16 +176,17 @@ contains
     end subroutine constructUniformGrid
 
 
-    subroutine writeDomain(self)
+    subroutine writeDomain(self, dirName)
     ! Writes domain data into binary file under Data
     class(Domain), intent(in) :: self
-    open(41,file="../Data/domainGrid.dat", form='UNFORMATTED')
+    character(*), intent(in) :: dirName
+    open(41,file='../'//dirName//'/domainGrid.dat', form='UNFORMATTED')
     write(41) self%grid
     close(41)
-    open(41,file="../Data/domainDxDl.dat", form='UNFORMATTED')
+    open(41,file='../'//dirName//'/domainDxDl.dat', form='UNFORMATTED')
     write(41) self%dx_dl
     close(41)
-    open(41,file="../Data/domainNodeVol.dat", form='UNFORMATTED')
+    open(41,file='../'//dirName//'/domainNodeVol.dat', form='UNFORMATTED')
     write(41) self%nodeVol
     close(41)
     end subroutine writeDomain

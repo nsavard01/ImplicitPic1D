@@ -119,13 +119,14 @@ contains
 
     end subroutine loadParticleDensity
 
-    subroutine WriteParticleDensity(densities, particleList, world, CurrentDiagStep, boolAverage) 
+    subroutine WriteParticleDensity(densities, particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
         ! Re-use rho array since it doesn't get used after first Poisson
         real(real64), intent(in out) :: densities(:,:)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: CurrentDiagStep
+        character(*), intent(in) :: dirName
         integer(int32) :: i
         logical, intent(in) :: boolAverage
         character(len=5) :: char_i
@@ -142,9 +143,9 @@ contains
             if (world%boundaryConditions(NumberXNodes) == 2) densities(NumberXNodes, i) = densities(NumberXNodes, i)*2.0d0
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
-                open(41,file='../Data/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
+                open(41,file='../'//dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else
-                open(41,file='../Data/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+                open(41,file='../'//dirName//'/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
             end if
             write(41) densities(:,i)
             close(41)
