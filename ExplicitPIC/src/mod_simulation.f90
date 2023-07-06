@@ -555,8 +555,9 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: heatSkipSteps
         integer(int32), intent(in out) :: irand
-        integer(int32) :: i, stepsAverage
-        real(real64) :: phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles), currentTime, chargeTotal, energyLoss
+        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j
+        real(real64) :: phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles), currentTime, chargeTotal, energyLoss, meanLoss, stdLoss
+        real(real64), allocatable :: wallLoss(:)
 
 
         open(22,file='../Data/GlobalDiagnosticDataAveraged.dat')
@@ -572,6 +573,9 @@ contains
         densities = 0.0d0
         currentTime = 0.0d0
         i = 0
+        windowDivision = INT(200.0d0 / fractionFreq)
+        allocate(wallLoss(2 * windowDivision))
+        windowNum = 0
         do while(currentTime < averagingTime)
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world)
@@ -584,7 +588,21 @@ contains
             ! end if
             i = i + 1
             currentTime = currentTime + del_t
+            windowNum = windowNum + 1
+            wallLoss(windowNum) = 0.0d0
+            do j = 1, numberChargedParticles
+                wallLoss(windowNum) = wallLoss(windowNum) + SUM(particleList(j)%energyLoss)
+            end do
+            wallLoss(windowNum) = wallLoss(windowNum)/currentTime
+            if (windowNum > windowDivision) then
+                meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
+                stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
+                print *, stdLoss/meanLoss
+                if (stdLoss/meanLoss < 1d-5) exit
+                windowNum = 0
+            end if
         end do
+        print *, "Averaging finished over", currentTime, 'simulation time (s)'
         stepsAverage = i
         densities = densities/i
         call writeParticleDensity(densities, particleList, world, 0, .true.) 

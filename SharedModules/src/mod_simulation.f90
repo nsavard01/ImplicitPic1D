@@ -646,6 +646,8 @@ contains
                 CurrentDiagStep = CurrentDiagStep + 1
                 inelasticEnergyLoss = 0.0d0
                 print *, "Number of electrons is:", particleList(1)%N_p
+                print *, "Number of electrons lost to walls was:", particleList(1)%delIdx
+                print *, "Number of electrons refluxed was:", particleList(1)%refIdx
                 pastDiagTime = currentTime + currDel_t
                 diagTime = diagTime + diagTimeDivision
             end if

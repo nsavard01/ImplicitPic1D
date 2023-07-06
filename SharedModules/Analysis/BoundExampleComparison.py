@@ -10,10 +10,18 @@ from generateBoundExample import *
 
 data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_16nodes/')
 data1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_200PPC_2p0delT_2p5e16nave_16nodes/')
+data31Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_31nodes/')
 data2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_300PPC_2p0delT_2p5e16nave_16nodes/')
-dataExplicit = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_100PPC_0p2delT_2p5e16nave/')
-dataList = [data, data1, data2, dataExplicit]
-labelList = ['100PPC', '200PPC', '300PPC', '100PPC - Exp.']
+data3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_0p2delT_2p5e16nave_16nodes/')
+data4 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_16nodes/')
+data1000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_16nodes/')
+data1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_1e18nave_16nodes/')
+dataExplicit100PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_100PPC_0p2delT_2p5e16nave/')
+dataExplicit300PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_300PPC_0p2delT_2p5e16nave/')
+dataExplicit500PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_500PPC_0p2delT_2p5e16nave/')
+test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Data/')
+dataList = [dataExplicit100PPC, dataExplicit300PPC, dataExplicit500PPC, data4, data1000PPC]
+labelList = ['100PPC-Explicit', '300PPC-Explicit', '500PPC-Explicit', '500PPC-NGP', '1000PPC-NGP']
 def compareModelToData(data):
     for name in data.particles.keys():
         if name != 'e':
@@ -52,6 +60,7 @@ def compareModeltoDatas(dataList, labelList):
     T_e = dataList[0].T_e
     T_i = dataList[0].T_i
     n_ave = dataList[0].n_ave
+    model = getBoundPlasmaSolutions(dataList[0].grid[-1] - dataList[0].grid[0], 100, n_ave, T_e, T_i, M)
     for i in range(len(dataList)):
         data = dataList[i]
         
@@ -64,7 +73,7 @@ def compareModeltoDatas(dataList, labelList):
         phi = data.getAvePhi()
         ax3.plot(data.grid, phi, linestyle = '-', marker = '.',label = labelList[i])
      
-    model = getBoundPlasmaSolutions(dataList[0].grid[-1] - dataList[0].grid[0], 100, n_ave, T_e, T_i, M)
+    
     ax1.plot(model[0], model[2], label = 'Model')
     ax2.plot(model[0], model[3], label = 'Model')
     ax3.plot(model[0], model[1], label = 'Model')
@@ -72,6 +81,14 @@ def compareModeltoDatas(dataList, labelList):
     ax2.legend(loc = 'best')
     ax3.legend(loc = 'best')
     ax1.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
+    ax1.set_xlabel('Distance (m)')
+    ax1.set_ylabel(r'$n_e$ (m$^{-3}$)')
+    
     ax2.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
+    ax2.set_xlabel('Distance (m)')
+    ax2.set_ylabel(r'$n_+$ (m$^{-3}$)')
+    
     ax3.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
+    ax3.set_xlabel('Distance (m)')
+    ax3.set_ylabel('Voltage (V)')
         

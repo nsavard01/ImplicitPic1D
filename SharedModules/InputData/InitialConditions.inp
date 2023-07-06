@@ -8,5 +8,5 @@
 50.0d0 ! Power (W/m^2)
 1 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
-NGP_300PPC_2p0delT_2p5e16nave_16nodes !filename
+NGP_1000PPC_2p0delT_2p5e16nave_16nodes !filename
 END

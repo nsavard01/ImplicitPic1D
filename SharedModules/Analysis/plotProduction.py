@@ -45,7 +45,7 @@ def plotAveEVDF(dataSet):
     dv = Vbins[1] - Vbins[0]
     Norm = np.sum(VHist * dv)
     VHist = VHist/Norm
-    popt, pcov = opt.curve_fit(maxwellEDVF, Vbins, VHist, p0 = [test.T_e])
+    popt, pcov = opt.curve_fit(maxwellEDVF, Vbins, VHist, p0 = [dataSet.T_e])
     print('popt is', popt)
     plt.plot(Vbins, VHist, 'o-', label = 'Global EDVF')
     plt.plot(Vbins, maxwellEDVF(Vbins, popt[0]), label = 'Best Fit T_e = ' + '{:2.2f}'.format(popt[0]))
@@ -63,7 +63,7 @@ def update_plot_Phi(i, dataSet, ax):
     ax.set_xlabel('Distance (m)')
     ax.set_ylabel('Potential (V)')
     ax.set_xlim([0, dataSet.grid[-1]])
-    ax.set_ylim([-20, 40])
+    #ax.set_ylim([-20, 40])
 
     
 def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "BoundPlasmaPhi.gif"):
@@ -76,7 +76,7 @@ def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "BoundPlasmaPhi.
         ax.set_xlabel('Distance (m)')
         ax.set_ylabel('Potential (V)')
         ax.set_xlim([0, dataSet.grid[-1]])
-        ax.set_ylim([-20, 40])
+        #ax.set_ylim([-20, 40])
         ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(dataSet, ax))
         
         ani.save(savePath)
