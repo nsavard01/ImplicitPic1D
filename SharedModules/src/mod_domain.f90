@@ -28,6 +28,7 @@ module mod_domain
 
 contains
 
+    
     ! Initialization procedures
     type(Domain) function domain_constructor(leftBoundary, rightBoundary) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.

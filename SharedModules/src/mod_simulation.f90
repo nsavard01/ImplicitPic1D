@@ -15,8 +15,8 @@ module mod_simulation
     implicit none
 
     integer(int32) :: numTimeSteps
-    real(real64) :: del_t, simulationTime, averagingTime, energyError, chargeError, gaussError
-    character(len=:), allocatable :: directoryName
+    real(real64) :: del_t, energyError, chargeError, gaussError
+    
 
 
 contains

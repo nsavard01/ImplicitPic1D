@@ -21,14 +21,16 @@ module mod_particle
         real(real64), allocatable :: refRecordIdx(:) 
 
     contains
-        procedure, public, pass(self) :: initialize_n_ave
+        procedure, public, pass(self) :: initialize_randUniform
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getKEAve
+        procedure, public, pass(self) :: getLocalTemperature
         procedure, public, pass(self) :: getTotalKE
         procedure, public, pass(self) :: getTotalKE1D
         procedure, public, pass(self) :: getTotalMomentum
         procedure, public, pass(self) :: getVrms
         procedure, public, pass(self) :: writePhaseSpace
+        procedure, public, pass(self) :: loadParticleDensity
         procedure, public, pass(self) :: writeLocalTemperature
     end type Particle
 
@@ -39,21 +41,20 @@ module mod_particle
 
 contains
 
-    type(Particle) function particle_constructor(mass, q, partPerCell, partIdxFactor, particleName, world) result(self)
+    type(Particle) function particle_constructor(mass, q, partPerCell, partIdxFactor, particleName) result(self)
         ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
         ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
-        type(Domain), intent(in) :: world
         real(real64), intent(in) :: mass, q
         integer(int32), intent(in) :: partPerCell, partIdxFactor
         character(*), intent(in) :: particleName
         self % name = particleName
         self % mass = mass
         self % q = q
-        self % w_p = 0.0d0
         self % partPerCell = partPerCell
         self % finalIdx = partPerCell * partIdxFactor
-        allocate(self%phaseSpace(4,finalIdx, NumberXNodes-1), self%refRecordIdx(INT(partPerCell * (NumberXNodes-1)/10)), &
-            part%w_p(finalIdx, NumberXNodes-1), self%N_p(NumberXNodes-1))
+        allocate(self%phaseSpace(4,self%finalIdx, NumberXNodes-1), self%refRecordIdx(INT(partPerCell * (NumberXNodes-1)/10)), &
+            self%w_p(self%finalIdx, NumberXNodes-1), self%N_p(NumberXNodes-1))
+        self%N_p = partPerCell
     end function particle_constructor
 
     subroutine initialize_randUniform(self, world, irand)
@@ -64,13 +65,12 @@ contains
         integer(int32) :: i, j
         real(real64) :: w_0, L_domain
         L_domain = world%grid(NumberXNodes) - world%grid(1)
-        lowIndex = 0
         w_0 = n_ave / real(self%partPerCell, kind = 8)
         do j = 1, NumberXNodes-1
             do i = 1, self%partPerCell
-                part%phaseSpace(1, i, j) = j + ran2(irand)
+                self%phaseSpace(1, i, j) = j + ran2(irand)
             end do
-            part%w_p(1:self%partPerCell, j) = w_0 * world%dx_dl(j)
+            self%w_p(1:self%partPerCell, j) = w_0 * world%dx_dl(j)
         end do
         self%N_p = self%partPerCell
         
@@ -105,7 +105,7 @@ contains
         integer(int32) :: i
         res = 0.0d0
         do i = 1, NumberXNodes-1
-            res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(i), i)**2) * self % mass * 0.5d0 / e / self%N_p
+            res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(i), i)**2)
         end do
         res = res * self%mass * 0.5d0 / e / SUM(self%N_p)
 
@@ -140,23 +140,60 @@ contains
         ! calculate total KE in Joules/m^2
         class(Particle), intent(in) :: self
         real(real64) :: res
-        integer(int32) :: i
+        integer(int32) :: i, j
         res = 0.0d0
         do i = 1, NumberXNodes-1
-            res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 * self%w_p
+            do j = 1, self%N_p(i)
+                res = res + SUM(self%phaseSpace(2:4, j, i)**2) * self%w_p(j, i)
+            end do
         end do
+        res = res * self%mass * 0.5d0
     end function getTotalKE
 
     pure function getTotalKE1D(self) result(res)
         ! calculate total KE in Joules/m^2 for domain dimension
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SUM(self%phaseSpace(2, 1:self%N_p)**2) * self % mass * 0.5d0 * self%w_p
+        integer(int32) :: i, j
+        res = 0.0d0
+        do i = 1, NumberXNodes-1
+            do j = 1, self%N_p(i)
+                res = res + self%phaseSpace(2, j, i)**2 * self%w_p(j, i)
+            end do
+        end do
+        res = res * self%mass * 0.5d0
 
     end function getTotalKE1D
 
-    ! ------------------------ delete/add particles --------------------------------------------
-    
+    function getLocalTemperature(self) result(res)
+        class(Particle), intent(in) :: self
+        real(real64) :: res(NumberXNodes-1)
+        integer(int32) :: i
+        do i = 1, NumberXNodes-1
+            res(i) = SUM(self%phaseSpace(2:4, 1:self%N_p(i), i)**2) * self % mass * 0.5d0 / e / self%N_p(i)
+        end do
+    end function getLocalTemperature
+
+    ! ------------------------ Gather to mesh  --------------------------------------------
+    subroutine loadParticleDensity(self, densities, world)
+        class(Particle), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in out) :: densities(:)
+        integer(int32) :: i, j
+        real(real64) :: d, w_p
+        do i = 1, NumberXNodes-1
+            do j = 1, self%N_p(i)
+                w_p = self%w_p(j, i)
+                d = MOD(self%phaseSpace(1,j, i), 1.0d0)
+                densities(i) = densities(i) + w_p * (1.0d0-d)
+                densities(i+1) = densities(i + 1) + w_p * d
+            end do
+        end do
+        if (world%boundaryConditions(1) > 4) then
+            print *, 'Just excuse to use world object since needed in CIC scheme'
+        end if
+
+    end subroutine loadParticleDensity
 
     ! --------------------------- Writing Particle Data to File -----------------------------------
 
@@ -166,9 +203,12 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
+        integer(int32) :: i
         write(char_i, '(I3)'), CurrentDiagStep
         open(10,file='../'//dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
-        write(10) self%phaseSpace(:, 1:self%N_p)
+        do i = 1, NumberXNodes-1
+            write(10) self%phaseSpace(:, 1:self%N_p(i), i)
+        end do
         close(10)
     end subroutine writePhaseSpace
 
@@ -178,26 +218,15 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
-        integer(int32) :: j, index, counter(NumberXNodes-1)
         real(real64) :: temp(NumberXNodes-1)
-        temp = 0.0d0
-        counter = 0
-    
-        do j = 1, self%N_p
-            index = INT(self%phaseSpace(1, j))
-            temp(index) = temp(index) + SUM(self%phaseSpace(2:4, j)**2) * 0.5d0 * self%mass/e
-            counter(index) = counter(index) + 1
-        end do
-        do j = 1, NumberXNodes-1
-            if (counter(j) > 0) then
-                temp(j) = temp(j)*2.0d0/counter(j)/3.0d0
-            end if
-        end do
+        temp = self%getLocalTemperature()
         write(char_i, '(I3)'), CurrentDiagStep
         open(10,file='../'//dirName//'/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
         write(10) temp
         close(10)
         
     end subroutine writeLocalTemperature
+
+    
 
 end module mod_particle
