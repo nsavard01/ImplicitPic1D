@@ -3,8 +3,7 @@ module mod_domain
     use constants
     implicit none
 
-    private
-    public :: Domain
+    
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain

@@ -3,6 +3,7 @@ module mod_particle
     use iso_fortran_env, only: int32, real64, output_unit
     use constants
     use mod_BasicFunctions
+    use mod_domain
     implicit none
 
     private
@@ -11,9 +12,11 @@ module mod_particle
     ! Particle contains particle properties and stored values in phase space df
     type :: Particle
         character(:), allocatable :: name !name of the particle
-        integer(int32) :: N_p, finalIdx !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
-        real(real64), allocatable :: phaseSpace(:,:) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
-        real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
+        integer(int32) :: finalIdx, partPerCell !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
+        real(real64), allocatable :: phaseSpace(:,:,:) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index, particle number in second index, cell number in final index
+        real(real64), allocatable :: w_p(:,:)
+        integer(int32), allocatable :: N_p(:)
+        real(real64) :: mass, q ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
         real(real64) :: delIdx, wallLoss(2), energyLoss(2), refIdx !keep track particle losses at boundaries
         real(real64), allocatable :: refRecordIdx(:) 
 
@@ -36,27 +39,43 @@ module mod_particle
 
 contains
 
-    type(Particle) function particle_constructor(mass, q, w_p, N_p, finalIdx, particleName) result(self)
+    type(Particle) function particle_constructor(mass, q, partPerCell, partIdxFactor, particleName, world) result(self)
         ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
         ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
-        real(real64), intent(in) :: mass, q, w_p
-        integer(int32), intent(in) :: N_p, finalIdx
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: mass, q
+        integer(int32), intent(in) :: partPerCell, partIdxFactor
         character(*), intent(in) :: particleName
         self % name = particleName
         self % mass = mass
         self % q = q
-        self % w_p = w_p
-        self % N_p = N_p
-        self % finalIdx = finalIdx
-        allocate(self%phaseSpace(4,finalIdx), self%refRecordIdx(INT(N_p/10)))
+        self % w_p = 0.0d0
+        self % partPerCell = partPerCell
+        self % finalIdx = partPerCell * partIdxFactor
+        allocate(self%phaseSpace(4,finalIdx, NumberXNodes-1), self%refRecordIdx(INT(partPerCell * (NumberXNodes-1)/10)), &
+            part%w_p(finalIdx, NumberXNodes-1), self%N_p(NumberXNodes-1))
     end function particle_constructor
 
-    pure subroutine initialize_n_ave(self, n_ave, L_domain)
-        ! initialize w_p based on initial average n (N/m^3) over domain
+    subroutine initialize_randUniform(self, world, irand)
+        ! place particles randomly in each dx_dl based on portion of volume it take up
         class(Particle), intent(in out) :: self
-        real(real64), intent(in) :: n_ave, L_domain
-        self % w_p = n_ave * L_domain / self % N_p
-    end subroutine initialize_n_ave
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in out) :: irand
+        integer(int32) :: i, j
+        real(real64) :: w_0, L_domain
+        L_domain = world%grid(NumberXNodes) - world%grid(1)
+        lowIndex = 0
+        w_0 = n_ave / real(self%partPerCell, kind = 8)
+        do j = 1, NumberXNodes-1
+            do i = 1, self%partPerCell
+                part%phaseSpace(1, i, j) = j + ran2(irand)
+            end do
+            part%w_p(1:self%partPerCell, j) = w_0 * world%dx_dl(j)
+        end do
+        self%N_p = self%partPerCell
+        
+    end subroutine initialize_randUniform
+
 
     ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
@@ -67,43 +86,65 @@ contains
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: T
         integer(int32), intent(in out) :: irand
-        real(real64) :: U1(self%N_p), U2(self%N_p), U3(self%N_p), U4(self%N_p)
-        call getRandom(U1, irand)
-        call getRandom(U2, irand)
-        call getRandom(U3, irand)
-        call getRandom(U4, irand)
-        self%phaseSpace(2, 1:self%N_p) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
-        self%phaseSpace(3, 1:self%N_p) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
-        self%phaseSpace(4, 1:self%N_p) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
+        real(real64) :: U(4)
+        integer(int32) :: i, j
+        do i = 1, NumberXNodes-1
+            do j = 1, self%N_p(i)
+                call getRandom(U, irand)
+                self%phaseSpace(2, j, i) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
+                self%phaseSpace(3, j, i) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
+                self%phaseSpace(4, j, i) = SQRT(T*e/ self%mass) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
+            end do
+        end do
     end subroutine generate3DMaxwellian
 
     pure function getKEAve(self) result(res)
         ! calculate average kinetic energy (temperature) in eV
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 / e / self%N_p
+        integer(int32) :: i
+        res = 0.0d0
+        do i = 1, NumberXNodes-1
+            res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(i), i)**2) * self % mass * 0.5d0 / e / self%N_p
+        end do
+        res = res * self%mass * 0.5d0 / e / SUM(self%N_p)
 
     end function getKEAve
 
     pure function getTotalMomentum(self) result(res)
         class(Particle), intent(in) :: self
         real(real64) :: res(3)
-        res = self%w_p * self%mass * SUM(self%phaseSpace(2:4, 1:self%N_p), DIM = 2)
+        integer(int32) :: i, j
+        res = 0.0d0
+        do i = 1, NumberXNodes-1
+            do j = 1, self%N_p(i)
+                res = res + self%w_p(j, i) * self%phaseSpace(2:4, j, i)
+            end do
+        end do
+        res = res * self%mass
     end function getTotalMomentum
 
     pure function getVrms(self) result(res)
         ! get rms velocity for checking
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SQRT(SUM(self%phaseSpace(2:4, 1:self%N_p)**2)/ self%N_p)
+        integer(int32) :: i
+        res = 0.0d0
+        do i = 1, NumberXNodes-1
+            res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(i), i)**2)
+        end do
+        res = SQRT(res / SUM(self%N_p))
     end function getVrms
 
     pure function getTotalKE(self) result(res)
         ! calculate total KE in Joules/m^2
         class(Particle), intent(in) :: self
         real(real64) :: res
-        res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 * self%w_p
-
+        integer(int32) :: i
+        res = 0.0d0
+        do i = 1, NumberXNodes-1
+            res = SUM(self%phaseSpace(2:4, 1:self%N_p)**2) * self % mass * 0.5d0 * self%w_p
+        end do
     end function getTotalKE
 
     pure function getTotalKE1D(self) result(res)

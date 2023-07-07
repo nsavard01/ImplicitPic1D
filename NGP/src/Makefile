@@ -36,13 +36,13 @@ mod_potentialSolver.o: ../../SharedModules/src/mod_potentialSolver.f90 mod_domai
 mod_Scheme.o: mod_Scheme.f90 mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_domain.o: ../../SharedModules/src/mod_domain.f90 constants.o mod_BasicFunctions.o
-	$(FC) $(BASE) -c  -o $@ $<
-
 mod_collisions.o: ../../SharedModules/src/mod_collisions.f90 constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_particle.o: ../../SharedModules/src/mod_particle.f90 constants.o mod_BasicFunctions.o
+mod_particle.o: ../../SharedModules/src/mod_particle.f90 constants.o mod_BasicFunctions.o mod_domain.o
+	$(FC) $(BASE) -c  -o $@ $<
+
+mod_domain.o: ../../SharedModules/src/mod_domain.f90 constants.o mod_BasicFunctions.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_BasicFunctions.o: ../../SharedModules/src/mod_BasicFunctions.f90 constants.o
