@@ -19,9 +19,9 @@ data1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PP
 dataExplicit100PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_100PPC_0p2delT_2p5e16nave/')
 dataExplicit300PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_300PPC_0p2delT_2p5e16nave/')
 dataExplicit500PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_500PPC_0p2delT_2p5e16nave/')
-test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Data/')
-dataList = [dataExplicit100PPC, dataExplicit300PPC, dataExplicit500PPC, data4, data1000PPC]
-labelList = ['100PPC-Explicit', '300PPC-Explicit', '500PPC-Explicit', '500PPC-NGP', '1000PPC-NGP']
+dataExplicit1000PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_1000PPC_0p2delT_2p5e16nave/')
+dataList = [dataExplicit300PPC, dataExplicit500PPC, dataExplicit1000PPC, data2, data4, data1000PPC]
+labelList = ['300PPC-Explicit', '500PPC-Explicit', '1000PPC-Explicit', '300PPC-NGP', '500PPC-NGP', '1000PPC-NGP']
 def compareModelToData(data):
     for name in data.particles.keys():
         if name != 'e':
