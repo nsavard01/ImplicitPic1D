@@ -258,9 +258,6 @@ contains
         
     end subroutine depositJ
 
-
-    ! -------------------------------------------- Particle mover without boolean checks for depositing J ------------------------------------------------------------
-
     subroutine moveParticles(solver, particleList, world, del_t)
         ! particle mover to avoid the boolean checks which mostly don't happen when depositing J
         class(potentialSolver), intent(in out) :: solver
@@ -269,13 +266,14 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, w_p
-        integer(int32) :: subStepNum, j, i, k, l_cell, delIdx, int_l_f, changeIdx
+        integer(int32) :: subStepNum, j, i, k, l_cell, delIdx, int_l_f, subCellIdx, addCellIdx(NumberXNodes-1), newIdx
         logical :: wasRefluxed
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
             particleList(j)%refIdx = 0
+            addCellIdx = 0
             loopCell: do k = 1, NumberXNodes-1
-                changeIdx = 0
+                subCellIdx = 0
                 loopParticles: do i = 1, particleList(j)%N_p(k)
                     wasRefluxed = .false.
                     v_sub = particleList(j)%phaseSpace(2,i,k)
@@ -292,19 +290,10 @@ contains
                         ! Add directly to J with no substep
                         l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
                         v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_t - v_sub
-                        !if (int_l_f == l_cell) then
-                        particleList(j)%phaseSpace(1, i-changeIdx, k) = l_f
-                        particleList(j)%phaseSpace(2,i-changeIdx, k) = v_f
-                        particleList(j)%w_p(i-changeIdx, k) = w_p
-                        particleList(j)%phaseSpace(3:4, i-changeIdx, k) = particleList(j)%phaseSpace(3:4, i, k)
-                        ! else
-                        !     changeIdx = changeIdx + 1
-                        !     particleList(j)%N_p(int_l_f) = particleList(j)%N_p(int_l_f) + 1
-                        !     particleList(j)%phaseSpace(1, particleList(j)%N_p(int_l_f), int_l_f) = l_f
-                        !     particleList(j)%phaseSpace(2,particleList(j)%N_p(int_l_f), int_l_f) = v_f
-                        !     particleList(j)%w_p(particleList(j)%N_p(int_l_f), int_l_f) = w_p
-                        !     particleList(j)%phaseSpace(3:4, particleList(j)%N_p(int_l_f), int_l_f) = particleList(j)%phaseSpace(3:4, i, k)
-                        ! end if
+                        particleList(j)%phaseSpace(1, i-subCellIdx, k) = l_f
+                        particleList(j)%phaseSpace(2,i-subCellIdx, k) = v_f
+                        particleList(j)%w_p(i-subCellIdx, k) = w_p
+                        particleList(j)%phaseSpace(3:4, i-subCellIdx, k) = particleList(j)%phaseSpace(3:4, i, k)
                         timePassed = del_t
                         if (INT(l_f) /= l_cell) then
                             stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
@@ -323,7 +312,7 @@ contains
                         CASE(1)
                             timePassed = del_t
                             delIdx = delIdx + 1
-                            changeIdx = changeIdx + 1
+                            subCellIdx = subCellIdx + 1
                             if (l_f == 1) then
                                 particleList(j)%energyLoss(1) = particleList(j)%energyLoss(1) + w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, k)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                                 particleList(j)%wallLoss(1) = particleList(j)%wallLoss(1) + w_p !C/m^2 in 1D
@@ -357,23 +346,35 @@ contains
                             if (ABS(l_f - l_sub) >= 1) then
                                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
                             end if
+                            ! particleList(j)%phaseSpace(1, i-subCellIdx, k) = l_f
+                            ! particleList(j)%phaseSpace(2,i-subCellIdx, k) = v_f
+                            ! particleList(j)%w_p(i-subCellIdx, k) = w_p
+                            ! particleList(j)%phaseSpace(3:4, i-subCellIdx, k) = particleList(j)%phaseSpace(3:4, i, k)
                             ! if (wasRefluxed) then
-                            !     changeIdx = changeIdx + 1
+                            !     subCellIdx = subCellIdx + 1
                             !     particleList(j)%refIdx = particleList(j)%refIdx + 1
                             !     particleList(j)%refRecord(1, particleList(j)%refIdx) = l_f
                             !     particleList(j)%refRecord(2, particleList(j)%refIdx) = w_p
-                            if (int_l_f == k) then
-                                particleList(j)%phaseSpace(1, i-changeIdx, k) = l_f
-                                particleList(j)%phaseSpace(2,i-changeIdx, k) = v_f
-                                particleList(j)%w_p(i-changeIdx, k) = w_p
-                                particleList(j)%phaseSpace(3:4, i-changeIdx, k) = particleList(j)%phaseSpace(3:4, i, k)
-                            else
-                                changeIdx = changeIdx + 1
+                            if (int_l_f > k) then
+                                subCellIdx = subCellIdx + 1
+                                addCellIdx(int_l_f) = addCellIdx(int_l_f) + 1
+                                newIdx = particleList(j)%N_p(int_l_f) + addCellIdx(int_l_f)
+                                particleList(j)%phaseSpace(1, newIdx, int_l_f) = l_f
+                                particleList(j)%phaseSpace(2,newIdx, int_l_f) = v_f
+                                particleList(j)%w_p(newIdx, int_l_f) = w_p
+                                particleList(j)%phaseSpace(3:4, newIdx, int_l_f) = particleList(j)%phaseSpace(3:4, i, k)
+                            else if (int_l_f < k) then
+                                subCellIdx = subCellIdx + 1
                                 particleList(j)%N_p(int_l_f) = particleList(j)%N_p(int_l_f) + 1
                                 particleList(j)%phaseSpace(1, particleList(j)%N_p(int_l_f), int_l_f) = l_f
                                 particleList(j)%phaseSpace(2,particleList(j)%N_p(int_l_f), int_l_f) = v_f
                                 particleList(j)%w_p(particleList(j)%N_p(int_l_f), int_l_f) = w_p
                                 particleList(j)%phaseSpace(3:4, particleList(j)%N_p(int_l_f), int_l_f) = particleList(j)%phaseSpace(3:4, i, k)
+                            else
+                                particleList(j)%phaseSpace(1, i-subCellIdx, k) = l_f
+                                particleList(j)%phaseSpace(2,i-subCellIdx, k) = v_f
+                                particleList(j)%w_p(i-subCellIdx, k) = w_p
+                                particleList(j)%phaseSpace(3:4, i-subCellIdx, k) = particleList(j)%phaseSpace(3:4, i, k)
                             end if
                             timePassed = del_t
                             
@@ -389,7 +390,7 @@ contains
                                 continue
                             CASE(1)
                                 delIdx = delIdx + 1
-                                changeIdx = changeIdx + 1
+                                subCellIdx = subCellIdx + 1
                                 if (l_f == 1) then
                                     particleList(j)%energyLoss(1) = particleList(j)%energyLoss(1) + w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, k)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                                     particleList(j)%wallLoss(1) = particleList(j)%wallLoss(1) + w_p !C/m^2 in 1D
@@ -418,12 +419,16 @@ contains
                     end if
                     
                 end do loopParticles
-                particleList(j)%N_p(k) = particleList(j)%N_p(k) - changeIdx
+                ! Fill in rest of particles stacked on top from other cells
+                if (addCellIdx(k) > 0) then
+                    particleList(j)%phaseSpace(:,particleList(j)%N_p(k)-subCellIdx+1:particleList(j)%N_p(k)-subCellIdx+addCellIdx(k), k) = particleList(j)%phaseSpace(:,particleList(j)%N_p(k)+1:particleList(j)%N_p(k)+addCellIdx(k), k)
+                    particleList(j)%w_p(particleList(j)%N_p(k)-subCellIdx+1:particleList(j)%N_p(k)-subCellIdx+addCellIdx(k), k) = particleList(j)%w_p(particleList(j)%N_p(k)+1:particleList(j)%N_p(k)+addCellIdx(k), k)
+                end if
+                particleList(j)%N_p(k) = particleList(j)%N_p(k)-subCellIdx+addCellIdx(k)
             end do loopCell
             particleList(j)%delIdx = delIdx
         end do loopSpecies
     end subroutine moveParticles
-
 
 
 

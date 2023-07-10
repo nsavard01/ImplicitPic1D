@@ -44,14 +44,17 @@ program BoundPlasmaExample
     print *, 'electron total weights before:', globalParticleList(1)%getSumWeights()
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
     print *, 'electron total weights after:', globalParticleList(1)%getSumWeights() + SUM(globalParticleList(1)%wallLoss)
-    print *, globalSolver%phi
-    print *, globalSolver%J
     E_f = globalSolver%getTotalPE(globalWorld, .false.)
     do i=1, numberChargedParticles
         E_f = E_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss)
     end do
     print *, "solve in:", iterNumPicard, "iterations"
     print *, "Energy error is:", ABS((E_f - E_i)/E_i)
+    globalSolver%rho = 0.0d0
+    do i =1, numberChargedParticles
+        call globalParticleList(i)%depositRho(globalSolver%rho, globalWorld)
+    end do
+    print *, "gauss error is:", globalSolver%getError_tridiag_Poisson(globalWorld)
     do i = 1, numberChargedParticles
         print *, "For particles", globalParticleList(i)%name
         print *, 'Number of refluxed particles:', globalParticleList(i)%refIdx
