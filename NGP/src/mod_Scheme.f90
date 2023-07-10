@@ -73,51 +73,6 @@ contains
 
     ! --------------------------- Diagnostics ------------------------------------
 
-    subroutine depositRho(rho, particleList, world) 
-        real(real64), intent(in out) :: rho(NumberXNodes)
-        type(Particle), intent(in) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_left
-        real(real64) :: d
-        rho = 0.0d0
-        do i=1, numberChargedParticles
-            do j = 1, particleList(i)%N_p
-                l_left = INT(particleList(i)%phaseSpace(1, j))
-                d = MOD(particleList(i)%phaseSpace(1, j), 1.0d0)
-                rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                rho(l_left + 1) = rho(l_left + 1) + particleList(i)%q * particleList(i)%w_p * d
-            end do
-        end do
-        rho = rho / world%nodeVol
-        if (world%boundaryConditions(1) == 3) then
-            rho(1) = rho(1) + rho(NumberXNodes)
-            rho(NumberXNodes) = rho(1)
-        else if (world%boundaryConditions(1) == 2) then
-            rho(1) = rho(1)*2.0d0
-        end if
-
-        if (world%boundaryConditions(NumberXNodes) == 2) rho(NumberXNodes) = rho(NumberXNodes)*2.0d0
-    end subroutine depositRho
-
-    subroutine loadParticleDensity(densities, particleList, world)
-        type(Particle), intent(in) :: particleList(:)
-        type(Domain), intent(in) :: world
-        real(real64), intent(in out) :: densities(:,:)
-        integer(int32) :: i,j, l_left
-        real(real64) :: d
-        do i=1, numberChargedParticles
-            do j = 1, particleList(i)%N_p
-                l_left = INT(particleList(i)%phaseSpace(1,j))
-                d = MOD(particleList(i)%phaseSpace(1,j), 1.0d0)
-                densities(l_left, i) = densities(l_left, i) + particleList(i)%w_p * (1.0d0-d)
-                densities(l_left + 1, i) = densities(l_left + 1, i) + particleList(i)%w_p * d
-            end do
-        end do
-        if (world%boundaryConditions(l_left) > 4) then
-            print *, 'Just excuse to use world object since needed in CIC scheme'
-        end if
-
-    end subroutine loadParticleDensity
 
     subroutine WriteParticleDensity(densities, particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density

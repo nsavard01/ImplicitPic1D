@@ -25,7 +25,6 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: getError_tridiag_Poisson
-        procedure, public, pass(self) :: construct_diagMatrix_Ampere
         procedure, public, pass(self) :: construct_diagMatrix
     end type
 
@@ -35,10 +34,12 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
+    type(potentialSolver) function potentialSolver_constructor(GeomFilename, world) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: leftVoltage, rightVoltage
+        character(len=*), intent(in) :: GeomFilename
+        real(real64) :: leftVoltage, rightVoltage
+        integer(int32) :: io
         allocate(self % J(NumberXNodes-1), self % rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
         call construct_diagMatrix(self, world)
@@ -46,8 +47,13 @@ contains
         self % J = 0.0d0
         self % phi = 0.0d0
         self % rho_const = 0.0d0
-        ! self%coeff_left = 0.0d0
-        ! self%coeff_left = 0.0d0
+        open(10,file='../../SharedModules/InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+        close(10)
         SELECT CASE (world%boundaryConditions(1))
         CASE(1)
             self%phi(1) = leftVoltage
@@ -77,23 +83,23 @@ contains
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
                 if (i < NumberXNodes) then
-                    self % c_tri(i) = 1.0d0/world%nodeVol(i)/world%dx_dl(i)
+                    self % c_tri(i) = 1.0d0/world%dx_dl(i)
                 end if
                 if (i > 1) then
-                    self%a_tri(i-1) = 1.0d0/world%nodeVol(i)/ world%dx_dl(i-1)
+                    self%a_tri(i-1) = 1.0d0/ world%dx_dl(i-1)
                 end if
-                self%b_tri(i) = - (1.0d0/world%dx_dl(i-1)  + 1.0d0/world%dx_dl(i)) /world%nodeVol(i)
+                self%b_tri(i) = - (1.0d0/world%dx_dl(i-1)  + 1.0d0/world%dx_dl(i))
             CASE(1)
                 self%b_tri(i) = 1.0d0
             CASE(2)
                 if (i == 1) then
-                    self % c_tri(i) = 2.0d0/world%nodeVol(i)/world%dx_dl(i)
+                    self % c_tri(i) = 1.0d0/world%dx_dl(i)
                     !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
-                    self%b_tri(i) = - (2.0d0/world%dx_dl(i)) /world%nodeVol(i)
+                    self%b_tri(i) = - (1.0d0/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    self % a_tri(i-1) = 2.0d0/world%nodeVol(i)/ world%dx_dl(i-1)
+                    self % a_tri(i-1) = 1.0d0/ world%dx_dl(i-1)
                     !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
-                    self%b_tri(i) = - (2.0d0/world%dx_dl(i-1)) /world%nodeVol(i)
+                    self%b_tri(i) = - (1.0d0/world%dx_dl(i-1))
                 else
                     print *, "Neumann boundary not on left or right most index!"
                     stop
@@ -107,43 +113,6 @@ contains
 
     end subroutine construct_diagMatrix
 
-    subroutine construct_diagMatrix_Ampere(self, world)
-        ! construct diagonal components for thomas algorithm, for Ampere (after initial Poisson)
-        class(potentialSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
-        integer(int32) :: i
-        do i = 1,NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
-            CASE(0)
-                if (i < NumberXNodes) then
-                    self % c_tri(i) = -1.0d0/world%dx_dl(i)
-                end if
-                if (i > 1) then
-                    self%a_tri(i-1) = -1.0d0/world%dx_dl(i-1)
-                end if
-                self%b_tri(i) = (world%dx_dl(i-1) + world%dx_dl(i))/ (world%dx_dl(i-1) * world%dx_dl(i))
-            CASE(1)
-                self%b_tri(i) = 1.0d0
-            CASE(2)
-                if (i == 1) then
-                    self % c_tri(i) = -2.0d0/world%dx_dl(i)
-                    self%b_tri(i) = 2.0d0/world%dx_dl(i)
-                    print *, self%b_tri(i)
-                else if (i == NumberXNodes) then
-                    self % a_tri(i - 1) = -2.0d0/world%dx_dl(i-1)
-                    self%b_tri(i) = 2.0d0/world%dx_dl(i-1)
-                else
-                    print *, "Neumann boundary not on left or right most index!"
-                    stop
-                end if
-            CASE(3)
-                self%b_tri(i) = 1.0d0
-            CASE default
-                print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
-            END SELECT
-        end do
-
-    end subroutine construct_diagMatrix_Ampere
 
     subroutine solve_tridiag_Poisson(self, world)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
@@ -185,7 +154,7 @@ contains
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
+        real(real64) :: Ax(NumberXNodes), res
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
         res = 0.0d0
         do i = 1, NumberXNodes
@@ -214,14 +183,14 @@ contains
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
-                d(i) = (-self%J(i) + self%J(i-1)) * del_t / eps_0 + (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) - (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
             CASE(1,3)
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = 2.0d0 * (-del_t * self%J(i)/eps_0 + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = 2.0d0 * (del_t * self%J(i-1)/eps_0 + (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do
@@ -255,14 +224,14 @@ contains
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
-                d(i) = (-self%J(i) + self%J(i-1)) * del_t / eps_0 + (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) - (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
             CASE(1,3)
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = -(del_t / eps_0) * (-self%J(i) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = (2.0d0 * del_t / eps_0) * (-self%J(i-1) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
+                    d(i) = -(del_t / eps_0) * (-self%J(i-1) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do

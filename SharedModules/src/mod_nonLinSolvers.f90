@@ -7,7 +7,7 @@ module mod_nonLinSolvers
     use mod_domain
     use mod_potentialSolver
     use mod_particleMover
-    use mod_Scheme
+    !use mod_Scheme
     implicit none
 
     ! Initialize objects needed
@@ -44,10 +44,13 @@ contains
         class(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
-        call depositRho(solver%rho, particleList, world)
+        integer(int32) :: i
+        solver%rho = 0.0d0
+        do i =1, numberChargedParticles
+            call particleList(i)%depositRho(solver%rho, world)
+        end do
         call solver%solve_tridiag_Poisson(world)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
-        call solver%construct_diagMatrix_Ampere(world)
 
     end subroutine solveInitialPotential
 

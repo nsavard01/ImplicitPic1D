@@ -4,28 +4,61 @@ program BoundPlasmaExample
     use mod_BasicFunctions
     use mod_domain
     use mod_particle
-    ! use mod_potentialSolver
-    ! use mod_particleMover
+    use mod_potentialSolver
+    use mod_particleMover
     ! use mod_collisions
-    ! use mod_nonLinSolvers
+    use mod_nonLinSolvers
     ! use mod_Scheme
     ! use mod_simulation
     implicit none
 
     integer(int32) :: i
-    real(real64), allocatable :: densities(:)
-    type(Domain) :: globalWorld
-    type(Particle), allocatable :: globalParticleList(:)
+    ! type(Domain) :: globalWorld
+    ! type(potentialSolver) :: globalSolver
+    ! type(Particle), allocatable :: globalParticleList(:)
+    real(real64) :: del_t, currDel_t, remainDel_t, E_i, E_f
     call readInitialConditions('InitialConditions.inp')
     globalWorld = Domain('Geometry.inp')
     globalParticleList =  readParticleInputs('BoundExample.inp',numberChargedParticles, irand)
     do i = 1, numberChargedParticles
         call globalParticleList(i)%initialize_randUniform(globalWorld, irand)
     end do
-    allocate(densities(NumberXNodes))
-    densities = 0.0d0
-    call globalParticleList(1)%loadParticleDensity(densities, globalWorld)
-    print *, densities/globalWorld%nodeVol
+    globalSolver = potentialSolver('Geometry.inp', globalWorld)
+    call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
+    print *, ""
+    print *, "Calulated values:"
+    print *, "Number of particles is:", SUM(globalParticleList(1)%N_p)
+    print *, "Debye length is:", getDebyeLength(globalParticleList(1)%getKEAve()*2.0d0/3.0d0, n_ave)
+    print *, "Plasma frequency is:", getPlasmaFreq(n_ave)
+    del_t = fractionFreq/getPlasmaFreq(n_ave)   
+    print *, "Time step (sec) is:", del_t
+    print *, "----------------"
+    print *, ""
+    call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
+    currDel_t = del_t
+    remainDel_t = del_t
+    E_i = globalSolver%getTotalPE(globalWorld, .false.)
+    do i=1, numberChargedParticles
+        E_i = E_i + globalParticleList(i)%getTotalKE()
+    end do
+    print *, 'electron total weights before:', globalParticleList(1)%getSumWeights()
+    call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+    print *, 'electron total weights after:', globalParticleList(1)%getSumWeights() + SUM(globalParticleList(1)%wallLoss)
+    print *, globalSolver%phi
+    print *, globalSolver%J
+    E_f = globalSolver%getTotalPE(globalWorld, .false.)
+    do i=1, numberChargedParticles
+        E_f = E_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss)
+    end do
+    print *, "solve in:", iterNumPicard, "iterations"
+    print *, "Energy error is:", ABS((E_f - E_i)/E_i)
+    do i = 1, numberChargedParticles
+        print *, "For particles", globalParticleList(i)%name
+        print *, 'Number of refluxed particles:', globalParticleList(i)%refIdx
+        print *, 'Number of wall lost particles:', globalParticleList(i)%delIdx
+        print *, 'Number of particles still in:', globalParticleList(i)%N_p
+    end do
+    
     !real(real64) :: remainDel_t, currDel_t
     ! call initializeScheme(schemeNum)
     ! ! Initialize constants with inputs
@@ -136,7 +169,7 @@ contains
             print *, 'Number of particles is:', SUM(particleList(j)%N_p)
             print *, "Particle mass is:", particleList(j)%mass
             print *, "Particle charge is:", particleList(j)%q
-            print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
+            print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5d0
         end do
         
         print *, "---------------"
