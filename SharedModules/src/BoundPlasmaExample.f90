@@ -16,7 +16,7 @@ program BoundPlasmaExample
     ! type(Domain) :: globalWorld
     ! type(potentialSolver) :: globalSolver
     ! type(Particle), allocatable :: globalParticleList(:)
-    real(real64) :: del_t, currDel_t, remainDel_t, E_i, E_f, l_f_test
+    real(real64) :: del_t, currDel_t, remainDel_t, E_i, E_f, l_f_test, l_del
     call readInitialConditions('InitialConditions.inp')
     globalWorld = Domain('Geometry.inp')
     globalParticleList =  readParticleInputs('BoundExample.inp',numberChargedParticles, irand)
@@ -44,6 +44,16 @@ program BoundPlasmaExample
     print *, 'electron total weights before:', globalParticleList(1)%getSumWeights()
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
     print *, 'electron total weights after:', globalParticleList(1)%getSumWeights() + SUM(globalParticleList(1)%wallLoss)
+    globalParticleList(1)%N_p(1) = globalParticleList(1)%N_p(1) + 1
+    globalParticleList(1)%phaseSpace(:, globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%phaseSpace(:, 50, 1)
+    globalParticleList(1)%w_p(50, 1) = globalParticleList(1)%w_p(50, 1)/2.0d0
+    globalParticleList(1)%w_p(globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%w_p(50, 1)
+    l_del = MIN(ABS(globalParticleList(1)%phaseSpace(1, 50, 1) - 1), ABS(globalParticleList(1)%phaseSpace(1, 50, 1) - 2))
+    l_del = l_del - 0.01
+    print *, 'OG position:', globalParticleList(1)%phaseSpace(1, 50, 1), globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1)
+    globalParticleList(1)%phaseSpace(1, 50, 1) = globalParticleList(1)%phaseSpace(1, 50, 1) + l_del
+    globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1) - l_del
+    print *, 'final positions:', globalParticleList(1)%phaseSpace(1, 50, 1), globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1)
     E_f = globalSolver%getTotalPE(globalWorld, .false.)
     do i=1, numberChargedParticles
         E_f = E_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss)
