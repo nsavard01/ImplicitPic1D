@@ -346,16 +346,14 @@ contains
                             if (ABS(l_f - l_sub) >= 1) then
                                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
                             end if
-                            ! particleList(j)%phaseSpace(1, i-subCellIdx, k) = l_f
-                            ! particleList(j)%phaseSpace(2,i-subCellIdx, k) = v_f
-                            ! particleList(j)%w_p(i-subCellIdx, k) = w_p
-                            ! particleList(j)%phaseSpace(3:4, i-subCellIdx, k) = particleList(j)%phaseSpace(3:4, i, k)
-                            ! if (wasRefluxed) then
-                            !     subCellIdx = subCellIdx + 1
-                            !     particleList(j)%refIdx = particleList(j)%refIdx + 1
-                            !     particleList(j)%refRecord(1, particleList(j)%refIdx) = l_f
-                            !     particleList(j)%refRecord(2, particleList(j)%refIdx) = w_p
-                            if (int_l_f > k) then
+                            if (wasRefluxed) then
+                                subCellIdx = subCellIdx + 1
+                                particleList(j)%refIdx = particleList(j)%refIdx + 1
+                                particleList(j)%refPhaseSpace(1, particleList(j)%refIdx) = l_f
+                                particleList(j)%refPhaseSpace(2, particleList(j)%refIdx) = v_f
+                                particleList(j)%refPhaseSpace(3:4, particleList(j)%refIdx) = particleList(j)%phaseSpace(3:4, i, k)
+                                particleList(j)%refw_p(particleList(j)%refIdx) = w_p
+                            else if (int_l_f > k) then
                                 subCellIdx = subCellIdx + 1
                                 addCellIdx(int_l_f) = addCellIdx(int_l_f) + 1
                                 newIdx = particleList(j)%N_p(int_l_f) + addCellIdx(int_l_f)

@@ -16,7 +16,7 @@ program BoundPlasmaExample
     ! type(Domain) :: globalWorld
     ! type(potentialSolver) :: globalSolver
     ! type(Particle), allocatable :: globalParticleList(:)
-    real(real64) :: del_t, currDel_t, remainDel_t, E_i, E_f
+    real(real64) :: del_t, currDel_t, remainDel_t, E_i, E_f, l_f_test
     call readInitialConditions('InitialConditions.inp')
     globalWorld = Domain('Geometry.inp')
     globalParticleList =  readParticleInputs('BoundExample.inp',numberChargedParticles, irand)
@@ -50,17 +50,26 @@ program BoundPlasmaExample
     end do
     print *, "solve in:", iterNumPicard, "iterations"
     print *, "Energy error is:", ABS((E_f - E_i)/E_i)
+    do i = 1, numberChargedParticles
+        print *, "For particles", globalParticleList(i)%name
+        print *, 'Number of refluxed particles:', globalParticleList(i)%refIdx
+        print *, 'Number of wall lost particles:', globalParticleList(i)%delIdx
+        print *, 'Number of particles still in:', SUM(globalParticleList(i)%N_p)
+    end do
+    l_f_test = 0.0d0
+    do i = 1, globalParticleList(1)%refIdx
+        l_f_test = l_f_test + (globalParticleList(1)%refPhaseSpace(1, i) - real(NumberXNodes-1)) * globalParticleList(1)%refw_p(i) 
+    end do
+    l_f_test = l_f_test/SUM(globalParticleList(1)%refw_p(1:globalParticleList(1)%refIdx)) + real(NumberXNodes-1)
+    print *, "l_f merged is:", l_f_test, 'with weight', SUM(globalParticleList(1)%refw_p(1:globalParticleList(1)%refIdx))
+    globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(int(l_f_test)) + 1, int(l_f_test)) = l_f_test
+    globalParticleList(1)%w_p(globalParticleList(1)%N_p(int(l_f_test)) + 1, int(l_f_test)) = SUM(globalParticleList(1)%refw_p(1:globalParticleList(1)%refIdx))
+    globalParticleList(1)%N_p(int(l_f_test)) = globalParticleList(1)%N_p(int(l_f_test)) + 1
     globalSolver%rho = 0.0d0
     do i =1, numberChargedParticles
         call globalParticleList(i)%depositRho(globalSolver%rho, globalWorld)
     end do
     print *, "gauss error is:", globalSolver%getError_tridiag_Poisson(globalWorld)
-    do i = 1, numberChargedParticles
-        print *, "For particles", globalParticleList(i)%name
-        print *, 'Number of refluxed particles:', globalParticleList(i)%refIdx
-        print *, 'Number of wall lost particles:', globalParticleList(i)%delIdx
-        print *, 'Number of particles still in:', globalParticleList(i)%N_p
-    end do
     
     !real(real64) :: remainDel_t, currDel_t
     ! call initializeScheme(schemeNum)

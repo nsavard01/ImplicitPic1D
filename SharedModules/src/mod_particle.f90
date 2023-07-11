@@ -18,7 +18,7 @@ module mod_particle
         integer(int32), allocatable :: N_p(:)
         real(real64) :: mass, q ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
         real(real64) :: wallLoss(2), energyLoss(2) !keep track particle losses at boundaries
-        real(real64), allocatable :: refRecord(:, :) !saved particle location and weight 
+        real(real64), allocatable :: refPhaseSpace(:, :), refw_p(:) !saved particle location and weight 
 
     contains
         procedure, public, pass(self) :: initialize_randUniform
@@ -58,7 +58,7 @@ contains
         self%wallLoss = 0.0d0
         self%delIdx = 0
         self%refIdx = 0
-        allocate(self%phaseSpace(4,self%finalIdx, NumberXNodes-1), self%refRecord(2, partPerCell), &
+        allocate(self%phaseSpace(4,self%finalIdx, NumberXNodes-1), self%refPhaseSpace(4, partPerCell), self%refw_p(partPerCell),&
             self%w_p(self%finalIdx, NumberXNodes-1), self%N_p(NumberXNodes-1))
         self%N_p = self%partPerCell
     end function particle_constructor
@@ -165,6 +165,9 @@ contains
             do j = 1, self%N_p(i)
                 res = res + SUM(self%phaseSpace(2:4, j, i)**2) * self%w_p(j, i)
             end do
+        end do
+        do i = 1, self%refIdx
+            res = res + SUM(self%refPhaseSpace(2:4, i)**2) * self%refw_p(i)
         end do
         res = res * self%mass * 0.5d0
     end function getTotalKE
