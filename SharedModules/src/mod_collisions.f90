@@ -2,6 +2,7 @@ module mod_collisions
     use iso_fortran_env, only: int32, real64
     use constants
     use mod_BasicFunctions
+    use mod_domain
     use mod_particle
     implicit none
 
@@ -14,153 +15,146 @@ module mod_collisions
 
 contains
 
-    ! ----------------------- For 1D example, keep simple for now --------------------------------------
-    subroutine ionizationCollisionIsotropic(electron, ion, n_g, sigma, del_t, E_thres, T, irand)
-        ! Temporary subroutine for artificial ionization, using MCC, energy units in eV
-        ! T in eV
-        ! divide energy among electrons, isotropic scatter
-        ! For moment assume null collision with gas temperature = 0
-        type(Particle), intent(in out) :: electron, ion
-        real(real64), intent(in) :: n_g, sigma, del_t, E_thres, T
-        integer(int32), intent(in out) :: irand
-        real(real64) :: electronSpeed, Pcoll, R, speedPerParticle, phi, theta, e_vector(3), V_cm(3), delE, V_neutral(3), mu, mass_neutral, sumMassInverse
-        integer(int32) :: i, addIdx
-        addIdx = 0
-        mass_neutral = ion%mass + m_e
-        sumMassInverse = (2.0d0/m_e + 1.0d0/ion%mass)
-        mu = (m_e * mass_neutral)/ (m_e + mass_neutral)
-        do i=1, electron%N_p
-            call get3DMaxwellianVelocity(V_neutral, mass_neutral, T, irand)
-            delE = 0.5d0 * mu * SUM((electron%phaseSpace(2:4, i) - V_neutral)**2) - E_thres*e
-            if (delE > 0) then
-                R = ran2(irand)
-                electronSpeed = SQRT(SUM((electron%phaseSpace(2:4, i) - V_neutral)**2))
-                Pcoll = 1.0d0 - EXP(-n_g * sigma * del_t * electronSpeed)
-                if (Pcoll > R) then
-                    addIdx = addIdx + 1
-                    V_cm = (m_e *electron%phaseSpace(2:4, i) + V_neutral * mass_neutral) / (mass_neutral + m_e)
+    function readParticleInputs(filename, numberChargedParticles, irand) result(particleList)
+        type(Particle), allocatable :: particleList(:)
+        character(len=*), intent(in) :: filename
+        integer(int32), intent(in out) :: numberChargedParticles, irand
+        integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
+        character(len=15) :: name
+        character(len=8) :: particleNames(100)
+        real(real64) :: mass(100), charge(100), Ti(100)
 
-                    ! first add to electron
-                    theta = ACOS(1.0d0 - 2.0d0*ran2(irand))
-                    phi = ran2(irand) * 2 * pi
-                    e_vector(1) = COS(theta)
-                    e_vector(2) = SIN(phi) * SIN(theta)
-                    e_vector(3) = COS(phi) * SIN(theta)
-                    speedPerParticle = SQRT(2.0d0 * delE / sumMassInverse / m_e**2)
-                    electron%phaseSpace(2:4, i) = e_vector * speedPerParticle + V_cm
+        print *, "Reading particle inputs:"
+        open(10,file='../../SharedModules/InputData/'//filename, action = 'read')
 
-                    ! second electron
-                    e_vector(1) = COS(theta + 2.0d0 * pi / 3.0d0)
-                    e_vector(2) = SIN(phi) * SIN(theta + 2.0d0 * pi / 3.0d0)
-                    e_vector(3) = COS(phi) * SIN(theta + 2.0d0 * pi / 3.0d0)
-                    electron%phaseSpace(2:4, electron%N_p + addIdx) = e_vector * speedPerParticle + V_cm
-                    electron%phaseSpace(1,electron%N_p + addIdx) = electron%phaseSpace(1,i)
+        do j=1, 10000
+            read(10,*,END=101,ERR=100) name
 
-                    ! ion
-                    e_vector(1) = COS(theta + 4.0d0 * pi / 3.0d0)
-                    e_vector(2) = SIN(phi) * SIN(theta + 4.0d0 * pi / 3.0d0)
-                    e_vector(3) = COS(phi) * SIN(theta + 4.0d0 * pi / 3.0d0)
-                    speedPerParticle = SQRT(2.0d0 * delE / sumMassInverse / ion%mass**2)
-                    ion%phaseSpace(2:4, ion%N_p + addIdx) = e_vector * speedPerParticle + V_cm
-                    ion%phaseSpace(1,ion%N_p + addIdx) = electron%phaseSpace(1,i)
+            if( name(1:9).eq.'ELECTRONS') then
+                read(10,*,END=101,ERR=100) name
+                read(10,*,END=101,ERR=100) name
+                read(10,'(A2)',END=101,ERR=100, ADVANCE = 'NO') name(1:2)
+                numSpecies = numSpecies + 1
+                read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
+                Ti(numSpecies) = T_e
+                mass(numSpecies) = m_e
+                charge(numSpecies) = -1.0
+                particleNames(numSpecies) = 'e'
+                read(10,*,END=101,ERR=100) name
+                read(10,*,END=101,ERR=100) name
+            endif
+
+
+            if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
+                do while(name(1:4).ne.'----')
+                    read(10,*,END=101,ERR=100) name
+                end do
+    200             read(10,'(A6)',END=101,ERR=100, ADVANCE = 'NO') name
+                if (name(1:4).eq.'----') then
+                    close(10)
+                else
+                    numSpecies = numSpecies + 1
+                    read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                    Ti(numSpecies) = T_i
+                    mass(numSpecies) = mass(numSpecies) * m_p
+                    particleNames(numSpecies) = trim(name)
+                    goto 200
                 end if
+            endif
+            ! Take care of extra text I guess        
+
+            if (name(1:7) == 'ENDFILE') then
+                close(10)
             end if
+
         end do
-        electron%N_p = electron%N_p + addIdx
-        ion%N_p = ion%N_p + addIdx
-        inelasticEnergyLoss = inelasticEnergyLoss + e*E_thres * addIdx * electron%w_p
-    end subroutine ionizationCollisionIsotropic
+    100     continue
+    101     continue
+        numberChargedParticles = numSpecies
+        allocate(particleList(numberChargedParticles))
+        do j=1, numberChargedParticles
+            particleList(j) = Particle(mass(j), e * charge(j), numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)))
+            call particleList(j) % generate3DMaxwellian(Ti(j), irand)
+            print *, 'Initializing ', particleList(j) % name
+            print *, 'Number of particles is:', SUM(particleList(j)%N_p)
+            print *, "Particle mass is:", particleList(j)%mass
+            print *, "Particle charge is:", particleList(j)%q
+            print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5d0
+        end do
+        
+        print *, "---------------"
+        print *, ""
 
 
-    !-------------------------- add Power in form of re-maxwellianizing collision ---------------------------------------------
-    subroutine addUniformPowerMaxwellian(species, Power, nu_h, irand, del_t)
+
+    end function readParticleInputs
+
+    subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
         ! Add power to all particles in domain
-        type(Particle), intent(in out) :: species
+        type(Particle), intent(in out) :: particleList(2)
+        type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand
-        real(real64), intent(in) :: Power, nu_h, del_t
-        real(real64) :: T_h, v_replace(3), R
-        integer(int32) :: i
-        T_h = (species%getKEAve() + Power/e/species%N_p/species%w_p/nu_h) * 2.0d0 / 3.0d0
-        do i=1, species%N_p
-            R = ran2(irand)
-            if (R < nu_h * del_t) then
-                call getMaxwellianSample(v_replace, species%mass, T_h, irand)
-                species%phaseSpace(2:4, i) = v_replace
+        real(real64), intent(in) :: T_e, T_i
+        integer(int32) :: i,j, k, numToMerge, numNonMerged, numToSplit, numToSplitCell, idxRan, l_int
+        real(real64) :: l_random, l_merged, w_merged, Temp(2), l_del, sumElectronLoss
+        Temp(1) = T_e
+        Temp(2) = T_i
+        do j = 1, 2
+            numToMerge = particleList(j)%refIdx - particleList(j)%partPerCell + particleList(j)%N_p(NumberXNodes-1) + 1
+            if (numToMerge > 1) then
+                numNonMerged = particleList(j)%refIdx - numToMerge
+                numToSplit = numToMerge - 1
+                do k = 1, NumberXNodes-1
+                    if (particleList(j)%partPerCell > particleList(j)%N_p(k)) then
+                        numToSplitCell = MIN(numToSplit, particleList(j)%partPerCell - particleList(j)%N_p(k))
+                        do i = 1, numToSplitCell
+                            idxRan = INT(ran2(irand) * particleList(j)%N_p(k) + 1)
+                            particleList(j)%phaseSpace(2:4,particleList(j)%N_p(k) + i, k) = particleList(j)%phaseSpace(2:4,idxRan, k)
+                            particleList(j)%w_p(idxRan, k) = 0.5d0 * particleList(j)%w_p(idxRan, k)
+                            particleList(j)%w_p(particleList(j)%N_p(k) + i, k) = particleList(j)%w_p(idxRan, k)
+                            l_del = MIN(ABS(particleList(j)%phaseSpace(1,idxRan, k)-k), ABS(particleList(j)%phaseSpace(1,idxRan, k)-k - 1))
+                            l_del = ran2(irand) * l_del
+                            particleList(j)%phaseSpace(1,particleList(j)%N_p(k) + i, k) = particleList(j)%phaseSpace(1,idxRan, k) + l_del
+                            particleList(j)%phaseSpace(1,idxRan, k) = particleList(j)%phaseSpace(1,idxRan, k) - l_del
+                        end do
+                        particleList(j)%N_p(k) = particleList(j)%N_p(k) + numToSplitCell
+                        numToSplit = numToSplit - numToSplitCell
+                        if (numToSplit == 0) exit
+                    end if
+                end do
+                w_merged = SUM(particleList(j)%refw_p(numNonMerged+1:particleList(j)%refIdx))
+                l_merged = SUM((particleList(j)%refPhaseSpace(1, numNonMerged+1:particleList(j)%refIdx) - real(NumberXNodes-1)) * particleList(j)%refw_p(numNonMerged+1:particleList(j)%refIdx) )
+                l_merged = l_merged / w_merged + real(NumberXNodes-1)
+                particleList(j)%N_p(NumberXNodes-1) = particleList(j)%N_p(NumberXNodes-1) + 1
+                particleList(j)%phaseSpace(1, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = l_merged
+                particleList(j)%w_p(particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = w_merged
+                call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1), particleList(j)%mass, Temp(j), irand)
+                particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = -ABS(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1))
+            else
+                numNonMerged = particleList(j)%refIdx
             end if
+            do i = 1, numNonMerged
+                particleList(j)%N_p(NumberXNodes-1) = particleList(j)%N_p(NumberXNodes-1) + 1
+                particleList(j)%w_p(particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = particleList(j)%refw_p(i)
+                particleList(j)%phaseSpace(1,particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = particleList(j)%refPhaseSpace(1, i)
+                call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1), particleList(j)%mass, Temp(j), irand)
+                particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = -ABS(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1))
+            end do
         end do
-    end subroutine addUniformPowerMaxwellian
-
-    subroutine addUniformPowerMaxwellianFraction(species, Power, fraction, irand, del_t)
-        ! Add power to all particles in domain
-        ! make it so nu_h * del_t == fraction
-        type(Particle), intent(in out) :: species
-        integer(int32), intent(in out) :: irand
-        real(real64), intent(in) :: Power, fraction, del_t
-        real(real64) :: T_h, v_replace(3), R
-        integer(int32) :: i
-        T_h = (species%getKEAve() + Power*del_t/e/species%N_p/species%w_p/fraction) * 2.0d0 / 3.0d0
-        do i=1, species%N_p
-            R = ran2(irand)
-            if (R < fraction) then
-                call getMaxwellianSample(v_replace, species%mass, T_h, irand)
-                species%phaseSpace(2:4, i) = v_replace
-            end if
+        sumElectronLoss = SUM(particleList(1)%wallLoss)
+        w_merged = sumElectronLoss/particleList(1)%delIdx
+        do i=1, particleList(1)%delIdx
+            l_random = world%getLFromX(world%grid(NumberXNodes) * ran2(irand))
+            l_int = INT(l_random)
+            do j = 1,2
+                particleList(j)%N_p(l_int) = particleList(j)%N_p(l_int) + 1
+                particleList(j)%phaseSpace(1, particleList(j)%N_p(l_int), l_int) = l_random
+                particleList(j)%w_p(particleList(j)%N_p(l_int), l_int) = w_merged
+            end do
+            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(l_int), l_int), particleList(1)%mass, T_e, irand)
+            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(l_int), l_int), particleList(2)%mass, T_i, irand)
         end do
-    end subroutine addUniformPowerMaxwellianFraction
-
-    subroutine addUniformPower(species, Power, del_t, irand)
-        type(Particle), intent(in out) :: species
-        integer(int32), intent(in out) :: irand
-        real(real64), intent(in) :: Power, del_t
-        real(real64) :: dE, R(3)
-        integer(int32) :: i
-        dE = Power * del_t/species%N_p/species%w_p
-        do i=1, species%N_p
-            call getRandom(R, irand)
-            R = R / SUM(R)
-            species.phaseSpace(2:4, i) = SIGN(1.0d0, species.phaseSpace(2:4, i)) * SQRT(species.phaseSpace(2:4, i)**2 + 2.0d0 * dE * R / species%mass)
-        end do
-
-
-    end subroutine addUniformPower
-
-    subroutine addUniformPowerMaxwellianNicolas(species, Power, fraction, irand, del_t)
-        ! Gwenael's method does not lead to conservation, very shady
-        ! Implement uniform power with conservation properties in mind to get improvement
-        ! Percent is percentage of particles to sample, isotropic scatter
-        type(Particle), intent(in out) :: species
-        integer(int32), intent(in out) :: irand
-        real(real64), intent(in) :: Power, fraction, del_t
-        real(real64) :: T_h, v_replace(3), R, KE
-        integer(int32) :: i, NSample, maxIndex
-        integer(int32), allocatable :: sampleIndex(:)
-        maxIndex = NINT(fraction*species%N_p*2.0d0)
-        allocate(sampleIndex(maxIndex))
-        NSample = 0
-        KE = 0.0d0
-        do i=1, species%N_p
-            R = ran2(irand)
-            if (R < fraction) then
-                NSample = NSample + 1
-                if (NSample > maxIndex) then
-                    stop "Sample rate in maxwellian power is higher than max"
-                end if
-                sampleIndex(NSample) = i
-                KE = KE + SUM(species%phaseSpace(2:4, i)**2)
-            end if
-        end do
-        !print *, "NSample is:", NSample
-        KE = KE * species%mass * 0.5d0 / e / NSample
-        !print *, "KE ave is:", KE * 2.0d0/3.0d0
-        T_h = (KE + Power*del_t/e/NSample/species%w_p) * 2.0d0 / 3.0d0
-        ! print *, "T_h is:", T_h
-        ! stop
-        do i = 1, NSample
-            call getMaxwellianSample(v_replace, species%mass, T_h, irand)
-            species%phaseSpace(2:4, sampleIndex(i)) = v_replace
-        end do
-        deallocate(sampleIndex)
-    end subroutine addUniformPowerMaxwellianNicolas
+    end subroutine addMaxwellianLostParticles
 
 
 

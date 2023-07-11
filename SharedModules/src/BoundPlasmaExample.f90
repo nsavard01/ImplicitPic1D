@@ -4,12 +4,12 @@ program BoundPlasmaExample
     use mod_BasicFunctions
     use mod_domain
     use mod_particle
+    use mod_collisions
     use mod_potentialSolver
     use mod_particleMover
-    ! use mod_collisions
     use mod_nonLinSolvers
     ! use mod_Scheme
-    ! use mod_simulation
+    use mod_simulation
     implicit none
 
     integer(int32) :: i
@@ -41,19 +41,19 @@ program BoundPlasmaExample
     do i=1, numberChargedParticles
         E_i = E_i + globalParticleList(i)%getTotalKE()
     end do
-    print *, 'electron total weights before:', globalParticleList(1)%getSumWeights()
+    ! print *, 'electron total weights before:', globalParticleList(1)%getSumWeights()
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
-    print *, 'electron total weights after:', globalParticleList(1)%getSumWeights() + SUM(globalParticleList(1)%wallLoss)
-    globalParticleList(1)%N_p(1) = globalParticleList(1)%N_p(1) + 1
-    globalParticleList(1)%phaseSpace(:, globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%phaseSpace(:, 50, 1)
-    globalParticleList(1)%w_p(50, 1) = globalParticleList(1)%w_p(50, 1)/2.0d0
-    globalParticleList(1)%w_p(globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%w_p(50, 1)
-    l_del = MIN(ABS(globalParticleList(1)%phaseSpace(1, 50, 1) - 1), ABS(globalParticleList(1)%phaseSpace(1, 50, 1) - 2))
-    l_del = l_del - 0.01
-    print *, 'OG position:', globalParticleList(1)%phaseSpace(1, 50, 1), globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1)
-    globalParticleList(1)%phaseSpace(1, 50, 1) = globalParticleList(1)%phaseSpace(1, 50, 1) + l_del
-    globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1) - l_del
-    print *, 'final positions:', globalParticleList(1)%phaseSpace(1, 50, 1), globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1)
+    ! print *, 'electron total weights after:', globalParticleList(1)%getSumWeights() + SUM(globalParticleList(1)%wallLoss)
+    ! globalParticleList(1)%N_p(1) = globalParticleList(1)%N_p(1) + 1
+    ! globalParticleList(1)%phaseSpace(:, globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%phaseSpace(:, 50, 1)
+    ! globalParticleList(1)%w_p(50, 1) = globalParticleList(1)%w_p(50, 1)/2.0d0
+    ! globalParticleList(1)%w_p(globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%w_p(50, 1)
+    ! l_del = MIN(ABS(globalParticleList(1)%phaseSpace(1, 50, 1) - 1), ABS(globalParticleList(1)%phaseSpace(1, 50, 1) - 2))
+    ! l_del = l_del - 0.01
+    ! print *, 'OG position:', globalParticleList(1)%phaseSpace(1, 50, 1), globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1)
+    ! globalParticleList(1)%phaseSpace(1, 50, 1) = globalParticleList(1)%phaseSpace(1, 50, 1) + l_del
+    ! globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1) = globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1) - l_del
+    ! print *, 'final positions:', globalParticleList(1)%phaseSpace(1, 50, 1), globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(1), 1)
     E_f = globalSolver%getTotalPE(globalWorld, .false.)
     do i=1, numberChargedParticles
         E_f = E_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss)
@@ -64,17 +64,10 @@ program BoundPlasmaExample
         print *, "For particles", globalParticleList(i)%name
         print *, 'Number of refluxed particles:', globalParticleList(i)%refIdx
         print *, 'Number of wall lost particles:', globalParticleList(i)%delIdx
-        print *, 'Number of particles still in:', SUM(globalParticleList(i)%N_p)
+        print *, 'Number of particles still in:', globalParticleList(i)%N_p
+        print *, 'Total weight loss:', SUM(globalParticleList(i)%wallLoss)
     end do
-    l_f_test = 0.0d0
-    do i = 1, globalParticleList(1)%refIdx
-        l_f_test = l_f_test + (globalParticleList(1)%refPhaseSpace(1, i) - real(NumberXNodes-1)) * globalParticleList(1)%refw_p(i) 
-    end do
-    l_f_test = l_f_test/SUM(globalParticleList(1)%refw_p(1:globalParticleList(1)%refIdx)) + real(NumberXNodes-1)
-    print *, "l_f merged is:", l_f_test, 'with weight', SUM(globalParticleList(1)%refw_p(1:globalParticleList(1)%refIdx))
-    globalParticleList(1)%phaseSpace(1, globalParticleList(1)%N_p(int(l_f_test)) + 1, int(l_f_test)) = l_f_test
-    globalParticleList(1)%w_p(globalParticleList(1)%N_p(int(l_f_test)) + 1, int(l_f_test)) = SUM(globalParticleList(1)%refw_p(1:globalParticleList(1)%refIdx))
-    globalParticleList(1)%N_p(int(l_f_test)) = globalParticleList(1)%N_p(int(l_f_test)) + 1
+    call addMaxwellianLostParticles(globalParticleList, T_e, T_i, irand, globalWorld)
     globalSolver%rho = 0.0d0
     do i =1, numberChargedParticles
         call globalParticleList(i)%depositRho(globalSolver%rho, globalWorld)
@@ -124,82 +117,6 @@ program BoundPlasmaExample
 
     ! print *, "Averaging up to", averagingTime, "simulation seconds"
     ! call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
-
-contains
-
-    function readParticleInputs(filename, numberChargedParticles, irand) result(particleList)
-        type(Particle), allocatable :: particleList(:)
-        character(len=*), intent(in) :: filename
-        integer(int32), intent(in out) :: numberChargedParticles, irand
-        integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
-        character(len=15) :: name
-        character(len=8) :: particleNames(100)
-        real(real64) :: mass(100), charge(100), Ti(100)
-
-        print *, "Reading particle inputs:"
-        open(10,file='../../SharedModules/InputData/'//filename, action = 'read')
-
-        do j=1, 10000
-            read(10,*,END=101,ERR=100) name
-
-            if( name(1:9).eq.'ELECTRONS') then
-                read(10,*,END=101,ERR=100) name
-                read(10,*,END=101,ERR=100) name
-                read(10,'(A2)',END=101,ERR=100, ADVANCE = 'NO') name(1:2)
-                numSpecies = numSpecies + 1
-                read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
-                Ti(numSpecies) = T_e
-                mass(numSpecies) = m_e
-                charge(numSpecies) = -1.0
-                particleNames(numSpecies) = 'e'
-                read(10,*,END=101,ERR=100) name
-                read(10,*,END=101,ERR=100) name
-            endif
-
-
-            if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
-                do while(name(1:4).ne.'----')
-                    read(10,*,END=101,ERR=100) name
-                end do
-    200             read(10,'(A6)',END=101,ERR=100, ADVANCE = 'NO') name
-                if (name(1:4).eq.'----') then
-                    close(10)
-                else
-                    numSpecies = numSpecies + 1
-                    read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
-                    Ti(numSpecies) = T_i
-                    mass(numSpecies) = mass(numSpecies) * m_p
-                    particleNames(numSpecies) = trim(name)
-                    goto 200
-                end if
-            endif
-            ! Take care of extra text I guess        
-
-            if (name(1:7) == 'ENDFILE') then
-                close(10)
-            end if
-
-        end do
-    100     continue
-    101     continue
-        numberChargedParticles = numSpecies
-        allocate(particleList(numberChargedParticles))
-        do j=1, numberChargedParticles
-            particleList(j) = Particle(mass(j), e * charge(j), numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)))
-            call particleList(j) % generate3DMaxwellian(Ti(j), irand)
-            print *, 'Initializing ', particleList(j) % name
-            print *, 'Number of particles is:', SUM(particleList(j)%N_p)
-            print *, "Particle mass is:", particleList(j)%mass
-            print *, "Particle charge is:", particleList(j)%q
-            print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5d0
-        end do
-        
-        print *, "---------------"
-        print *, ""
-
-
-
-    end function readParticleInputs
 
     
 end program BoundPlasmaExample
