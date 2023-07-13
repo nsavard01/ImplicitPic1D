@@ -346,7 +346,7 @@ contains
                             if (ABS(l_f - l_sub) >= 1) then
                                 stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
                             end if
-                            if ((wasRefluxed) .and. (int_l_f == NumberXNodes-1)) then
+                            if (wasRefluxed) then
                                 subCellIdx = subCellIdx + 1
                                 particleList(j)%refIdx = particleList(j)%refIdx + 1
                                 particleList(j)%refPhaseSpace(1, particleList(j)%refIdx) = l_f

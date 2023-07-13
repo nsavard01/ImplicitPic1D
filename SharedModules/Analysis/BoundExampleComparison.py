@@ -22,6 +22,7 @@ dataExplicit500PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitP
 dataExplicit1000PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_1000PPC_0p2delT_2p5e16nave/')
 dataList = [dataExplicit300PPC, dataExplicit500PPC, dataExplicit1000PPC, data4, data1000PPC]
 labelList = ['300PPC-Explicit', '500PPC-Explicit', '1000PPC-Explicit', '500PPC-NGP', '1000PPC-NGP']
+
 def compareModelToData(data):
     for name in data.particles.keys():
         if name != 'e':

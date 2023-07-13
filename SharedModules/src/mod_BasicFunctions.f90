@@ -151,7 +151,22 @@ contains
     !     real(real64), intent(in) :: x(n), y(n)
     !     res = SUM(x * y)
     ! end function innerProduct
+    function produceOrthonormBasis(e_z) result(res)
+        ! make e_x, e_y, e_z, e_z along e_z already normalized given with gram-schmidt process
+        ! produce in matrix [e_x, e_y, e_z]
+        real(real64), intent(in) :: e_z(3)
+        real(real64) :: res(3,3), e_x(3), e_y(3)
+        e_x = (/1, 0, 0/)
+        e_y = (/0,1,0/)
+        e_x = e_x - SUM(e_x * e_z) * e_z
+        e_x = e_x / SQRT(SUM(e_x**2))
+        e_y = e_y - SUM(e_y * e_z) * e_z - SUM(e_y*e_x)*e_x
+        e_y = e_y / SQRT(SUM(e_y**2))
+        res(:, 1) = e_x
+        res(:, 2) = e_y
+        res(:, 3) = e_z
 
+    end function produceOrthonormBasis
 
     !------------------------ Array Functions -------------------------------------
 
@@ -168,6 +183,27 @@ contains
         res = sum(x)/size(x)
 
     end function getArrayMean1D
+
+    !---------------- Write Phi -----------------
+
+    subroutine writePhi(phi, CurrentDiagStep, boolAverage, dirName) 
+        ! For diagnostics, deposit single particle density
+        ! Re-use rho array since it doesn't get used after first Poisson
+        real(real64), intent(in) :: phi(:)
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(*), intent(in) :: dirName
+        character(len=5) :: char_i
+        logical, intent(in) :: boolAverage
+        write(char_i, '(I3)') CurrentDiagStep
+        if (boolAverage) then
+            open(41,file='../'//dirName//'/Phi/phi_Average.dat', form='UNFORMATTED')
+        else
+            open(41,file='../'//dirName//'/Phi/phi_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        end if
+        write(41) phi
+        close(41)
+        
+    end subroutine writePhi
 
 
 

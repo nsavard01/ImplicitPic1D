@@ -73,7 +73,7 @@ contains
         numberChargedParticles = numSpecies
         allocate(particleList(numberChargedParticles))
         do j=1, numberChargedParticles
-            particleList(j) = Particle(mass(j), e * charge(j), numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)))
+            particleList(j) = Particle(mass(j), e * charge(j), numParticles(j), particleIdxFactor(j), trim(particleNames(j)))
             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
             print *, 'Initializing ', particleList(j) % name
             print *, 'Number of particles is:', SUM(particleList(j)%N_p)
@@ -96,65 +96,116 @@ contains
         integer(int32), intent(in out) :: irand
         real(real64), intent(in) :: T_e, T_i
         integer(int32) :: i,j, k, numToMerge, numNonMerged, numToSplit, numToSplitCell, idxRan, l_int
-        real(real64) :: l_random, l_merged, w_merged, Temp(2), l_del, sumElectronLoss
+        real(real64) :: l_random, l_merged, w_merged, Temp(2), l_del, sumElectronLoss, w_coll, l_array(NumberXNodes-1), w_array(NumberXNodes-1)
         Temp(1) = T_e
         Temp(2) = T_i
         do j = 1, 2
-            numToMerge = particleList(j)%refIdx - particleList(j)%partPerCell + particleList(j)%N_p(NumberXNodes-1) + 1
-            if (numToMerge > 1) then
-                numNonMerged = particleList(j)%refIdx - numToMerge
-                numToSplit = numToMerge - 1
-                do k = 1, NumberXNodes-1
-                    if (particleList(j)%partPerCell > particleList(j)%N_p(k)) then
-                        numToSplitCell = MIN(numToSplit, particleList(j)%partPerCell - particleList(j)%N_p(k))
-                        do i = 1, numToSplitCell
-                            idxRan = INT(ran2(irand) * particleList(j)%N_p(k) + 1)
-                            particleList(j)%phaseSpace(2:4,particleList(j)%N_p(k) + i, k) = particleList(j)%phaseSpace(2:4,idxRan, k)
-                            particleList(j)%w_p(idxRan, k) = 0.5d0 * particleList(j)%w_p(idxRan, k)
-                            particleList(j)%w_p(particleList(j)%N_p(k) + i, k) = particleList(j)%w_p(idxRan, k)
-                            l_del = MIN(ABS(particleList(j)%phaseSpace(1,idxRan, k)-k), ABS(particleList(j)%phaseSpace(1,idxRan, k)-k - 1))
-                            l_del = ran2(irand) * l_del
-                            particleList(j)%phaseSpace(1,particleList(j)%N_p(k) + i, k) = particleList(j)%phaseSpace(1,idxRan, k) + l_del
-                            particleList(j)%phaseSpace(1,idxRan, k) = particleList(j)%phaseSpace(1,idxRan, k) - l_del
-                        end do
-                        particleList(j)%N_p(k) = particleList(j)%N_p(k) + numToSplitCell
-                        numToSplit = numToSplit - numToSplitCell
-                        if (numToSplit == 0) exit
-                    end if
-                end do
-                w_merged = SUM(particleList(j)%refw_p(numNonMerged+1:particleList(j)%refIdx))
-                l_merged = SUM((particleList(j)%refPhaseSpace(1, numNonMerged+1:particleList(j)%refIdx) - real(NumberXNodes-1)) * particleList(j)%refw_p(numNonMerged+1:particleList(j)%refIdx) )
-                l_merged = l_merged / w_merged + real(NumberXNodes-1)
-                particleList(j)%N_p(NumberXNodes-1) = particleList(j)%N_p(NumberXNodes-1) + 1
-                particleList(j)%phaseSpace(1, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = l_merged
-                particleList(j)%w_p(particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = w_merged
-                call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1), particleList(j)%mass, Temp(j), irand)
-                particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = -ABS(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1))
-            else
-                numNonMerged = particleList(j)%refIdx
-            end if
-            do i = 1, numNonMerged
-                particleList(j)%N_p(NumberXNodes-1) = particleList(j)%N_p(NumberXNodes-1) + 1
-                particleList(j)%w_p(particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = particleList(j)%refw_p(i)
-                particleList(j)%phaseSpace(1,particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = particleList(j)%refPhaseSpace(1, i)
-                call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1), particleList(j)%mass, Temp(j), irand)
-                particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = -ABS(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1))
+            do i = 1, particleList(j)%refIdx
+                l_int = INT(particleList(j)%refPhaseSpace(1, i))
+                particleList(j)%N_p(l_int) = particleList(j)%N_p(l_int) + 1
+                particleList(j)%phaseSpace(1, particleList(j)%N_p(l_int), l_int) = particleList(j)%refPhaseSpace(1, i)
+                particleList(j)%w_p(particleList(j)%N_p(l_int), l_int) = particleList(j)%refw_p(i)
+                call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(l_int), l_int), particleList(j)%mass, Temp(j), irand)
+                particleList(j)%phaseSpace(2:4, particleList(j)%N_p(l_int), l_int) = -ABS(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(l_int), l_int))
             end do
+            particleList(j)%refIdx = 0
         end do
         sumElectronLoss = SUM(particleList(1)%wallLoss)
-        w_merged = sumElectronLoss/particleList(1)%delIdx
+        w_coll = sumElectronLoss/particleList(1)%delIdx
         do i=1, particleList(1)%delIdx
             l_random = world%getLFromX(world%grid(NumberXNodes) * ran2(irand))
             l_int = INT(l_random)
-            do j = 1,2
+            do j = 1, 2
                 particleList(j)%N_p(l_int) = particleList(j)%N_p(l_int) + 1
                 particleList(j)%phaseSpace(1, particleList(j)%N_p(l_int), l_int) = l_random
-                particleList(j)%w_p(particleList(j)%N_p(l_int), l_int) = w_merged
+                particleList(j)%w_p(particleList(j)%N_p(l_int), l_int) = w_coll
             end do
             call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(l_int), l_int), particleList(1)%mass, T_e, irand)
             call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(l_int), l_int), particleList(2)%mass, T_i, irand)
         end do
     end subroutine addMaxwellianLostParticles
+
+    ! subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+    !     ! Add power to all particles in domain
+    !     type(Particle), intent(in out) :: particleList(2)
+    !     type(Domain), intent(in) :: world
+    !     integer(int32), intent(in out) :: irand
+    !     real(real64), intent(in) :: T_e, T_i
+    !     integer(int32) :: i,j, k, numToMerge, numNonMerged, numToSplit, numToSplitCell, idxRan, l_int
+    !     real(real64) :: l_random, l_merged, w_merged, Temp(2), l_del, sumElectronLoss, w_coll, l_array(NumberXNodes-1), w_array(NumberXNodes-1)
+    !     Temp(1) = T_e
+    !     Temp(2) = T_i
+    !     do j = 1, 2
+    !         if (particleList(j)%refIdx > 0) then
+    !             numToMerge = MIN(particleList(j)%refIdx - particleList(j)%partPerCell + particleList(j)%N_p(NumberXNodes-1) + 1, particleList(j)%refIdx)
+    !             if (numToMerge > 1) then
+    !                 numNonMerged = particleList(j)%refIdx - numToMerge
+    !                 numToSplit = numToMerge - 1
+    !                 do k = 1, NumberXNodes-1
+    !                     if (particleList(j)%N_p(k) > 0) then
+    !                         if (particleList(j)%partPerCell > particleList(j)%N_p(k)) then
+    !                             numToSplitCell = MIN(numToSplit, particleList(j)%partPerCell - particleList(j)%N_p(k))
+    !                             do i = 1, numToSplitCell
+    !                                 idxRan = INT(ran2(irand) * particleList(j)%N_p(k) + 1)
+    !                                 particleList(j)%phaseSpace(2:4,particleList(j)%N_p(k) + i, k) = particleList(j)%phaseSpace(2:4,idxRan, k)
+    !                                 particleList(j)%w_p(idxRan, k) = 0.5d0 * particleList(j)%w_p(idxRan, k)
+    !                                 particleList(j)%w_p(particleList(j)%N_p(k) + i, k) = particleList(j)%w_p(idxRan, k)
+    !                                 l_del = MIN(ABS(particleList(j)%phaseSpace(1,idxRan, k)-k), ABS(particleList(j)%phaseSpace(1,idxRan, k)-k - 1))
+    !                                 l_del = ran2(irand) * (l_del - 1d-8)
+    !                                 particleList(j)%phaseSpace(1,particleList(j)%N_p(k) + i, k) = particleList(j)%phaseSpace(1,idxRan, k) + l_del
+    !                                 particleList(j)%phaseSpace(1,idxRan, k) = particleList(j)%phaseSpace(1,idxRan, k) - l_del
+    !                             end do
+    !                             particleList(j)%N_p(k) = particleList(j)%N_p(k) + numToSplitCell
+    !                             numToSplit = numToSplit - numToSplitCell
+    !                             if (numToSplit == 0) exit
+    !                         end if
+    !                     end if
+    !                 end do
+    !                 w_merged = SUM(particleList(j)%refw_p(numNonMerged+1:particleList(j)%refIdx))
+    !                 l_merged = SUM((particleList(j)%refPhaseSpace(1, numNonMerged+1:particleList(j)%refIdx) - real(NumberXNodes-1)) * particleList(j)%refw_p(numNonMerged+1:particleList(j)%refIdx) )
+    !                 l_merged = l_merged / w_merged + real(NumberXNodes-1)
+    !                 particleList(j)%N_p(NumberXNodes-1) = particleList(j)%N_p(NumberXNodes-1) + 1
+    !                 particleList(j)%phaseSpace(1, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = l_merged
+    !                 particleList(j)%w_p(particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = w_merged
+    !                 call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1), particleList(j)%mass, Temp(j), irand)
+    !                 particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = -ABS(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1))
+    !             else
+    !                 numNonMerged = particleList(j)%refIdx
+    !             end if
+    !             do i = 1, numNonMerged
+    !                 particleList(j)%N_p(NumberXNodes-1) = particleList(j)%N_p(NumberXNodes-1) + 1
+    !                 particleList(j)%w_p(particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = particleList(j)%refw_p(i)
+    !                 particleList(j)%phaseSpace(1,particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = particleList(j)%refPhaseSpace(1, i)
+    !                 call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1), particleList(j)%mass, Temp(j), irand)
+    !                 particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1) = -ABS(particleList(j)%phaseSpace(2:4, particleList(j)%N_p(NumberXNodes-1), NumberXNodes-1))
+    !             end do
+    !         end if
+    !         particleList(j)%refIdx = 0
+    !     end do
+    !     sumElectronLoss = SUM(particleList(1)%wallLoss)
+    !     w_coll = sumElectronLoss/particleList(1)%delIdx
+    !     l_array = 0.0
+    !     w_array = 0.0
+    !     do i=1, particleList(1)%delIdx
+    !         l_random = world%getLFromX(world%grid(NumberXNodes) * ran2(irand))
+    !         l_int = INT(l_random)
+    !         particleList(1)%N_p(l_int) = particleList(1)%N_p(l_int) + 1
+    !         particleList(1)%phaseSpace(1, particleList(1)%N_p(l_int), l_int) = l_random
+    !         particleList(1)%w_p(particleList(1)%N_p(l_int), l_int) = w_coll
+    !         call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(l_int), l_int), particleList(1)%mass, T_e, irand)
+    !         l_array(l_int) = l_array(l_int) + (l_random - l_int) * w_coll
+    !         w_array(l_int) = w_array(l_int) + w_coll
+    !         !call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(l_int), l_int), particleList(2)%mass, T_i, irand)
+    !     end do
+    !     do i = 1, NumberXNodes-1
+    !         if (w_array(i) > 0.0) then
+    !             particleList(2)%N_p(i) = particleList(2)%N_p(i) + 1
+    !             particleList(2)%phaseSpace(1, particleList(2)%N_p(i), i) = l_array(i)/w_array(i) + i
+    !             particleList(2)%w_p(particleList(2)%N_p(i), i) = w_array(i)
+    !             call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(i), i), particleList(2)%mass, T_i, irand)
+    !         end if
+    !     end do
+    ! end subroutine addMaxwellianLostParticles
 
 
 

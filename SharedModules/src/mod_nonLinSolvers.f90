@@ -221,6 +221,7 @@ contains
             call dgels('N', NumberXNodes, m_k, 1, fitMat(:, 1:m_k), NumberXNodes, alpha(1:ldb), ldb, work, lwork, info)
             if (info /= 0) then
                 print *, "Issue with minimization procedure dgels in Anderson Acceleration!"
+                print *, fitMat(:, m_k)
                 stop
             end if
             alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k)) 

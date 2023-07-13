@@ -253,27 +253,6 @@ contains
         end if
     end function getTotalPE
 
-    
-    !---------------- Write Phi -----------------
-
-    subroutine writePhi(phi, CurrentDiagStep, boolAverage, dirName) 
-        ! For diagnostics, deposit single particle density
-        ! Re-use rho array since it doesn't get used after first Poisson
-        real(real64), intent(in) :: phi(:)
-        integer(int32), intent(in) :: CurrentDiagStep
-        character(*), intent(in) :: dirName
-        character(len=5) :: char_i
-        logical, intent(in) :: boolAverage
-        write(char_i, '(I3)') CurrentDiagStep
-        if (boolAverage) then
-            open(41,file='../'//dirName//'/Phi/phi_Average.dat', form='UNFORMATTED')
-        else
-            open(41,file='../'//dirName//'/Phi/phi_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
-        end if
-        write(41) phi
-        close(41)
-        
-    end subroutine writePhi
 
 
 end module mod_potentialSolver
