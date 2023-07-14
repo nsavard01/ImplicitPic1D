@@ -127,6 +127,8 @@ contains
             call system_clock(startTime)
             call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             call system_clock(endTime)
+            print *, "number electrons after add maxwellian solver is:", particleList(1)%N_p
+            print *, "number ions after add maxwellian solver is:", particleList(2)%N_p
 
             collisionTime = collisionTime + (endTime - startTime)
             solver%rho = 0.0d0
@@ -166,8 +168,7 @@ contains
             print *, "Energy error is:", energyError
             print *, "Guass error is:", gaussError
             print *, "Charge error is:", chargeError
-            print *, 'charge error full is:'
-            print *, (1.0 + currDel_t * (solver%J(2:) - solver%J(1:NumberXNodes-2))/(solver%rho(2:NumberXNodes-1) - rho_i(2:NumberXNodes-1)))
+            print *, 'n_ave is:', particleList(1)%getSumWeights()/world%grid(NumberXNodes)
             print *, "Number of electrons is:", particleList(1)%N_p
             print *, 'Total number of electrons is:', SUM(particleList(1)%N_p)
             print *, "Number of electrons lost to walls was:", particleList(1)%delIdx
@@ -190,7 +191,7 @@ contains
             ! end if
             currentTime = currentTime + currDel_t
             i = i + 1
-            if (i==400) stop
+            if (i==1000) stop
         end do
     
         

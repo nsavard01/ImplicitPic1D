@@ -229,7 +229,7 @@ contains
                 v_temp = P_i/P_Mag
                 RotMat = produceOrthonormBasis(v_temp)
                 cos_theta = P_mag/w_merged/v_Mag
-                sin_theta = SQRT(1.0d0 - cos_theta**2)
+                sin_theta = SQRT(1.0d0 - cos_theta**2 + 1d-15)
                 ran_phi = ran2(irand) * 2.0d0 * pi
                 v_temp(1) = sin_theta * COS(ran_phi) * v_Mag
                 v_temp(2) = sin_theta * SIN(ran_phi) * v_Mag
