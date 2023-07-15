@@ -271,6 +271,8 @@ contains
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
             particleList(j)%refIdx = 0
+            particleList(j)%energyLoss = 0.0d0
+            particleList(j)%wallLoss = 0.0d0
             addCellIdx = 0
             loopCell: do k = 1, NumberXNodes-1
                 subCellIdx = 0
@@ -425,6 +427,8 @@ contains
                 particleList(j)%N_p(k) = particleList(j)%N_p(k)-subCellIdx+addCellIdx(k)
             end do loopCell
             particleList(j)%delIdx = delIdx
+            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + particleList(j)%energyLoss
+            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + particleList(j)%wallLoss
         end do loopSpecies
     end subroutine moveParticles
 

@@ -16,7 +16,6 @@ program BoundPlasmaExample
     ! type(Domain) :: globalWorld
     ! type(potentialSolver) :: globalSolver
     ! type(Particle), allocatable :: globalParticleList(:)
-    real(real64) :: currDel_t, remainDel_t, E_i, E_f
     call readInitialConditions('InitialConditions.inp')
     globalWorld = Domain('Geometry.inp')
     globalParticleList =  readParticleInputs('BoundExample.inp',numberChargedParticles, irand)
@@ -62,7 +61,7 @@ program BoundPlasmaExample
     ! end do
     ! print *, "gauss error is:", globalSolver%getError_tridiag_Poisson(globalWorld)
     
-    call solveSimulationTest(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
-
+    call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime, heatSkipSteps)
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
     
 end program BoundPlasmaExample

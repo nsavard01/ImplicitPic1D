@@ -17,7 +17,7 @@ module mod_particle
         real(real64), allocatable :: w_p(:,:)
         integer(int32), allocatable :: N_p(:)
         real(real64) :: mass, q ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
-        real(real64) :: wallLoss(2), energyLoss(2) !keep track particle losses at boundaries
+        real(real64) :: wallLoss(2), energyLoss(2), accumWallLoss(2), accumEnergyLoss(2) !keep track particle losses at boundaries
         real(real64), allocatable :: refPhaseSpace(:, :), refw_p(:) !saved particle location and weight 
 
     contains
@@ -58,6 +58,8 @@ contains
         self % finalIdx = partPerCell * partIdxFactor
         self%energyLoss = 0.0d0
         self%wallLoss = 0.0d0
+        self%accumEnergyLoss = 0.0d0
+        self%accumWallLoss = 0.0d0
         self%delIdx = 0
         self%refIdx = 0
         allocate(self%phaseSpace(4,self%finalIdx, NumberXNodes-1), self%refPhaseSpace(4, partPerCell*4), self%refw_p(partPerCell*4),&
@@ -201,50 +203,78 @@ contains
     subroutine mergeAndSplit(self, irand)
         class(Particle), intent(in out) :: self
         integer(int32), intent(in out) :: irand
-        integer(int32) :: i, k, numToOp, ranIdx, lowIndex
+        integer(int32) :: i, k, j, numToOp, ranIdx, lowIndex
+        integer(int32) :: v_bins(100), v_indxArr(200, 100), v_indx, delIdx(200), amountDel
         real(real64) :: w_merged, l_merged, P_i(3), KE_i, v_Mag, P_Mag, RotMat(3,3), cos_theta, sin_theta, ran_phi, l_del
-        real(real64) :: v_temp(3), KE_f, KE_tot, P_tot(3), P_after(3)
+        real(real64) :: v_temp(3), vbinDiv, v_min, v_max, KE_f, KE_tot, P_tot(3), P_after(3)
         P_tot = self%getTotalMomentum()
         KE_tot = self%getTotalKE()
         do k = 1, NumberXNodes-1
+            ! print *, "k is:", k
             if (self%N_p(k) > self%partPerCell) then
                 numToOp = self%N_p(k) - self%partPerCell + 2
-                w_merged = 0.0d0
-                l_merged = 0.0d0
-                P_i = 0.0d0
-                KE_i = 0.0d0
-                do i = 1, numToOp
-                    ranIdx = INT(self%N_p(k)*ran2(irand) + 1)
-                    w_merged = w_merged + self%w_p(ranIdx, k)
-                    l_merged = l_merged + self%w_p(ranIdx, k) * (self%phaseSpace(1, ranIdx, k) - k)
-                    P_i = P_i + self%phaseSpace(2:4, ranIdx, k) * self%w_p(ranIdx, k)
-                    KE_i = KE_i + SUM(self%phaseSpace(2:4, ranIdx, k)**2) * self%w_p(ranIdx, k)
-                    self%phaseSpace(:, ranIdx, k) = self%phaseSpace(:, self%N_p(k), k)
-                    self%w_p(ranIdx, k) = self%w_p(self%N_p(k), k)
+                v_max = MAXVAL(self%phaseSpace(2, 1:self%N_p(k), k))
+                v_min = MINVAL(self%phaseSpace(2, 1:self%N_p(k), k))
+                vbinDiv = (v_max + 1d-8 - v_min)/100.0d0
+                v_bins = 0
+                do i = 1, self%N_p(k)
+                    v_indx = INT((self%phaseSpace(2, i, k) - v_min)/vbinDiv) + 1
+                    v_bins(v_indx) = v_bins(v_indx) + 1
+                    v_indxArr(v_bins(v_indx), v_indx) = i
+                end do
+                amountDel = 0
+                ! print *, "Amount to merge total:", numToOp
+                do i = 1, 100
+                    if (v_bins(i) > 2) then
+                        w_merged = 0.0d0
+                        l_merged = 0.0d0
+                        P_i = 0.0d0
+                        KE_i = 0.0d0
+                        v_indx = min(v_bins(i), numToOp)
+                        ! print *, 'amount to merge in vbin:', v_indx
+                        ! print *, 'in vbin number:', i
+                        do j = 1, v_indx
+                            w_merged = w_merged + self%w_p(v_indxArr(j,i), k)
+                            l_merged = l_merged + self%w_p(v_indxArr(j,i), k) * (self%phaseSpace(1, v_indxArr(j,i), k) - k)
+                            P_i = P_i + self%phaseSpace(2:4, v_indxArr(j,i), k) * self%w_p(v_indxArr(j,i), k)
+                            KE_i = KE_i + SUM(self%phaseSpace(2:4, v_indxArr(j,i), k)**2) * self%w_p(v_indxArr(j,i), k)
+                            if (j > 2) then
+                                amountDel = amountDel + 1
+                                delIdx(amountDel) = v_indxArr(j,i)
+                            end if
+                        end do
+                        l_merged = l_merged/w_merged + real(k)
+                        v_Mag = SQRT(KE_i/w_merged)
+                        P_Mag = SQRT(SUM(P_i**2))
+                        v_temp = P_i/P_Mag
+                        RotMat = produceOrthonormBasis(v_temp)
+                        cos_theta = P_mag/w_merged/v_Mag
+                        sin_theta = SQRT(1.0d0 - cos_theta**2 + 1e-15)
+                        ran_phi = ran2(irand) * 2.0d0 * pi
+                        v_temp(1) = sin_theta * COS(ran_phi) * v_Mag
+                        v_temp(2) = sin_theta * SIN(ran_phi) * v_Mag
+                        v_temp(3) = cos_theta * v_Mag
+                        v_temp = MATMUL(RotMat, v_temp)
+                        self%phaseSpace(1, v_indxArr(1,i), k) = l_merged
+                        self%phaseSpace(2:4,v_indxArr(1,i), k) = v_temp
+                        self%w_p(v_indxArr(1,i), k) = 0.5d0* w_merged
+
+                        v_temp = P_i * 2.0d0/w_merged - v_temp
+                        self%phaseSpace(1, v_indxArr(2,i), k) = l_merged
+                        self%phaseSpace(2:4,v_indxArr(2,i), k) = v_temp
+                        self%w_p(v_indxArr(2,i), k) = 0.5d0* w_merged
+                        P_after = (self%phaseSpace(2:4,v_indxArr(2,i), k) + self%phaseSpace(2:4,v_indxArr(1,i), k)) * 0.5 * w_merged
+                        KE_f = (SUM(self%phaseSpace(2:4,v_indxArr(2,i), k)**2) + SUM(self%phaseSpace(2:4,v_indxArr(1,i), k)**2)) * 0.5 * w_merged
+                        numToOp = numToOp - v_indx + 2
+                        if (numToOp < 3) exit
+                    end if
+                end do
+                ! print *, "amountDel is:", amountDel
+                do i = 1, amountDel
+                    self%phaseSpace(:, delIdx(i), k) = self%phaseSpace(:, self%N_p(k), k)
+                    self%w_p(delIdx(i), k) = self%w_p(self%N_p(k), k)
                     self%N_p(k) = self%N_p(k) - 1
                 end do
-                l_merged = l_merged/w_merged + real(k)
-                v_Mag = SQRT(KE_i/w_merged)
-                P_Mag = SQRT(SUM(P_i**2))
-                v_temp = P_i/P_Mag
-                RotMat = produceOrthonormBasis(v_temp)
-                cos_theta = P_mag/w_merged/v_Mag
-                sin_theta = SQRT(1.0d0 - cos_theta**2 + 1d-15)
-                ran_phi = ran2(irand) * 2.0d0 * pi
-                v_temp(1) = sin_theta * COS(ran_phi) * v_Mag
-                v_temp(2) = sin_theta * SIN(ran_phi) * v_Mag
-                v_temp(3) = cos_theta * v_Mag
-                v_temp = MATMUL(RotMat, v_temp)
-                self%N_p(k) = self%N_p(k) + 1
-                self%phaseSpace(1, self%N_p(k), k) = l_merged
-                self%phaseSpace(2:4,self%N_p(k), k) = v_temp
-                self%w_p(self%N_p(k), k) = 0.5d0* w_merged
-
-                v_temp = P_i * 2.0d0/w_merged - v_temp
-                self%N_p(k) = self%N_p(k) + 1
-                self%phaseSpace(1, self%N_p(k), k) = l_merged
-                self%phaseSpace(2:4,self%N_p(k), k) = v_temp
-                self%w_p(self%N_p(k), k) = 0.5d0* w_merged
             else if (self%N_p(k) < self%partPerCell .and. self%N_p(k) > 0) then
                 numToOp = self%partPerCell - self%N_p(k)
                 do while (numToOp > self%N_p(k))
@@ -278,6 +308,87 @@ contains
         print *, "Merging KE error is:", ABS((KE_f - KE_tot)/KE_tot)
         print *, "Merging P error is:", ABS((P_after - P_tot)/P_tot)
     end subroutine mergeAndSplit
+
+    ! subroutine mergeAndSplit(self, irand)
+    !     class(Particle), intent(in out) :: self
+    !     integer(int32), intent(in out) :: irand
+    !     integer(int32) :: i, k, numToOp, ranIdx, lowIndex
+    !     real(real64) :: w_merged, l_merged, P_i(3), KE_i, v_Mag, P_Mag, RotMat(3,3), cos_theta, sin_theta, ran_phi, l_del
+    !     real(real64) :: v_temp(3)!, KE_f, KE_tot, P_tot(3), P_after(3)
+    !     ! P_tot = self%getTotalMomentum()
+    !     ! KE_tot = self%getTotalKE()
+    !     do k = 1, NumberXNodes-1
+    !         if (self%N_p(k) > self%partPerCell) then
+    !             numToOp = self%N_p(k) - self%partPerCell + 2
+    !             w_merged = 0.0d0
+    !             l_merged = 0.0d0
+    !             P_i = 0.0d0
+    !             KE_i = 0.0d0
+    !             do i = 1, numToOp
+    !                 ranIdx = INT(self%N_p(k)*ran2(irand) + 1)
+    !                 w_merged = w_merged + self%w_p(ranIdx, k)
+    !                 l_merged = l_merged + self%w_p(ranIdx, k) * (self%phaseSpace(1, ranIdx, k) - k)
+    !                 P_i = P_i + self%phaseSpace(2:4, ranIdx, k) * self%w_p(ranIdx, k)
+    !                 KE_i = KE_i + SUM(self%phaseSpace(2:4, ranIdx, k)**2) * self%w_p(ranIdx, k)
+    !                 self%phaseSpace(:, ranIdx, k) = self%phaseSpace(:, self%N_p(k), k)
+    !                 self%w_p(ranIdx, k) = self%w_p(self%N_p(k), k)
+    !                 self%N_p(k) = self%N_p(k) - 1
+    !             end do
+    !             l_merged = l_merged/w_merged + real(k)
+    !             v_Mag = SQRT(KE_i/w_merged)
+    !             P_Mag = SQRT(SUM(P_i**2))
+    !             v_temp = P_i/P_Mag
+    !             RotMat = produceOrthonormBasis(v_temp)
+    !             cos_theta = P_mag/w_merged/v_Mag
+    !             sin_theta = SQRT(1.0d0 - cos_theta**2 + 1d-15)
+    !             ran_phi = ran2(irand) * 2.0d0 * pi
+    !             v_temp(1) = sin_theta * COS(ran_phi) * v_Mag
+    !             v_temp(2) = sin_theta * SIN(ran_phi) * v_Mag
+    !             v_temp(3) = cos_theta * v_Mag
+    !             v_temp = MATMUL(RotMat, v_temp)
+    !             self%N_p(k) = self%N_p(k) + 1
+    !             self%phaseSpace(1, self%N_p(k), k) = l_merged
+    !             self%phaseSpace(2:4,self%N_p(k), k) = v_temp
+    !             self%w_p(self%N_p(k), k) = 0.5d0* w_merged
+
+    !             v_temp = P_i * 2.0d0/w_merged - v_temp
+    !             self%N_p(k) = self%N_p(k) + 1
+    !             self%phaseSpace(1, self%N_p(k), k) = l_merged
+    !             self%phaseSpace(2:4,self%N_p(k), k) = v_temp
+    !             self%w_p(self%N_p(k), k) = 0.5d0* w_merged
+    !         else if (self%N_p(k) < self%partPerCell .and. self%N_p(k) > 0) then
+    !             numToOp = self%partPerCell - self%N_p(k)
+    !             do while (numToOp > self%N_p(k))
+    !                 do i = 1, numToOp
+    !                     self%phaseSpace(2:4,self%N_p(k) + i, k) = self%phaseSpace(2:4,i, k)
+    !                     self%w_p(i, k) = 0.5d0 * self%w_p(i, k)
+    !                     self%w_p(self%N_p(k) + i, k) = self%w_p(i, k)
+    !                     l_del = MIN(ABS(self%phaseSpace(1,i, k)-k), ABS(self%phaseSpace(1,i, k)-k - 1))
+    !                     l_del = ran2(irand) * (l_del) * 0.1d0
+    !                     self%phaseSpace(1,self%N_p(k) + i, k) = self%phaseSpace(1,i, k) + l_del
+    !                     self%phaseSpace(1,i, k) = self%phaseSpace(1,i, k) - l_del
+    !                 end do
+    !                 self%N_p(k) = self%N_p(k) + numToOp
+    !                 numToOp = self%partPerCell - self%N_p(k)
+    !             end do
+    !             do i = 1, numToOp
+    !                 ranIdx = INT(ran2(irand)*self%N_p(k) + 1)
+    !                 self%phaseSpace(2:4,self%N_p(k) + i, k) = self%phaseSpace(2:4,ranIdx, k)
+    !                 self%w_p(ranIdx, k) = 0.5d0 * self%w_p(ranIdx, k)
+    !                 self%w_p(self%N_p(k) + i, k) = self%w_p(ranIdx, k)
+    !                 l_del = MIN(ABS(self%phaseSpace(1,ranIdx, k)-k), ABS(self%phaseSpace(1,ranIdx, k)-k - 1))
+    !                 l_del = ran2(irand) * (l_del) * 0.1d0
+    !                 self%phaseSpace(1,self%N_p(k) + i, k) = self%phaseSpace(1,ranIdx, k) + l_del
+    !                 self%phaseSpace(1,ranIdx, k) = self%phaseSpace(1,ranIdx, k) - l_del
+    !             end do
+    !             self%N_p(k) = self%N_p(k) + numToOp
+    !         end if
+    !     end do
+    !     ! KE_f = self%getTotalKE()
+    !     ! P_after = self%getTotalMomentum()
+    !     ! print *, "Merging KE error is:", ABS((KE_f - KE_tot)/KE_tot)
+    !     ! print *, "Merging P error is:", ABS((P_after - P_tot)/P_tot)
+    ! end subroutine mergeAndSplit
 
     ! ------------------------ Gather to mesh  --------------------------------------------
     subroutine loadParticleDensity(self, densities, world)
