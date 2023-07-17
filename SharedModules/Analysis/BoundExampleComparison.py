@@ -16,12 +16,12 @@ data2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_300PPC_2
 data3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_0p2delT_2p5e16nave_16nodes/')
 data4 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_16nodes/')
 data1000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_16nodes/')
+data2000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_2000PPC_2p0delT_2p5e16nave_16nodes/')
 data1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_1e18nave_16nodes/')
 dataExplicit100PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_100PPC_0p2delT_2p5e16nave/')
 dataExplicit300PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_300PPC_0p2delT_2p5e16nave/')
 dataExplicit500PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_500PPC_0p2delT_2p5e16nave/')
 dataExplicit1000PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_1000PPC_0p2delT_2p5e16nave/')
-data2000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_highPPCCase/')
 dataList = [dataExplicit300PPC, dataExplicit500PPC, dataExplicit1000PPC, data2, data4, data1000PPC, data2000PPC]
 labelList = ['300PPC-Explicit', '500PPC-Explicit', '1000PPC-Explicit', '300PPC-NGP', '500PPC-NGP', '1000PPC-NGP', '2000PPC-NGP']
 def compareModelToData(data):
