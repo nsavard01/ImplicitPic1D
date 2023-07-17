@@ -1,4 +1,4 @@
-        !COMPILER-GENERATED INTERFACE MODULE: Mon Jul 17 17:51:29 2023
+        !COMPILER-GENERATED INTERFACE MODULE: Mon Jul 17 19:45:00 2023
         ! This source file is for reference only and may not completely
         ! represent the generated interface used by the compiler.
         MODULE NITFD__genmod

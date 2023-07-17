@@ -111,18 +111,30 @@ contains
             particleList(j)%refIdx = 0
         end do
         sumElectronLoss = SUM(particleList(1)%wallLoss)
-        w_coll = sumElectronLoss/particleList(1)%delIdx
-        do i=1, particleList(1)%delIdx
-            l_random = world%getLFromX(world%grid(NumberXNodes) * ran2(irand))
-            l_int = INT(l_random)
-            do j = 1, 2
-                particleList(j)%N_p(l_int) = particleList(j)%N_p(l_int) + 1
-                particleList(j)%phaseSpace(1, particleList(j)%N_p(l_int), l_int) = l_random
-                particleList(j)%w_p(particleList(j)%N_p(l_int), l_int) = w_coll
+        if (sumElectronLoss > 0) then
+            do i = 1, NumberXNodes-1
+                l_random = ran2(irand) + real(i)
+                do j = 1, 2
+                    particleList(j)%N_p(i) = particleList(j)%N_p(i) + 1
+                    particleList(j)%phaseSpace(1, particleList(j)%N_p(i), i) = l_random
+                    particleList(j)%w_p(particleList(j)%N_p(i), i) = sumElectronLoss * world%dx_dl(i)/ (world%grid(NumberXNodes))
+                end do
+                call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(i), i), particleList(1)%mass, T_e, irand)
+                call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(i), i), particleList(2)%mass, T_i, irand)
             end do
-            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(l_int), l_int), particleList(1)%mass, T_e, irand)
-            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(l_int), l_int), particleList(2)%mass, T_i, irand)
-        end do
+        end if
+        ! w_coll = sumElectronLoss / particleList(1)%delIdx
+        ! do i=1, particleList(1)%delIdx
+        !     l_random = world%getLFromX(world%grid(NumberXNodes) * ran2(irand))
+        !     l_int = INT(l_random)
+        !     do j = 1, 2
+        !         particleList(j)%N_p(l_int) = particleList(j)%N_p(l_int) + 1
+        !         particleList(j)%phaseSpace(1, particleList(j)%N_p(l_int), l_int) = l_random
+        !         particleList(j)%w_p(particleList(j)%N_p(l_int), l_int) = w_coll
+        !     end do
+        !     call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(l_int), l_int), particleList(1)%mass, T_e, irand)
+        !     call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(l_int), l_int), particleList(2)%mass, T_i, irand)
+        ! end do
     end subroutine addMaxwellianLostParticles
 
     ! subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
