@@ -446,25 +446,31 @@ contains
     subroutine generateSaveDirectory(dirName)
         character(*), intent(in) :: dirName
         logical :: bool
+        character(len=10) :: buf
         bool = makedirqq('../'//dirName)
         if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq('../'//dirName//'/Density')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq('../'//dirName//'/ElectronTemperature')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq('../'//dirName//'/PhaseSpace')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq('../'//dirName//'/Phi')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
+            print *, "Save directory ", dirName, " already exists. Are you sure you want to continue(yes/no)?"
+            read *, buf
+            if (buf(1:3) /= 'yes') then
+                stop "You have decided to create a new directory for the save files I suppose"
+            end if
+        else
+            bool = makedirqq('../'//dirName//'/Density')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
+            bool = makedirqq('../'//dirName//'/ElectronTemperature')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
+            bool = makedirqq('../'//dirName//'/PhaseSpace')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
+            bool = makedirqq('../'//dirName//'/Phi')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
         end if
     end subroutine generateSaveDirectory
 

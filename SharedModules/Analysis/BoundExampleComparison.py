@@ -8,6 +8,7 @@ Created on Tue Jun 27 14:32:42 2023
 from plotProduction import *
 from generateBoundExample import *
 
+test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/test/')
 data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_16nodes/')
 data1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_200PPC_2p0delT_2p5e16nave_16nodes/')
 data31Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_31nodes/')
