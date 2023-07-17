@@ -159,7 +159,7 @@ contains
         res = SQRT(res / SUM(self%N_p))
     end function getVrms
 
-    pure function getTotalKE(self) result(res)
+    function getTotalKE(self) result(res)
         ! calculate total KE in Joules/m^2
         class(Particle), intent(in) :: self
         real(real64) :: res
@@ -204,13 +204,12 @@ contains
         class(Particle), intent(in out) :: self
         integer(int32), intent(in out) :: irand
         integer(int32) :: i, k, j, numToOp, ranIdx, lowIndex
-        integer(int32) :: v_bins(100), v_indxArr(200, 100), v_indx, delIdx(200), amountDel
+        integer(int32) :: v_bins(100), v_indxArr(self%finalIdx, 100), v_indx, delIdx(self%finalIdx), amountDel
         real(real64) :: w_merged, l_merged, P_i(3), KE_i, v_Mag, P_Mag, RotMat(3,3), cos_theta, sin_theta, ran_phi, l_del
-        real(real64) :: v_temp(3), vbinDiv, v_min, v_max, KE_f, KE_tot, P_tot(3), P_after(3)
-        P_tot = self%getTotalMomentum()
-        KE_tot = self%getTotalKE()
+        real(real64) :: v_temp(3), vbinDiv, v_min, v_max
+    
         do k = 1, NumberXNodes-1
-            ! print *, "k is:", k
+            ! print *, "k is:", 
             if (self%N_p(k) > self%partPerCell) then
                 numToOp = self%N_p(k) - self%partPerCell + 2
                 v_max = MAXVAL(self%phaseSpace(2, 1:self%N_p(k), k))
@@ -249,7 +248,7 @@ contains
                         v_temp = P_i/P_Mag
                         RotMat = produceOrthonormBasis(v_temp)
                         cos_theta = P_mag/w_merged/v_Mag
-                        sin_theta = SQRT(1.0d0 - cos_theta**2 + 1e-15)
+                        sin_theta = SQRT(1.0d0 - cos_theta**2 + 1.0d-12)
                         ran_phi = ran2(irand) * 2.0d0 * pi
                         v_temp(1) = sin_theta * COS(ran_phi) * v_Mag
                         v_temp(2) = sin_theta * SIN(ran_phi) * v_Mag
@@ -258,55 +257,52 @@ contains
                         self%phaseSpace(1, v_indxArr(1,i), k) = l_merged
                         self%phaseSpace(2:4,v_indxArr(1,i), k) = v_temp
                         self%w_p(v_indxArr(1,i), k) = 0.5d0* w_merged
-
                         v_temp = P_i * 2.0d0/w_merged - v_temp
                         self%phaseSpace(1, v_indxArr(2,i), k) = l_merged
                         self%phaseSpace(2:4,v_indxArr(2,i), k) = v_temp
                         self%w_p(v_indxArr(2,i), k) = 0.5d0* w_merged
-                        P_after = (self%phaseSpace(2:4,v_indxArr(2,i), k) + self%phaseSpace(2:4,v_indxArr(1,i), k)) * 0.5 * w_merged
-                        KE_f = (SUM(self%phaseSpace(2:4,v_indxArr(2,i), k)**2) + SUM(self%phaseSpace(2:4,v_indxArr(1,i), k)**2)) * 0.5 * w_merged
+                        ! print *, "Merging KE error is:", ABS((KE_f - KE_i)/KE_i)
+                        ! print *, "Merging P error is:", ABS((P_after - P_i)/P_i)
                         numToOp = numToOp - v_indx + 2
                         if (numToOp < 3) exit
                     end if
                 end do
-                ! print *, "amountDel is:", amountDel
-                do i = 1, amountDel
-                    self%phaseSpace(:, delIdx(i), k) = self%phaseSpace(:, self%N_p(k), k)
-                    self%w_p(delIdx(i), k) = self%w_p(self%N_p(k), k)
+                if (amountDel > 1) call quickSortInt(delIdx, 1, amountDel)
+                do i = amountDel, 1, -1
+                    if (delIdx(i) /= self%N_p(k)) then
+                        self%phaseSpace(:, delIdx(i), k) = self%phaseSpace(:, self%N_p(k), k)
+                        self%w_p(delIdx(i), k) = self%w_p(self%N_p(k), k)
+                    end if
                     self%N_p(k) = self%N_p(k) - 1
                 end do
-            else if (self%N_p(k) < self%partPerCell .and. self%N_p(k) > 0) then
-                numToOp = self%partPerCell - self%N_p(k)
-                do while (numToOp > self%N_p(k))
-                    do i = 1, numToOp
-                        self%phaseSpace(2:4,self%N_p(k) + i, k) = self%phaseSpace(2:4,i, k)
-                        self%w_p(i, k) = 0.5d0 * self%w_p(i, k)
-                        self%w_p(self%N_p(k) + i, k) = self%w_p(i, k)
-                        l_del = MIN(ABS(self%phaseSpace(1,i, k)-k), ABS(self%phaseSpace(1,i, k)-k - 1))
-                        l_del = ran2(irand) * (l_del) * 0.1d0
-                        self%phaseSpace(1,self%N_p(k) + i, k) = self%phaseSpace(1,i, k) + l_del
-                        self%phaseSpace(1,i, k) = self%phaseSpace(1,i, k) - l_del
-                    end do
-                    self%N_p(k) = self%N_p(k) + numToOp
-                    numToOp = self%partPerCell - self%N_p(k)
-                end do
-                do i = 1, numToOp
-                    ranIdx = INT(ran2(irand)*self%N_p(k) + 1)
-                    self%phaseSpace(2:4,self%N_p(k) + i, k) = self%phaseSpace(2:4,ranIdx, k)
-                    self%w_p(ranIdx, k) = 0.5d0 * self%w_p(ranIdx, k)
-                    self%w_p(self%N_p(k) + i, k) = self%w_p(ranIdx, k)
-                    l_del = MIN(ABS(self%phaseSpace(1,ranIdx, k)-k), ABS(self%phaseSpace(1,ranIdx, k)-k - 1))
-                    l_del = ran2(irand) * (l_del) * 0.1d0
-                    self%phaseSpace(1,self%N_p(k) + i, k) = self%phaseSpace(1,ranIdx, k) + l_del
-                    self%phaseSpace(1,ranIdx, k) = self%phaseSpace(1,ranIdx, k) - l_del
-                end do
-                self%N_p(k) = self%N_p(k) + numToOp
+            ! else if (self%N_p(k) < self%partPerCell .and. self%N_p(k) > 0) then
+            !     numToOp = self%partPerCell - self%N_p(k)
+            !     do while (numToOp > self%N_p(k))
+            !         do i = 1, numToOp
+            !             self%phaseSpace(2:4,self%N_p(k) + i, k) = self%phaseSpace(2:4,i, k)
+            !             self%w_p(i, k) = 0.5d0 * self%w_p(i, k)
+            !             self%w_p(self%N_p(k) + i, k) = self%w_p(i, k)
+            !             l_del = MIN(ABS(self%phaseSpace(1,i, k)-k), ABS(self%phaseSpace(1,i, k)-k - 1))
+            !             l_del = ran2(irand) * (l_del) * 0.1d0
+            !             self%phaseSpace(1,self%N_p(k) + i, k) = self%phaseSpace(1,i, k) + l_del
+            !             self%phaseSpace(1,i, k) = self%phaseSpace(1,i, k) - l_del
+            !         end do
+            !         self%N_p(k) = self%N_p(k) + numToOp
+            !         numToOp = self%partPerCell - self%N_p(k)
+            !     end do
+            !     do i = 1, numToOp
+            !         ranIdx = INT(ran2(irand)*self%N_p(k) + 1)
+            !         self%phaseSpace(2:4,self%N_p(k) + i, k) = self%phaseSpace(2:4,ranIdx, k)
+            !         self%w_p(ranIdx, k) = 0.5d0 * self%w_p(ranIdx, k)
+            !         self%w_p(self%N_p(k) + i, k) = self%w_p(ranIdx, k)
+            !         l_del = MIN(ABS(self%phaseSpace(1,ranIdx, k)-k), ABS(self%phaseSpace(1,ranIdx, k)-k - 1))
+            !         l_del = ran2(irand) * (l_del) * 0.1d0
+            !         self%phaseSpace(1,self%N_p(k) + i, k) = self%phaseSpace(1,ranIdx, k) + l_del
+            !         self%phaseSpace(1,ranIdx, k) = self%phaseSpace(1,ranIdx, k) - l_del
+            !     end do
+            !     self%N_p(k) = self%N_p(k) + numToOp
             end if
         end do
-        KE_f = self%getTotalKE()
-        P_after = self%getTotalMomentum()
-        print *, "Merging KE error is:", ABS((KE_f - KE_tot)/KE_tot)
-        print *, "Merging P error is:", ABS((P_after - P_tot)/P_tot)
     end subroutine mergeAndSplit
 
     ! subroutine mergeAndSplit(self, irand)

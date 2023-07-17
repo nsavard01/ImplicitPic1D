@@ -184,6 +184,33 @@ contains
 
     end function getArrayMean1D
 
+    recursive subroutine quickSortInt(array, startIdx, endIdx)
+        integer(int32), intent(in out) :: array(:)
+        integer(int32), intent(in) :: startIdx, endIdx
+        integer(int32) :: i, j, x, t
+        
+        x = array( (startIdx+endIdx) / 2 )
+        i = startIdx
+        j = endIdx
+        do
+            do while (array(i) < x)
+                i=i+1
+            end do
+            do while (x < array(j))
+                j=j-1
+            end do
+            if (i >= j) exit
+            t = array(i)  
+            array(i) = array(j)  
+            array(j) = t
+            i=i+1
+            j=j-1
+        end do
+        if (startIdx < i-1) call quickSortInt(array, startIdx, i-1)
+        if (j+1 < endIdx)  call quickSortInt(array, j+1, endIdx)
+
+    end subroutine quickSortInt
+
     !---------------- Write Phi -----------------
 
     subroutine writePhi(phi, CurrentDiagStep, boolAverage, dirName) 
