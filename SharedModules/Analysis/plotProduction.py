@@ -66,7 +66,7 @@ def update_plot_Phi(i, dataSet, ax):
     #ax.set_ylim([-20, 40])
 
     
-def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "BoundPlasmaPhi.gif"):
+def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPlasmaPhi.gif"):
     if boolMakeAnimation:
         numframes = dataSet.numDiag
         fig, ax = plt.subplots()
@@ -93,6 +93,48 @@ def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "BoundPlasmaPhi.
             plt.plot(dataSet.grid, phi, 'o-')
             plt.xlabel('Distance (m)')
             plt.ylabel('Potential (V)')
+            plt.xlim([0, dataSet.grid[-1]])
+            plt.pause(0.05)  
+
+def update_plot_Density(i, dataSet, ax, nameList):
+    ax.clear()
+    for name in nameList:
+        n = dataSet.getDensity(name, i)
+        ax.plot(dataSet.grid, n, 'o-', label = name)
+    ax.set_xlabel('Distance (m)')
+    ax.set_ylabel('Particle Density (1/m^3)')
+    ax.set_xlim([0, dataSet.grid[-1]])
+    plt.legend(loc = 'lower center')            
+            
+def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Figures/BoundPlasmaDensity.gif"):
+    if boolMakeAnimation:
+        numframes = dataSet.numDiag
+        fig, ax = plt.subplots()
+        for name in nameList:
+            n = dataSet.getDensity(name, 0)
+            ax.plot(dataSet.grid, n, 'o-', label = name)
+            
+        ax.set_xlabel('Distance (m)')
+        ax.set_ylabel(r'Density (m$^{-3}$)')
+        ax.set_xlim([0, dataSet.grid[-1]])
+        #ax.set_ylim([-20, 40])
+        ani = animation.FuncAnimation(fig, update_plot_Density, frames=range(numframes), interval = 100,fargs=(dataSet, ax, nameList))
+        
+        ani.save(savePath)
+        plt.show()
+        
+        
+    else:
+        plt.figure(figsize = (5,4), dpi = 80)
+        for y in range(dataSet.numDiag):
+        
+            plt.cla()
+            
+            for name in nameList:
+                n = dataSet.getDensity(name, y)
+                plt.plot(dataSet.grid, n, 'o-', label = name)
+            plt.xlabel('Distance (m)')
+            plt.ylabel(r'Density (m$^{-3}$)')
             plt.xlim([0, dataSet.grid[-1]])
             plt.pause(0.05)  
             

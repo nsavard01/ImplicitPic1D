@@ -1,5 +1,5 @@
 22.0d-6 ! simulation time
-2.5d16 ! Initial number density (1/m^3) of electrons
+5.0d14 ! Initial number density (1/m^3) of electrons
 5.0 ! Initial electron Temperature (eV) 
 1.0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
@@ -8,4 +8,5 @@
 50.0d0 ! Power (W/m^2)
 10 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
+test !save file name
 END

@@ -29,7 +29,7 @@ mod_potentialSolver.o: mod_potentialSolver.f90 constants.o mod_BasicFunctions.o 
 mod_collisions.o: ../../SharedModules/src/mod_collisions.f90 constants.o mod_BasicFunctions.o mod_particle.o
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_particle.o: mod_particle.f90 constants.o mod_BasicFunctions.o
+mod_particle.o: ../../SharedModules/src/mod_particle.f90 constants.o mod_BasicFunctions.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_domain.o: mod_domain.f90 constants.o mod_BasicFunctions.o
