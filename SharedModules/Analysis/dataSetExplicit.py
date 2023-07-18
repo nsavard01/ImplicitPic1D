@@ -47,7 +47,7 @@ class dataSetExplicit:
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):
-            diagAverageList = ['steps','Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+            diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
             self.aveGlobDiag = pd.read_csv(self.path + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
         else:
             self.aveGlobDiag = None
@@ -105,14 +105,14 @@ class dataSetExplicit:
             raise Warning('No averaging done!')
         return n
     
-    # def getAveEVDF(self):
-    #     if (self.boolAverageFile):
-    #         VTot = np.fromfile(self.path + 'ElectronTemperature/EVDF_average.dat', dtype = 'float', offset = 4)
-    #         VHist = VTot[0:-1]
-    #         VMax = VTot[-1]
-    #         size = VHist.size/2
-    #         Vedge = np.arange(-size,size+1) * VMax/size
-    #         Vbins = (Vedge[0:-1] + Vedge[1:])/2
-    #     else:
-    #         raise Warning('No averaging done!')
-    #     return Vbins, VHist
+    def getAveEVDF(self):
+        if (self.boolAverageFile):
+            VTot = np.fromfile(self.path + 'ElectronTemperature/EVDF_average.dat', dtype = 'float', offset = 4)
+            VHist = VTot[0:-1]
+            VMax = VTot[-1]
+            size = VHist.size/2
+            Vedge = np.arange(-size,size+1) * VMax/size
+            Vbins = (Vedge[0:-1] + Vedge[1:])/2
+        else:
+            raise Warning('No averaging done!')
+        return Vbins, VHist

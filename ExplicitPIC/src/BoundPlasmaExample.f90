@@ -37,7 +37,7 @@ program BoundPlasmaExample
     print *, "----------------"
     print *, ""
     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
-    call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, heatSkipSteps)
+    call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, 100)
     ! call solver%construct_diagMatrix_Ampere(world)
     ! if (Power /= 0.0d0) then
     !     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)

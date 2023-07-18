@@ -585,22 +585,22 @@ contains
     end subroutine solveSimulation
 
 
-    subroutine solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, heatSkipSteps)
+    subroutine solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, binNumber)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
         type(Particle), intent(in out) :: particleList(:)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, averagingTime
-        integer(int32), intent(in) :: heatSkipSteps
+        integer(int32), intent(in) :: binNumber
         integer(int32), intent(in out) :: irand
-        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j
+        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber)
         real(real64) :: phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles), currentTime, chargeTotal, energyLoss, meanLoss, stdLoss
+        real(real64) :: E_max, VMax
         real(real64), allocatable :: wallLoss(:)
 
 
-        open(22,file='../'//directoryName//'/GlobalDiagnosticDataAveraged.dat')
-        write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
+        
         
         !Save initial particle/field data, along with domain
         do i = 1, numberChargedParticles
@@ -644,17 +644,37 @@ contains
         stepsAverage = i
         densities = densities/i
         call writeParticleDensity(densities, particleList, world, 0, .true., directoryName) 
-        call writePhi(phi_average/i, 0, .true., directoryName)
+        phi_average = phi_average/stepsAverage
+        call writePhi(phi_average, 0, .true., directoryName)
         chargeTotal = 0.0d0
         energyLoss = 0.0d0
         do i=1, numberChargedParticles
             chargeTotal = chargeTotal + SUM(particleList(i)%wallLoss) * particleList(i)%q * particleList(i)%w_p
             energyLoss = energyLoss + SUM(particleList(i)%energyLoss)
         end do
+        open(22,file='../'//directoryName//'/GlobalDiagnosticDataAveraged.dat')
+        write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
         write(22,"((I6, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/currentTime, chargeTotal/currentTime, energyLoss/currentTime
         close(22)
         print *, "Electron average wall loss:", SUM(particleList(1)%wallLoss)* particleList(1)%w_p * particleList(1)%q/currentTime
         print *, "Ion average wall loss:", SUM(particleList(2)%wallLoss)* particleList(2)%w_p * particleList(2)%q/currentTime
+        print *, "Performing average for EEDF over 50/omega_p"
+        E_max = 3.0d0 * (MAXVAL(phi_average) - minval(phi_average))
+        VMax = SQRT(2.0d0 * E_max *e/ m_e)
+        windowDivision = INT(50.0d0/fractionFreq)
+        VHist = 0.0d0
+        do i = 1, windowDivision
+            call solver%moveParticles(particleList, world, del_t)
+            call solver%solvePotential(particleList, world)
+            call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            do j = 1, particleList(1)%N_p
+                intPartV = INT(particleList(1)%phaseSpace(2, j) * (binNumber) / VMax + binNumber + 1)
+                VHist(intPartV) = VHist(intPartV) + 1
+            end do
+        end do
+        open(10,file='../'//directoryName//'/ElectronTemperature/EVDF_average.dat', form='UNFORMATTED')
+        write(10) real(VHist, kind = real64), VMax
+        close(10)
 
     end subroutine solveSimulationFinalAverage
 
