@@ -37,7 +37,7 @@ class dataSet:
         self.delT = initialCond[6]
         self.fracTime = initialCond[7]
         self.numDiag = int(initialCond[11]) + 1
-        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
+        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
         self.particles = {}
         partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss']
         for i in range(len(ParticleProperties)):
@@ -46,6 +46,7 @@ class dataSet:
             self.particles[name]['mass'] = ParticleProperties.iloc[i]['mass']
             self.particles[name]['q'] = ParticleProperties.iloc[i]['q']
             self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
+            self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
             self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, delim_whitespace=True, names = partDiag)
             
         self.grid = np.fromfile(self.path + 'domainGrid.dat', dtype = 'float', offset = 4)

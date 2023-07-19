@@ -19,153 +19,153 @@ contains
 
     ! ------------------------- Reading Input data --------------------------------
 
-    subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, T_i, GeomFilename, InitFilename)
-        ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
-        integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
-        real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
-        real(real64), intent(in out) :: T_e, T_i
-        character(len=*), intent(in) :: GeomFilename, InitFilename
-        integer(int32) :: io, leftBoundary, rightBoundary
-        real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
-        character(len=100) :: tempName
-        type(Domain) :: world
-        type(potentialSolver) :: solver
+!     subroutine readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, T_i, GeomFilename, InitFilename)
+!         ! Set initial conditions and global constants based on read input from txt file, create world and solver from these inputs
+!         integer(int32), intent(in out) :: NumberXNodes, numDiagnosticSteps, heatSkipSteps
+!         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, Power, nu_h, averagingTime
+!         real(real64), intent(in out) :: T_e, T_i
+!         character(len=*), intent(in) :: GeomFilename, InitFilename
+!         integer(int32) :: io, leftBoundary, rightBoundary
+!         real(real64) :: leftVoltage, rightVoltage, L_domain, debyeLength
+!         character(len=100) :: tempName
+!         type(Domain) :: world
+!         type(potentialSolver) :: solver
 
-        print *, "Reading initial inputs:"
-        open(10,file='../InputData/'//InitFilename, IOSTAT=io)
-        read(10, *, IOSTAT = io) simulationTime
-        read(10, *, IOSTAT = io) n_ave
-        read(10, *, IOSTAT = io) T_e
-        read(10, *, IOSTAT = io) T_i
-        read(10, *, IOSTAT = io) numDiagnosticSteps
-        read(10, *, IOSTAT = io) fractionFreq
-        read(10, *, IOSTAT = io) averagingTime
-        read(10, *, IOSTAT = io) Power
-        read(10, *, IOSTAT = io) heatSkipSteps
-        read(10, *, IOSTAT = io) nu_h
-        read(10, *, IOSTAT = io) tempName
-        close(10)
-        directoryName = trim(tempName)
-        if (len(directoryName) < 2) then
-            stop "Directory name length less than 2 characters!"
-        end if
-        print *, "Save data folder: ", directoryName
-        print *, "Average initial electron density:", n_ave
-        print *, "Initial electron temperature:", T_e
-        print *, "Initial ion temperature:", T_i
-        print *, "Number of diagnostic steps is:", numDiagnosticSteps
-        print *, "Fraction of 1/w_p for time step:", fractionFreq
-        print *, "Final averaging time is:", averagingTime
-        print *, "Power input (W/m^2):", Power
-        print *, "Steps to skip for heating:", heatSkipSteps
-        print *, "Heating frequency (Hz):", nu_h
-        print *, "------------------"
-        print *, ""
-        print *, "Reading domain inputs:"
-        open(10,file='../InputData/'//GeomFilename)
-        read(10, *, IOSTAT = io) NumberXNodes
-        read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) leftBoundary, rightBoundary
-        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
-        close(10)
-        debyeLength = getDebyeLength(T_e, n_ave)
-        if (L_domain / (NumberXNodes-1) > debyeLength) then
-            print *, "Insufficient amount of nodes to resolve initial debyeLength"
-            print *, "Changing amount of nodes to have 0.75 * debyeLength"
-            NumberXNodes = NINT(L_domain/debyeLength/0.75d0) + 1
-        end if
-        print *, "Number of nodes:", NumberXNodes
-        print *, "Grid length:", L_domain
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
-        print *, "------------------"
-        print *, ""
-        ! if one boundary is periodic, other must also be
-        if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
-            leftBoundary = 3
-            rightBoundary = 3
-            leftVoltage = rightVoltage
-        end if
-        world = Domain(leftBoundary, rightBoundary)
-        call world % constructGrid(L_domain)
-        solver = potentialSolver(world, leftVoltage, rightVoltage)
-        call solver%construct_diagMatrix(world)
+!         print *, "Reading initial inputs:"
+!         open(10,file='../InputData/'//InitFilename, IOSTAT=io)
+!         read(10, *, IOSTAT = io) simulationTime
+!         read(10, *, IOSTAT = io) n_ave
+!         read(10, *, IOSTAT = io) T_e
+!         read(10, *, IOSTAT = io) T_i
+!         read(10, *, IOSTAT = io) numDiagnosticSteps
+!         read(10, *, IOSTAT = io) fractionFreq
+!         read(10, *, IOSTAT = io) averagingTime
+!         read(10, *, IOSTAT = io) Power
+!         read(10, *, IOSTAT = io) heatSkipSteps
+!         read(10, *, IOSTAT = io) nu_h
+!         read(10, *, IOSTAT = io) tempName
+!         close(10)
+!         directoryName = trim(tempName)
+!         if (len(directoryName) < 2) then
+!             stop "Directory name length less than 2 characters!"
+!         end if
+!         print *, "Save data folder: ", directoryName
+!         print *, "Average initial electron density:", n_ave
+!         print *, "Initial electron temperature:", T_e
+!         print *, "Initial ion temperature:", T_i
+!         print *, "Number of diagnostic steps is:", numDiagnosticSteps
+!         print *, "Fraction of 1/w_p for time step:", fractionFreq
+!         print *, "Final averaging time is:", averagingTime
+!         print *, "Power input (W/m^2):", Power
+!         print *, "Steps to skip for heating:", heatSkipSteps
+!         print *, "Heating frequency (Hz):", nu_h
+!         print *, "------------------"
+!         print *, ""
+!         print *, "Reading domain inputs:"
+!         open(10,file='../InputData/'//GeomFilename)
+!         read(10, *, IOSTAT = io) NumberXNodes
+!         read(10, *, IOSTAT = io) L_domain
+!         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
+!         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+!         close(10)
+!         debyeLength = getDebyeLength(T_e, n_ave)
+!         if (L_domain / (NumberXNodes-1) > debyeLength) then
+!             print *, "Insufficient amount of nodes to resolve initial debyeLength"
+!             print *, "Changing amount of nodes to have 0.75 * debyeLength"
+!             NumberXNodes = NINT(L_domain/debyeLength/0.75d0) + 1
+!         end if
+!         print *, "Number of nodes:", NumberXNodes
+!         print *, "Grid length:", L_domain
+!         print *, "Left boundary type:", leftBoundary
+!         print *, "Right boundary type:", rightBoundary
+!         print *, "------------------"
+!         print *, ""
+!         ! if one boundary is periodic, other must also be
+!         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
+!             leftBoundary = 3
+!             rightBoundary = 3
+!             leftVoltage = rightVoltage
+!         end if
+!         world = Domain(leftBoundary, rightBoundary)
+!         call world % constructGrid(L_domain)
+!         solver = potentialSolver(world, leftVoltage, rightVoltage)
+!         call solver%construct_diagMatrix(world)
         
-    end subroutine readInputs
+!     end subroutine readInputs
 
-    function readParticleInputs(filename, numberChargedParticles, irand, T_e, T_i) result(particleList)
-        type(Particle), allocatable :: particleList(:)
-        character(len=*), intent(in) :: filename
-        integer(int32), intent(in out) :: numberChargedParticles, irand
-        real(real64), intent(in) :: T_e, T_i
-        integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
-        character(len=15) :: name
-        character(len=8) :: particleNames(100)
-        real(real64) :: mass(100), charge(100), Ti(100)
+!     function readParticleInputs(filename, numberChargedParticles, irand, T_e, T_i) result(particleList)
+!         type(Particle), allocatable :: particleList(:)
+!         character(len=*), intent(in) :: filename
+!         integer(int32), intent(in out) :: numberChargedParticles, irand
+!         real(real64), intent(in) :: T_e, T_i
+!         integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
+!         character(len=15) :: name
+!         character(len=8) :: particleNames(100)
+!         real(real64) :: mass(100), charge(100), Ti(100)
 
-        print *, "Reading particle inputs:"
-        open(10,file='../InputData/'//filename, action = 'read')
-        do j=1, 10000
-            read(10,*,END=101,ERR=100) name
+!         print *, "Reading particle inputs:"
+!         open(10,file='../InputData/'//filename, action = 'read')
+!         do j=1, 10000
+!             read(10,*,END=101,ERR=100) name
 
-            if( name(1:9).eq.'ELECTRONS') then
-                read(10,*,END=101,ERR=100) name
-                read(10,*,END=101,ERR=100) name
-                read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:2)
-                numSpecies = numSpecies + 1
-                read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
-                Ti(numSpecies) = T_e
-                mass(numSpecies) = m_e
-                charge(numSpecies) = -1.0
-                particleNames(numSpecies) = 'e'
-                read(10,*,END=101,ERR=100) name
-                read(10,*,END=101,ERR=100) name
-            endif
+!             if( name(1:9).eq.'ELECTRONS') then
+!                 read(10,*,END=101,ERR=100) name
+!                 read(10,*,END=101,ERR=100) name
+!                 read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:2)
+!                 numSpecies = numSpecies + 1
+!                 read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
+!                 Ti(numSpecies) = T_e
+!                 mass(numSpecies) = m_e
+!                 charge(numSpecies) = -1.0
+!                 particleNames(numSpecies) = 'e'
+!                 read(10,*,END=101,ERR=100) name
+!                 read(10,*,END=101,ERR=100) name
+!             endif
 
 
-            if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
-                do while(name(1:4).ne.'----')
-                    read(10,*,END=101,ERR=100) name
-                end do
-200             read(10,'(A6)',END=101,ERR=100, ADVANCE = 'NO') name
-                if (name(1:4).eq.'----') then
-                    close(10)
-                else
-                    numSpecies = numSpecies + 1
-                    read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
-                    Ti(numSpecies) = T_i
-                    mass(numSpecies) = mass(numSpecies) * m_p
-                    particleNames(numSpecies) = trim(name)
-                    goto 200
-                end if
-            endif
-            ! Take care of extra text I guess        
+!             if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
+!                 do while(name(1:4).ne.'----')
+!                     read(10,*,END=101,ERR=100) name
+!                 end do
+! 200             read(10,'(A6)',END=101,ERR=100, ADVANCE = 'NO') name
+!                 if (name(1:4).eq.'----') then
+!                     close(10)
+!                 else
+!                     numSpecies = numSpecies + 1
+!                     read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+!                     Ti(numSpecies) = T_i
+!                     mass(numSpecies) = mass(numSpecies) * m_p
+!                     particleNames(numSpecies) = trim(name)
+!                     goto 200
+!                 end if
+!             endif
+!             ! Take care of extra text I guess        
 
-            if (name(1:7) == 'ENDFILE') then
-                close(10)
-            end if
+!             if (name(1:7) == 'ENDFILE') then
+!                 close(10)
+!             end if
 
-        end do
-100     continue
-101     continue
-        numberChargedParticles = numSpecies
-        allocate(particleList(numberChargedParticles))
-        do j=1, numberChargedParticles
-            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j) * (NumberXNodes-1), numParticles(j) * particleIdxFactor(j) * (NumberXNodes - 1), trim(particleNames(j)))
-            call particleList(j) % generate3DMaxwellian(Ti(j), irand)
-            print *, 'Initializing ', particleList(j) % name
-            print *, 'Amount of macroparticles is:', particleList(j) % N_p
-            print *, "Particle mass is:", particleList(j)%mass
-            print *, "Particle charge is:", particleList(j)%q
-            print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
-        end do
+!         end do
+! 100     continue
+! 101     continue
+!         numberChargedParticles = numSpecies
+!         allocate(particleList(numberChargedParticles))
+!         do j=1, numberChargedParticles
+!             particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j) * (NumberXNodes-1), numParticles(j) * particleIdxFactor(j) * (NumberXNodes - 1), trim(particleNames(j)))
+!             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
+!             print *, 'Initializing ', particleList(j) % name
+!             print *, 'Amount of macroparticles is:', particleList(j) % N_p
+!             print *, "Particle mass is:", particleList(j)%mass
+!             print *, "Particle charge is:", particleList(j)%q
+!             print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
+!         end do
         
-        print *, "---------------"
-        print *, ""
+!         print *, "---------------"
+!         print *, ""
 
 
 
-    end function readParticleInputs
+!     end function readParticleInputs
 
     subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
         ! Add power to all particles in domain
@@ -300,98 +300,7 @@ contains
         end do
         
     end subroutine WriteParticleDensity
-    
-    ! -------------------------- Simulation ------------------------------------------
 
-    ! subroutine solveSimulationOnlyPotential(solver, particleList, world, del_t, simulationTime)
-    !     ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
-    !     ! Impliment averaging for final select amount of timeSteps, this will be last data dump
-    !     type(Particle), intent(in out) :: particleList(:)
-    !     type(potentialSolver), intent(in out) :: solver
-    !     type(Domain), intent(in) :: world
-    !     real(real64), intent(in) :: simulationTime, del_t
-    !     integer(int32) :: j, CurrentDiagStep
-    !     real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime
-    !     CurrentDiagStep = 1
-    !     currentTime = 0.0d0
-    !     !Wrtie Initial conditions
-    !     open(15,file='../Data/InitialConditions.dat')
-    !     write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, Power(W/m^2), heatSteps, nu_h")')
-    !     write(15,"((I3.3, 1x), 5(es16.8,1x), (I3.3, 1x), (es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, Power, heatSkipSteps, nu_h
-    !     close(15)
-
-    !     ! Write Particle properties
-    !     open(9,file='../Data/ParticleProperties.dat')
-    !     write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2)")')
-    !     do j=1, numberChargedParticles
-    !         write(9,"((A, 1x), 3(es16.8,1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p
-    !     end do
-    !     close(9)
-
-    !     diagTimeDivision = simulationTime/real(numDiagnosticSteps)
-    !     diagTime = diagTimeDivision
-    !     101 format(20(1x,es16.8))
-    !     open(22,file='../Data/GlobalDiagnosticData.dat')
-    !     write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
-        
-    !     !Save initial particle/field data, along with domain
-    !     call solver%solvePotential(particleList, world)
-    !     call solver%initialVRewind(particleList, del_t)
-    !     densities = 0.0d0
-    !     call loadParticleDensity(densities, particleList, world)
-    !     call writeParticleDensity(densities, particleList, world, 0, .false.) 
-    !     call writePhi(solver%phi, 0, .false.)
-    !     call particleList(1)%writeLocalTemperature(0)
-    !     call world%writeDomain()
-    !     do j=1, numberChargedParticles
-    !         call particleList(j)%writePhaseSpace(0)
-    !     end do
-
-    !     do while(currentTime < simulationTime)
-    !         if (currentTime < diagTime) then
-    !             call solver%moveParticles(particleList, world, del_t)
-    !             call solver%solvePotential(particleList, world)
-    !         else  
-    !             ! Data dump with diagnostics
-    !             print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
-    !             inelasticEnergyLoss = 0.0d0
-    !             solver%particleEnergyLoss = 0.0d0
-    !             solver%particleChargeLoss = 0.0d0
-    !             call solver%moveParticles(particleList, world, del_t)
-    !             call solver%solvePotential(particleList, world)
-    !             densities = 0.0d0
-    !             call loadParticleDensity(densities, particleList, world)
-    !             call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
-    !             call writePhi(solver%phi, CurrentDiagStep, .false.)
-    !             call particleList(1)%writeLocalTemperature(CurrentDiagStep)
-    !             do j=1, numberChargedParticles
-    !                 call particleList(j)%writePhaseSpace(CurrentDiagStep)
-    !             end do
-    !             write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t, &
-    !             SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t
-    !             CurrentDiagStep = CurrentDiagStep + 1
-    !             diagTime = diagTime + diagTimeDivision
-    !         end if
-    !         currentTime = currentTime + del_t
-    !     end do
-    !     inelasticEnergyLoss = 0.0d0
-    !     solver%particleEnergyLoss = 0.0d0
-    !     solver%particleChargeLoss = 0.0d0
-    !     call solver%moveParticles(particleList, world, del_t)
-    !     call solver%solvePotential(particleList, world)
-    !     densities = 0.0d0
-    !     call loadParticleDensity(densities, particleList, world)
-    !     call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false.) 
-    !     call writePhi(solver%phi, CurrentDiagStep, .false.)
-    !     call particleList(1)%writeLocalTemperature(CurrentDiagStep)
-    !     do j=1, numberChargedParticles
-    !         call particleList(j)%writePhaseSpace(CurrentDiagStep)
-    !     end do
-    !     write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t, &
-    !             SUM(solver%particleChargeLoss)/del_t, solver%particleEnergyLoss/del_t
-    !     close(22)
-
-    ! end subroutine solveSimulationOnlyPotential
 
     subroutine generateSaveDirectory(dirName)
         character(*), intent(in) :: dirName
@@ -441,22 +350,22 @@ contains
         call generateSaveDirectory(directoryName)
         !Wrtie Initial conditions
         open(15,file='../'//directoryName//'/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, n_ave, T_e, T_i, numDiag")')
-        write(15,"((I3.3, 1x), 7(es16.8,1x), (I3.3, 1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, n_ave, T_e, T_i, numDiag, NumChargedPart")')
+        write(15,"((I3.3, 1x), 7(es16.8,1x), 2(I3.3, 1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps, numberChargedParticles
         close(15)
         call system_clock(count_rate = timingRate)
         ! Write Particle properties
         open(9,file='../'//directoryName//'/ParticleProperties.dat')
-        write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2)")')
+        write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2), maxIdx")')
         do j=1, numberChargedParticles
-            write(9,"((A, 1x), 3(es16.8,1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p
+            write(9,"((A, 1x), 3(es16.8,1x), (I6, 1x))") particleList(j)%name//'       ', particleList(j)%mass, particleList(j)%q, particleList(j)%w_p, particleList(j)%finalIdx
         end do
         close(9)
         do i = 1, numberChargedParticles
             particleList(i)%energyLoss = 0.0d0
             particleList(i)%wallLoss = 0
             open(unitPart1+i,file='../'//directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat')
-            write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2)")')
+            write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p")')
         end do
         collisionTime = 0
         potentialTime = 0
@@ -476,13 +385,13 @@ contains
             particleList(i)%wallLoss = 0
         end do
         call solver%solvePotential(particleList, world)
-        call solver%initialVRewind(particleList, del_t)
+        !call solver%initialVRewind(particleList, del_t)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, 0, .false., directoryName) 
         call writePhi(solver%phi, 0, .false., directoryName)
         call particleList(1)%writeLocalTemperature(0, directoryName)
-        call world%writeDomain()
+        call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
             call particleList(j)%writePhaseSpace(0, directoryName)
         end do
@@ -524,9 +433,9 @@ contains
                     call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
                     energyLoss = energyLoss + SUM(particleList(j)%energyLoss)
-                    write(unitPart1+j,"(5(es16.8,1x))") currentTime, &
+                    write(unitPart1+j,"(5(es16.8,1x), (I6,1x))") currentTime, &
                         particleList(j)%wallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%wallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
-                        particleList(j)%energyLoss(1)/del_t/diagStepDiff, particleList(j)%energyLoss(2)/del_t/diagStepDiff
+                        particleList(j)%energyLoss(1)/del_t/diagStepDiff, particleList(j)%energyLoss(2)/del_t/diagStepDiff, particleList(j)%N_p
                     particleList(j)%energyLoss = 0.0d0
                     particleList(j)%wallLoss = 0
                 end do
@@ -566,9 +475,9 @@ contains
             call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
             chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
             energyLoss = energyLoss + SUM(particleList(j)%energyLoss)
-            write(unitPart1+j,"(5(es16.8,1x))") currentTime, &
+            write(unitPart1+j,"(5(es16.8,1x), (I6, 1x))") currentTime, &
                 particleList(j)%wallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%wallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
-                particleList(j)%energyLoss(1)/del_t/diagStepDiff, particleList(j)%energyLoss(2)/del_t/diagStepDiff
+                particleList(j)%energyLoss(1)/del_t/diagStepDiff, particleList(j)%energyLoss(2)/del_t/diagStepDiff, particleList(j)%N_p
         end do
         write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
         chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff

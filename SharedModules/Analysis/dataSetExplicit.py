@@ -26,18 +26,19 @@ class dataSetExplicit:
         self.T_e = initialCond[6]
         self.T_i = initialCond[7]
         self.numDiag = int(initialCond[8]) + 1
-        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p'], delim_whitespace = True)
+        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
         self.particles = {}
-        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss']
+        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p']
         for i in range(len(ParticleProperties)):
             name = ParticleProperties.iloc[i]['name']
             self.particles[name] = {}
             self.particles[name]['mass'] = ParticleProperties.iloc[i]['mass']
             self.particles[name]['q'] = ParticleProperties.iloc[i]['q']
             self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
+            self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
             self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, delim_whitespace=True, names = partDiag)
             
-        self.grid = np.arange(0, self.Nx) * self.delX
+        self.grid = np.fromfile(self.path + 'domainGrid.dat', offset = 4)
         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
         self.totTime = endDiag[0]
         self.totPotTime = endDiag[1]
@@ -116,3 +117,7 @@ class dataSetExplicit:
         else:
             raise Warning('No averaging done!')
         return Vbins, VHist
+    
+    def getBoundaryConditions(self):
+        cond = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype = np.int32, offset = 4)[0:-1]
+        return cond

@@ -27,6 +27,7 @@ dataExplicit1000PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/Implicit
 dataList = [dataExplicit500PPC, dataExplicit1000PPC, data4, data1000PPC, data2000PPC, data1000PPC_32Nodes, data500PPC_61Nodes]
 labelList = ['500PPC-Explicit', '1000PPC-Explicit', '500PPC-NGP', '1000PPC-NGP', '2000PPC-NGP', '1000PPC-NGP-32nodes', '500PPC-NGP-61nodes']
 
+
 def compareModelToData(data):
     for name in data.particles.keys():
         if name != 'e':
@@ -67,7 +68,7 @@ def compareModeltoDatas(dataList, labelList):
     n_ave = dataList[0].n_ave
     model = getBoundPlasmaSolutions(dataList[0].grid[-1] - dataList[0].grid[0], 100, n_ave, T_e, T_i, M)
     for i in range(len(dataList)):
-        data = dataList[i]
+        data = wdataList[i]
         
         n_e = data.getAveDensity('e')
         ax1.plot(data.grid, n_e, linestyle = '-', marker = '.',label = labelList[i])

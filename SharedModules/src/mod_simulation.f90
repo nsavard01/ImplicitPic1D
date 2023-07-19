@@ -507,9 +507,9 @@ contains
         call system_clock(count_rate = timingRate)
         ! Write Particle properties
         open(9,file='../'//directoryName//'/ParticleProperties.dat')
-        write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2)")')
+        write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2), maxIdx")')
         do j=1, numberChargedParticles
-            write(9,"((A, 1x), 3(es16.8,1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p
+            write(9,"((A, 1x), 3(es16.8,1x), (I6, 1x))") particleList(j)%name, particleList(j)%mass, particleList(j)%q, particleList(j)%w_p, particleList(j)%finalIdx
         end do
         close(9)
         collisionTime = 0

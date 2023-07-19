@@ -7,24 +7,30 @@ program BoundPlasmaExample
     use mod_potentialSolver
     use mod_collisions
     use mod_simulation
+    use mod_readInputs
     implicit none
 
     integer(int32) :: i!, tclock1, tclock2, clock_rate
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
+    character(len=100) :: buf
 
-    ! Initialize constants with inputs
-    ! create the world the particles live in
-    call readInputs(NumberXNodes, numDiagnosticSteps, averagingTime, fractionFreq, n_ave, world, solver, simulationTime, Power, heatSkipSteps, nu_h, T_e, T_i, 'Geometry.inp', 'InitialConditions.inp')
-    !initialize the particles in this world, at some point will be read from input file or something
-    particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i) 
-    
-    do i = 1, numberChargedParticles
-        call getRandom(particleList(i)%phaseSpace(1, 1:particleList(i)%N_p), irand)
-        particleList(i)%phaseSpace(1, 1:particleList(i)%N_p) = particleList(i)%phaseSpace(1, 1:particleList(i)%N_p) * real(NumberXNodes-1) + 1.0d0
-        call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
-    end do
+    print *, "Is this a restart file (yes/no)?"
+    read *, buf
+    if (buf(1:3) == 'yes') then
+        call readRestart('InitialConditions.inp', world, solver, particleList)
+    else
+        call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime)
+        call readGeometry(world, solver, 'Geometry.inp')
+        !initialize the particles in this world, at some point will be read from input file or something
+        particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i) 
+        do i = 1, numberChargedParticles
+            call getRandom(particleList(i)%phaseSpace(1, 1:particleList(i)%N_p), irand)
+            particleList(i)%phaseSpace(1, 1:particleList(i)%N_p) = particleList(i)%phaseSpace(1, 1:particleList(i)%N_p) * real(NumberXNodes-1) + 1.0d0
+            call particleList(i) % initialize_n_ave(n_ave, world%grid(NumberXNodes) - world%grid(1))
+        end do
+    end if
     print *, "Calulated values:"
     print *, "w_p is:", particleList(1)%w_p
     print *, "Debye length is:", getDebyeLength(particleList(1)%getKEAve()*2.0d0/3.0d0, n_ave)
@@ -37,7 +43,9 @@ program BoundPlasmaExample
     print *, "----------------"
     print *, ""
     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
-    call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, 100)
+    if (averagingTime > 0) then
+        call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, 100)
+    end if
     ! call solver%construct_diagMatrix_Ampere(world)
     ! if (Power /= 0.0d0) then
     !     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime, heatSkipSteps)
