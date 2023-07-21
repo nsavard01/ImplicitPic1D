@@ -19,7 +19,6 @@ program BoundPlasmaExample
     call initializeSeed(irand, numThread)
     electron = Particle(m_e, e, 1.0d0, 1000, 1010, 'e', numThread)
     call electron%generate3DMaxwellian(5.0d0, irand)
-    print *, electron%getKEAve()
     ! type(potentialSolver) :: solver
     ! character(len=100) :: buf
 

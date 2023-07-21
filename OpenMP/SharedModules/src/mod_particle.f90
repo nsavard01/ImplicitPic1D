@@ -23,8 +23,8 @@ module mod_particle
         procedure, public, pass(self) :: initialize_n_ave
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getKEAve
-        ! procedure, public, pass(self) :: getTotalKE
-        ! procedure, public, pass(self) :: getTotalMomentum
+        procedure, public, pass(self) :: getTotalKE
+        procedure, public, pass(self) :: getTotalMomentum
         ! procedure, public, pass(self) :: writePhaseSpace
         ! procedure, public, pass(self) :: writeLocalTemperature
     end type Particle
@@ -92,89 +92,89 @@ contains
         ! calculate average kinetic energy (temperature) in eV
         class(Particle), intent(in) :: self
         integer(int32) :: iThread
-        real(real64) :: temp(numThread), res
-        !$OMP parallel private(iThread)
+        real(real64) :: res
+        res = 0.0d0
+        !$OMP parallel private(iThread) reduction(+:res)
         iThread = omp_get_thread_num() + 1
-        temp(iThread) = SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread)**2) 
+        res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread)**2) 
         !$OMP end parallel
-        print *, temp * self % mass * 0.5d0 / e / self%N_p
-        res = SUM(temp) * self % mass * 0.5d0 / e / SUM(self%N_p)
+        res = res * self % mass * 0.5d0 / e / SUM(self%N_p)
     end function getKEAve
 
-    ! function getTotalMomentum(self) result(res)
-    !     class(Particle), intent(in) :: self
-    !     real(real64) :: res(3)
-    !     integer(int32) :: iThread
-    !     !$OMP parallel reduction(+:res)
-    !     iThread = omp_get_thread_num() + 1
-    !     res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread), DIM = 2)
-    !     !$OMP end parallel
-    !     res = res * self%w_p * self%mass
-    ! end function getTotalMomentum
+    function getTotalMomentum(self) result(res)
+        class(Particle), intent(in) :: self
+        real(real64) :: res(3), temp(3, numThread)
+        integer(int32) :: iThread
+        !$OMP parallel private(iThread)
+        iThread = omp_get_thread_num() + 1
+        temp(:, iThread) = SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread), DIM = 2)
+        !$OMP end parallel
+        res = SUM(temp, DIM = 2) * self%w_p * self%mass
+    end function getTotalMomentum
 
-    ! function getTotalKE(self) result(res)
-    !     ! calculate total KE in Joules/m^2
-    !     class(Particle), intent(in) :: self
-    !     real(real64) :: res
-    !     integer(int32) :: iThread
-    !     !$OMP parallel reduction(+:res)
-    !     iThread = omp_get_thread_num() + 1
-    !     res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread)**2)
-    !     !$OMP end parallel
-    !     res = res * self % mass * 0.5d0 * self%w_p
+    function getTotalKE(self) result(res)
+        ! calculate total KE in Joules/m^2
+        class(Particle), intent(in) :: self
+        real(real64) :: res
+        integer(int32) :: iThread
+        res = 0.0d0
+        !$OMP parallel private(iThread) reduction(+:res)
+        iThread = omp_get_thread_num() + 1
+        res = res + SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread)**2) 
+        !$OMP end parallel
+        res = res * self % mass * 0.5d0 * self%w_p
 
-    ! end function getTotalKE
-
-
-    ! ! ------------------------ delete/add particles --------------------------------------------
+    end function getTotalKE
     
 
-    ! ! --------------------------- Writing Particle Data to File -----------------------------------
+    ! --------------------------- Writing Particle Data to File -----------------------------------
 
-    ! subroutine writePhaseSpace(self, CurrentDiagStep, dirName)
-    !     ! Writes particle phase space into binary file
-    !     class(Particle), intent(in) :: self
-    !     integer(int32), intent(in) :: CurrentDiagStep
-    !     character(*), intent(in) :: dirName
-    !     character(len=5) :: char_i
-    !     integer(int32) :: i
-    !     write(char_i, '(I3)'), CurrentDiagStep
-    !     open(10,file='../'//dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
-    !     do i = 1, numThread
-    !         write(10) self%phaseSpace(:, 1:self%N_p(i), i)
-    !     end do
-    !     close(10)
-    ! end subroutine writePhaseSpace
+    subroutine writePhaseSpace(self, CurrentDiagStep, dirName)
+        ! Writes particle phase space into binary file
+        class(Particle), intent(in) :: self
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(*), intent(in) :: dirName
+        character(len=5) :: char_i
+        integer(int32) :: i
+        write(char_i, '(I3)'), CurrentDiagStep
+        open(10,file='../'//dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        do i = 1, numThread
+            write(10) self%phaseSpace(:, 1:self%N_p(i), i)
+        end do
+        close(10)
+    end subroutine writePhaseSpace
 
-    ! subroutine writeLocalTemperature(self, CurrentDiagStep, dirName)
-    !     ! Write particle temperature averaged over local grid
-    !     class(Particle), intent(in) :: self
-    !     integer(int32), intent(in) :: CurrentDiagStep
-    !     character(*), intent(in) :: dirName
-    !     character(len=5) :: char_i
-    !     integer(int32) :: j, index, counter(NumberXNodes-1), iThread
-    !     real(real64) :: temp(NumberXNodes-1)
-    !     temp = 0.0d0
-    !     counter = 0
-    !     !$OMP parallel reduction(+:temp) reduction(+:counter)
-    !     iThread = omp_get_thread_num() + 1
-    !     do j = 1, self%N_p(iThread)
-    !         index = INT(self%phaseSpace(1, j, iThread))
-    !         temp(index) = temp(index) + SUM(self%phaseSpace(2:4, j, iThread)**2)
-    !         counter(index) = counter(index) + 1
-    !     end do
-    !     !$OMP end parallel
-    !     temp = temp * 0.5d0 * self%mass/e
-    !     do j = 1, NumberXNodes-1
-    !         if (counter(j) > 0) then
-    !             temp(j) = temp(j)*2.0d0/counter(j)/3.0d0
-    !         end if
-    !     end do
-    !     write(char_i, '(I3)'), CurrentDiagStep
-    !     open(10,file='../'//dirName//'/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
-    !     write(10) temp
-    !     close(10)
+    subroutine writeLocalTemperature(self, CurrentDiagStep, dirName)
+        ! Write particle temperature averaged over local grid
+        class(Particle), intent(in) :: self
+        integer(int32), intent(in) :: CurrentDiagStep
+        character(*), intent(in) :: dirName
+        character(len=5) :: char_i
+        integer(int32) :: j, index, counter(NumberXNodes-1, numThread), iThread
+        real(real64) :: temp(NumberXNodes-1, numThread), EHist(NumberXNodes-1)
+        temp = 0.0d0
+        counter = 0
+        !$OMP parallel private(iThread, j, index) 
+        iThread = omp_get_thread_num() + 1
+        do j = 1, self%N_p(iThread)
+            index = INT(self%phaseSpace(1, j, iThread))
+            temp(index, iThread) = temp(index, iThread) + SUM(self%phaseSpace(2:4, j, iThread)**2)
+            counter(index, iThread) = counter(index, iThread) + 1
+        end do
+        !$OMP end parallel
+        temp = temp * 0.5d0 * self%mass/e
+        do j = 1, NumberXNodes-1
+            if (SUM(counter(j, :)) > 0) then
+                EHist(j) = SUM(temp(j,:))*self%mass/SUM(counter(j, :))/3.0d0/e
+            else
+                EHist(j) = 0.0d0
+            end if
+        end do
+        write(char_i, '(I3)'), CurrentDiagStep
+        open(10,file='../'//dirName//'/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        write(10) EHist
+        close(10)
         
-    ! end subroutine writeLocalTemperature
+    end subroutine writeLocalTemperature
 
 end module mod_particle

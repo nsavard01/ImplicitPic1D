@@ -14,7 +14,7 @@ module mod_potentialSolver
     public :: potentialSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), rho(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64), allocatable :: phi(:), rho(:, :), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: energyError, rho_const
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
@@ -41,7 +41,7 @@ contains
         ! Construct domain object, initialize grid, dx_dl, and dx_dl.
         real(real64), intent(in) :: leftVoltage, rightVoltage
         type(Domain), intent(in) :: world
-        allocate(self % rho(NumberXNodes), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
+        allocate(self % rho(NumberXNodes, numThread), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
         self % a_tri = 0.0d0
         self % c_tri = 0.0d0
