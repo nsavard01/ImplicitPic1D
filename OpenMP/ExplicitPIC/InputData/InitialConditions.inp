@@ -1,3 +1,4 @@
+32 ! number of processors
 22.0d-6 ! simulation time
 5.0d14 ! Initial number density (1/m^3) of electrons
 5.0 ! Initial electron Temperature (eV) 
