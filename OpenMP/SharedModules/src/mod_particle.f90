@@ -21,12 +21,13 @@ module mod_particle
 
     contains
         procedure, public, pass(self) :: initialize_n_ave
+        procedure, public, pass(self) :: initializeRandUniform
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getKEAve
         procedure, public, pass(self) :: getTotalKE
         procedure, public, pass(self) :: getTotalMomentum
-        ! procedure, public, pass(self) :: writePhaseSpace
-        ! procedure, public, pass(self) :: writeLocalTemperature
+        procedure, public, pass(self) :: writePhaseSpace
+        procedure, public, pass(self) :: writeLocalTemperature
     end type Particle
 
 
@@ -62,6 +63,18 @@ contains
         real(real64), intent(in) :: n_ave, L_domain
         self % w_p = n_ave * L_domain / SUM(self % N_p)
     end subroutine initialize_n_ave
+
+    subroutine initializeRandUniform(self, irand)
+        class(Particle), intent(in out) :: self
+        integer(int32), intent(in out) :: irand(numThread)
+        integer(int32) :: iThread, i
+        !$OMP parallel private(iThread, i)
+        iThread = omp_get_thread_num() + 1
+        do i = 1, self%N_p(iThread)
+            self%phaseSpace(1, i, iThread) = ran2(irand(iThread)) * real(NumberXNodes-1) + 1.0d0
+        end do
+        !$OMP end parallel
+    end subroutine initializeRandUniform
 
     ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 

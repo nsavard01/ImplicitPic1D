@@ -4,6 +4,7 @@ module mod_potentialSolver
     use mod_BasicFunctions
     use mod_particle
     use mod_domain
+    use omp_lib
     implicit none
 
     ! This module will be for the potential solver
@@ -60,56 +61,24 @@ contains
 
     end function potentialSolver_constructor
 
-    subroutine depositRho(self, particleList, world) 
+    subroutine depositRho(self, particleList) 
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_left, l_right
+        integer(int32) :: i, j, l_left, l_right, iThread
         real(real64) :: d
-        self % rho = 0.0d0
+        self % rho = self%rho_const
         do i=1, numberChargedParticles
-            do j = 1, particleList(i)%N_p
-                l_left = INT(particleList(i)%phaseSpace(1, j))
+            !$OMP parallel private(iThread, j, l_left, l_right, d)
+            iThread = omp_get_thread_num() + 1
+            do j = 1, particleList(i)%N_p(iThread)
+                l_left = INT(particleList(i)%phaseSpace(1, j, iThread))
                 l_right = l_left + 1
-                d = particleList(i)%phaseSpace(1, j) - l_left
-                SELECT CASE (world%boundaryConditions(l_left))
-                CASE(0)
-                    self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                CASE(1)
-                    self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                CASE(2)
-                    self % rho(l_left) = self % rho(l_left) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                CASE(3)
-                    self % rho(l_left) = self % rho(l_left) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                    self % rho(ABS(l_left - NumberXNodes)+1) = self % rho(ABS(l_left - NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                CASE(4)
-                    self % rho(l_left) = self % rho(l_left) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * (1.0d0-d)
-                CASE default
-                    print *, "case doesn't exist in deposit rho"
-                    print *, 'particle position:', particleList(i)%phaseSpace(1, j)
-                    stop
-                END SELECT
-
-                SELECT CASE (world%boundaryConditions(l_right))
-                CASE(0)
-                    self % rho(l_right) = self % rho(l_right) + particleList(i)%q * particleList(i)%w_p * d
-                CASE(1)
-                    self % rho(l_right) = self % rho(l_right) + particleList(i)%q * particleList(i)%w_p * d
-                CASE(2)
-                    self % rho(l_right) = self % rho(l_right) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * d
-                CASE(3)
-                    self % rho(l_right) = self % rho(l_right) + particleList(i)%q * particleList(i)%w_p * d
-                    self % rho(ABS(l_right - NumberXNodes)+1) = self % rho(ABS(l_right-NumberXNodes)+1) + particleList(i)%q * particleList(i)%w_p * d
-                CASE(4)
-                    self % rho(l_right) = self % rho(l_right) + 2.0d0 * particleList(i)%q * particleList(i)%w_p * d
-                CASE default
-                    print *, "case doesn't exist in deposit rho"
-                    print *, 'particle position:', particleList(i)%phaseSpace(1, j)
-                    stop
-                END SELECT
+                d = particleList(i)%phaseSpace(1, j, iThread) - real(l_left)
+                self % rho(l_left, iThread) = self % rho(l_left, iThread) + (1.0d0-d) * particleList(i)%w_p
+                self % rho(l_right, iThread) = self % rho(l_right, iThread) + d * particleList(i)%w_p
             end do
+            !$OMP end parallel
         end do
-        self % rho = self % rho / world%delX
     end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
@@ -121,23 +90,23 @@ contains
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
                 if (i < NumberXNodes) then
-                    self % c_tri(i) = 1.0d0/(world%delX**2)
+                    self % c_tri(i) = 1.0d0/(world%delX)
                 end if
                 if (i > 1) then
-                    self%a_tri(i-1) = 1.0d0/(world%delX**2)
+                    self%a_tri(i-1) = 1.0d0/(world%delX)
                 end if
-                self%b_tri(i) = - 2.0d0 / (world%delX**2)
+                self%b_tri(i) = - 2.0d0 / (world%delX)
             CASE(1)
                 self%b_tri(i) = 1.0d0
             CASE(2)
                 if (i == 1) then
-                    self % c_tri(i) = 2.0d0/(world%delX**2)
+                    self % c_tri(i) = 1.0d0/(world%delX)
                     !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
-                    self%b_tri(i) = - 2.0d0 / (world%delX**2)
+                    self%b_tri(i) = - 1.0d0 / (world%delX)
                 else if (i == NumberXNodes) then
-                    self % a_tri(i-1) = 2.0d0/(world%delX**2)
+                    self % a_tri(i-1) = 1.0d0/(world%delX)
                     !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
-                    self%b_tri(i) = - 2.0d0 / (world%delX**2)
+                    self%b_tri(i) = - 1.0d0 / (world%delX)
                 else
                     print *, "Neumann boundary reflecting not on left or right most index!"
                     stop
@@ -174,7 +143,7 @@ contains
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                d(i) = (-self%rho(i) - self%rho_const) / eps_0
+                d(i) = (-SUM(self%rho(i, :))) / eps_0
             CASE(1,3)
                 d(i) = self%phi(i)
             CASE(4)
@@ -269,11 +238,16 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
-        integer(int32) :: j, i
+        real(real64) :: q_m_ratio
+        integer(int32) :: j, i, iThread
         loopSpecies: do j = 1, numberChargedParticles
-            loopParticles: do i = 1, particleList(j)%N_p
-                particleList(j)%phaseSpace(2, i) = particleList(j)%phaseSpace(2, i) - 0.5 * (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i)) * del_t
+            q_m_ratio = particleList(j)%q/particleList(j)%mass
+            !$OMP parallel private(iThread, i)
+            iThread = omp_get_thread_num() + 1
+            loopParticles: do i = 1, particleList(j)%N_p(iThread)
+                particleList(j)%phaseSpace(2, i, iThread) = particleList(j)%phaseSpace(2, i, iThread) - 0.5d0 * (q_m_ratio) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
             end do loopParticles
+            !$OMP end parallel
         end do loopSpecies
     end subroutine initialVRewind
 
@@ -284,52 +258,55 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        integer(int32) :: j, i, delIdx
+        integer(int32) :: j, i, delIdx, iThread
         loopSpecies: do j = 1, numberChargedParticles
+            !$OMP parallel private(iThread, i, delIdx)
+            iThread = omp_get_thread_num() + 1
             delIdx = 0
-            particleList(j)%refIdx = 0
-            loopParticles: do i = 1, particleList(j)%N_p
-                particleList(j)%phaseSpace(2, i-delIdx) = particleList(j)%phaseSpace(2, i) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i)) * del_t
-                particleList(j)%phaseSpace(1, i-delIdx) = particleList(j)%phaseSpace(1, i) + particleList(j)%phaseSpace(2, i-delIdx) * del_t/world%delX
-                particleList(j)%phaseSpace(3:4, i-delIdx) = particleList(j)%phaseSpace(3:4, i)
-                if (particleList(j)%phaseSpace(1, i-delIdx) <= 1) then
+            particleList(j)%refIdx(iThread) = 0
+            loopParticles: do i = 1, particleList(j)%N_p(iThread)
+                particleList(j)%phaseSpace(2, i-delIdx, iThread) = particleList(j)%phaseSpace(2, i, iThread) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                particleList(j)%phaseSpace(1, i-delIdx, iThread) = particleList(j)%phaseSpace(1, i, iThread) + particleList(j)%phaseSpace(2, i-delIdx, iThread) * del_t/world%delX
+                particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
+                if (particleList(j)%phaseSpace(1, i-delIdx, iThread) <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1)
-                        particleList(j)%energyLoss(1) = particleList(j)%energyLoss(1) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx)**2) * particleList(j)%mass * 0.5d0
-                        particleList(j)%wallLoss(1) = particleList(j)%wallLoss(1) + 1 !C/m^2 in 1D
+                        particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2) * particleList(j)%mass * 0.5d0
+                        particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
-                        particleList(j)%phaseSpace(1, i-delIdx) = 2.0d0 - particleList(j)%phaseSpace(1, i-delIdx)
-                        particleList(j)%phaseSpace(2, i-delIdx) = -particleList(j)%phaseSpace(2, i-delIdx)
-                        particleList(j)%refIdx = particleList(j)%refIdx + 1
-                        particleList(j)%refRecordIdx(particleList(j)%refIdx) = i - delIdx
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - particleList(j)%phaseSpace(1, i-delIdx, iThread)
+                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -particleList(j)%phaseSpace(2, i-delIdx, iThread)
+                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx) = MODULO(particleList(j)%phaseSpace(1, i-delIdx) - 2.0d0, real(NumberXNodes, kind = real64)) + 1
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(particleList(j)%phaseSpace(1, i-delIdx, iThread) - 2.0d0, real(NumberXNodes, kind = real64)) + 1
                     CASE default
                         print *, 'no case, moveParticles'
                         stop
                     END SELECT
-                else if ((particleList(j)%phaseSpace(1, i-delIdx) >= NumberXNodes)) then
+                else if ((particleList(j)%phaseSpace(1, i-delIdx, iThread) >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
                     CASE(1)
-                        particleList(j)%energyLoss(2) = particleList(j)%energyLoss(2) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx)**2) * particleList(j)%mass * 0.5d0
-                        particleList(j)%wallLoss(2) = particleList(j)%wallLoss(2) + 1 !C/m^2 in 1D
+                        particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2) * particleList(j)%mass * 0.5d0
+                        particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
-                        particleList(j)%phaseSpace(1, i-delIdx) = 2.0d0 * NumberXNodes - particleList(j)%phaseSpace(1, i-delIdx)
-                        particleList(j)%phaseSpace(2, i-delIdx) = -particleList(j)%phaseSpace(2, i-delIdx)
-                        particleList(j)%refIdx = particleList(j)%refIdx + 1
-                        particleList(j)%refRecordIdx(particleList(j)%refIdx) = i - delIdx
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - particleList(j)%phaseSpace(1, i-delIdx, iThread)
+                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -particleList(j)%phaseSpace(2, i-delIdx, iThread)
+                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx) = MODULO(particleList(j)%phaseSpace(1, i-delIdx), real(NumberXNodes, kind = real64)) + 1
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(particleList(j)%phaseSpace(1, i-delIdx, iThread), real(NumberXNodes, kind = real64)) + 1
                     CASE default
                         print *, 'no case, moveParticles'
                         stop
                     END SELECT
                 end if
             end do loopParticles
-            particleList(j)%N_p = particleList(j)%N_p - delIdx
-            particleList(j)%delIdx = delIdx
+            particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
+            particleList(j)%delIdx(iThread) = delIdx
+            !$OMP end parallel
         end do loopSpecies
     end subroutine moveParticles
 
@@ -340,7 +317,7 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
-        call self%depositRho(particleList, world)
+        call self%depositRho(particleList)
         call self%solve_tridiag_Poisson(world)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)

@@ -5,7 +5,7 @@ program BoundPlasmaExample
     use mod_BasicFunctions
     use mod_domain
     use mod_particle
-    ! use mod_potentialSolver
+    use mod_potentialSolver
     ! use mod_collisions
     ! use mod_simulation
     ! use mod_readInputs
@@ -13,12 +13,24 @@ program BoundPlasmaExample
 
     integer(int32) :: i!, tclock1, tclock2, clock_rate
     type(Domain) :: world
-    type(Particle) :: electron
+    type(Particle) :: electron(1)
+    type(potentialSolver) :: solver
+    NumberXNodes = 50
+    numberChargedParticles = 1
     numThread = omp_get_num_procs()/2
     call omp_set_num_threads(numThread)
     call initializeSeed(irand, numThread)
-    electron = Particle(m_e, e, 1.0d0, 1000, 1010, 'e', numThread)
-    call electron%generate3DMaxwellian(5.0d0, irand)
+    electron(1) = Particle(m_e, e, 1.0d0, 1000, 1010, 'e', numThread)
+    call electron(1)%initialize_n_ave(5.0d14, 0.05d0)
+    call electron(1)%generate3DMaxwellian(5.0d0, irand)
+    print *, electron(1)%getKEAve()
+    call electron(1)%initializeRandUniform(irand)
+    world = Domain(1, 2)
+    call world % constructGrid(0.05d0)
+    solver = potentialSolver(world, 0.0d0, 0.0d0)
+    call solver%construct_diagMatrix(world)
+    call solver%depositRho(electron)
+    print *, SUM(solver%rho, DIM = 2)/world%delX
     ! type(potentialSolver) :: solver
     ! character(len=100) :: buf
 
