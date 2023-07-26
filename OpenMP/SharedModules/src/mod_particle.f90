@@ -12,12 +12,12 @@ module mod_particle
     ! Particle contains particle properties and stored values in phase space df
     type :: Particle
         character(:), allocatable :: name !name of the particle
-        integer(int32), allocatable :: N_p(:) !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
-        integer(int32) :: finalIdx
+        integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:) !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
+        integer(int32) :: finalIdx, accumWallLoss(2)
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
-        real(real64), allocatable :: refRecordIdx(:, :), delIdx(:), wallLoss(:, :), energyLoss(:, :), refIdx(:) 
-        real(real64) :: accumWallLoss(2), accumEnergyLoss(2)
+        real(real64), allocatable :: wallLoss(:, :), energyLoss(:, :) 
+        real(real64) :: accumEnergyLoss(2)
 
     contains
         procedure, public, pass(self) :: initialize_n_ave
@@ -47,12 +47,12 @@ contains
         self % mass = mass
         self % q = q
         self % w_p = w_p
-        self % finalIdx = finalIdx
+        self % finalIdx = finalIdx/numThread
         self%accumWallLoss = 0.0d0
         self%accumEnergyLoss = 0.0d0
-        allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(N_p/10), numThread), self%N_p(numThread), &
+        allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread))
-        self%N_p = N_p
+        self%N_p = N_p/numThread
         self%energyLoss = 0.0d0
         self%wallLoss = 0
     end function particle_constructor
@@ -150,7 +150,7 @@ contains
         character(len=5) :: char_i
         integer(int32) :: i
         write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file='../'//dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        open(10,file=dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
         do i = 1, numThread
             write(10) self%phaseSpace(:, 1:self%N_p(i), i)
         end do
@@ -184,7 +184,7 @@ contains
             end if
         end do
         write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file='../'//dirName//'/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        open(10,file=dirName//'/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
         write(10) EHist
         close(10)
         

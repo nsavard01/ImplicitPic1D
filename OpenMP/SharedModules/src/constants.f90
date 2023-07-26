@@ -14,5 +14,7 @@ module constants
     integer(int32) :: NumberXNodes, numberChargedParticles, maxIter, numDiagnosticSteps, schemeNum, numThread
     integer(int32), allocatable :: irand(:) !Global variable that will need to be changed in-out
     real(real64) :: eps_r, fractionFreq, n_ave, T_e, T_i
+    real(real64) :: del_t, simulationTime, averagingTime
+    character(len=:), allocatable :: directoryName
 
 end module constants

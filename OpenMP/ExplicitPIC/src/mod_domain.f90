@@ -52,10 +52,10 @@ contains
         ! Writes domain data into binary file under Data
         class(Domain), intent(in) :: self
         character(*), intent(in) :: dirName
-        open(41,file="../"//dirName//"/domainGrid.dat", form='UNFORMATTED')
+        open(41,file=dirName//"/domainGrid.dat", form='UNFORMATTED')
         write(41) self%grid
         close(41)
-        open(41,file="../"//dirName//"/domainBoundaryConditions.dat", form='UNFORMATTED')
+        open(41,file=dirName//"/domainBoundaryConditions.dat", form='UNFORMATTED')
         write(41) self%boundaryConditions
         close(41)
     end subroutine writeDomain

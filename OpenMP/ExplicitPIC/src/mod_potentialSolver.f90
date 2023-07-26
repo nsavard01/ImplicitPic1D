@@ -74,8 +74,8 @@ contains
                 l_left = INT(particleList(i)%phaseSpace(1, j, iThread))
                 l_right = l_left + 1
                 d = particleList(i)%phaseSpace(1, j, iThread) - real(l_left)
-                self % rho(l_left, iThread) = self % rho(l_left, iThread) + (1.0d0-d) * particleList(i)%w_p
-                self % rho(l_right, iThread) = self % rho(l_right, iThread) + d * particleList(i)%w_p
+                self % rho(l_left, iThread) = self % rho(l_left, iThread) + (1.0d0-d) * particleList(i)%w_p * particleList(i)%q
+                self % rho(l_right, iThread) = self % rho(l_right, iThread) + d * particleList(i)%w_p * particleList(i)%q
             end do
             !$OMP end parallel
         end do
@@ -264,6 +264,8 @@ contains
             iThread = omp_get_thread_num() + 1
             delIdx = 0
             particleList(j)%refIdx(iThread) = 0
+            particleList(j)%energyLoss(:, iThread) = 0.0d0
+            particleList(j)%wallLoss(:, iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 particleList(j)%phaseSpace(2, i-delIdx, iThread) = particleList(j)%phaseSpace(2, i, iThread) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                 particleList(j)%phaseSpace(1, i-delIdx, iThread) = particleList(j)%phaseSpace(1, i, iThread) + particleList(j)%phaseSpace(2, i-delIdx, iThread) * del_t/world%delX
@@ -271,7 +273,7 @@ contains
                 if (particleList(j)%phaseSpace(1, i-delIdx, iThread) <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1)
-                        particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2) * particleList(j)%mass * 0.5d0
+                        particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2)
                         particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
@@ -288,7 +290,7 @@ contains
                 else if ((particleList(j)%phaseSpace(1, i-delIdx, iThread) >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
                     CASE(1)
-                        particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + particleList(j)%w_p * SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2) * particleList(j)%mass * 0.5d0
+                        particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2)
                         particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
@@ -307,6 +309,8 @@ contains
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             !$OMP end parallel
+            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
+            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
         end do loopSpecies
     end subroutine moveParticles
 
@@ -321,7 +325,6 @@ contains
         call self%solve_tridiag_Poisson(world)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)
-
     end subroutine solvePotential
 
 

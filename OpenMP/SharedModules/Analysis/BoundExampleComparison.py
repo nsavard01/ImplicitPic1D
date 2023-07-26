@@ -8,27 +8,36 @@ Created on Tue Jun 27 14:32:42 2023
 from plotProduction import *
 from generateBoundExample import *
 
-test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/test/')
-data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_16nodes/')
-data1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_200PPC_2p0delT_2p5e16nave_16nodes/')
-data31Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_31nodes/')
-data2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_300PPC_2p0delT_2p5e16nave_16nodes/')
-data3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_0p2delT_2p5e16nave_16nodes/')
-data4 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_16nodes/')
-data1000PPC_61nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_61nodes/')
-data1000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_16nodes/')
-data2000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_2000PPC_2p0delT_2p5e16nave_16nodes/')
-data1000PPC_32Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_32nodes/')
-data500PPC_61Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_61nodes/')
-data1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_1e18nave_16nodes/')
-dataExplicit100PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_100PPC_0p2delT_2p5e16nave/')
-dataExplicit300PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_300PPC_0p2delT_2p5e16nave/')
-dataExplicit500PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_500PPC_0p2delT_2p5e16nave/')
-dataExplicit1000PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_1000PPC_0p2delT_2p5e16nave/')
-dataList = [ dataExplicit1000PPC, data1000PPC, data2000PPC, data1000PPC_32Nodes, data500PPC_61Nodes, data1000PPC_61nodes]
-labelList = [ '1000PPC-Explicit' , '1000PPC-NGP', '2000PPC-NGP', '1000PPC-NGP-32nodes', '500PPC-NGP-61nodes', '1000PPC-NGP-61nodes']
+Exp_128PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p75Deb_0p2delT/')
+Exp_256PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_256PPC_0p75Deb_0p2delT/')
+Exp_512PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_512PPC_0p75Deb_0p2delT/')
+Exp_128PPC_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p5Deb_0p2delT/')
+Exp_128PPC_0p25Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p25Deb_0p2delT/')
+Exp_128PPC_0p1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p1Deb_0p2delT/')
+Exp_128PPC_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p5Deb_0p2delT/')
+# data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_16nodes/')
+# data1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_200PPC_2p0delT_2p5e16nave_16nodes/')
+# data31Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_31nodes/')
+# data2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_300PPC_2p0delT_2p5e16nave_16nodes/')
+# data3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_0p2delT_2p5e16nave_16nodes/')
+# data4 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_16nodes/')
+# data1000PPC_61nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_61nodes/')
+# data1000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_16nodes/')
+# data2000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_2000PPC_2p0delT_2p5e16nave_16nodes/')
+# data1000PPC_32Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_32nodes/')
+# data500PPC_61Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_61nodes/')
+# data1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_1e18nave_16nodes/')
+# dataExplicit100PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_100PPC_0p2delT_2p5e16nave/')
+# dataExplicit300PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_300PPC_0p2delT_2p5e16nave/')
+# dataExplicit500PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_500PPC_0p2delT_2p5e16nave/')
+# dataExplicit1000PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_1000PPC_0p2delT_2p5e16nave/')
+# dataList = [ dataExplicit1000PPC, data1000PPC, data2000PPC, data1000PPC_32Nodes, data500PPC_61Nodes, data1000PPC_61nodes]
+# labelList = [ '1000PPC-Explicit' , '1000PPC-NGP', '2000PPC-NGP', '1000PPC-NGP-32nodes', '500PPC-NGP-61nodes', '1000PPC-NGP-61nodes']
 
-
+expListPPC = [Exp_512PPC_0p75Deb_0p2delT_2p5e16, Exp_128PPC_0p5Deb_0p2delT_2p5e16, Exp_128PPC_0p25Deb_0p2delT_2p5e16,
+              Exp_128PPC_0p1Deb_0p2delT_2p5e16]
+labelListPPC = ['512 PPC, 0.75 $\lambda_{De}$', r'128 PPC, 0.5 $\lambda_{De}$', '128 PPC, 0.25 $\lambda_{De}$',
+                '128 PPC, 0.1 $\lambda_{De}$']
 def compareModelToData(data):
     for name in data.particles.keys():
         if name != 'e':
@@ -52,7 +61,7 @@ def compareModelToData(data):
     plt.legend(loc = 'best')
     
     
-def compareModeltoDatas(dataList, labelList):
+def compareModelToDatas(dataList, labelList):
     if (len(dataList) != len(labelList)):
         raise Warning("List of data and labels not the same size!")
         

@@ -12,7 +12,7 @@ from dataSetExplicit import *
 # ---------------------------- Averages -------------------------------------
 def plotAveDensity(dataSet, name = "", label = ""):
     if name == "":
-        colors = ['b', 'r', 'g', 'k', 'c', 'm', 'y']
+        colors = ['b', 'r', 'g', 'k', 'c', 'm', 'yAve']
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.getAveDensity(name)
             plt.plot(dataSet.grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name +  '}$')
@@ -46,7 +46,6 @@ def plotAveEVDF(dataSet):
     Norm = np.sum(VHist * dv)
     VHist = VHist/Norm
     popt, pcov = opt.curve_fit(maxwellEDVF, Vbins, VHist, p0 = [dataSet.T_e])
-    print('popt is', popt)
     plt.plot(Vbins, VHist, 'o-', label = 'Global EDVF')
     plt.plot(Vbins, maxwellEDVF(Vbins, popt[0]), label = 'Best Fit T_e = ' + '{:2.2f}'.format(popt[0]))
     plt.legend(loc = 'best')

@@ -151,15 +151,6 @@ contains
     !     real(real64), intent(in) :: x(n), y(n)
     !     res = SUM(x * y)
     ! end function innerProduct
-    subroutine initializeSeed(irand, numThread)
-        integer(int32), allocatable, intent(out) :: irand(:)
-        integer(int32), intent(in) :: numThread
-        integer(int32) :: i
-        allocate(irand(numThread))
-        do i = 1, numThread
-            irand(i) = 123456*i*11
-        end do
-    end subroutine initializeSeed
 
     !------------------------ Array Functions -------------------------------------
 
