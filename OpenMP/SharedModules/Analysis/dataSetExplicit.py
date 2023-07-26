@@ -26,6 +26,8 @@ class dataSetExplicit:
         self.T_e = initialCond[6]
         self.T_i = initialCond[7]
         self.numDiag = int(initialCond[8]) + 1
+        self.numChargedParticles = int(initialCond[9])
+        self.numThreads = int(initialCond[10])
         ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
         self.particles = {}
         partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p']

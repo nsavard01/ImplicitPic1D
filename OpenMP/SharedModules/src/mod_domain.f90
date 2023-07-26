@@ -103,8 +103,8 @@ contains
             do i = 2, NumberXNodes-1
                 self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2.0d0
             end do
-            self%nodeVol(1) = self%dx_dl(1)
-            self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
+            self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
+            self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
         end if
 
     end subroutine constructSineGrid
@@ -146,8 +146,8 @@ contains
             do i = 2, NumberXNodes-1
                 self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
             end do
-            self%nodeVol(1) = self%dx_dl(1)
-            self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
+            self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
+            self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
         end if
 
         if (self%boundaryConditions(1) == 3 .or. self%boundaryConditions(NumberXNodes) == 3) then
@@ -171,8 +171,8 @@ contains
         do i = 2, NumberXNodes-1
             self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
         end do
-        self%nodeVol(1) = self%dx_dl(1)
-        self%nodeVol(NumberXNodes) = self%dx_dl(NumberXNodes-1)
+        self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
+        self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
     end subroutine constructUniformGrid
 
 
@@ -180,13 +180,13 @@ contains
     ! Writes domain data into binary file under Data
     class(Domain), intent(in) :: self
     character(*), intent(in) :: dirName
-    open(41,file='../'//dirName//'/domainGrid.dat', form='UNFORMATTED')
+    open(41,file=dirName//'/domainGrid.dat', form='UNFORMATTED')
     write(41) self%grid
     close(41)
-    open(41,file='../'//dirName//'/domainDxDl.dat', form='UNFORMATTED')
+    open(41,file=dirName//'/domainDxDl.dat', form='UNFORMATTED')
     write(41) self%dx_dl
     close(41)
-    open(41,file='../'//dirName//'/domainNodeVol.dat', form='UNFORMATTED')
+    open(41,file=dirName//'/domainNodeVol.dat', form='UNFORMATTED')
     write(41) self%nodeVol
     close(41)
     end subroutine writeDomain
