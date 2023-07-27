@@ -276,6 +276,7 @@ contains
             print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
             print *, "Particle mass is:", particleList(j)%mass
             print *, "Particle charge is:", particleList(j)%q
+            print *, "Particle weight is:", particleList(j)%w_p
             print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
         end do
         

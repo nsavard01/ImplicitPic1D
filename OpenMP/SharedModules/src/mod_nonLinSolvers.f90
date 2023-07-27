@@ -47,7 +47,6 @@ contains
         call depositRho(solver%rho, particleList, world)
         call solver%solve_tridiag_Poisson(world)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
-        call solver%construct_diagMatrix_Ampere(world)
 
     end subroutine solveInitialPotential
 
