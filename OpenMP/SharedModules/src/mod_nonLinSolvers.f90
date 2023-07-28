@@ -195,6 +195,7 @@ contains
             if (normResidual(index) < eps_r*(initialR)) then
                 call moveParticles(solver,particleList, world, del_t)
                 solver%phi = solver%phi_f
+                iterNumPicard = i
                 exit
             end if
             if (i > m_Anderson) then
@@ -207,7 +208,7 @@ contains
                 end if
                 if (normResidual(index) > sumPastResiduals) then
                     iterNumPicard = maxIter
-                    goto 75
+                    exit
                 end if
             end if
             do j = 0, m_k-1
@@ -227,8 +228,6 @@ contains
             solver%phi_f = phi_k(:, MODULO(i+1, m_Anderson+1) + 1)
             
         end do
-        iterNumPicard = i-1
-        75 continue
         
 
     end subroutine solveDivAmpereAnderson

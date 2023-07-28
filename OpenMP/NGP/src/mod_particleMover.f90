@@ -316,10 +316,10 @@ contains
                         timePassed = del_t
                         delIdx = delIdx + 1
                         if (l_f == 1) then
-                            particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                            particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
                             particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
                         else if (l_f == NumberXNodes) then
-                            particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                            particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
                             particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
                         end if
                     CASE(2)
@@ -366,10 +366,10 @@ contains
                         CASE(1)
                             delIdx = delIdx + 1
                             if (l_f == 1) then
-                                particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                                particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
                                 particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
                             else if (l_f == NumberXNodes) then
-                                particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                                particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
                                 particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
                             end if
                             exit
@@ -397,7 +397,7 @@ contains
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             !$OMP end parallel
-            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
+            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
         end do loopSpecies
     end subroutine moveParticles

@@ -1,10 +1,10 @@
 32 ! number of threads
 22.0d-6 ! simulation time
-5.0d14 ! Initial number density (1/m^3) of particles
+2.5e16 ! Initial number density (1/m^3) of particles
 5.0d0 ! T_e (eV)
 1.0d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
 2.0 ! Fraction of initial 1/w_p for initial time step
 22.0d-6 ! amount of time to average final Diagnostics
-test !filename
+NGP_2p5e16_128PPC_2p0delT_60nodes !filename
 END
