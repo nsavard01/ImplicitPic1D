@@ -16,7 +16,7 @@ module mod_particle
         integer(int32) :: finalIdx, accumWallLoss(2)
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
-        real(real64), allocatable :: wallLoss(:, :), energyLoss(:, :) 
+        real(real64), allocatable :: wallLoss(:, :), energyLoss(:, :)
         real(real64) :: accumEnergyLoss(2)
 
     contains

@@ -13,6 +13,7 @@ module mod_simulation
     implicit none
 
     real(real64) :: inelasticEnergyLoss
+    real(real64), allocatable :: energyAddColl(:)
 
 contains
 
@@ -30,6 +31,8 @@ contains
         do i=1, particleList(1)%delIdx(iThread)
             call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
             call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
+            energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
+             + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
             particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = ran2(irand(iThread)) * real(NumberXNodes - 1) + 1.0d0
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do
@@ -40,6 +43,7 @@ contains
             !$OMP parallel private(iThread, i)
             iThread = omp_get_thread_num() + 1
             do i = 1, particleList(j)%refIdx(iThread)
+                energyAddColl(iThread) = energyAddColl(iThread) - (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
                 if (j == 1) then
                     call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
                 else
@@ -50,6 +54,7 @@ contains
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 end if
+                energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
             end do
             !$OMP end parallel
         end do
@@ -174,6 +179,7 @@ contains
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
         real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, startTotal, endTotal
+        allocate(energyAddColl(numThread))
         CurrentDiagStep = 1
         unitPart1 = 100
         call generateSaveDirectory(directoryName)
@@ -208,6 +214,7 @@ contains
         write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
         
         !Save initial particle/field data, along with domain
+        energyAddColl = 0.0d0
         inelasticEnergyLoss = 0.0d0
         call solver%solvePotential(particleList, world)
         !call solver%initialVRewind(particleList, del_t)
@@ -268,6 +275,7 @@ contains
                 chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff
                 CurrentDiagStep = CurrentDiagStep + 1
                 print *, "Number of electrons is:", SUM(particleList(1)%N_p)
+                energyAddColl = 0.0d0
                 inelasticEnergyLoss = 0.0d0
                 diagStepDiff = 0
                 diagTime = diagTime + diagTimeDivision
@@ -344,6 +352,7 @@ contains
             particleList(i)%accumWallLoss = 0
         end do
         inelasticEnergyLoss = 0.0d0
+        energyAddColl = 0.0d0
         phi_average = 0.0d0
         densities = 0.0d0
         currentTime = 0.0d0
@@ -392,6 +401,8 @@ contains
         write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
         write(22,"((I8, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/currentTime, chargeTotal/currentTime, energyLoss/currentTime
         close(22)
+        print *, 'Power loss to wall is:', energyLoss/currentTime
+        print *, 'Power gain is:', SUM(energyAddColl)/currentTime
         print *, "Electron average wall loss:", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p * particleList(1)%q/currentTime
         print *, "Ion average wall loss:", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p * particleList(2)%q/currentTime
         print *, "Performing average for EEDF over 50/omega_p"

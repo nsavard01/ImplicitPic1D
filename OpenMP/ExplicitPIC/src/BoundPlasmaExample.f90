@@ -19,9 +19,7 @@ program BoundPlasmaExample
     call readGeometry(world, solver, 'Geometry.inp')
     particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world)
     call solver%solvePotential(particleList, world)
-    call solver%moveParticles(particleList, world, del_t)
-    call solver%solvePotential(particleList, world)
-    call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+    call solver%initialVRewind(particleList, del_t)
     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime)
     if (averagingTime /= 0.0d0) then
         print *, "Averaging over", averagingTime, "seconds"
