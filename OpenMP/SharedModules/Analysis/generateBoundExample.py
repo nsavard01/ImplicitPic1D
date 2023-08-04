@@ -102,7 +102,7 @@ def getBoundPlasmaSolutions(L, numNodes, n_ave, T_e, T_i, M):
     return L-s*L, phi, n_e, n_i
     
     
-def compareModelToDatas(dataList, labelList):
+def compareModelToDatas(dataList, labelList, model):
     if (len(dataList) != len(labelList)):
         raise Warning("List of data and labels not the same size!")
         
@@ -117,7 +117,6 @@ def compareModelToDatas(dataList, labelList):
     T_e = dataList[0].T_e
     T_i = dataList[0].T_i
     n_ave = dataList[0].n_ave
-    model = getBoundPlasmaSolutions(dataList[0].grid[-1] - dataList[0].grid[0], 100, n_ave, T_e, T_i, M)
     for i in range(len(dataList)):
         data = dataList[i]
         
@@ -131,9 +130,9 @@ def compareModelToDatas(dataList, labelList):
         ax3.plot(data.grid, phi, linestyle = '-', marker = '.',label = labelList[i])
      
     
-    ax1.plot(model[0], model[2], label = 'Model')
-    ax2.plot(model[0], model[3], label = 'Model')
-    ax3.plot(model[0], model[1], label = 'Model')
+    ax1.plot(model[0, :], model[2, :], label = 'Model')
+    ax2.plot(model[0, :], model[3, :], label = 'Model')
+    ax3.plot(model[0, :], model[1, :], label = 'Model')
     ax1.legend(loc = 'lower right')
     ax2.legend(loc = 'lower right')
     ax3.legend(loc = 'lower right')
@@ -148,5 +147,42 @@ def compareModelToDatas(dataList, labelList):
     ax3.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
     ax3.set_xlabel('Distance (m)')
     ax3.set_ylabel('Voltage (V)')
+    
+def compareModelToData(data, model):
+    for name in data.particles.keys():
+        if name != 'e':
+            ion = name
+            break
+    deb = debye_length(data.T_e, data.n_ave)
+    M = data.particles[ion]['mass']
+    plt.figure()
+    n_e = data.getAveDensity('e')
+    plt.plot(data.grid, n_e, 'o', label = 'PIC')
+    plt.plot(model[0, :], model[2, :], label = 'Model')
+    plt.ylabel(r'$n_e$ (m$^-3$)')
+    plt.legend(loc = 'best')
+    modelN_e = np.interp(data.grid[1:-1], model[0,:], model[2,:])
+    res = np.sqrt(np.sum(((modelN_e - n_e[1:-1]))**2)/(data.Nx - 2))
+    print('Percent diff. root mean square in n_e is:', 100*res)
+    
+    plt.figure()
+    n_i = data.getAveDensity(ion)
+    plt.plot(data.grid, n_i, 'o',  label = 'PIC')
+    plt.plot(model[0, :], model[3, :], label = 'Model')
+    plt.ylabel(r'$n_i$ (m$^-3$)')
+    plt.legend(loc = 'best')
+    modelN_i = np.interp(data.grid[1:-1], model[0,:], model[3,:])
+    res = np.sqrt(np.sum(((modelN_i - n_i[1:-1]))**2)/(data.Nx - 2))
+    print('Percent diff. root mean square in n_i is:', 100*res)
+    
+    plt.figure()
+    phi = data.getAvePhi()
+    plt.plot(data.grid, phi, 'o', label = 'PIC')
+    plt.plot(model[0, :], model[1, :], label = 'Model')
+    plt.ylabel(r'Voltage (V)')
+    plt.legend(loc = 'best')
+    modelPhi = np.interp(data.grid[1:-1], model[0,:], model[1,:])
+    res = np.sqrt(np.sum(((modelPhi - phi[1:-1]))**2)/(data.Nx - 2))
+    print('Percent diff. root mean square in phi is:', 100 * res)
         
     

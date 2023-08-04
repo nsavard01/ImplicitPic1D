@@ -13,16 +13,8 @@ from generateBoundExample import *
 #%%
 
 #5e14
-model5e14 = np.load('BoundModels/model_5e+14nave_5Te_1Ti.npy')
-Exp_128PPC_0p75Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_128PPC_0p75Deb_0p2delT/')
-Exp_1024PPC_0p75Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p75Deb_0p2delT/')
-Exp_1024PPC_0p5Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p5Deb_0p2delT/')
-Exp_1024PPC_0p1Deb_0p025delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p1Deb_0p025delT/')
+model = np.load('BoundModels/model_2p5e+16nave_5Te_1Ti.npy')
 
-NGP_1024PPC_32nodes_2p0delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_1024PPC_2p0delT_32nodes/')
-NGP_1024PPC_16nodes_2p0delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_1024PPC_2p0delT_16nodes/')
-NGP_2048PPC_16nodes_2p0delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_2048PPC_2p0delT_16nodes/')
-NGP_1024PPC_32nodes_0p2delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_1024PPC_0p2delT_32nodes/')
 
 Exp_128PPC_1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_1Deb_0p2delT/')
 Exp_128PPC_2Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_2Deb_0p2delT/')
@@ -63,45 +55,6 @@ NGP_256PPC_16nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Im
 NGP_128PPC_16nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_16nodes/')
 NGP_256PPC_11nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_256PPC_2p0delT_11nodes/')
 
-Exp_128PPC_0p75Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p75Deb_0p2delT/')
-Exp_128PPC_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p5Deb_0p2delT/')
-Exp_128PPC_0p1Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p1Deb_0p2delT/')
-Exp_16PPC_0p1Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_16PPC_0p1Deb_0p2delT/')
-NGP_256PPC_120nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_256PPC_2p0delT_120nodes/')
-NGP_1024PPC_64nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_1024PPC_2p0delT_64nodes/')
-NGP_2048PPC_64nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_2048PPC_2p0delT_64nodes/')
-NGP_1024PPC_16nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_1024PPC_2p0delT_16nodes/')
-NGP_1024PPC_32nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_1024PPC_2p0delT_32nodes/')
-test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test/')
-expListPPC = [Exp_128PPC_0p75Deb_0p2delT_2p5e16, Exp_256PPC_0p75Deb_0p2delT_2p5e16,
-                  Exp_512PPC_0p75Deb_0p2delT_2p5e16]
-labelListPPC = [r'128 PPC', '256 PPC', '512 PPC']
 
-
-dataList2p5e16 = [Exp_128PPC_0p75Deb_0p2delT_2p5e16, Exp_256PPC_0p75Deb_0p2delT_2p5e16,
-                  Exp_512PPC_0p75Deb_0p2delT_2p5e16]
-labelList2p5e16 = [r'128 PPC', '256 PPC', '512 PPC']
-
-list1 = [Exp_128PPC_0p75Deb_0p2delT_2p5e16, Exp_512PPC_0p75Deb_0p2delT_2p5e16,
-         Exp_128PPC_0p5Deb_0p2delT_2p5e16, Exp_128PPC_0p15Deb_0p05delT_2p5e16]
-list2 = ['128 PPC, 0.2 $\Delta$ t, 0.75 $\lambda_{De}$', '512 PPC, 0.2 $\Delta$ t, 0.75 $\lambda_{De}$', 
-         r'128 PPC, 0.2 $\Delta$ t, 0.5 $\lambda_{De}$', r'128 PPC, 0.05 $\Delta$ t, 0.15 $\lambda_{De}$']
-
-NGPList = [Exp_128PPC_0p25Deb_0p05delT_2p5e16, NGP_128PPC_32nodes_2p0delT_2p5e16, 
-           NGP_128PPC_32nodes_4p0delT_2p5e16, NGP_1024PPC_32nodes_2p0delT_2p5e16]
-NGPlabel = ['Exp. Ref.', r'128 PPC, 2.0 $\Delta$t', r'128 PPC, 4.0 $\Delta$t'
-           , r'1024 PPC, 2.0 $\Delta$t']
-
-dataList1e18 = [Exp_128PPC_0p75Deb_0p2delT_1e18, Exp_128PPC_0p5Deb_0p2delT_1e18,
-                  NGP_1024PPC_64nodes_2p0delT_1e18, NGP_2048PPC_64nodes_2p0delT_1e18]
-labelList1e18 = [r'Exp., 0.2 $\Delta$t, 128PPC, 0.75 $\lambda_{De}$', r'Exp., 0.2 $\Delta$t, 128PPC, 0.5 $\lambda_{De}$',
-                   r'NGP, 1024 PPC', r'NGP, 2048 PPC']
-
-NGPListHighPPC = [NGP_1024PPC_32nodes_2p0delT_2p5e16, NGP_2048PPC_32nodes_2p0delT_2p5e16]
-NGPListHighLabel = ['1024 PPC', '2048 PPC']
-
-LowPPC = [NGP_128PPC_16nodes_2p0delT_2p5e16, NGP_256PPC_16nodes_2p0delT_2p5e16, NGP_512PPC_16nodes_2p0delT_2p5e16,
-          Exp_64PPC_0p75Deb_0p2delT_2p5e16, Exp_32PPC_0p75Deb_0p2delT_2p5e16]
-LowPPCLabel = ['NGP, 128 PPC', 'NGP, 256 PPC', 'NGP, 512 PPC', 'Exp., 64 PPC', 'Exp., 32 PPC']
 
 
