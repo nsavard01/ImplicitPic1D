@@ -372,7 +372,7 @@ contains
             if (windowNum > windowDivision) then
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
-                if (stdLoss/meanLoss < 1d-5) exit
+                if (stdLoss/meanLoss < 1d-6) exit
                 windowNum = 0
             end if
         end do
@@ -390,7 +390,7 @@ contains
         end do
         open(22,file=directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
-        write(22,"((I6, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/currentTime, chargeTotal/currentTime, energyLoss/currentTime
+        write(22,"((I8, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/currentTime, chargeTotal/currentTime, energyLoss/currentTime
         close(22)
         print *, "Electron average wall loss:", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p * particleList(1)%q/currentTime
         print *, "Ion average wall loss:", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p * particleList(2)%q/currentTime

@@ -8,45 +8,14 @@ Created on Tue Jun 27 14:32:42 2023
 from plotProduction import *
 from generateBoundExample import *
 
-Exp_128PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p75Deb_0p2delT/')
-Exp_256PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_256PPC_0p75Deb_0p2delT/')
-Exp_512PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_512PPC_0p75Deb_0p2delT/')
-Exp_128PPC_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p5Deb_0p2delT/')
-Exp_128PPC_0p25Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p25Deb_0p2delT/')
-Exp_128PPC_0p1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p1Deb_0p2delT/')
-Exp_128PPC_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p5Deb_0p2delT/')
-NGP_128PPC_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_32nodes/')
-NGP_128PPC_60nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_60nodes/')
-# data = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_16nodes/')
-# data1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_200PPC_2p0delT_2p5e16nave_16nodes/')
-# data31Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_2p5e16nave_31nodes/')
-# data2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_300PPC_2p0delT_2p5e16nave_16nodes/')
-# data3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_0p2delT_2p5e16nave_16nodes/')
-# data4 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_16nodes/')
-# data1000PPC_61nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_61nodes/')
-# data1000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_16nodes/')
-# data2000PPC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_2000PPC_2p0delT_2p5e16nave_16nodes/')
-# data1000PPC_32Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_1000PPC_2p0delT_2p5e16nave_32nodes/')
-# data500PPC_61Nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_500PPC_2p0delT_2p5e16nave_61nodes/')
-# data1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/NGP/NGP_100PPC_2p0delT_1e18nave_16nodes/')
-# dataExplicit100PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_100PPC_0p2delT_2p5e16nave/')
-# dataExplicit300PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_300PPC_0p2delT_2p5e16nave/')
-# dataExplicit500PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_500PPC_0p2delT_2p5e16nave/')
-# dataExplicit1000PPC = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/ExplicitPIC/Explicit_1000PPC_0p2delT_2p5e16nave/')
-# dataList = [ dataExplicit1000PPC, data1000PPC, data2000PPC, data1000PPC_32Nodes, data500PPC_61Nodes, data1000PPC_61nodes]
-# labelList = [ '1000PPC-Explicit' , '1000PPC-NGP', '2000PPC-NGP', '1000PPC-NGP-32nodes', '500PPC-NGP-61nodes', '1000PPC-NGP-61nodes']
-
-expListPPC = [Exp_512PPC_0p75Deb_0p2delT_2p5e16, Exp_128PPC_0p5Deb_0p2delT_2p5e16, Exp_128PPC_0p25Deb_0p2delT_2p5e16,
-              Exp_128PPC_0p1Deb_0p2delT_2p5e16]
-labelListPPC = ['512 PPC, 0.75 $\lambda_{De}$', r'128 PPC, 0.5 $\lambda_{De}$', '128 PPC, 0.25 $\lambda_{De}$',
-                '128 PPC, 0.1 $\lambda_{De}$']
 def compareModelToData(data):
     for name in data.particles.keys():
         if name != 'e':
             ion = name
             break
+    deb = debye_length(data.T_e, data.n_ave)
     M = data.particles[ion]['mass']
-    model = getBoundPlasmaSolutions(data.grid[-1] - data.grid[0], 100, data.n_ave, data.T_e, data.T_i, M)
+    model = getBoundPlasmaSolutions(data.grid[-1] - data.grid[0], 300, data.n_ave, data.T_e, data.T_i, M)
     plt.figure()
     plotAveDensity(data, name = 'e', label = 'PIC')
     plt.plot(model[0], model[2], label = 'Model')
@@ -62,51 +31,95 @@ def compareModelToData(data):
     plt.plot(model[0], model[1], label = 'Model')
     plt.legend(loc = 'best')
     
-    
-def compareModelToDatas(dataList, labelList):
-    if (len(dataList) != len(labelList)):
-        raise Warning("List of data and labels not the same size!")
-        
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
-    fig3, ax3 = plt.subplots()
-    for name in dataList[0].particles.keys():
-        if name != 'e':
-            ion = name
-            break
-    M = dataList[0].particles[ion]['mass']
-    T_e = dataList[0].T_e
-    T_i = dataList[0].T_i
-    n_ave = dataList[0].n_ave
-    model = getBoundPlasmaSolutions(dataList[0].grid[-1] - dataList[0].grid[0], 100, n_ave, T_e, T_i, M)
-    for i in range(len(dataList)):
-        data = dataList[i]
-        
-        n_e = data.getAveDensity('e')
-        ax1.plot(data.grid, n_e, linestyle = '-', marker = '.',label = labelList[i])
-        
-        n_i = data.getAveDensity(ion)
-        ax2.plot(data.grid, n_i, linestyle = '-', marker = '.',label = labelList[i])
-        
-        phi = data.getAvePhi()
-        ax3.plot(data.grid, phi, linestyle = '-', marker = '.',label = labelList[i])
-     
-    
-    ax1.plot(model[0], model[2], label = 'Model')
-    ax2.plot(model[0], model[3], label = 'Model')
-    ax3.plot(model[0], model[1], label = 'Model')
-    ax1.legend(loc = 'best')
-    ax2.legend(loc = 'best')
-    ax3.legend(loc = 'best')
-    ax1.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
-    ax1.set_xlabel('Distance (m)')
-    ax1.set_ylabel(r'$n_e$ (m$^{-3}$)')
-    
-    ax2.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
-    ax2.set_xlabel('Distance (m)')
-    ax2.set_ylabel(r'$n_+$ (m$^{-3}$)')
-    
-    ax3.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
-    ax3.set_xlabel('Distance (m)')
-    ax3.set_ylabel('Voltage (V)')
-        
+#%%
+
+#5e14
+Exp_128PPC_0p75Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_128PPC_0p75Deb_0p2delT/')
+Exp_1024PPC_0p75Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p75Deb_0p2delT/')
+Exp_1024PPC_0p5Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p5Deb_0p2delT/')
+Exp_1024PPC_0p1Deb_0p025delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p1Deb_0p025delT/')
+
+NGP_1024PPC_32nodes_2p0delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_1024PPC_2p0delT_32nodes/')
+NGP_1024PPC_32nodes_0p2delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_1024PPC_0p2delT_32nodes/')
+
+Exp_128PPC_1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_1Deb_0p2delT/')
+Exp_128PPC_2Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_2Deb_0p2delT/')
+Exp_128PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p75Deb_0p2delT/')
+Exp_64PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_64PPC_0p75Deb_0p2delT/')
+Exp_32PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_32PPC_0p75Deb_0p2delT/')
+Exp_128PPC_0p75Deb_0p2delT_2p5e16_fullAve = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p75Deb_0p2delT_fullAve/')
+Exp_256PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_256PPC_0p75Deb_0p2delT/')
+Exp_512PPC_0p75Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_512PPC_0p75Deb_0p2delT/')
+Exp_128PPC_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p5Deb_0p2delT/')
+Exp_128PPC_0p25Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p25Deb_0p2delT/')
+Exp_128PPC_0p1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p1Deb_0p2delT/')
+Exp_256PPC_0p1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_256PPC_0p1Deb_0p2delT/')
+Exp_128PPC_2Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_2p0Deb_0p2delT/')
+Exp_128PPC_0p5Deb_0p1delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p5Deb_0p1delT/')
+Exp_128PPC_0p25Deb_0p05delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p25Deb_0p05delT/')
+Exp_128PPC_0p15Deb_0p05delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p15Deb_0p05delT/')
+
+#NGP 2p5e16
+NGP_128PPC_100nodes_2p0delT_2p5e16_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_100nodes_evenGrid/')
+NGP_128PPC_200nodes_2p0delT_2p5e16_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_200nodes_evenGrid/')
+NGP_128PPC_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_64nodes/')
+NGP_256PPC_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_256PPC_2p0delT_64nodes/')
+NGP_1024PPC_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_2p0delT_32nodes/')
+NGP_2048PPC_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_2048PPC_2p0delT_32nodes/')
+NGP_1024PPC_32nodes_3p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_3p0delT_32nodes/')
+NGP_1024PPC_32nodes_4p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_4p0delT_32nodes/')
+NGP_512PPC_32nodes_4p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_512PPC_4p0delT_32nodes/')
+NGP_128PPC_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_32nodes/')
+NGP_128PPC_32nodes_4p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_4p0delT_32nodes/')
+NGP_2048PPC_16nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_2048PPC_2p0delT_16nodes/')
+NGP_1024PPC_16nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_2p0delT_16nodes/')
+NGP_1024PPC_16nodes_2p0delT_2p5e16_1e5eps = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_2p0delT_16nodes_1e-5eps/')
+NGP_1024PPC_16nodes_2p0delT_2p5e16_1e4eps = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_2p0delT_16nodes_1e-4eps/')
+NGP_1024PPC_16nodes_2p0delT_2p5e16_1e3eps = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_2p0delT_16nodes_1e-3eps/')
+NGP_512PPC_16nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_512PPC_2p0delT_16nodes/')
+NGP_256PPC_16nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_256PPC_2p0delT_16nodes/')
+NGP_128PPC_16nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_16nodes/')
+NGP_256PPC_11nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_256PPC_2p0delT_11nodes/')
+
+Exp_128PPC_0p75Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p75Deb_0p2delT/')
+Exp_128PPC_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p5Deb_0p2delT/')
+Exp_128PPC_0p1Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p1Deb_0p2delT/')
+Exp_16PPC_0p1Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_16PPC_0p1Deb_0p2delT/')
+NGP_256PPC_120nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_256PPC_2p0delT_120nodes/')
+NGP_1024PPC_64nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_1024PPC_2p0delT_64nodes/')
+NGP_2048PPC_64nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_2048PPC_2p0delT_64nodes/')
+NGP_1024PPC_16nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_1024PPC_2p0delT_16nodes/')
+NGP_1024PPC_32nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_1024PPC_2p0delT_32nodes/')
+test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test/')
+expListPPC = [Exp_128PPC_0p75Deb_0p2delT_2p5e16, Exp_256PPC_0p75Deb_0p2delT_2p5e16,
+                  Exp_512PPC_0p75Deb_0p2delT_2p5e16]
+labelListPPC = [r'128 PPC', '256 PPC', '512 PPC']
+
+
+dataList2p5e16 = [Exp_128PPC_0p75Deb_0p2delT_2p5e16, Exp_256PPC_0p75Deb_0p2delT_2p5e16,
+                  Exp_512PPC_0p75Deb_0p2delT_2p5e16]
+labelList2p5e16 = [r'128 PPC', '256 PPC', '512 PPC']
+
+list1 = [Exp_128PPC_0p75Deb_0p2delT_2p5e16, Exp_512PPC_0p75Deb_0p2delT_2p5e16,
+         Exp_128PPC_0p5Deb_0p2delT_2p5e16, Exp_128PPC_0p15Deb_0p05delT_2p5e16]
+list2 = ['128 PPC, 0.2 $\Delta$ t, 0.75 $\lambda_{De}$', '512 PPC, 0.2 $\Delta$ t, 0.75 $\lambda_{De}$', 
+         r'128 PPC, 0.2 $\Delta$ t, 0.5 $\lambda_{De}$', r'128 PPC, 0.05 $\Delta$ t, 0.15 $\lambda_{De}$']
+
+NGPList = [Exp_128PPC_0p25Deb_0p05delT_2p5e16, NGP_128PPC_32nodes_2p0delT_2p5e16, 
+           NGP_128PPC_32nodes_4p0delT_2p5e16, NGP_1024PPC_32nodes_2p0delT_2p5e16]
+NGPlabel = ['Exp. Ref.', r'128 PPC, 2.0 $\Delta$t', r'128 PPC, 4.0 $\Delta$t'
+           , r'1024 PPC, 2.0 $\Delta$t']
+
+dataList1e18 = [Exp_128PPC_0p75Deb_0p2delT_1e18, Exp_128PPC_0p5Deb_0p2delT_1e18,
+                  NGP_1024PPC_64nodes_2p0delT_1e18, NGP_2048PPC_64nodes_2p0delT_1e18]
+labelList1e18 = [r'Exp., 0.2 $\Delta$t, 128PPC, 0.75 $\lambda_{De}$', r'Exp., 0.2 $\Delta$t, 128PPC, 0.5 $\lambda_{De}$',
+                   r'NGP, 1024 PPC', r'NGP, 2048 PPC']
+
+NGPListHighPPC = [NGP_1024PPC_32nodes_2p0delT_2p5e16, NGP_2048PPC_32nodes_2p0delT_2p5e16]
+NGPListHighLabel = ['1024 PPC', '2048 PPC']
+
+LowPPC = [NGP_128PPC_16nodes_2p0delT_2p5e16, NGP_256PPC_16nodes_2p0delT_2p5e16, NGP_512PPC_16nodes_2p0delT_2p5e16,
+          Exp_64PPC_0p75Deb_0p2delT_2p5e16, Exp_32PPC_0p75Deb_0p2delT_2p5e16]
+LowPPCLabel = ['NGP, 128 PPC', 'NGP, 256 PPC', 'NGP, 512 PPC', 'Exp., 64 PPC', 'Exp., 32 PPC']
+
+

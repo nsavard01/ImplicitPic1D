@@ -24,3 +24,7 @@ e = constants.e
 def debye_length(T_e, n):
     """ Distance of potential drop in plasma, T_e in V"""
     return np.sqrt(eps_0*T_e/n/(e))
+
+def plasmaFreq(n):
+    """ Distance of potential drop in plasma, T_e in V"""
+    return np.sqrt(n * e**2 / m_e / eps_0)

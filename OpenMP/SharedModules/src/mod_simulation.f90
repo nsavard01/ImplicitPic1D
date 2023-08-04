@@ -500,8 +500,6 @@ contains
                 CurrentDiagStep = CurrentDiagStep + 1
                 inelasticEnergyLoss = 0.0d0
                 print *, "Number of electrons is:", SUM(particleList(1)%N_p)
-                print *, "Number of electrons lost to walls was:", SUM(particleList(1)%delIdx)
-                print *, "Number of electrons refluxed was:", SUM(particleList(1)%refIdx)
                 pastDiagTime = currentTime + currDel_t
                 diagTime = diagTime + diagTimeDivision
             end if
@@ -663,7 +661,7 @@ contains
             if ((currentTime - lastCheckTime) > checkTimeDivision) then
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
-                if (stdLoss/meanLoss < 1d-5) exit
+                if (stdLoss/meanLoss < 1d-6) exit
                 windowNum = 0
                 lastCheckTime = currentTime
             end if

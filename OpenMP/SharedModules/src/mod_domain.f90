@@ -19,6 +19,7 @@ module mod_domain
         procedure, public, pass(self) :: constructSineGrid
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
+        procedure, public, pass(self) :: constructExpHalfGrid
         procedure, public, pass(self) :: writeDomain
     end type Domain
 
@@ -55,6 +56,8 @@ contains
             call self%constructSineGrid(del_x, L_domain)
         CASE(2)
             call self%constructHalfSineGrid(del_x, L_domain)
+        CASE(3)
+            call self%constructExpHalfGrid(del_x, L_domain)
         CASE default
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
@@ -155,6 +158,59 @@ contains
             stop
         end if
     end subroutine constructHalfSineGrid
+
+    subroutine constructExpHalfGrid(self, del_x, L_domain)
+        class(Domain), intent(in out) :: self
+        real(real64), intent(in) :: del_x, L_domain
+        integer(int32) :: i
+        real(real64) :: gridField(NumberXNodes-1), k, A, F
+        self%grid(1) = 0.0d0
+        self%grid(NumberXNodes) = L_domain
+        F = 100.0d0 * del_x
+        if (F/L_domain > 0.5d0) then
+            stop "Debye length too small for exponential increase "
+        end if
+        if (schemeNum == 1) then
+            stop 'Exp half grid not made for CIC yet!'
+            ! self%grid(2) = self%grid(1) + del_x
+            ! do i = 1,NumberXNodes-1
+            !     gridField(i) = (L_domain - del_x) * (real(i-1)/(2.0d0 * real(NumberXNodes) - 3.0d0) - (1.0d0/(2.0d0 * real(NumberXNodes) - 3.0d0) - del_x/(L_domain - del_x)) &
+            !     * SIN(2.0d0 * pi * real(i-1)/(2.0d0 * real(NumberXNodes) - 3.0d0)) / SIN(2.0d0 * pi / (2.0d0 * real(NumberXNodes) - 3.0d0))) + del_x/2.0d0
+            ! end do
+            ! self%grid(3:NumberXNodes-1) = (gridField(2:NumberXNodes-2) + gridField(3:NumberXNodes-1))/2.0d0
+            ! self%nodeVol(1) = del_x
+            ! self%nodeVol(NumberXNodes) = 2.0d0 * (self%grid(NumberXNodes) - gridField(NumberXNodes-1))
+            ! do i = 2,NumberXNodes-1
+            !     self%nodeVol(i) = gridField(i) - gridField(i-1)
+            ! end do
+            ! do i = 1, NumberXNodes-1
+            !     self%dx_dl(i) = self%grid(i+1) - self%grid(i)
+            ! end do
+        else   
+            F = 100.0d0 * del_x
+            if (F/L_domain > 0.5d0) then
+
+            end if
+            k = 2.0d0 * LOG(L_domain/F - 1.0d0)/real(NumberXNodes-1)
+            A = L_domain / (EXP(k * real(NumberXNodes-1, kind = real64)) -1.0d0)
+            do i = 2,NumberXNodes-1
+                self % grid(i) = A * (EXP(k * real(i-1, kind = real64)) - 1.0d0)
+            end do
+            do i = 1, NumberXNodes-1
+                self%dx_dl(i) = self%grid(i+1) - self%grid(i)
+            end do
+            do i = 2, NumberXNodes-1
+                self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
+            end do
+            self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
+            self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
+        end if
+
+        if (self%boundaryConditions(1) == 3 .or. self%boundaryConditions(NumberXNodes) == 3) then
+            print *, "Mesh is not periodic, cannot have periodic boundary!"
+            stop
+        end if
+    end subroutine constructExpHalfGrid
 
     subroutine constructUniformGrid(self, L_domain)
         class(Domain), intent(in out) :: self
