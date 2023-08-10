@@ -16,19 +16,21 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), rho(:, :), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, rho_const
+        real(real64) :: energyError, rho_const, siedelIter, siedelEps
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
 
     contains
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: solve_tridiag_Poisson
+        procedure, public, pass(self) :: solve_gaussSiedel_Poisson
         procedure, public, pass(self) :: getEField
         procedure, public, pass(self) :: makeEField
         procedure, public, pass(self) :: solvePotential
         procedure, public, pass(self) :: construct_diagMatrix
         procedure, public, pass(self) :: initialVRewind
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: getTotalE
         procedure, public, pass(self) :: moveParticles
     end type
 
@@ -52,6 +54,8 @@ contains
         self % phi = 0.0d0
         self % EField = 0.0d0
         self%energyError = 0.0d0
+        self%siedelIter = 1000000
+        self%siedelEps = 1d-6
         if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
         if (world%boundaryConditions(NumberXNodes) == 1) self%phi(NumberXNodes) = rightVoltage
         if (world%boundaryConditions(1) == 3) then
@@ -170,6 +174,44 @@ contains
 
     end subroutine solve_tridiag_Poisson
 
+    subroutine solve_gaussSiedel_Poisson(self, world)
+        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        integer(int32) :: i, j
+        real(real64) :: b(NumberXNodes), sigma(NumberXNodes), Ax(NumberXNodes), res
+
+        do i=1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0,2)
+                b(i) = (-SUM(self%rho(i, :))) / eps_0
+            CASE(1,3)
+                b(i) = self%phi(i)
+            END SELECT
+        end do
+        do i = 1, self%siedelIter
+            sigma(1) = self%c_tri(1)*self%phi(2)
+            self%phi(1) = self%phi(1) + 1.4d0*((b(1) - sigma(1))/self%b_tri(1) - self%phi(1))
+            do j = 2, NumberXNodes-1
+                sigma(j) = self%c_tri(j)*self%phi(j+1) + self%a_tri(j-1) * self%phi(j-1)    
+                self%phi(j) = self%phi(j) + 1.4d0*((b(j) - sigma(j))/self%b_tri(j) - self%phi(j))
+            end do
+            sigma(NumberXNodes) = self%a_tri(NumberXNodes-1) * self%phi(NumberXNodes-1)
+            self%phi(NumberXNodes) = self%phi(NumberXNodes) + 1.4d0 * ((b(NumberXNodes) - sigma(NumberXNodes))/self%b_tri(NumberXNodes) - self%phi(NumberXNodes))
+            if (MOD(i, 100) == 0) then
+                Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+                res = SUM(((Ax + 1d-15)/(b + 1d-15) - 1.0d0)**2)
+                res = SQRT(res/NumberXNodes)
+                if (res < self%siedelEps) then
+                    exit
+                end if
+            end if
+        end do
+        if (i == self%siedelIter+1) then
+            stop 'Max iterations reached Gauss-siedel solver!'
+        end if
+    end subroutine solve_gaussSiedel_Poisson
+
 
     function getTotalPE(self, world) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
@@ -251,6 +293,28 @@ contains
         end do loopSpecies
     end subroutine initialVRewind
 
+    function getTotalE(self, particleList, world) result(res)
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in) :: particleList(:)
+        real(real64) :: res, temp(numThread), PE, v, q_m_ratio
+        integer(int32) :: i, j, iThread
+        PE = self%getTotalPE(world)
+        temp = 0.0d0
+        res = 0.0d0
+        do j = 1, numberChargedParticles
+            q_m_ratio = particleList(j)%q/particleList(j)%mass
+            !$OMP parallel private(iThread, i, v)
+            iThread = omp_get_thread_num() + 1
+            loopParticles: do i = 1, particleList(j)%N_p(iThread)
+                v = particleList(j)%phaseSpace(2, i, iThread) + 0.5d0 * (q_m_ratio) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                temp(iThread) = temp(iThread) + (v**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) * particleList(j)%w_p * particleList(j)%mass * 0.5d0
+            end do loopParticles
+            !$OMP end parallel
+        end do
+        res = SUM(temp) + PE
+    end function getTotalE
+
     subroutine moveParticles(self, particleList, world, del_t)
         ! particle mover to avoid the boolean checks which mostly don't happen when depositing J
         class(potentialSolver), intent(in out) :: self
@@ -322,7 +386,7 @@ contains
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         call self%depositRho(particleList)
-        call self%solve_tridiag_Poisson(world)
+        call self%solve_gaussSiedel_Poisson(world)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)
     end subroutine solvePotential

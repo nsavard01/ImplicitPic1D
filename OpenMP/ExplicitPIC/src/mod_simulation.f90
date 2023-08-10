@@ -178,7 +178,7 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
         real(real64) :: currentTime, densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
-        integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, startTotal, endTotal
+        integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
         allocate(energyAddColl(numThread))
         CurrentDiagStep = 1
         unitPart1 = 100
@@ -204,6 +204,7 @@ contains
         end do
         collisionTime = 0
         potentialTime = 0
+        moverTime = 0
         i = 0
         elapsedTime = 0.0d0
         diagStepDiff = 1
@@ -216,7 +217,6 @@ contains
         !Save initial particle/field data, along with domain
         energyAddColl = 0.0d0
         inelasticEnergyLoss = 0.0d0
-        call solver%solvePotential(particleList, world)
         !call solver%initialVRewind(particleList, del_t)
         densities = 0.0d0
         call loadParticleDensity(densities, particleList, world)
@@ -233,6 +233,9 @@ contains
             if (currentTime < diagTime) then
                 call system_clock(startTime)
                 call solver%moveParticles(particleList, world, del_t)
+                call system_clock(endTime)
+                moverTime = moverTime + (endTime - startTime)
+                call system_clock(startTime)
                 call solver%solvePotential(particleList, world)
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
@@ -246,6 +249,9 @@ contains
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
                 call system_clock(startTime)
                 call solver%moveParticles(particleList, world, del_t)
+                call system_clock(endTime)
+                moverTime = moverTime + (endTime - startTime)
+                call system_clock(startTime)
                 call solver%solvePotential(particleList, world)
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
@@ -289,6 +295,9 @@ contains
         end do
         call system_clock(startTime)
         call solver%moveParticles(particleList, world, del_t)
+        call system_clock(endTime)
+        moverTime = moverTime + (endTime - startTime)
+        call system_clock(startTime)
         call solver%solvePotential(particleList, world)
         call system_clock(endTime)
         potentialTime = potentialTime + (endTime - startTime)
@@ -322,9 +331,11 @@ contains
         ! Write Final Data
         open(9,file=directoryName//'/SimulationFinalData.dat')
         write(9,'("Elapsed Times(s), Potential Time (s), Collision Time (s), Total Steps")')
-        write(9,"(3(es16.8,1x), 1(I8, 1x))") elapsed_time, real(potentialTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1
+        write(9,"(3(es16.8,1x), 1(I8, 1x))") elapsed_time, real(potentialTime + moverTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1
         close(9)
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
+        print *, 'moverTime is:', real(moverTime, kind = real64)/real(timingRate, kind = real64)
+        print *, 'potentialTime is:', real(potentialTime, kind = real64)/real(timingRate, kind = real64)
 
     end subroutine solveSimulation
 

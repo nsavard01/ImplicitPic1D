@@ -99,7 +99,12 @@ def getBoundPlasmaSolutions(L, numNodes, n_ave, T_e, T_i, M):
     n_e = n_0 * np.exp(eta[0] - eta)
     n_i = n_0 * np.exp(eta*tau + eta[0]) * B * I_G
     phi = -eta * T_e
-    return L-s*L, phi, n_e, n_i
+    sol = np.zeros((4, numNodes))
+    sol[0,:] = L-s*L
+    sol[1,:] = phi
+    sol[2, :] = n_e
+    sol[3, :] = n_i
+    return np.flip(sol, axis = 1)
     
     
 def compareModelToDatas(dataList, labelList, model):
@@ -162,7 +167,7 @@ def compareModelToData(data, model):
     plt.ylabel(r'$n_e$ (m$^-3$)')
     plt.legend(loc = 'best')
     modelN_e = np.interp(data.grid[1:-1], model[0,:], model[2,:])
-    res = np.sqrt(np.sum(((modelN_e - n_e[1:-1]))**2)/(data.Nx - 2))
+    res = np.sum(abs((modelN_e - n_e[1:-1])/modelN_e)/(data.Nx - 2))
     print('Percent diff. root mean square in n_e is:', 100*res)
     
     plt.figure()
@@ -172,7 +177,7 @@ def compareModelToData(data, model):
     plt.ylabel(r'$n_i$ (m$^-3$)')
     plt.legend(loc = 'best')
     modelN_i = np.interp(data.grid[1:-1], model[0,:], model[3,:])
-    res = np.sqrt(np.sum(((modelN_i - n_i[1:-1]))**2)/(data.Nx - 2))
+    res = np.sum(abs((modelN_i - n_i[1:-1])/modelN_i))/(data.Nx - 2)
     print('Percent diff. root mean square in n_i is:', 100*res)
     
     plt.figure()
@@ -182,7 +187,7 @@ def compareModelToData(data, model):
     plt.ylabel(r'Voltage (V)')
     plt.legend(loc = 'best')
     modelPhi = np.interp(data.grid[1:-1], model[0,:], model[1,:])
-    res = np.sqrt(np.sum(((modelPhi - phi[1:-1]))**2)/(data.Nx - 2))
+    res = np.sum(abs((modelPhi - phi[1:-1])/modelPhi)/(data.Nx - 2))
     print('Percent diff. root mean square in phi is:', 100 * res)
         
     

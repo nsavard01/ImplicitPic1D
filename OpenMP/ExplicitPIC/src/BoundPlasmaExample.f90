@@ -15,10 +15,14 @@ program BoundPlasmaExample
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
+    real(real64), allocatable :: phiCopy(:)
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(world, solver, 'Geometry.inp')
     particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world)
-    call solver%solvePotential(particleList, world)
+    call solver%depositRho(particleList)
+    call solver%solve_tridiag_Poisson(world)
+    ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
+    call solver%makeEField(world)
     call solver%initialVRewind(particleList, del_t)
     call solveSimulation(solver, particleList, world, del_t, irand, simulationTime)
     if (averagingTime /= 0.0d0) then
