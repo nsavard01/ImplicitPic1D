@@ -12,10 +12,10 @@ from generateBoundExample import *
     
 #%%
 
-#5e14
+
 model = np.load('BoundModels/model_2p5e+16nave_5Te_1Ti.npy')
 
-
+test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test/')
 Exp_128PPC_1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_1Deb_0p2delT/')
 Exp_128PPC_2Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_2Deb_0p2delT/')
 Exp_64PPC_2Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_64PPC_2Deb_0p2delT/')
@@ -35,6 +35,7 @@ Exp_128PPC_0p25Deb_0p05delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/Implici
 Exp_128PPC_0p15Deb_0p05delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p15Deb_0p05delT/')
 
 #NGP 2p5e16
+testNGP = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test/')
 NGP_128PPC_100nodes_2p0delT_2p5e16_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_100nodes_evenGrid/')
 NGP_128PPC_200nodes_2p0delT_2p5e16_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_200nodes_evenGrid/')
 NGP_128PPC_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_64nodes/')

@@ -24,6 +24,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_gaussSiedel_Poisson
+        procedure, public, pass(self) :: solve_CG_Poisson
         procedure, public, pass(self) :: getEField
         procedure, public, pass(self) :: makeEField
         procedure, public, pass(self) :: solvePotential
@@ -54,7 +55,7 @@ contains
         self % phi = 0.0d0
         self % EField = 0.0d0
         self%energyError = 0.0d0
-        self%siedelIter = 1000000
+        self%siedelIter = 100000
         self%siedelEps = 1d-6
         if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
         if (world%boundaryConditions(NumberXNodes) == 1) self%phi(NumberXNodes) = rightVoltage
@@ -211,6 +212,45 @@ contains
             stop 'Max iterations reached Gauss-siedel solver!'
         end if
     end subroutine solve_gaussSiedel_Poisson
+
+    subroutine solve_CG_Poisson(self, world)
+        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        integer(int32) :: i
+        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes), res_b
+        logical :: converge
+        do i=1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0,2)
+                b(i) = (-SUM(self%rho(i, :))) / eps_0
+            CASE(1,3)
+                b(i) = self%phi(i)
+            END SELECT
+        end do
+        res_b = SQRT(SUM(b**2))
+        RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+        resPast = SQRT(SUM(RPast**2))
+        D = RPast
+        do i = 1, 1000
+            alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
+            self%phi = self%phi + alpha * D
+            Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+            RFuture = b - Ax
+            resFuture = SQRT(SUM(RFuture**2))
+            if (resFuture < res_b * 1d-6) then
+                converge = .true.
+                exit
+            end if
+            beta = (resFuture**2)/(resPast**2)
+            D = RFuture + beta * D
+            RPast = RFuture
+            resPast = resFuture
+        end do
+        if (.not. converge) then
+            stop 'Max iterations reached CG solver!'
+        end if
+    end subroutine solve_CG_Poisson
 
 
     function getTotalPE(self, world) result(res)
@@ -386,7 +426,7 @@ contains
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         call self%depositRho(particleList)
-        call self%solve_gaussSiedel_Poisson(world)
+        call self%solve_CG_Poisson(world)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)
     end subroutine solvePotential

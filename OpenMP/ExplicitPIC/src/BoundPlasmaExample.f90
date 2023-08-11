@@ -15,7 +15,6 @@ program BoundPlasmaExample
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(potentialSolver) :: solver
-    real(real64), allocatable :: phiCopy(:)
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(world, solver, 'Geometry.inp')
     particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world)

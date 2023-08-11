@@ -178,7 +178,7 @@ contains
         phi_k(:,1) = solver%phi
         call depositJ(solver, particleList, world, del_t)
         initialNorm = SQRT(SUM(solver%phi**2))
-        call solver%solve_gaussSiedel_Ampere(world, del_t)
+        call solver%solve_tridiag_Ampere(world, del_t)
         phi_k(:,2) = solver%phi_f
         initialR = SQRT(real(NumberXNodes))!SQRT(SUM((solver%phi_f - phi_k(:,1))**2))
         normResidual(1) = initialR
@@ -189,7 +189,7 @@ contains
             m_k = MIN(i, m_Anderson)
             ldb = MAX(m_k, (NumberXNodes))
             call depositJ(solver,particleList, world, del_t)
-            call solver%solve_gaussSiedel_Ampere(world, del_t)
+            call solver%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
             if (normResidual(index) < eps_r*(initialR)) then
@@ -226,7 +226,10 @@ contains
                 phi_k(:, MODULO(i+1, m_Anderson+1) + 1) = phi_k(:, MODULO(i+1, m_Anderson+1) + 1) + alpha(j + 1) * (Beta_k*Residual_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1))
             end do
             solver%phi_f = phi_k(:, MODULO(i+1, m_Anderson+1) + 1)
+            
         end do
+        
+
     end subroutine solveDivAmpereAnderson
 
     subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)

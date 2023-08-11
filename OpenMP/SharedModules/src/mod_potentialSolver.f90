@@ -15,7 +15,7 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: rho_const, siedelIter, siedelEps 
+        real(real64) :: rho_const
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
 
@@ -24,7 +24,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: getError_tridiag_Ampere
-        procedure, public, pass(self) :: solve_gaussSiedel_Ampere
+        procedure, public, pass(self) :: getError_CG_Ampere
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
     end type
@@ -45,8 +45,6 @@ contains
         self % rho = 0.0d0
         self % J = 0.0d0
         self % phi = 0.0d0
-        self%siedelEps = 1d-6
-        self%siedelIter = 1000000
         self % rho_const = 0.0d0
         SELECT CASE (world%boundaryConditions(1))
         CASE(1)
@@ -165,51 +163,6 @@ contains
 
     end function getError_tridiag_Poisson
 
-    subroutine solve_gaussSiedel_Ampere(self, world, del_t)
-        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-        class(potentialSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
-        real(real64), intent(in) :: del_t
-        integer(int32) :: i, j
-        real(real64) :: b(NumberXNodes), sigma(NumberXNodes), Ax(NumberXNodes), res
-
-        do i =1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
-            CASE(0)
-                b(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
-            CASE(1,3)
-                b(i) = self%phi_f(i)
-            CASE(2)
-                if (i == 1) then
-                    b(i) = (del_t * SUM(self%J(i, :))/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
-                else if (i == NumberXNodes) then
-                    b(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
-                end if
-            END SELECT
-        end do
-        do i = 1, self%siedelIter
-            sigma(1) = self%c_tri(1)*self%phi_f(2)
-            self%phi_f(1) = self%phi_f(1) + 1.4d0*((b(1) - sigma(1))/self%b_tri(1) - self%phi_f(1))
-            do j = 2, NumberXNodes-1
-                sigma(j) = self%c_tri(j)*self%phi_f(j+1) + self%a_tri(j-1) * self%phi_f(j-1)    
-                self%phi_f(j) = self%phi_f(j) + 1.4d0*((b(j) - sigma(j))/self%b_tri(j) - self%phi_f(j))
-            end do
-            sigma(NumberXNodes) = self%a_tri(NumberXNodes-1) * self%phi_f(NumberXNodes-1)
-            self%phi_f(NumberXNodes) = self%phi_f(NumberXNodes) + 1.4d0 * ((b(NumberXNodes) - sigma(NumberXNodes))/self%b_tri(NumberXNodes) - self%phi_f(NumberXNodes))
-            if (MOD(i, 100) == 0) then
-                Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
-                res = SUM(((Ax + 1d-15)/(b + 1d-15) - 1.0d0)**2)
-                res = SQRT(res/NumberXNodes)
-                if (res < self%siedelEps) then
-                    exit
-                end if
-            end if
-        end do
-        if (i == self%siedelIter+1) then
-            stop 'Max iterations reached Gauss-siedel solver!'
-        end if
-    end subroutine solve_gaussSiedel_Ampere
-
     subroutine solve_tridiag_Ampere(self, world, del_t)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
         class(potentialSolver), intent(in out) :: self
@@ -251,6 +204,53 @@ contains
         end do
 
     end subroutine solve_tridiag_Ampere
+
+    subroutine solve_CG_Ampere(self, world, del_t)
+        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t
+        integer(int32) :: i
+        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes), res_b
+        logical :: converge
+        converge = .false.
+        do i =1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0)
+                b(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+            CASE(1,3)
+                b(i) = self%phi_f(i)
+            CASE(2)
+                if (i == 1) then
+                    b(i) = (del_t * SUM(self%J(i, :))/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                else if (i == NumberXNodes) then
+                    b(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                end if
+            END SELECT
+        end do
+        res_b = SQRT(SUM(b**2))
+        RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
+        resPast = SQRT(SUM(RPast**2))
+        D = RPast
+        do i = 1, 1000
+            alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
+            self%phi_f = self%phi_f + alpha * D
+            Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
+            RFuture = b - Ax
+            resFuture = SQRT(SUM(RFuture**2))
+            if (resFuture < res_b * 1.d-8) then
+                converge = .true.
+                exit
+            end if
+            beta = (resFuture**2)/(resPast**2)
+            D = RFuture + beta * D
+            RPast = RFuture
+            resPast = resFuture
+        end do
+        if (.not. converge) then
+            stop 'Max iterations reached CG solver!'
+        end if
+    end subroutine solve_CG_Ampere
 
     function getError_tridiag_Ampere(self, world, del_t) result(res)
         class(potentialSolver), intent(in) :: self
