@@ -218,7 +218,7 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
-        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes), res_b
+        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
         logical :: converge
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
@@ -228,7 +228,6 @@ contains
                 b(i) = self%phi(i)
             END SELECT
         end do
-        res_b = SQRT(SUM(b**2))
         RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
         resPast = SQRT(SUM(RPast**2))
         D = RPast
@@ -238,7 +237,7 @@ contains
             Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
             RFuture = b - Ax
             resFuture = SQRT(SUM(RFuture**2))
-            if (resFuture < res_b * 1d-6) then
+            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-8) then
                 converge = .true.
                 exit
             end if

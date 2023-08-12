@@ -24,7 +24,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: getError_tridiag_Ampere
-        procedure, public, pass(self) :: getError_CG_Ampere
+        procedure, public, pass(self) :: solve_CG_Ampere
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
     end type
@@ -211,7 +211,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i
-        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes), res_b
+        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
         logical :: converge
         converge = .false.
         do i =1, NumberXNodes
@@ -228,7 +228,6 @@ contains
                 end if
             END SELECT
         end do
-        res_b = SQRT(SUM(b**2))
         RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         resPast = SQRT(SUM(RPast**2))
         D = RPast
@@ -238,7 +237,7 @@ contains
             Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
             RFuture = b - Ax
             resFuture = SQRT(SUM(RFuture**2))
-            if (resFuture < res_b * 1.d-8) then
+            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-8) then
                 converge = .true.
                 exit
             end if
