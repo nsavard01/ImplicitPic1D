@@ -15,6 +15,7 @@ from generateBoundExample import *
 #5e14
 model = getBoundPlasmaSolutions(0.05, 500, 1e18, 5, 1, m_p)
 
+Exp_128PPC_0p75Deb_0p2delT_1e18_CG = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_128PPC_0p75Deb_0p2delT_1e18_CG/')
 Exp_128PPC_0p75Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p75Deb_0p2delT/')
 Exp_128PPC_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p5Deb_0p2delT/')
 Exp_128PPC_0p1Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_128PPC_0p1Deb_0p2delT/')

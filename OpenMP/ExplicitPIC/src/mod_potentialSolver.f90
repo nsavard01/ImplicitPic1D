@@ -220,6 +220,7 @@ contains
         integer(int32) :: i
         real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
         logical :: converge
+        converge = .false.
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
@@ -237,7 +238,7 @@ contains
             Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
             RFuture = b - Ax
             resFuture = SQRT(SUM(RFuture**2))
-            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-6) then
+            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-8) then
                 converge = .true.
                 exit
             end if
