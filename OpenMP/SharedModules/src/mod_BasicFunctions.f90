@@ -168,6 +168,13 @@ contains
 
     end function getArrayMean1D
 
+    function trapZ(y, dx, n) result(res)
+        integer(int32), intent(in) :: n
+        real(real64), intent(in) :: dx, y(n)
+        real(real64) :: res
+        res = 0.5d0 * SUM(y(2:n) + y(1:n-1)) * dx
+    end function trapZ
+
 
 
 end module mod_BasicFunctions

@@ -237,7 +237,7 @@ contains
             Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
             RFuture = b - Ax
             resFuture = SQRT(SUM(RFuture**2))
-            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-8) then
+            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-6) then
                 converge = .true.
                 exit
             end if

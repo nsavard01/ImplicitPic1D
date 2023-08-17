@@ -15,7 +15,7 @@ from generateBoundExample import *
 #5e14
 model5e14 = np.load('BoundModels/model_5e+14nave_5Te_1Ti.npy')
 
-test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test/')
+
 Exp_128PPC_0p75Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_128PPC_0p75Deb_0p2delT/')
 Exp_1024PPC_0p75Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p75Deb_0p2delT/')
 Exp_1024PPC_0p5Deb_0p2delT_5e14 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_5e14_1024PPC_0p5Deb_0p2delT/')
