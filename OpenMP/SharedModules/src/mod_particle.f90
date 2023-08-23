@@ -47,12 +47,12 @@ contains
         self % mass = mass
         self % q = q
         self % w_p = w_p
-        self % finalIdx = finalIdx/numThread
+        self % finalIdx = finalIdx
         self%accumWallLoss = 0.0d0
         self%accumEnergyLoss = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread))
-        self%N_p = N_p/numThread
+        self%N_p = N_p
         self%energyLoss = 0.0d0
         self%wallLoss = 0
     end function particle_constructor

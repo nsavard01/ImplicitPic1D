@@ -426,7 +426,7 @@ contains
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         call self%depositRho(particleList)
-        call self%solve_CG_Poisson(world)
+        call self%solve_tridiag_Poisson(world)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)
     end subroutine solvePotential
