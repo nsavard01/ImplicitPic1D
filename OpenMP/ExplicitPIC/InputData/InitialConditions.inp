@@ -9,5 +9,5 @@
 0.25d0 ! Fraction Debye length
 10 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
-Explicit_2p5e16_100PPD_0p5Deb_0p2delT !save file name
+Explicit_2p5e16_600PPD_0p5Deb_0p2delT_eps40 !save file name
 END

@@ -13,10 +13,15 @@ from generateBoundExample import *
 #%%
 
 
-model = np.load('BoundModels/model_2p5e+16nave_5Te_1Ti.npy')
+model = np.load('BoundModels/modelNonTruncSparse_2p5e+16nave_5Te_1Ti.npy')
+modelOther = np.load('BoundModels/modelNonTrunc_2p5e+16nave_5Te_1Ti.npy')
 
 Exp_1000PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1000PPD_0p5Deb_0p2delT_2p5e16/')
 Exp_500PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_500PPD_0p5Deb_0p2delT/')
+Exp_300PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_300PPD_0p5Deb_0p2delT/')
+Exp_200PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_200PPD_0p5Deb_0p2delT/')
+Exp_148PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_148PPD_0p5Deb_0p2delT/')
+Exp_128PPC_0p5Deb_0p2delT_2p5e16_eps40 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_600PPD_0p5Deb_0p2delT_eps40/')
 Exp_100PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_100PPD_0p5Deb_0p2delT/')
 Exp_128PPC_0p75Deb_0p2delT_2p5e16_CG = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_0p75Deb_0p2delT_CG/')
 Exp_128PPC_1Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_128PPC_1Deb_0p2delT/')
@@ -43,6 +48,13 @@ Exp_32PPC_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPi
 NGP_1000PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1000PPD_2p0delT_32nodes/')
 NGP_500PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_500PPD_2p0delT_32nodes/')
 NGP_100PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_100PPD_2p0delT_32nodes/')
+NGP_75PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_75PPD_2p0delT_32nodes/')
+NGP_50PPD_32nodes_2p0delT_2p5e16_1e3eps = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_50PPD_2p0delT_32nodes_1e3eps/')
+NGP_50PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_50PPD_2p0delT_32nodes/')
+NGP_1902PPD_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1902PPD_2p0delT_64nodes/')
+NGP_1902PPD_64nodes_2p0delT_2p5e16_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1902PPD_2p0delT_64nodes_even/')
+NGP_951PPD_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_951PPD_2p0delT_64nodes/')
+NGP_475PPD_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_475PPD_2p0delT_64nodes/')
 NGP_128PPC_100nodes_2p0delT_2p5e16_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_100nodes_evenGrid/')
 NGP_128PPC_200nodes_2p0delT_2p5e16_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_200nodes_evenGrid/')
 NGP_128PPC_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_128PPC_2p0delT_64nodes/')
@@ -70,20 +82,43 @@ NGP_256PPC_11nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Im
 NGP_64PPC_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_64PPC_2p0delT_32nodes/')
 NGP_64PPC_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_64PPC_2p0delT_64nodes/')
 NGP_1024PPC_32nodes_2p0delT_2p5e16_CG = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_2p0delT_32nodes_CG/')
+test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test/')
+
+convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
+convergenceLabelExp = [r'Explicit', 'Implicit']
+
+compareModelToDatas(convergenceDataExp, convergenceLabelExp, modelOther)
+
+convergenceDataChangePPC = [Exp_32PPC_0p5Deb_0p2delT_2p5e16, Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_128PPC_64nodes_2p0delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
+convergenceLabelChangePPC = [r'Exp., 32 PPC', 'Exp., 128 PPC', 'Imp., 128 PPC', 'Imp., 2048 PPC']
+
+compareModelToDatasRes(convergenceDataChangePPC, convergenceLabelChangePPC, modelOther)
 
 
-convergenceData = [Exp_128PPC_0p15Deb_0p05delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
-convergenceLabel = ['Explicit', 'Implicit']
+# bitchPlease = [Exp_148PPD_0p5Deb_0p2delT_2p5e16, Exp_128PPC_0p5Deb_0p2delT_2p5e16_eps40]
+# labelPlease = [r'Exp., 5 PPC, $\epsilon_r$ = $\epsilon_0$', r'Exp. 128 PPC, $\epsilon_r$ = 40$\epsilon_0$']
+# compareModelToDatasRes(bitchPlease, labelPlease, modelOther)
 
-#compareModelToDatas(convergenceData, convergenceLabel, model)
+# comparePPCData = [Exp_64PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16, NGP_512PPC_64nodes_2p0delT_2p5e16, NGP_64PPC_64nodes_2p0delT_2p5e16]
+# comparePPCLabel = ['Exp., 64 PPC', 'Imp., 2048 PPC', 'Imp., 512 PPC', 'Imp., 64 PPC']
 
-comparePPCData = [Exp_64PPC_0p5Deb_0p2delT_2p5e16,  NGP_2048PPC_64nodes_2p0delT_2p5e16, NGP_512PPC_64nodes_2p0delT_2p5e16, NGP_64PPC_64nodes_2p0delT_2p5e16]
-comparePPCLabel = ['Exp., 64 PPC', 'Imp., 2048 PPC', 'Imp., 512 PPC', 'Imp., 64 PPC']
+# compareRefToDatasRes(comparePPCData, comparePPCLabel, Exp_128PPC_0p15Deb_0p05delT_2p5e16)
 
-#compareModelToDatas(comparePPCData, comparePPCLabel, model)
+# comparePPDData = [Exp_64PPC_0p5Deb_0p2delT_2p5e16, NGP_1902PPD_64nodes_2p0delT_2p5e16, NGP_951PPD_64nodes_2p0delT_2p5e16, 
+#                   NGP_475PPD_64nodes_2p0delT_2p5e16]
+# comparePPDLabel = ['Exp., 60864 PPD', 'Imp., 60864 PPD', 'Imp. 30432 PPD', 'Imp. 15200 PPD']
 
-comparePPDData = [Exp_1000PPD_0p5Deb_0p2delT_2p5e16, NGP_1000PPD_32nodes_2p0delT_2p5e16, Exp_500PPD_0p5Deb_0p2delT_2p5e16,
-                  NGP_500PPD_32nodes_2p0delT_2p5e16, Exp_100PPD_0p5Deb_0p2delT_2p5e16, NGP_100PPD_32nodes_2p0delT_2p5e16]
-comparePPDLabel = ['Exp., 1000 PPD','Imp., 1000 PPD', 'Exp., 500 PPD', 'Imp., 500 PPD', 'Exp., 100 PPD', 'Imp., 100 PPD']
+# compareRefToDatasRes(comparePPDData, comparePPDLabel, Exp_128PPC_0p15Deb_0p05delT_2p5e16)
 
-compareModelToDatas(comparePPDData, comparePPDLabel, model)
+comparePPDData = [Exp_148PPD_0p5Deb_0p2delT_2p5e16, NGP_100PPD_32nodes_2p0delT_2p5e16, NGP_75PPD_32nodes_2p0delT_2p5e16,
+                  NGP_50PPD_32nodes_2p0delT_2p5e16, NGP_50PPD_32nodes_2p0delT_2p5e16_1e3eps]
+comparePPDLabel = ['Exp., 4736 PPD', 'Imp., 3200 PPD', 'Imp., 2400 PPD', 'Imp., 1600 PPD', 'Imp., 1600 PPD, low eps']
+
+compareRefToDatasRes(comparePPDData, comparePPDLabel, Exp_128PPC_0p15Deb_0p05delT_2p5e16)
+
+# compareGwenaelData = [Exp_64PPC_0p5Deb_0p2delT_2p5e16, NGP_64PPC_64nodes_2p0delT_2p5e16, 
+#                       NGP_951PPD_64nodes_2p0delT_2p5e16, NGP_475PPD_64nodes_2p0delT_2p5e16]
+# compareGwenaelLabel = ['Exp., 60864 PPD',  'Imp., 64 PPC', 
+#                       'Imp., 30432 PPD', 'Imp., 15200 PPD']
+# compareRefToDatasRes(compareGwenaelData, compareGwenaelLabel, Exp_128PPC_0p15Deb_0p05delT_2p5e16)
+# compareModelToDatas(compareGwenaelData, compareGwenaelLabel, model)

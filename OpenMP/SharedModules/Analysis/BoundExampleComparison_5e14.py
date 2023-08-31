@@ -28,5 +28,5 @@ NGP_2048PPC_16nodes_2p0delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Imp
 NGP_1024PPC_32nodes_0p2delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_1024PPC_0p2delT_32nodes/')
 NGP_128PPC_64nodes_2p0delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_128PPC_2p0delT_64nodes/')
 NGP_128PPC_128nodes_2p0delT_5e14 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_5e14_128PPC_2p0delT_128nodes/')
-testNGP = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test/')
+
 
