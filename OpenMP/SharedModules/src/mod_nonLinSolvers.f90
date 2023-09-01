@@ -81,7 +81,7 @@ contains
         SELECT CASE (solverType)
         CASE(1)
             allocate(inputJFNK(10))
-            iplvl = 0 ! print level
+            iplvl = 4 ! print level
             inputJFNK = 0
             inputJFNK(1) = maxIter ! maximum iterations
             inputJFNK(2) = 0 !ijacv
@@ -89,7 +89,7 @@ contains
             inputJFNK(4) = m_Anderson ! maximum krylov subspace dimension
             inputJFNK(5) = 0 !ipre
             inputJFNK(9) = -1
-            inputJFNK(6) = m_Anderson
+            inputJFNK(6) = m_Anderson*10
             inputJFNK(10) = 2 ! eta with gamma and alpha
             etamax = 0.8d0 ! eta max
             choice2_exp = 1.5d0 ! alpha
@@ -226,10 +226,7 @@ contains
                 phi_k(:, MODULO(i+1, m_Anderson+1) + 1) = phi_k(:, MODULO(i+1, m_Anderson+1) + 1) + alpha(j + 1) * (Beta_k*Residual_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1))
             end do
             solver%phi_f = phi_k(:, MODULO(i+1, m_Anderson+1) + 1)
-            
         end do
-        
-
     end subroutine solveDivAmpereAnderson
 
     subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
@@ -315,6 +312,7 @@ contains
             print *, "in analytical jacobian if block"
         else if (ijob == 1) then
             call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, v, z)
+            print *, 'In solve tridiag?'
         end if
         itrmjv = 0
     end subroutine jacNitsol
@@ -332,7 +330,7 @@ contains
         call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, del_t, ipar, itrmf)
         initialNorm = dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
-        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r*initialNorm, eps_r,inputJFNK, info, rworkSolver, del_t, ipar, iterm, ddot, dnrm2)
+        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), eps_r,inputJFNK, info, rworkSolver, del_t, ipar, iterm, ddot, dnrm2)
         SELECT CASE (iterm)
         CASE(0)
             iterNumPicard = info(4)
@@ -344,6 +342,8 @@ contains
             print *, "Nitsol error with iterm == ", iterm
             stop
         END SELECT
+        print *, 'iterNumPicard is:', iterNumPicard
+        stop
     end subroutine solveJFNK
 
     subroutine adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r)

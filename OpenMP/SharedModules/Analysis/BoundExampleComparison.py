@@ -27,6 +27,7 @@ NGP_1024PPC_32nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Imp
 NGP_1000PPD_32nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_1000PPD_2p0delT_32nodes/')
 NGP_500PPD_32nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_500PPD_2p0delT_32nodes/')
 NGP_250PPD_32nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_250PPD_2p0delT_32nodes/')
+NGP_250PPD_32nodes_2p0delT_1e18_eps1e4 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_250PPD_2p0delT_32nodes_eps1e-4/')
 NGP_125PPD_32nodes_2p0delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_125PPD_2p0delT_32nodes/')
 NGP_2048PPC_32nodes_2p0delT_1e18_CG = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_1e18_2048PPC_2p0delT_32nodes_CG/')
 
@@ -35,9 +36,9 @@ Exp_1000PPD_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPi
 Exp_1500PPD_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_1500PPD_0p5Deb_0p2delT/')
 Exp_2000PPD_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1e18_2000PPD_0p5Deb_0p2delT/')
 
-compareData = [Exp_2000PPD_0p5Deb_0p2delT_1e18, NGP_1000PPD_32nodes_2p0delT_1e18, NGP_500PPD_32nodes_2p0delT_1e18, 
-                NGP_250PPD_32nodes_2p0delT_1e18]
-compareLabel = ['Exp., 64000 PPD' ,'Imp., 32000 PPD', 'Imp., 16000 PPD', 'Imp., 8000 PPD']
+compareData = [Exp_2000PPD_0p5Deb_0p2delT_1e18, NGP_500PPD_32nodes_2p0delT_1e18, 
+                NGP_250PPD_32nodes_2p0delT_1e18, NGP_250PPD_32nodes_2p0delT_1e18_eps1e4]
+compareLabel = ['Exp., 64000 PPD' , 'Imp., 16000 PPD', 'Imp., 8000 PPD', 'Imp., 8000 PPD, \n low res.']
 compareRefToDatasRes(compareData, compareLabel, Exp_128PPC_0p5Deb_0p2delT_1e18)
 
 # compareDataGood = [NGP_2048PPC_32nodes_2p0delT_1e18_CG, Exp_128PPC_0p75Deb_0p2delT_1e18]

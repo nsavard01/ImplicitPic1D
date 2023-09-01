@@ -164,7 +164,6 @@ def compareRefToDatasRes(dataList, labelList, ref):
     
     ax4.set_ylabel(r'Total Wall Time for Solver (s)', fontsize = 12)
     
-    
 
     
 def compareModelToDatas(dataList, labelList, model):

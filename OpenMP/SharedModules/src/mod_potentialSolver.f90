@@ -197,12 +197,12 @@ contains
         m = self%b_tri(NumberXNodes)-cp(NumberXNodes-1)*self%a_tri(NumberXNodes-1)
         dp(NumberXNodes) = (d(NumberXNodes)-dp(NumberXNodes-1)*self%a_tri(NumberXNodes-1))/m
     ! initialize phi_f
+        !d = self%phi_f
         self%phi_f(NumberXNodes) = dp(NumberXNodes)
     ! solve for x from the vectors c-prime and d-prime
         do i = NumberXNodes-1, 1, -1
             self%phi_f(i) = dp(i)-cp(i)*self%phi_f(i+1)
         end do
-
     end subroutine solve_tridiag_Ampere
 
     subroutine solve_CG_Ampere(self, world, del_t)
