@@ -14,7 +14,7 @@ module mod_potentialSolver
     public :: potentialSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: rho_const
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
@@ -40,7 +40,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
         allocate(self % J(NumberXNodes-1, numThread), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
-        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
+        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes-1))
         call construct_diagMatrix(self, world)
         self % rho = 0.0d0
         self % J = 0.0d0
@@ -63,7 +63,7 @@ contains
             self%phi(NumberXNodes) = 0.0d0
         END SELECT
         self%phi_f = self%phi  
-
+        self%EField = 0.0d0
     end function potentialSolver_constructor
 
     subroutine construct_diagMatrix(self, world)
@@ -138,7 +138,7 @@ contains
             self%phi(i) = dp(i)-cp(i)*self%phi(i+1)
         end do
         self%phi_f = self%phi
-
+        !self%EField = (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Poisson
 
     function getError_tridiag_Poisson(self, world) result(res)
@@ -203,6 +203,7 @@ contains
         do i = NumberXNodes-1, 1, -1
             self%phi_f(i) = dp(i)-cp(i)*self%phi_f(i+1)
         end do
+        !self%EField = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
 
     subroutine solve_CG_Ampere(self, world, del_t)
