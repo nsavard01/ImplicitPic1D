@@ -139,6 +139,7 @@ contains
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a
         integer(int32) :: subStepNum, j, i, l_cell, iThread
         solver%J = 0.0d0
+        solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         loopSpecies: do j = 1, numberChargedParticles
             !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, &
                     subStepNum, l_cell)
@@ -263,6 +264,7 @@ contains
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a
         integer(int32) :: subStepNum, j, i, l_cell, delIdx, iThread
+        solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         loopSpecies: do j = 1, numberChargedParticles
             !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, &
                     subStepNum, delIdx, l_cell)
