@@ -12,6 +12,7 @@ import pandas as pd
 import scipy
 import glob, os
 import matplotlib.animation as animation
+import math
 
 eps_0 = constants.epsilon_0
 c = constants.c

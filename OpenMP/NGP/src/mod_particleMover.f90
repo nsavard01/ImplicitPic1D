@@ -11,15 +11,6 @@ module mod_particleMover
 
 contains
 
-    pure function getEField(solver, l_cell, world) result(EField)
-        !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
-        class(potentialSolver), intent(in) :: solver
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: l_cell
-        real(real64) :: EField
-        EField = 0.5d0 * (solver%phi_f(l_cell) + solver%phi(l_cell) - solver%phi(l_cell+1) - solver%phi_f(l_cell + 1)) / world%dx_dl(l_cell)
-    end function getEField
-
     ! subroutine getl_BoundaryInitial(l_sub, v_sub, l_alongV, l_awayV)
     !     ! get point in l-space on boundary which is away or towards boundary based on velocity direction, when particle between nodes
     !     real(real64), intent(in out) :: l_alongV, l_awayV
@@ -160,7 +151,7 @@ contains
                 l_cell = INT(l_sub)
                 l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
                 l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
-                a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * getEField(solver, l_cell, world)
+                a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * solver%EField(l_cell)
                 call particleSubStepInitialTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, l_cell, a)
                 if (del_tau >= del_t) then
                     ! Add directly to J with no substep
@@ -199,7 +190,7 @@ contains
                 do while((timePassed < del_t))
                     l_alongV = l_sub + SIGN(1.0d0, v_sub)
                     l_cell = INT(l_sub + SIGN(0.5d0, v_sub))
-                    a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * getEField(solver, l_cell, world)
+                    a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * solver%EField(l_cell)
                     call particleSubStepTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_cell, a)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
@@ -288,7 +279,7 @@ contains
                 l_cell = INT(l_sub)
                 l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
                 l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
-                a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * getEField(solver, l_cell, world)
+                a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * solver%EField(l_cell)
                 call particleSubStepInitialTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, l_cell, a)
                 if (del_tau >= del_t) then
                     ! Add directly to J with no substep
@@ -339,7 +330,7 @@ contains
                 do while((timePassed < del_t))
                     l_alongV = l_sub + SIGN(1.0d0, v_sub)
                     l_cell = INT(l_sub + SIGN(0.5d0, v_sub))
-                    a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * getEField(solver, l_cell, world)
+                    a = (particleList(j)%q / particleList(j)%mass / 2.0d0) * solver%EField(l_cell)
                     call particleSubStepTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_cell, a)
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep

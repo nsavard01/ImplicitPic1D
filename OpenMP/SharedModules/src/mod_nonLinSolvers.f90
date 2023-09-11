@@ -176,6 +176,7 @@ contains
         ldb = MAX(m_Anderson, (NumberXNodes))
         lwork= MIN((NumberXNodes),m_Anderson) + ldb
         phi_k(:,1) = solver%phi
+        solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         call depositJ(solver, particleList, world, del_t)
         initialNorm = SQRT(SUM(solver%phi**2))
         call solver%solve_tridiag_Ampere(world, del_t)
@@ -188,11 +189,13 @@ contains
             index = MODULO(i, m_Anderson+1) + 1
             m_k = MIN(i, m_Anderson)
             ldb = MAX(m_k, (NumberXNodes))
+            solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
             call depositJ(solver,particleList, world, del_t)
             call solver%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
             if (normResidual(index) < eps_r*(initialR)) then
+                solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
                 call moveParticles(solver,particleList, world, del_t)
                 solver%phi = solver%phi_f
                 iterNumPicard = i

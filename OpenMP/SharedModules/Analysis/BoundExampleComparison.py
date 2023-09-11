@@ -38,8 +38,10 @@ Exp_2000PPD_0p5Deb_0p2delT_1e18 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPi
 
 compareData = [Exp_2000PPD_0p5Deb_0p2delT_1e18, NGP_500PPD_32nodes_2p0delT_1e18, 
                 NGP_250PPD_32nodes_2p0delT_1e18, NGP_250PPD_32nodes_2p0delT_1e18_eps1e4]
-compareLabel = ['Exp., 64000 PPD' , 'Imp., 16000 PPD', 'Imp., 8000 PPD', 'Imp., 8000 PPD, \n low res.']
-compareRefToDatasRes(compareData, compareLabel, Exp_128PPC_0p5Deb_0p2delT_1e18)
+compareLabel = ['Exp., 64000 NSP' , 'Imp., 16000 NSP', 'Imp., 8000 NSP', 'Imp., 8000 NSP, \n low res.']
+
+compareRefToDatasAbsRes(compareData, compareLabel, Exp_128PPC_0p5Deb_0p2delT_1e18)
+compareRefToDatasRes(compareData, compareLabel, Exp_128PPC_0p5Deb_0p2delT_1e18, 'ICIS2023/lowRes1e18')
 
 # compareDataGood = [NGP_2048PPC_32nodes_2p0delT_1e18_CG, Exp_128PPC_0p75Deb_0p2delT_1e18]
 # compareLabelGood = ['Imp., 63488 PPD', 'Exp., 513408 PPD']
