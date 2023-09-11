@@ -163,7 +163,7 @@ contains
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32) :: i
-        real(real64) :: gridField(NumberXNodes-1), k, A, F
+        real(real64) :: k, A, F
         self%grid(1) = 0.0d0
         self%grid(NumberXNodes) = L_domain
         F = 100.0d0 * del_x
