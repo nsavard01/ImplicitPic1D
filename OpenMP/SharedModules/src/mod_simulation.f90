@@ -717,7 +717,7 @@ contains
             do k = 1, numThread
                 do i=1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)
-                    if (intPartV > 0 .or. intPartV < binNumber*2+1) VHist(intPartV) = VHist(intPartV) + 1
+                    if (intPartV > 0 .and. intPartV < binNumber*2+1) VHist(intPartV) = VHist(intPartV) + 1
                 end do
             end do
             currentTime = currentTime + currDel_t
