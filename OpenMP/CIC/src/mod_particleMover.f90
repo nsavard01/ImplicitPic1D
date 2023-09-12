@@ -5,8 +5,9 @@ module mod_particleMover
     use mod_particle
     use mod_domain
     use mod_potentialSolver
+    use omp_lib
     implicit none
-    integer(int32) :: idxReFlux(1000, 2), reFluxMaxIdx(2), delIdx(2)
+
 
 contains
     
@@ -18,8 +19,7 @@ contains
         integer(int32), intent(in) :: l_cell
         real(real64) :: EField, d
         d = l_p - real(l_cell, kind = real64) + 0.5d0
-        EField = ((solver%phi_f(l_cell) + solver%phi(l_cell) - solver%phi(l_cell+1) - solver%phi_f(l_cell + 1)) * d +  &
-        (solver%phi_f(l_cell-1) + solver%phi(l_cell-1) - solver%phi(l_cell) - solver%phi_f(l_cell)) * (1.0d0 - d)) * 0.5d0/world%nodeVol(l_cell)
+        EField = (solver%EField(l_cell) * d + solver%EField(l_cell-1) * (1.0d0 - d)) / world%nodeVol(l_cell)
     end function getEField
 
     function getEFieldNeumann(solver, l_p, l_cell, world) result(EField)
@@ -30,16 +30,9 @@ contains
         integer(int32), intent(in) :: l_cell
         real(real64) :: EField, d
         integer(int32) :: l_inner
-        d = l_p - real(l_cell, kind = real64)
-        if (l_cell == NumberXNodes) then
-            l_inner = -1
-        else if (l_cell == 1) then
-            l_inner = 1
-        else
-            print *, "l_cell in _getEFieldNeumann_ is incorrect!"
-            stop
-        end if
-        EField = ((solver%phi_f(l_cell) + solver%phi(l_cell) - solver%phi(l_cell + l_inner) - solver%phi_f(l_cell + l_inner)) * (d))/world%nodeVol(l_cell)
+        d = 2.0d0 * ABS(l_p - real(l_cell, kind = real64))
+        l_inner = INT(l_p)
+        EField = (solver%EField(l_inner) * d)/world%nodeVol(l_cell)
     end function getEFieldNeumann
 
     pure function getEFieldPeriodic(solver, l_p, l_cell, world) result(EField)
@@ -50,8 +43,7 @@ contains
         integer(int32), intent(in) :: l_cell
         real(real64) :: EField, d
         d = l_p - real(l_cell, kind = real64) + 0.5d0
-        EField = ((solver%phi_f(1) + solver%phi(1) - solver%phi(2) - solver%phi_f(2)) * d/2.0d0 +  &
-        (solver%phi_f(NumberXNodes-1) + solver%phi(NumberXNodes-1) - solver%phi(1) - solver%phi_f(1)) * (1.0d0 - d)/2.0d0)/world%nodeVol(l_cell)
+        EField = (solver%EField(1) * d +  solver%EField(NumberXNodes-1) * (1.0d0 - d))/world%nodeVol(l_cell)
     end function getEFieldPeriodic
 
     pure function getEFieldDirichlet(solver, l_p, l_cell, world) result(EField)
@@ -60,9 +52,10 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: l_p
         integer(int32), intent(in) :: l_cell
-        real(real64) :: EField, d
-        d = l_p - real(l_cell, kind = real64)
-        EField = SIGN(1.0, d) * (solver%phi_f(l_cell) + solver%phi(l_cell) - solver%phi(l_cell+ INT(SIGN(1.0, d))) - solver%phi_f(l_cell + INT(SIGN(1.0, d))))/world%nodeVol(l_cell)/2.0d0
+        real(real64) :: EField
+        integer(int32) :: l_inner
+        l_inner = INT(l_p)
+        EField = solver%EField(l_inner)/world%nodeVol(l_cell)
     end function getEFieldDirichlet
 
     subroutine getDelTauAlongVelocity(nodeVol, a, l_alongV, l_sub, l_f, v_sub, l_cell, del_tau)
@@ -114,13 +107,13 @@ contains
     !real(real64), external :: fieldFunc
     real(real64) :: del_tau_tmp
     del_tau = del_t
-    a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
+    a = 0.5d0 * (part%q / part%mass) * fieldFunc(solver,(l_sub + l_alongV)*0.5d0, l_cell, world)
     ! Particle first between nodes, so solve quadratic for that particle depending on conditions
     if (v_sub/=0.0d0) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
         call getDelTauAlongVelocity(world%nodeVol, a, l_alongV, l_sub, l_f, v_sub, l_cell, del_tau)
         if (del_tau >= del_t) then
             ! boundary opposite direction of v
-            a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,(l_sub + l_awayV)/2.0d0, l_cell, world)
+            a = 0.5d0 * (part%q / part%mass) * fieldFunc(solver,(l_sub + l_awayV)*0.5d0, l_cell, world)
             if (a*v_sub < 0) then
                 c = (l_sub - l_awayV) * world%nodeVol(l_cell)
                 del_tau_tmp = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
@@ -130,7 +123,10 @@ contains
                     l_f = l_awayV
                 end if
                 if (del_tau <= 0) then
-                    stop "Have issue with del_tau for v,a in opposite direction, boundary opposite v"
+                    print *, "l_sub is:", l_sub
+                    print *, 'l_f is:', l_f
+                    print *, 'v_sub is:', v_sub
+                    stop "Have issue with initial substep del_tau for v,a in opposite direction, boundary opposite v"
                 end if
             end if  
         end if
@@ -178,14 +174,14 @@ contains
         !real(real64), external :: fieldFunc
         del_tau = del_t - timePassed
         ! get index cell where field and dx_dl is evaluated
-        a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,(l_sub + l_alongV)/2.0d0, l_cell, world)
+        a = 0.5d0 * (part%q / part%mass) * fieldFunc(solver,(l_sub + l_alongV)*0.5d0, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
         if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
             call getDelTauAlongVelocity(world%nodeVol, a, l_alongV, l_sub, l_f, v_sub, l_cell, del_tau)
             if (del_tau >= del_t-timePassed) then
                 ! For particles returning to boundary, make guess for maximum distance could go before v_f = 0 in half sub-step
                 if (ABS((del_t - timePassed) *v_sub/4.0d0/world%nodeVol(l_cell)) < 1.0) then
-                    a = (part%q / part%mass / 2.0d0) * fieldFunc(solver,l_sub + (del_t - timePassed) *v_sub/8.0d0/world%nodeVol(l_cell), l_cell, world)
+                    a = 0.5d0 * (part%q / part%mass) * fieldFunc(solver,l_sub + (del_t - timePassed) *v_sub/8.0d0/world%nodeVol(l_cell), l_cell, world)
                     if (a*v_sub < 0) then
                         del_tau_tmp = ABS(v_sub/a)
                         if (del_tau_tmp < del_tau) then
@@ -229,7 +225,7 @@ contains
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_awayV, l_alongV, a, c
         integer(int32), intent(in) :: l_cell
-        a = (part%q / part%mass / 2.0d0) * getEFieldDirichlet(solver,l_sub, l_cell, world)
+        a = 0.5d0 * (part%q / part%mass) * getEFieldDirichlet(solver,l_sub, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
         if ((v_sub/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field, never have to check)
             c = (l_sub - l_alongV) * world%nodeVol(l_cell)
@@ -278,7 +274,7 @@ contains
         type(Particle), intent(in) :: part
         real(real64), intent(in out) :: l_sub, l_f, v_sub, del_tau, l_alongV, a, c
         integer(int32), intent(in) :: l_cell
-        a = (part%q / part%mass / 2.0d0) * getEFieldDirichlet(solver,l_sub, l_cell, world)
+        a = 0.5d0 * (part%q / part%mass) * getEFieldDirichlet(solver,l_sub, l_cell, world)
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
         if ((a/=0.0d0)) then ! make first case, since pretty much always likely to be the case (could just not have, assume always field exists, never have to check)
             c = (l_sub - l_alongV) * world%nodeVol(l_cell)
@@ -340,17 +336,11 @@ contains
         del_tau = del_t - timePassed
         del_tau_sqr = del_tau**2
         real_l_cell = real(l_cell, kind = real64)
-        l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(l_cell)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(l_cell+1)*q + & 
-        2.0d0* del_tau_sqr *real_l_cell*solver%phi(l_cell-1)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(l_cell)*q + &
-        2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_cell+1)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_cell-1)*q + &
-        2.0d0*del_tau_sqr  *l_sub*solver%phi(l_cell)*q - del_tau_sqr *l_sub*solver%phi(l_cell+1)*q - &
-        del_tau_sqr *l_sub*solver%phi(l_cell-1)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(l_cell)*q - &
-        del_tau_sqr *l_sub*solver%phi_f(l_cell+1)*q - del_tau_sqr *l_sub*solver%phi_f(l_cell-1)*q - &
-        del_tau_sqr *solver%phi(l_cell+1)*q + del_tau_sqr *solver%phi(l_cell-1)*q - del_tau_sqr *solver%phi_f(l_cell+1)*q + &
-        del_tau_sqr *solver%phi_f(l_cell-1)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
-        8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(l_cell)*q + del_tau_sqr *solver%phi(l_cell+1)*q + &
-        del_tau_sqr *solver%phi(l_cell-1)*q - 2.0d0*del_tau_sqr *solver%phi_f(l_cell)*q + del_tau_sqr *solver%phi_f(l_cell+1)*q + &
-        del_tau_sqr *solver%phi_f(l_cell-1)*q + 8.0d0*mass*dx**2)
+        l_f = (-2.0d0 * del_tau_sqr * real_l_cell*q*solver%EField(l_cell) + 2.0d0 * del_tau_sqr * real_l_cell*q*solver%EField(l_cell-1) + &
+            del_tau_sqr * l_sub*q*solver%EField(l_cell) - del_tau_sqr * l_sub*q*solver%EField(l_cell-1) + &
+            del_tau_sqr * q*solver%EField(l_cell) + del_tau_sqr * q*solver%EField(l_cell-1) + 4.0*del_tau*dx*mass*v_sub + &
+            4.0 * dx**2 * l_sub*mass)/(-del_tau_sqr * q*solver%EField(l_cell) + &
+            del_tau_sqr * q*solver%EField(l_cell-1) + 4.0 * dx**2 * mass)
         v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
         if (NINT(l_f) /= l_cell) then
             print *, "Have final l_f outside initial cell"
@@ -374,17 +364,11 @@ contains
         del_tau = del_t - timePassed
         del_tau_sqr = del_tau**2
         real_l_cell = real(l_cell, kind = real64)
-        l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(1)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(2)*q + & 
-        2.0d0* del_tau_sqr *real_l_cell*solver%phi(NumberXNodes-1)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(1)*q + &
-        2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(2)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(NumberXNodes-1)*q + &
-        2.0d0*del_tau_sqr  *l_sub*solver%phi(1)*q - del_tau_sqr *l_sub*solver%phi(2)*q - &
-        del_tau_sqr *l_sub*solver%phi(NumberXNodes-1)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(1)*q - &
-        del_tau_sqr *l_sub*solver%phi_f(2)*q - del_tau_sqr *l_sub*solver%phi_f(NumberXNodes-1)*q - &
-        del_tau_sqr *solver%phi(2)*q + del_tau_sqr *solver%phi(NumberXNodes-1)*q - del_tau_sqr *solver%phi_f(2)*q + &
-        del_tau_sqr *solver%phi_f(NumberXNodes-1)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
-        8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(1)*q + del_tau_sqr *solver%phi(2)*q + &
-        del_tau_sqr *solver%phi(NumberXNodes-1)*q - 2.0d0*del_tau_sqr *solver%phi_f(1)*q + del_tau_sqr *solver%phi_f(2)*q + &
-        del_tau_sqr *solver%phi_f(NumberXNodes-1)*q + 8.0d0*mass*dx**2)
+        l_f = (-2.0d0 * del_tau_sqr * real_l_cell*q*solver%EField(1) + 2.0d0 * del_tau_sqr * real_l_cell*q*solver%EField(NumberXNodes-1) + &
+            del_tau_sqr * l_sub*q*solver%EField(1) - del_tau_sqr * l_sub*q*solver%EField(NumberXNodes-1) + &
+            del_tau_sqr * q*solver%EField(1) + del_tau_sqr * q*solver%EField(NumberXNodes-1) + 4.0*del_tau*dx*mass*v_sub + &
+            4.0 * dx**2 * l_sub*mass)/(-del_tau_sqr * q*solver%EField(1) + &
+            del_tau_sqr * q*solver%EField(NumberXNodes-1) + 4.0 * dx**2 * mass)
         v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
         if (NINT(l_f) /= l_cell) then
             print *, "Have final l_f outside initial cell"
@@ -404,26 +388,21 @@ contains
         dx = world%nodeVol(l_cell)
         del_tau = del_t - timePassed
         del_tau_sqr = del_tau**2
-        if (l_cell == NumberXNodes) then
-            l_inner = NumberXNodes - 1
-        else
-            l_inner = 2
-        end if
         real_l_cell = real(l_cell, kind = real64)
-        l_f = (-4.0d0*del_tau**2 *real_l_cell*solver%phi(l_cell)*q + 2.0d0*del_tau**2 *real_l_cell *solver%phi(l_inner)*q + & 
-        2.0d0* del_tau_sqr *real_l_cell*solver%phi(l_inner)*q - 4.0d0*del_tau**2 *real_l_cell*solver%phi_f(l_cell)*q + &
-        2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + 2.0d0*del_tau_sqr *real_l_cell*solver%phi_f(l_inner)*q + &
-        2.0d0*del_tau_sqr  *l_sub*solver%phi(l_cell)*q - del_tau_sqr *l_sub*solver%phi(l_inner)*q - &
-        del_tau_sqr *l_sub*solver%phi(l_inner)*q + 2.0d0*del_tau_sqr *l_sub*solver%phi_f(l_cell)*q - &
-        del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - del_tau_sqr *l_sub*solver%phi_f(l_inner)*q - &
-        del_tau_sqr *solver%phi(l_inner)*q + del_tau_sqr *solver%phi(l_inner)*q - del_tau_sqr *solver%phi_f(l_inner)*q + &
-        del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*(del_t - timePassed)*mass*v_sub*dx + &
-        8.0d0*l_sub*mass*dx**2 )/(-2.0d0*del_tau_sqr *solver%phi(l_cell)*q + del_tau_sqr *solver%phi(l_inner)*q + &
-        del_tau_sqr *solver%phi(l_inner)*q - 2.0d0*del_tau_sqr *solver%phi_f(l_cell)*q + del_tau_sqr *solver%phi_f(l_inner)*q + &
-        del_tau_sqr *solver%phi_f(l_inner)*q + 8.0d0*mass*dx**2)
+        if (l_cell == NumberXNodes) then
+            l_inner = NumberXNodes-1
+            l_f = (2.0d0*del_tau_sqr*real_l_cell*q*solver%EField(l_inner) - del_tau_sqr*l_sub*q*solver%EField(l_inner) + &
+                2.0d0*del_tau*mass*v_sub*dx + 2.0d0*l_sub*mass* dx**2)/&
+                (del_tau_sqr*q*solver%EField(l_inner) + 2.0d0*mass * dx**2)
+        else
+            l_inner = 1
+            l_f = (2.0d0*del_tau_sqr*real_l_cell*q*solver%EField(l_inner) - del_tau_sqr*l_sub*q*solver%EField(l_inner) - &
+                2.0d0*del_tau*mass*v_sub*dx - 2.0d0*l_sub*mass* dx**2)/&
+                (del_tau_sqr*q*solver%EField(l_inner) - 2.0d0*mass * dx**2)
+        end if
         v_f = 2.0d0 * (l_f - l_sub) * dx / del_tau - v_sub
         if (NINT(l_f) /= l_cell) then
-            print *, "Have final l_f outside initial cell"
+            print *, "Have final l_f outside initial cell analytical mover neumann"
             print *, "particle charge is:", q
             print *, "l_sub is:", l_sub
             print *, "l_f is:", l_f
@@ -478,45 +457,45 @@ contains
     end if
     end subroutine picardIterParticles
 
-    subroutine depositJSubStep(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+    subroutine depositJSubStep(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
-        integer(int32), intent(in) :: l_cell
+        integer(int32), intent(in) :: l_cell, iThread
         real(real64) :: d
         d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-        solver%J(l_cell-1) = solver%J(l_cell-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
-        solver%J(l_cell) = solver%J(l_cell) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
+        solver%J(l_cell-1, iThread) = solver%J(l_cell-1, iThread) + 0.5d0 * (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
+        solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + 0.5d0 * d * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
     end subroutine depositJSubStep
 
-    subroutine depositJSubStepNeumann(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+    subroutine depositJSubStepNeumann(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
-        integer(int32), intent(in) :: l_cell
+        integer(int32), intent(in) :: l_cell, iThread
         real(real64) :: l_half
         l_half = 0.5d0*(l_sub + l_f)
-        solver%J(INT(l_half)) = solver%J(INT(l_half)) + ABS(l_half - real(l_cell, kind = real64)) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
+        solver%J(INT(l_half), iThread) = solver%J(INT(l_half), iThread) + ABS(l_half - real(l_cell, kind = real64)) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
+        ! solver%J(INT(l_half), iThread) = solver%J(INT(l_half), iThread) + 0.5d0 * (ABS(l_half - real(l_cell, kind = real64)) + 0.5d0) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
     end subroutine depositJSubStepNeumann
 
-    subroutine depositJSubStepPeriodic(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+    subroutine depositJSubStepPeriodic(solver, world, q, w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub, l_f
-        integer(int32), intent(in) :: l_cell
+        integer(int32), intent(in) :: l_cell, iThread
         real(real64) :: d
         d = (l_sub + l_f)/2.0d0 - REAL(l_cell, kind = real64) + 0.5d0
-        solver%J(NumberXNodes-1) = solver%J(NumberXNodes-1) + (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
-        solver%J(1) = solver%J(1) + d * w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
-
+        solver%J(NumberXNodes-1, iThread) = solver%J(NumberXNodes-1, iThread) + 0.5d0 * (1.0d0 - d) * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
+        solver%J(1, iThread) = solver%J(1, iThread) + 0.5d0 * d * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
     end subroutine depositJSubStepPeriodic
 
-    subroutine depositJSubStepDirichlet(solver, world, q, w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t)
+    subroutine depositJSubStepDirichlet(solver, world, q, w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t, iThread)
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: q, w_p, v_f, v_sub, del_tau, del_t, l_sub
-        integer(int32), intent(in) :: l_cell
-        solver%J(INT(l_sub)) = solver%J(INT(l_sub)) + w_p * q * (v_f + v_sub)*del_tau/2.0d0/world%nodeVol(l_cell)/del_t
+        integer(int32), intent(in) :: l_cell, iThread
+        solver%J(INT(l_sub), iThread) = solver%J(INT(l_sub), iThread) + 0.5d0 * w_p * q * (v_f + v_sub)*del_tau/world%nodeVol(l_cell)/del_t
     end subroutine depositJSubStepDirichlet
 
 
@@ -530,13 +509,16 @@ contains
     real(real64), intent(in) :: del_t
     !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
     real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
-    integer(int32) :: subStepNum, j, i, delIdx, l_cell
+    integer(int32) :: subStepNum, j, i, l_cell, iThread
     solver%J = 0.0d0
+    solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes))
     loopSpecies: do j = 1, numberChargedParticles
-        delIdx = 0
-        loopParticles: do i = 1, particleList(j)%N_p
-            v_sub = particleList(j)%phaseSpace(2,i)
-            l_sub = particleList(j)%phaseSpace(1,i)
+        !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c,&
+                    subStepNum, l_cell)
+        iThread = omp_get_thread_num() + 1 
+        loopParticles: do i = 1, particleList(j)%N_p(iThread)
+            v_sub = particleList(j)%phaseSpace(2,i, iThread)
+            l_sub = particleList(j)%phaseSpace(1,i, iThread)
             v_f = v_sub
             l_f = l_sub
             timePassed = 0.0d0
@@ -553,15 +535,15 @@ contains
                 if (del_tau >= del_t) then
                     call analyticalParticleMover(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                     !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-                    call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t) 
+                    call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t, iThread) 
                     if (NINT(l_f) /= NINT(l_sub)) then
-                        print *, "After initial domain substep, l_f is not in correct cell"
+                        print *, "After initial domain substep in regular domain, l_f is not in correct cell"
                         stop
                     end if
                     timePassed = del_t  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                    call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+                    call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread)
                     timePassed = timePassed + del_tau
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
                         print *, "l_sub is:", l_sub
@@ -581,7 +563,7 @@ contains
                     ! Add directly to J with no substep
                     l_f = v_sub * del_t / world%nodeVol(l_cell) + (a/ world%nodeVol(l_cell)) * del_t**2 + l_sub
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_t - v_sub
-                    call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_t, del_t)
+                    call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_t, del_t, iThread)
                     if (NINT(l_f) /= NINT(l_sub)) then
                         print *, "After initial Dirichlet substep, l_f is not in correct cell"
                         stop
@@ -589,7 +571,7 @@ contains
                     timePassed = del_t  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                    call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t)
+                    call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t, iThread)
                     timePassed = del_tau
                     if (l_f == l_cell) then ! if particle is now on node, must be boundary, exit
                         timePassed = del_t
@@ -618,15 +600,15 @@ contains
                     ! print *, "v_f is:", v_f
                     ! stop
                     !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-                    call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t) 
+                    call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t, iThread) 
                     if (NINT(l_f) /= NINT(l_sub)) then
-                        print *, "After initial domain substep, l_f is not in correct cell"
+                        print *, "After initial domain substep for neumann-symmetric, l_f is not in correct cell"
                         stop
                     end if
                     timePassed = del_t  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                    call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+                    call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread)
                     if (l_f == l_cell) v_f = -v_f
                     timePassed = timePassed + del_tau
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
@@ -644,7 +626,7 @@ contains
                 call getDelTauInitialSubStep(solver,world, particleList(j), l_sub, l_f, v_sub, del_tau, del_t, l_alongV, l_awayV, l_cell, a, c, getEFieldPeriodic)
                 if (del_tau >= del_t-timePassed) then
                     call analyticalParticleMoverPeriodic(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)    
-                    call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t) 
+                    call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t, del_t, iThread) 
                     if (NINT(l_f) /= NINT(l_sub)) then
                         print *, "After initial periodic substep, l_f is not in correct cell"
                         stop
@@ -657,7 +639,7 @@ contains
                     timePassed = del_t  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                    call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t)
+                    call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread)
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
                         print *, "l_sub is:", l_sub
                         print *, "l_f is:", l_f
@@ -689,14 +671,14 @@ contains
                         ! Add directly to J with no substep
                         call analyticalParticleMover(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                         !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-                        call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t)
+                        call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t, iThread)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
                         timePassed = del_t  
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                        call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
+                        call depositJSubStep(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread) 
                         timePassed = timePassed + del_tau
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
                             print *, l_f
@@ -714,7 +696,7 @@ contains
                         ! Add directly to J with no substep
                         l_f = v_sub * (del_t-timePassed) / world%nodeVol(l_cell) + (a/ world%nodeVol(l_cell)) * (del_t - timePassed)**2 + l_sub
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / (del_t - timePassed) - v_sub
-                        call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_t-timePassed, del_t)
+                        call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_t-timePassed, del_t, iThread)
                         if (NINT(l_f) /= l_cell) then
                             print *, "a is:", a
                             print *, world%nodeVol
@@ -729,7 +711,7 @@ contains
                         timePassed = del_t  
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                        call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t) 
+                        call depositJSubStepDirichlet(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_cell, v_f, v_sub, del_tau, del_t, iThread) 
                         if (l_f == l_cell) exit ! if particle is now on node, must be boundary, exit
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 0.5d0)) then
                             print *, "l_sub is:", l_sub
@@ -751,14 +733,14 @@ contains
                         ! Add directly to J with no substep
                         call analyticalParticleMoverNeumann(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
                         !call solver%picardIterParticles(world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-                        call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t)
+                        call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t, iThread)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
                         timePassed = del_t  
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                        call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
+                        call depositJSubStepNeumann(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread) 
                         if (l_f == l_cell) v_f = -v_f
                         timePassed = timePassed + del_tau
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
@@ -775,7 +757,7 @@ contains
                     if (del_tau >= del_t-timePassed) then
                         ! Add directly to J with no substep
                         call analyticalParticleMoverPeriodic(solver,world, particleList(j)%q, particleList(j)%mass, l_sub, l_f, v_sub, v_f, l_cell, del_t, timePassed)
-                        call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t)
+                        call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_t - timePassed, del_t, iThread)
                         if (NINT(l_f) /= l_cell) then
                             print *, "After final periodic substep, l_f is not in correct cell"
                             stop
@@ -788,7 +770,7 @@ contains
                         timePassed = del_t  
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
-                        call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t) 
+                        call depositJSubStepPeriodic(solver,world, particleList(j)%q, particleList(j)%w_p, l_sub, l_f, v_f, v_sub, l_cell, del_tau, del_t, iThread) 
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
                             print *, l_f
                             stop "l_f is not half integer after ogoing periodic subStep or it is too far away"
@@ -815,7 +797,7 @@ contains
                 stop "Have particles travelling outside domain!"
             end if
         end do loopParticles
-        
+        !$OMP end parallel
     end do loopSpecies
 
     end subroutine depositJ
@@ -831,13 +813,19 @@ contains
     real(real64), intent(in) :: del_t
     !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
     real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c
-    integer(int32) :: subStepNum, j, i, l_cell
-    delIdx = 0
-    reFluxMaxIdx = 0
+    integer(int32) :: subStepNum, j, i, l_cell, iThread, delIdx
+    solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes))
     loopSpecies: do j = 1, numberChargedParticles
-        loopParticles: do i = 1, particleList(j)%N_p
-            v_sub = particleList(j)%phaseSpace(2,i)
-            l_sub = particleList(j)%phaseSpace(1,i)
+        !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_alongV, l_awayV, a, c,&
+                    subStepNum, delIdx, l_cell)
+        iThread = omp_get_thread_num() + 1 
+        delIdx = 0
+        particleList(j)%refIdx(iThread) = 0
+        particleList(j)%energyLoss(:, iThread) = 0.0d0
+        particleList(j)%wallLoss(:, iThread) = 0.0d0
+        loopParticles: do i = 1, particleList(j)%N_p(iThread)
+            v_sub = particleList(j)%phaseSpace(2,i, iThread)
+            l_sub = particleList(j)%phaseSpace(1,i, iThread)
             v_f = v_sub
             l_f = l_sub
             timePassed = 0.0d0
@@ -858,9 +846,9 @@ contains
                         stop
                     end if
                     timePassed = del_t 
-                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread) 
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                     timePassed = timePassed + del_tau
@@ -887,19 +875,20 @@ contains
                         stop
                     end if
                     timePassed = del_t 
-                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread) 
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                     if (l_f == l_cell) then ! if particle is now on node, must be boundary, exit
-                        delIdx(j) = delIdx(j) + 1
+                        delIdx = delIdx + 1
                         timePassed = del_t
-                        solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
                         if (l_f == 1) then
-                            solver%particleChargeLoss(1, j) = solver%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
-                        else
-                            solver%particleChargeLoss(2, j) = solver%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                            particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
+                            particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                        else if (l_f == NumberXNodes) then
+                            particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
+                            particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
                         end if
                     else
                         timePassed = del_tau
@@ -925,15 +914,15 @@ contains
                         stop
                     end if
                     timePassed = del_t
-                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)  
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                     if (l_f == l_cell) then
                         v_f = -v_f
-                        reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
-                        idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                     end if
                     timePassed = timePassed + del_tau
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
@@ -961,9 +950,9 @@ contains
                         l_f = l_f - l_cell + 1
                     end if
                     timePassed = del_t
-                    particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)  
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                    particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)  
                 else
                     v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                     if ((l_f /= l_alongV) .and. (l_f /= l_awayV)) then
@@ -1001,9 +990,9 @@ contains
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
                         timePassed = del_t 
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread) 
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                         timePassed = timePassed + del_tau
@@ -1028,18 +1017,19 @@ contains
                             stop
                         end if
                         timePassed = del_t 
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread) 
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                         if (l_f == l_cell) then 
-                            delIdx(j) = delIdx(j) + 1
-                            solver%particleEnergyLoss = solver%particleEnergyLoss + particleList(j)%w_p * (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i)**2)) * particleList(j)%mass * 0.5d0 !J/m^2 in 1D
+                            delIdx = delIdx + 1
                             if (l_f == 1) then
-                                solver%particleChargeLoss(1, j) = solver%particleChargeLoss(1, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
-                            else
-                                solver%particleChargeLoss(2, j) = solver%particleChargeLoss(2, j) + particleList(j)%q * particleList(j)%w_p !C/m^2 in 1D
+                                particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
+                                particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                            else if (l_f == NumberXNodes) then
+                                particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
+                                particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
                             end if
                             exit ! if particle is now on node, must be boundary, exit
                         end if
@@ -1066,15 +1056,15 @@ contains
                             print *, "After ongoing substep, l_f is not in correct cell"
                         end if
                         timePassed = del_t 
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i) 
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread) 
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                         if (l_f == l_cell) then
                             v_f = -v_f
-                            reFluxMaxIdx(j) = reFluxMaxIdx(j) + 1
-                            idxReFlux(reFluxMaxIdx(j), j) = i - delIdx(j)
+                            particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                            particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                         end if
                         timePassed = timePassed + del_tau
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
@@ -1101,9 +1091,9 @@ contains
                             l_f = l_f - l_cell + 1
                         end if
                         timePassed = del_t
-                        particleList(j)%phaseSpace(1, i-delIdx(j)) = l_f
-                        particleList(j)%phaseSpace(2,i-delIdx(j)) = v_f
-                        particleList(j)%phaseSpace(3:4, i-delIdx(j)) = particleList(j)%phaseSpace(3:4, i)  
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)  
                     else
                         v_f = 2.0d0 * (l_f - l_sub) * world%nodeVol(l_cell) / del_tau - v_sub
                         if ((MOD(l_f, 0.5d0) /= 0.0d0) .or. (ABS(l_f - l_sub) > 1.0d0)) then
@@ -1135,7 +1125,11 @@ contains
             ! When not depositing, then updating particles, overwrite deleted indices
 
         end do loopParticles
-        particleList(j)%N_p = particleList(j)%N_p - delIdx(j)
+        particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
+        particleList(j)%delIdx(iThread) = delIdx
+        !$OMP end parallel
+        particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
+        particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
     end do loopSpecies
     end subroutine moveParticles
 

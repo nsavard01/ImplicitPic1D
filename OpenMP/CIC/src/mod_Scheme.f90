@@ -12,6 +12,9 @@ contains
     subroutine initializeScheme(schemeNum)
         integer(int32), intent(in out) :: schemeNum
         schemeNum = 1
+        print *, "--Scheme---"
+        print *, "CIC constant grid size between half nodes"
+        print *, '----------'
     end subroutine initializeScheme
 
     subroutine initialize_randUniform(part, world, irand)
