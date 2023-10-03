@@ -1,0 +1,14 @@
+ELECTRONS
+name	 NumParticles/thread   ArraySizeMultiplication
+-------------------------------------------
+e	  600		2
+-------------------------------------------
+
+
+IONS
+name   mass  charge 	NumParticles/thread   ArraySizeMultiplication
+--------------------------------------------------
+H+     1.     1. 		600    2
+--------------------------------------------------
+
+ENDFILE

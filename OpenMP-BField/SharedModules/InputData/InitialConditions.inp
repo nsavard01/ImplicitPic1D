@@ -1,0 +1,10 @@
+32 ! number of threads
+22.0d-6 ! simulation time
+1.d18 ! Initial number density (1/m^3) of particles
+5.0d0 ! T_e (eV)
+1.0d0 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+2.0d0 ! Fraction of initial 1/w_p for initial time step
+22.0d-6 ! amount of time to average final Diagnostics
+CIC_1e18_250PPD_2p0delT_32nodes !filename
+END
