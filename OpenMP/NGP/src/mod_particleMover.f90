@@ -5,6 +5,7 @@ module mod_particleMover
     use mod_particle
     use mod_domain
     use mod_potentialSolver
+    use mod_particleInjection
     use omp_lib
     implicit none
     ! Procedures for moving particles and depositing J 

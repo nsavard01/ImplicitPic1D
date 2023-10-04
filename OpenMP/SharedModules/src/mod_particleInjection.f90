@@ -8,6 +8,9 @@ module mod_particleInjection
     use omp_lib
     implicit none
     real(real64), allocatable :: energyAddColl(:)
+    logical :: addLostPartBool, refluxPartBool, injectionBool
+    integer(int32) :: injectionPartPerStep
+    real(real64) :: injectionFlux
 
 contains
 

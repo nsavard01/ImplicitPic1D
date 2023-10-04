@@ -121,6 +121,34 @@ contains
     !     end if
     ! end subroutine readRestart
 
+    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, injectionPartPerStep)
+        logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool
+        real(real64), intent(in out) :: injectionFlux
+        integer(int32), intent(in out) :: injectionPartPerStep
+        character(len=*), intent(in) :: InjFilename
+        integer(int32) :: tempInt, io
+        print *, ""
+        print *, "Reading initial inputs for particle injection:"
+        print *, "------------------"
+        open(10,file='../../SharedModules/InputData/'//InjFilename, IOSTAT=io)
+        read(10, *, IOSTAT = io) tempInt
+        addLostPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt
+        refluxPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt, injectionFlux, injectionPartPerStep
+        injectionBool = (tempInt == 1)
+        close(10)
+        print *, "Particle lost is reinjected:", addLostPartBool
+        print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
+        print *, "Particle injection on neumann boundary", injectionBool
+        if (injectionBool) then
+            print *, 'Particle injection flux:', injectionFlux
+            print *, 'Particle injection particle per step:', injectionPartPerStep
+        end if
+        print *, "------------------"
+        print *, ""
+    end subroutine readInjectionInputs
+
     subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, averagingTime, T_e, T_i
         integer(int32), intent(in out) :: numDiagnosticSteps, numThread

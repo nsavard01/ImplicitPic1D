@@ -7,6 +7,7 @@ program BoundPlasmaExample
     use mod_potentialSolver
     use mod_readInputs
     use mod_Scheme
+    use mod_particleInjection
     use mod_particleMover
     ! use mod_collisions
     use mod_nonLinSolvers
@@ -19,6 +20,7 @@ program BoundPlasmaExample
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
+    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, injectionFlux, injectionPartPerStep)
     call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
     ! E_i = globalSolver%getTotalPE(globalWorld, .false.)
