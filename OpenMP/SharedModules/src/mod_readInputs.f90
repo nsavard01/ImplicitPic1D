@@ -297,7 +297,7 @@ contains
         allocate(particleList(numberChargedParticles))
         do j=1, numberChargedParticles
             particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
-            call particleList(j) % initialize_n_ave(n_ave, (world%grid(NumberXNodes) - world%grid(1)))
+            particleList(j) % w_p = n_ave * (world%grid(NumberXNodes) - world%grid(1)) / SUM(particleList(j) % N_p)
             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
             call initialize_randUniform(particleList(j), world, irand)
             print *, 'Initializing ', particleList(j) % name

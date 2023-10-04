@@ -366,8 +366,8 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-                call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
@@ -392,8 +392,8 @@ contains
                 
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-                call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 densities = 0.0d0
@@ -494,8 +494,8 @@ contains
 
         !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
         call system_clock(startTime)
-        call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-        call refluxParticles(particleList, T_e, T_i, irand, world)
+        if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+        if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
         call system_clock(endTime)
         collisionTime = collisionTime + (endTime-startTime)
         densities = 0.0d0
@@ -611,8 +611,8 @@ contains
         do while(currentTime < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
-            call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-            call refluxParticles(particleList, T_e, T_i, irand, world)
+            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i+1, heatSkipSteps) == 0) then
@@ -672,8 +672,8 @@ contains
         do while(currentTime < checkTimeDivision)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
-            call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-            call refluxParticles(particleList, T_e, T_i, irand, world)
+            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             do k = 1, numThread
                 do i=1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)

@@ -150,44 +150,46 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 subStepNum = 0
-                l_cell = INT(l_sub)
-                l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
-                l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
-                a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * solver%EField(l_cell)
-                call particleSubStepInitialTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, l_cell, a)
-                if (del_tau >= del_t) then
-                    ! Add directly to J with no substep
-                    l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
-                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_t - v_sub
-                    timePassed = del_t
-                    if (INT(l_f) /= l_cell) then
-                        stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
-                    end if
-                    solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)/2.0d0/world%dx_dl(l_cell)
-                else
-                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
-                    timePassed = timePassed + del_tau
-                    solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
-                    if (MOD(l_f, 1.0d0) /= 0.0d0) then
-                        print *, l_f
-                        stop "l_f is not integer after subStep"
-                    end if
-                    firstStep: SELECT CASE (world%boundaryConditions(INT(l_f)))
-                    CASE(0)
-                        continue
-                    CASE(1)
+                if (MOD(l_sub, 1.0d0) /= 0.0d0) then
+                    l_cell = INT(l_sub)
+                    l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
+                    l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
+                    a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * solver%EField(l_cell)
+                    call particleSubStepInitialTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, l_cell, a)
+                    if (del_tau >= del_t) then
+                        ! Add directly to J with no substep
+                        l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
+                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_t - v_sub
                         timePassed = del_t
-                    CASE(2)
-                        v_f = -v_f
-                    CASE(3)
-                        l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
-                    CASE default
-                        print *, "Case does not exist in first substep, depositJ"
-                        stop
-                    END SELECT firstStep
-                    ! now final position/velocity becomes next starting position/velocity
-                    l_sub = l_f
-                    v_sub = v_f
+                        if (INT(l_f) /= l_cell) then
+                            stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
+                        end if
+                        solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)/2.0d0/world%dx_dl(l_cell)
+                    else
+                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                        timePassed = timePassed + del_tau
+                        solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + particleList(j)%w_p * particleList(j)%q * (v_f + v_sub)*del_tau/2.0d0/world%dx_dl(l_cell)/del_t
+                        if (MOD(l_f, 1.0d0) /= 0.0d0) then
+                            print *, l_f
+                            stop "l_f is not integer after subStep"
+                        end if
+                        firstStep: SELECT CASE (world%boundaryConditions(INT(l_f)))
+                        CASE(0)
+                            continue
+                        CASE(1)
+                            timePassed = del_t
+                        CASE(2)
+                            v_f = -v_f
+                        CASE(3)
+                            l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
+                        CASE default
+                            print *, "Case does not exist in first substep, depositJ"
+                            stop
+                        END SELECT firstStep
+                        ! now final position/velocity becomes next starting position/velocity
+                        l_sub = l_f
+                        v_sub = v_f
+                    end if
                 end if
                 do while((timePassed < del_t))
                     l_alongV = l_sub + SIGN(1.0d0, v_sub)
@@ -279,56 +281,58 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0
                 subStepNum = 0
-                l_cell = INT(l_sub)
-                l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
-                l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
-                a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * solver%EField(l_cell)
-                call particleSubStepInitialTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, l_cell, a)
-                if (del_tau >= del_t) then
-                    ! Add directly to J with no substep
-                    l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
-                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_t - v_sub
-                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
-                    particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
-                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
-                    timePassed = del_t
-                    if (INT(l_f) /= l_cell) then
-                        stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
-                    end if
-                    
-                else
-                    v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
-                    timePassed = timePassed + del_tau
-                    if (MOD(l_f, 1.0d0) /= 0.0d0) then
-                        print *, l_f
-                        stop "l_f is not integer after subStep"
-                    end if
-                    firstStep: SELECT CASE (world%boundaryConditions(INT(l_f)))
-                    CASE(0)
-                        continue
-                    CASE(1)
+                if (MOD(l_sub, 1.0d0) /= 0.0d0) then
+                    l_cell = INT(l_sub)
+                    l_alongV = INT(l_sub) + 0.5d0 + SIGN(0.5d0, v_sub)
+                    l_awayV = INT(l_sub) + 0.5d0 - SIGN(0.5d0, v_sub)
+                    a = 0.5d0 * (particleList(j)%q / particleList(j)%mass) * solver%EField(l_cell)
+                    call particleSubStepInitialTau(world, l_sub, l_f, v_sub, del_tau, l_alongV, l_awayV, l_cell, a)
+                    if (del_tau >= del_t) then
+                        ! Add directly to J with no substep
+                        l_f = v_sub * del_t / world%dx_dl(l_cell) + (a/ world%dx_dl(l_cell)) * del_t**2 + l_sub
+                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_t - v_sub
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                        particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+                        particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
                         timePassed = del_t
-                        delIdx = delIdx + 1
-                        if (l_f == 1) then
-                            particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
-                            particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
-                        else if (l_f == NumberXNodes) then
-                            particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
-                            particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                        if (INT(l_f) /= l_cell) then
+                            stop "l_f has crossed boundary when condition says is shouldn't have any substeps"
                         end if
-                    CASE(2)
-                        v_f = -v_f
-                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
-                    CASE(3)
-                        l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
-                    CASE default
-                        print *, "Case does not exist in first substep, depositJ"
-                        stop
-                    END SELECT firstStep
-                    ! now final position/velocity becomes next starting position/velocity
-                    l_sub = l_f
-                    v_sub = v_f
+                        
+                    else
+                        v_f = 2.0d0 * (l_f - l_sub) * world%dx_dl(l_cell) / del_tau - v_sub
+                        timePassed = timePassed + del_tau
+                        if (MOD(l_f, 1.0d0) /= 0.0d0) then
+                            print *, l_f
+                            stop "l_f is not integer after subStep"
+                        end if
+                        firstStep: SELECT CASE (world%boundaryConditions(INT(l_f)))
+                        CASE(0)
+                            continue
+                        CASE(1)
+                            timePassed = del_t
+                            delIdx = delIdx + 1
+                            if (l_f == 1) then
+                                particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
+                                particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                            else if (l_f == NumberXNodes) then
+                                particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
+                                particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                            end if
+                        CASE(2)
+                            v_f = -v_f
+                            particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                            particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                        CASE(3)
+                            l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
+                        CASE default
+                            print *, "Case does not exist in first substep, depositJ"
+                            stop
+                        END SELECT firstStep
+                        ! now final position/velocity becomes next starting position/velocity
+                        l_sub = l_f
+                        v_sub = v_f
+                    end if
                 end if
                 do while((timePassed < del_t))
                     l_alongV = l_sub + SIGN(1.0d0, v_sub)

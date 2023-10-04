@@ -30,7 +30,7 @@ mod_nonLinSolvers.o: ../../SharedModules/src/mod_nonLinSolvers.f90 constants.o m
 mod_particleMover.o: mod_particleMover.f90 mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o mod_potentialSolver.o
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_readInputs.o: ../../SharedModules/src/mod_readInputs.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_Scheme.o mod_potentialSolver.o
+mod_readInputs.o: ../../SharedModules/src/mod_readInputs.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_Scheme.o mod_particleInjection.o mod_potentialSolver.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_potentialSolver.o: ../../SharedModules/src/mod_potentialSolver.f90 constants.o mod_BasicFunctions.o mod_domain.o
