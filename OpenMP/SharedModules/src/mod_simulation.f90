@@ -348,9 +348,9 @@ contains
         call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, 0, .false., directoryName) 
         call writePhi(solver%phi, 0, .false., directoryName)
-        call particleList(1)%writeLocalTemperature(0, directoryName)
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
+            call particleList(j)%writeLocalTemperature(0, directoryName)
             call particleList(j)%writePhaseSpace(0, directoryName)
         end do
         currentTime = 0.0d0
@@ -368,6 +368,7 @@ contains
                 call system_clock(startTime)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
@@ -394,6 +395,7 @@ contains
                 call system_clock(startTime)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 densities = 0.0d0
@@ -442,11 +444,11 @@ contains
                     ! call solver%solve_tridiag_Poisson(world)
                 end if
                 
-                call particleList(1)%writeLocalTemperature(CurrentDiagStep, directoryName)
                 Etotal = solver%getTotalPE(world, .false.)
                 chargeTotal = 0.0d0
                 energyLoss = 0.0d0
                 do j=1, numberChargedParticles
+                    call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
                     call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
                     Etotal = Etotal + particleList(j)%getTotalKE()
@@ -496,6 +498,7 @@ contains
         call system_clock(startTime)
         if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
         if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+        if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world)
         call system_clock(endTime)
         collisionTime = collisionTime + (endTime-startTime)
         densities = 0.0d0
@@ -543,11 +546,11 @@ contains
             ! call solver%solve_tridiag_Poisson(world)
         end if
 
-        call particleList(1)%writeLocalTemperature(CurrentDiagStep, directoryName)
         Etotal = solver%getTotalPE(world, .false.)
         chargeTotal = 0.0d0
         energyLoss = 0.0d0
         do j=1, numberChargedParticles
+            call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
             call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
             chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
             Etotal = Etotal + particleList(j)%getTotalKE()
@@ -613,6 +616,7 @@ contains
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i+1, heatSkipSteps) == 0) then
@@ -674,6 +678,7 @@ contains
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world)
             do k = 1, numThread
                 do i=1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)

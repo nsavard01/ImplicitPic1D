@@ -20,7 +20,7 @@ program BoundPlasmaExample
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
-    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, injectionFlux, injectionPartPerStep)
+    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, injectionFlux, globalParticleList(1)%w_p)
     call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
     ! E_i = globalSolver%getTotalPE(globalWorld, .false.)
@@ -36,8 +36,10 @@ program BoundPlasmaExample
     ! end do
     ! print *, ABS((E_i - E_f)/(E_i))
     ! print *, 'took', iterNumPicard, 'iterations'
+    ! call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld)
     ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     ! print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
+    ! stop
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime)
     call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
 end program BoundPlasmaExample

@@ -73,7 +73,7 @@ contains
                 l_right = l_left + 1
                 d = particleList(i)%phaseSpace(1, j, iThread) - real(l_left)
                 rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + (1.0d0-d)
-                rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + d
+                if (l_left < NumberXNodes) rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + d
             end do
             !$OMP end parallel
             rho = rho + SUM(rhoTemp, DIM = 2) * particleList(i)%w_p * particleList(i)%q
@@ -95,7 +95,7 @@ contains
                 l_right = l_left + 1
                 d = particleList(i)%phaseSpace(1,j, iThread) - l_left
                 tempDensity(l_left, iThread) = tempDensity(l_left, iThread) + (1.0d0-d)
-                tempDensity(l_right, iThread) = tempDensity(l_right, iThread) + d
+                if (l_left < NumberXNodes) tempDensity(l_right, iThread) = tempDensity(l_right, iThread) + d
             end do
             !$OMP end parallel
             densities(:, i) = densities(:, i) + SUM(tempDensity, DIM = 2) * particleList(i)%w_p

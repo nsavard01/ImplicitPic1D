@@ -6,6 +6,7 @@ module mod_readInputs
     use mod_particle
     use mod_potentialSolver
     use mod_Scheme
+    use mod_particleInjection
     use omp_lib
     implicit none
 
@@ -121,12 +122,13 @@ contains
     !     end if
     ! end subroutine readRestart
 
-    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, injectionPartPerStep)
+    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, w_p)
         logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool
         real(real64), intent(in out) :: injectionFlux
-        integer(int32), intent(in out) :: injectionPartPerStep
+        real(real64), intent(in) :: w_p
         character(len=*), intent(in) :: InjFilename
         integer(int32) :: tempInt, io
+        real(real64) :: numFluxPart
         print *, ""
         print *, "Reading initial inputs for particle injection:"
         print *, "------------------"
@@ -135,7 +137,7 @@ contains
         addLostPartBool = (tempInt == 1)
         read(10, *, IOSTAT = io) tempInt
         refluxPartBool = (tempInt == 1)
-        read(10, *, IOSTAT = io) tempInt, injectionFlux, injectionPartPerStep
+        read(10, *, IOSTAT = io) tempInt, injectionFlux
         injectionBool = (tempInt == 1)
         close(10)
         print *, "Particle lost is reinjected:", addLostPartBool
@@ -143,7 +145,13 @@ contains
         print *, "Particle injection on neumann boundary", injectionBool
         if (injectionBool) then
             print *, 'Particle injection flux:', injectionFlux
-            print *, 'Particle injection particle per step:', injectionPartPerStep
+            numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
+            numFluxParticlesLow = floor(numFluxPart)
+            numFluxParticlesHigh = numFluxParticlesLow + 1
+            print *, 'Low end of flux particles:', numFluxParticlesLow
+            print *, 'High end of flux particles:', numFluxParticlesHigh
+            injectionR = numFluxPart - real(numFluxParticlesLow)
+            print *, 'Number for selection of flux particles is:', injectionR
         end if
         print *, "------------------"
         print *, ""

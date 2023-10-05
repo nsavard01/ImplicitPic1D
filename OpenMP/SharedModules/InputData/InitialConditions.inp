@@ -1,6 +1,6 @@
 32 ! number of threads
 0.32d-6 ! simulation time
-5.d19 ! Initial number density (1/m^3) of particles
+8.d19 ! Initial number density (1/m^3) of particles
 47.0d0 ! T_e (eV)
 0.1d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
