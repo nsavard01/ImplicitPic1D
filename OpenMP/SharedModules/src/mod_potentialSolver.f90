@@ -200,6 +200,8 @@ contains
                 else if (i == NumberXNodes) then
                     d(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
+            CASE(4)
+                d(i) = 0.0d0
             END SELECT
         end do
     ! initialize c-prime and d-prime
