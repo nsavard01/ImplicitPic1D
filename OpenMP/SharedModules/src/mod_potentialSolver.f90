@@ -171,6 +171,8 @@ contains
             CASE(1,3)
                 res = res + ((Ax(i) + 1d-15)/(self.phi_f(i) + 1d-15) - 1.0d0)**2
                 !d(i) = self%phi_f(i)*eps_0
+            CASE(4)
+                res = res + (Ax(i))**2
             END SELECT
         end do
         !res = Ax*eps_0 - 
