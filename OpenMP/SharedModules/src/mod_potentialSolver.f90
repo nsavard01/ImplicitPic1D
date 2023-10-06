@@ -131,6 +131,8 @@ contains
                 d(i) = (-self%rho(i) - self%rho_const) / eps_0
             CASE(1,3)
                 d(i) = self%phi(i)
+            CASE(4)
+                d(i) = 0.0d0
             END SELECT
         end do
     ! initialize c-prime and d-prime
