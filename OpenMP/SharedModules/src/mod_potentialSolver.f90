@@ -98,6 +98,19 @@ contains
                 end if
             CASE(3)
                 self%b_tri(i) = 1.0d0
+            CASE(4)
+                if (i == 1) then
+                    self % c_tri(i) = 1.0d0
+                    !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
+                    self%b_tri(i) = -1.0d0
+                else if (i == NumberXNodes) then
+                    self % a_tri(i-1) = 1.0d0
+                    !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
+                    self%b_tri(i) = -1.0d0
+                else
+                    print *, "Neumann boundary not on left or right most index!"
+                    stop
+                end if
             CASE default
                 print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
             END SELECT
