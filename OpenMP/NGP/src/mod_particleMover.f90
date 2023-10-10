@@ -176,7 +176,7 @@ contains
                         firstStep: SELECT CASE (world%boundaryConditions(INT(l_f)))
                         CASE(0)
                             continue
-                        CASE(1)
+                        CASE(1,4)
                             timePassed = del_t
                         CASE(2)
                             v_f = -v_f
@@ -227,7 +227,7 @@ contains
                         subStep: SELECT CASE (world%boundaryConditions(INT(l_f)))
                         CASE(0)
                             continue
-                        CASE(1)
+                        CASE(1,4)
                             exit
                         CASE(2)
                             v_f = -v_f
@@ -325,6 +325,24 @@ contains
                             particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
+                        CASE(4)
+                            timePassed = del_t
+                            if (refluxPartBool .or. injectionBool) then
+                                particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                                particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_f
+                                particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
+                                particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                                particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                            else
+                                delIdx = delIdx + 1
+                                if (l_f == 1) then
+                                    particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
+                                    particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                                else if (l_f == NumberXNodes) then
+                                    particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
+                                    particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                                end if
+                            end if
                         CASE default
                             print *, "Case does not exist in first substep, depositJ"
                             stop
@@ -377,6 +395,24 @@ contains
                             particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
+                        CASE(4)
+                            if (refluxPartBool .or. injectionBool) then
+                                particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+                                particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_f
+                                particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
+                                particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                                particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                            else
+                                delIdx = delIdx + 1
+                                if (l_f == 1) then
+                                    particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2))!J/m^2 in 1D
+                                    particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                                else if (l_f == NumberXNodes) then
+                                    particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (v_f**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) !J/m^2 in 1D
+                                    particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                                end if
+                            end if
+                            exit
                         CASE default
                             print *, "Case does not exist in ongoing substep, depositJ"
                             stop

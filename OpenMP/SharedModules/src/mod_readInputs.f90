@@ -303,11 +303,16 @@ contains
 101     continue
         numberChargedParticles = numSpecies
         allocate(particleList(numberChargedParticles))
+
         do j=1, numberChargedParticles
             particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
             particleList(j) % w_p = n_ave * (world%grid(NumberXNodes) - world%grid(1)) / SUM(particleList(j) % N_p)
             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
-            call initialize_randUniform(particleList(j), world, irand)
+            if (j == 1) then
+                call initialize_randUniform(particleList(j), world, irand)
+            else
+                call initialize_QuasiNeutral(particleList(j), particleList(1))
+            end if
             print *, 'Initializing ', particleList(j) % name
             print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
             print *, "Particle mass is:", particleList(j)%mass

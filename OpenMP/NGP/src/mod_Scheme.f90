@@ -32,6 +32,18 @@ contains
         !$OMP end parallel    
     end subroutine initialize_randUniform
 
+    subroutine initialize_QuasiNeutral(ions, electrons)
+        type(Particle), intent(in) :: electrons
+        type(Particle), intent(in out) :: ions
+        integer(int32) :: i, iThread
+        !$OMP parallel private(iThread, i)
+        iThread = omp_get_thread_num() + 1
+        do i=1, ions%N_p(iThread)
+            ions%phaseSpace(1,i, iThread) = electrons%phaseSpace(1,i, iThread)
+        end do
+        !$OMP end parallel  
+    end subroutine initialize_QuasiNeutral
+
     function getLFromX(x, world) result(l)
         real(real64), intent(in) :: x
         type(Domain), intent(in) :: world

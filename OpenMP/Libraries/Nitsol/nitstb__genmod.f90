@@ -1,4 +1,4 @@
-        !COMPILER-GENERATED INTERFACE MODULE: Thu Oct  5 18:18:07 2023
+        !COMPILER-GENERATED INTERFACE MODULE: Tue Oct 10 17:48:16 2023
         ! This source file is for reference only and may not completely
         ! represent the generated interface used by the compiler.
         MODULE NITSTB__genmod

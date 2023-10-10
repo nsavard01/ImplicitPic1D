@@ -5,6 +5,7 @@ module mod_readInputs
     use mod_domain
     use mod_particle
     use mod_potentialSolver
+    use mod_particleInjection
     use omp_lib
     implicit none
 
@@ -119,6 +120,41 @@ contains
     !         stop "File you're trying to restart from doesn't exist."
     !     end if
     ! end subroutine readRestart
+
+    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, w_p)
+        logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool
+        real(real64), intent(in out) :: injectionFlux
+        real(real64), intent(in) :: w_p
+        character(len=*), intent(in) :: InjFilename
+        integer(int32) :: tempInt, io
+        real(real64) :: numFluxPart
+        print *, ""
+        print *, "Reading initial inputs for particle injection:"
+        print *, "------------------"
+        open(10,file='../../SharedModules/InputData/'//InjFilename, IOSTAT=io)
+        read(10, *, IOSTAT = io) tempInt
+        addLostPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt
+        refluxPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt, injectionFlux
+        injectionBool = (tempInt == 1)
+        close(10)
+        print *, "Particle lost is reinjected:", addLostPartBool
+        print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
+        print *, "Particle injection on neumann boundary", injectionBool
+        if (injectionBool) then
+            print *, 'Particle injection flux:', injectionFlux
+            numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
+            numFluxParticlesLow = floor(numFluxPart)
+            numFluxParticlesHigh = numFluxParticlesLow + 1
+            print *, 'Low end of flux particles:', numFluxParticlesLow
+            print *, 'High end of flux particles:', numFluxParticlesHigh
+            injectionR = numFluxPart - real(numFluxParticlesLow)
+            print *, 'Number for selection of flux particles is:', injectionR
+        end if
+        print *, "------------------"
+        print *, ""
+    end subroutine readInjectionInputs
 
     subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, averagingTime, T_e, T_i
@@ -282,6 +318,7 @@ contains
             print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
             print *, "Particle mass is:", particleList(j)%mass
             print *, "Particle charge is:", particleList(j)%q
+            print *, "Particle weight is:", particleList(j)%w_p
             print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
         end do
         

@@ -52,6 +52,8 @@ contains
         self%accumEnergyLoss = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread))
+        self%refIdx = 0
+        self%delIdx = 0
         self%N_p = N_p
         self%energyLoss = 0.0d0
         self%wallLoss = 0

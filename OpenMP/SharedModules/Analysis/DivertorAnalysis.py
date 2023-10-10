@@ -14,6 +14,9 @@ from generateBoundExample import *
 
 
 test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test/')
+test_lowPPD = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_lowPPD/')
+
+testExp = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test/')
 
 
 #CIC 2p5e1
