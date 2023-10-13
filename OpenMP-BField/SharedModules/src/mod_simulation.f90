@@ -8,7 +8,7 @@ module mod_simulation
     use mod_domain
     use mod_potentialSolver
     use mod_particleMover
-    !use mod_collisions
+    use mod_particleInjection
     use mod_Scheme
     use mod_nonLinSolvers
     use ifport, only: makedirqq
@@ -16,56 +16,11 @@ module mod_simulation
 
     integer(int32) :: numTimeSteps, heatSkipSteps
     real(real64) :: energyError, chargeError, gaussError, Power, nu_h, inelasticEnergyLoss
-    real(real64), allocatable :: energyAddColl(:)
 
 
 contains
 
     ! ------------------------- Reading Input data --------------------------------
-
-    subroutine addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-        ! Add power to all particles in domain
-        type(Particle), intent(in out) :: particleList(2)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in out) :: irand(numThread)
-        real(real64), intent(in) :: T_e, T_i
-        integer(int32) :: i,j, iThread
-        real(real64) :: x_random
-        !$OMP parallel private(iThread, i, x_random)
-        iThread = omp_get_thread_num() + 1
-        do i=1, particleList(1)%delIdx(iThread)
-            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
-            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
-            energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
-             + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
-            x_random = world%grid(NumberXNodes) * ran2(irand(iThread))
-            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(x_random, world)
-            particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
-        end do
-        particleList(2)%N_p(iThread) = particleList(2)%N_p(iThread) + particleList(1)%delIdx(iThread)
-        particleList(1)%N_p(iThread) = particleList(1)%N_p(iThread) + particleList(1)%delIdx(iThread)
-        !$OMP end parallel
-        do j = 1, 2
-            !$OMP parallel private(iThread, i)
-            iThread = omp_get_thread_num() + 1
-            do i = 1, particleList(j)%refIdx(iThread)
-                energyAddColl(iThread) = energyAddColl(iThread) - (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
-                if (j == 1) then
-                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
-                else
-                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_i, irand(iThread))
-                end if
-                if (world%boundaryConditions(1) == 2) then
-                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
-                else
-                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
-                end if
-                energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
-            end do
-            !$OMP end parallel
-        end do
-
-    end subroutine addMaxwellianLostParticles
     
     subroutine writePhi(phi, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
@@ -331,6 +286,10 @@ contains
             if (.not. bool) then
                 stop "Save directory not successfully created!"
             end if
+            bool = makedirqq(dirName//'/Temperature')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
         end if
     end subroutine generateSaveDirectory
 
@@ -393,9 +352,9 @@ contains
         call loadParticleDensity(densities, particleList, world)
         call writeParticleDensity(densities, particleList, world, 0, .false., directoryName) 
         call writePhi(solver%phi, 0, .false., directoryName)
-        call particleList(1)%writeLocalTemperature(0, directoryName)
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
+            call particleList(j)%writeLocalTemperature(0, directoryName)
             call particleList(j)%writePhaseSpace(0, directoryName)
         end do
         currentTime = 0.0d0
@@ -411,7 +370,9 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
@@ -436,7 +397,9 @@ contains
                 
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 densities = 0.0d0
@@ -485,11 +448,11 @@ contains
                     ! call solver%solve_tridiag_Poisson(world)
                 end if
                 
-                call particleList(1)%writeLocalTemperature(CurrentDiagStep, directoryName)
                 Etotal = solver%getTotalPE(world, .false.)
                 chargeTotal = 0.0d0
                 energyLoss = 0.0d0
                 do j=1, numberChargedParticles
+                    call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
                     call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
                     Etotal = Etotal + particleList(j)%getTotalKE()
@@ -537,7 +500,9 @@ contains
 
         !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
         call system_clock(startTime)
-        call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+        if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+        if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+        if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
         call system_clock(endTime)
         collisionTime = collisionTime + (endTime-startTime)
         densities = 0.0d0
@@ -585,11 +550,11 @@ contains
             ! call solver%solve_tridiag_Poisson(world)
         end if
 
-        call particleList(1)%writeLocalTemperature(CurrentDiagStep, directoryName)
         Etotal = solver%getTotalPE(world, .false.)
         chargeTotal = 0.0d0
         energyLoss = 0.0d0
         do j=1, numberChargedParticles
+            call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
             call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
             chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
             Etotal = Etotal + particleList(j)%getTotalKE()
@@ -653,7 +618,9 @@ contains
         do while(currentTime < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
-            call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i+1, heatSkipSteps) == 0) then
@@ -700,8 +667,8 @@ contains
         close(22)
         print *, 'Power loss to walls is:', ELossTotal/currentTime
         print *, 'Power gain in plasma is:', SUM(energyAddColl)/currentTime
-        print *, "Electron average wall loss:", SUM(particleList(1)%accumWallLoss)* particleList(1)%q * particleList(1)%w_p/currentTime
-        print *, "Ion average wall loss:", SUM(particleList(2)%accumWallLoss)* particleList(2)%q * particleList(2)%w_p/currentTime
+        print *, "Electron average wall loss flux:", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p/currentTime
+        print *, "Ion average wall loss flux:", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p/currentTime
         print *, "Performing average for EEDF over 50/omega_p"
         E_max = 3.0d0 * (MAXVAL(phi_average) - minval(phi_average))
         print *, 'E_max is:', E_max
@@ -713,7 +680,9 @@ contains
         do while(currentTime < checkTimeDivision)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
-            call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
             do k = 1, numThread
                 do i=1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)

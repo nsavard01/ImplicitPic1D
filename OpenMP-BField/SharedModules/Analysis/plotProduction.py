@@ -169,5 +169,7 @@ def PhaseSpaceAnimation(dataSet, name, boolMakeAnimation = False, savePath = 'Ph
             plt.ylabel('Particle velocity (m/s)')
             plt.xlim([0, dataSet.grid[-1]])
             plt.pause(0.1)
+            
+    
  
 #------------ Bounded Model comparison ---------------------------            

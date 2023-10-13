@@ -225,13 +225,6 @@ contains
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
-        print *, "Number of nodes:", NumberXNodes
-        print *, "Grid length:", L_domain
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
-        print *, 'Grid type is:', gridType
-        print *, "------------------"
-        print *, ""
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
@@ -239,6 +232,13 @@ contains
         end if
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(debyeLength, L_domain, gridType)
+        print *, "Number of nodes:", NumberXNodes
+        print *, "Grid length:", world%grid(NumberXNodes) - world%grid(1)
+        print *, "Left boundary type:", leftBoundary
+        print *, "Right boundary type:", rightBoundary
+        print *, 'Grid type is:', gridType
+        print *, "------------------"
+        print *, ""
         solver = potentialSolver(world, leftVoltage, rightVoltage)
         call solver%construct_diagMatrix(world)
 

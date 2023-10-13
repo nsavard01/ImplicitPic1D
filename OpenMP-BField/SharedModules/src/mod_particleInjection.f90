@@ -65,16 +65,18 @@ contains
         end do
     end subroutine refluxParticles
 
-    subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+    subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, BFieldAngle)
         type(Particle), intent(in out) :: particleList(2)
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
-        real(real64), intent(in) :: T_e, T_i, del_t
+        real(real64), intent(in) :: T_e, T_i, del_t, BFieldAngle
         integer(int32) :: i,j, iThread, numInjected
-        real(real64) :: ionSoundSpeed, shift_rand
-        ! Reflux particles
+        real(real64) :: ionSoundSpeed, shift_rand, cosAngle, sinAngle
+        cosAngle = COS(BFieldAngle)
+        sinAngle = SIN(BFieldAngle)
         ionSoundSpeed = SQRT(T_e * e / particleList(2)%mass)
         do j = 1, 2
+            print *, 'particle type reflux:', particleList(j)%name
             !$OMP parallel private(iThread, i)
             iThread = omp_get_thread_num() + 1
             do i = 1, particleList(j)%refIdx(iThread)
@@ -82,8 +84,8 @@ contains
                 if (j == 1) then
                     call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
                 else
-                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed
-                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
+                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed * cosAngle
+                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed * sinAngle
                     particleList(j)%phaseSpace(4, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
                 end if
                 if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
@@ -91,6 +93,7 @@ contains
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 end if
+                print *, 'v_new', particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread)
                 !energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
             end do
             !$OMP end parallel
@@ -105,10 +108,10 @@ contains
             numInjected = numFluxParticlesHigh
         end if
         do i = 1, numInjected
-            shift_rand = del_t * ran2(irand(iThread)) * ionSoundSpeed
+            shift_rand = del_t * ran2(irand(iThread)) * ionSoundSpeed * cosAngle
             call getMaxwellianFluxSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
-            particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed
-            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
+            particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed * cosAngle
+            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed * sinAngle
             particleList(2)%phaseSpace(4, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
             if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))

@@ -12,28 +12,12 @@ from generateBoundExample import *
     
 #%%
 
-test_32nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes/')
-test_32nodes_1us = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes_1us/')
-test_400nodes_even0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_400nodes_even0p2T/')
-test_100nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes/')
-test_100nodes_even0p2_noVac = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes_even0p2T_noVacuum/')
-test_uniformFlux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_uniformFlux/')
-test_absNeu_noReFlux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_absorbNeumann_Noreflux/')
-test_32nodes_sin0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes_sin0p2T/')
-test_32nodes_sin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes_sin/')
-test_100nodes_even0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes_even0p2T/')
-test_absNeu = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_absorbNeumann_reflux/')
-test_100nodes_even2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes_even2T/')
-test_eThermal = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_Ethermal_injection/')
-test_lowPPD = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_lowPPD/')
-test_PureMax = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_PureMax/')
-test_PureMax_reflux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_PureMax_reflux/')
-test_PureMax_refluxMax = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_PureMax_refluxMax/')
 
-testExp = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test/')
-testExp_200PPD = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_lowPPD/')
-testExp_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
+testExp_0deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test/')
+testExp_45deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg/')
+testExp_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg/')
 
+testExp_norm_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
 
 #CIC 2p5e1
 

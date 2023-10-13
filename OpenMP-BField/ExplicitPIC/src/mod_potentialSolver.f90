@@ -16,8 +16,9 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), rho(:, :), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, rho_const, siedelIter, siedelEps
+        real(real64) :: energyError, rho_const, siedelIter, siedelEps, BFieldMag, BField(3), BFieldAngle
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
+        logical :: BFieldBool
 
 
     contains
@@ -41,10 +42,12 @@ module mod_potentialSolver
    
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle) result(self)
         ! Construct domain object, initialize grid, dx_dl, and dx_dl.
         real(real64), intent(in) :: leftVoltage, rightVoltage
         type(Domain), intent(in) :: world
+        real(real64), intent(in) :: BFieldMag, angle
+        real(real64) :: angle_rad
         allocate(self % rho(NumberXNodes, numThread), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
         self % a_tri = 0.0d0
@@ -56,6 +59,13 @@ contains
         self % EField = 0.0d0
         self%energyError = 0.0d0
         self%siedelIter = 100000
+        self%BFieldMag = BFieldMag
+        self%BFieldBool = (BFieldMag /= 0.0d0)
+        angle_rad = angle * pi / 180.0d0
+        self%BFieldAngle = angle_rad
+        self%BField(1) = BFieldMag * COS(angle_rad)
+        self%BField(2) = BFieldMag * SIN(angle_rad)
+        self%BField(3) = 0.0d0
         self%siedelEps = 1d-6
         if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
         if (world%boundaryConditions(NumberXNodes) == 1) self%phi(NumberXNodes) = rightVoltage
@@ -363,17 +373,38 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         integer(int32) :: j, i, delIdx, iThread
+        real(real64) :: v_minus(3), v_plus(3), coeffField, tBoris(3), v_prime(3), sBoris(3)
         loopSpecies: do j = 1, numberChargedParticles
-            !$OMP parallel private(iThread, i, delIdx)
+            !$OMP parallel private(iThread, i, delIdx, v_minus, v_plus, coeffField, tBoris, v_prime, sBoris)
             iThread = omp_get_thread_num() + 1
             delIdx = 0
             particleList(j)%refIdx(iThread) = 0
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             particleList(j)%wallLoss(:, iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
-                particleList(j)%phaseSpace(2, i-delIdx, iThread) = particleList(j)%phaseSpace(2, i, iThread) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                if (self%BFieldBool) then
+                    coeffField = 0.5d0 * (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                    ! First half step acceleration
+                    v_minus(1) =  particleList(j)%phaseSpace(2, i, iThread) + coeffField
+                    v_minus(2:3) = particleList(j)%phaseSpace(3:4, i, iThread)
+
+                    !v_prime, first half rotation
+                    tBoris = 0.5d0 * (particleList(j)%q/particleList(j)%mass) * self%BField * del_t
+                    v_prime = v_minus + crossProduct(v_minus, tBoris)
+
+                    !v_plus, second half rotation
+                    sBoris = 2.0d0 * tBoris / (1.0d0 + SUM(tBoris**2))
+                    v_plus = v_minus + crossProduct(v_prime, sBoris)
+
+                    particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_plus(1) + coeffField
+                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = v_plus(2:3)
+
+                else    
+                    particleList(j)%phaseSpace(2, i-delIdx, iThread) = particleList(j)%phaseSpace(2, i, iThread) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
+                end if
+                ! Get new position
                 particleList(j)%phaseSpace(1, i-delIdx, iThread) = particleList(j)%phaseSpace(1, i, iThread) + particleList(j)%phaseSpace(2, i-delIdx, iThread) * del_t/world%delX
-                particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
                 if (particleList(j)%phaseSpace(1, i-delIdx, iThread) <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1)

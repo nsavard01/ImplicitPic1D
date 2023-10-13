@@ -4,10 +4,8 @@ module mod_particleInjection
     use mod_BasicFunctions
     use mod_domain
     use mod_particle
-    use mod_Scheme
     use omp_lib
     implicit none
-    real(real64), allocatable :: energyAddColl(:)
     logical :: addLostPartBool, refluxPartBool, injectionBool
     integer(int32) :: numFluxParticlesHigh, numFluxParticlesLow
     real(real64) :: injectionFlux, injectionR
@@ -27,10 +25,8 @@ contains
         do i=1, particleList(1)%delIdx(iThread)
             call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
             call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
-            energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
-            + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
             x_random = world%grid(NumberXNodes) * ran2(irand(iThread))
-            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(x_random, world)
+            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = ran2(irand(iThread)) * real(NumberXNodes - 1) + 1.0d0
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do
         particleList(2)%N_p(iThread) = particleList(2)%N_p(iThread) + particleList(1)%delIdx(iThread)
@@ -48,7 +44,6 @@ contains
             !$OMP parallel private(iThread, i)
             iThread = omp_get_thread_num() + 1
             do i = 1, particleList(j)%refIdx(iThread)
-                energyAddColl(iThread) = energyAddColl(iThread) - (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
                 if (j == 1) then
                     call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
                 else
@@ -59,21 +54,22 @@ contains
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 end if
-                energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
             end do
             !$OMP end parallel
         end do
     end subroutine refluxParticles
 
-    subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+    subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, BFieldAngle)
         type(Particle), intent(in out) :: particleList(2)
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
-        real(real64), intent(in) :: T_e, T_i, del_t
+        real(real64), intent(in) :: T_e, T_i, del_t, BFieldAngle
         integer(int32) :: i,j, iThread, numInjected
-        real(real64) :: ionSoundSpeed, shift_rand
+        real(real64) :: ionSoundSpeed, shift_rand, cosAngle, sinAngle
         ! Reflux particles
         ionSoundSpeed = SQRT(T_e * e / particleList(2)%mass)
+        cosAngle = COS(BFieldAngle)
+        sinAngle = SIN(BFieldAngle)
         do j = 1, 2
             !$OMP parallel private(iThread, i)
             iThread = omp_get_thread_num() + 1
@@ -81,12 +77,15 @@ contains
                 !energyAddColl(iThread) = energyAddColl(iThread) - (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
                 if (j == 1) then
                     call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
+                    ! tempVec(1) = cosAngle * particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) - sinAngle * particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread)
+                    ! tempVec(2) = sinAngle * particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) + cosAngle * particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread)
+                    ! particleList(j)%phaseSpace(2:3, particleList(j)%refRecordIdx(i, iThread), iThread) = tempVec
                 else
-                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed
-                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
+                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed * cosAngle
+                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = -ionSoundSpeed * sinAngle
                     particleList(j)%phaseSpace(4, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
                 end if
-                if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
+                if (world%boundaryConditions(1) == 2) then
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
@@ -105,20 +104,23 @@ contains
             numInjected = numFluxParticlesHigh
         end if
         do i = 1, numInjected
-            shift_rand = del_t * ran2(irand(iThread)) * ionSoundSpeed
+            shift_rand = del_t * ran2(irand(iThread)) * ionSoundSpeed * cosAngle/ world%delX
             call getMaxwellianFluxSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
-            particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed
-            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
+            ! tempVec(1) = cosAngle * particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) - sinAngle * particleList(1)%phaseSpace(3, particleList(1)%N_p(iThread) + i, iThread)
+            ! tempVec(2) = sinAngle * particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) + cosAngle * particleList(1)%phaseSpace(3, particleList(1)%N_p(iThread) + i, iThread)
+            ! particleList(1)%phaseSpace(2:3, particleList(1)%N_p(iThread) + i, iThread) = tempVec
+            particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed * cosAngle
+            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = -ionSoundSpeed * sinAngle
             particleList(2)%phaseSpace(4, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
-            if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
+            if (world%boundaryConditions(1) == 2) then
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
                 particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
-                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(world%grid(1) + shift_rand, world)
+                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = 1.0d0 + shift_rand
                 particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
             else
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = -ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
                 particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = -ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
-                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(world%grid(NumberXNodes) - shift_rand, world)
+                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = real(NumberXNodes) - shift_rand
                 particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
             end if
         end do
@@ -127,11 +129,11 @@ contains
         !$OMP end parallel
     end subroutine injectAtBoundary
 
-    subroutine injectUniformFlux(particleList, T_e, T_i, irand, world)
+    subroutine injectUniformFlux(particleList, T_e, T_i, irand, world, del_t)
         type(Particle), intent(in out) :: particleList(2)
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
-        real(real64), intent(in) :: T_e, T_i
+        real(real64), intent(in) :: T_e, T_i, del_t
         integer(int32) :: i,j, iThread, numInjected
         real(real64) :: ionSoundSpeed, x_random
         ! Reflux particles
@@ -148,7 +150,7 @@ contains
                     particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
                     particleList(j)%phaseSpace(4, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
                 end if
-                if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
+                if (world%boundaryConditions(1) == 2) then
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
@@ -159,7 +161,7 @@ contains
         end do
         ! Injection of particles
         
-        !$OMP parallel private(iThread, i, numInjected, x_random)
+        !$OMP parallel private(iThread, i, numInjected)
         iThread = omp_get_thread_num() + 1
         if (ran2(irand(iThread)) > injectionR) then
             numInjected = numFluxParticlesLow
@@ -167,19 +169,21 @@ contains
             numInjected = numFluxParticlesHigh
         end if
         do i = 1, numInjected
-            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
+            call getMaxwellianFluxSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
+            particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed
             if (world%boundaryConditions(NumberXNodes) == 2) then
-                particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = -ionSoundSpeed
+                particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = -ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
+                particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = -ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
+                particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = real(NumberXNodes)
+                particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = real(NumberXNodes)
             else
-                particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed
+                particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
+                particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
+                particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = 1.0d0
+                particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = 1.0d0
             end if
             particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
             particleList(2)%phaseSpace(4, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
-            x_random = world%grid(NumberXNodes) * ran2(irand(iThread))
-            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(x_random, world)
-            particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
-            energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
-            + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
         end do
         particleList(1)%N_p(iThread) = particleList(1)%N_p(iThread) + numInjected
         particleList(2)%N_p(iThread) = particleList(2)%N_p(iThread) + numInjected

@@ -168,6 +168,26 @@ contains
 
     end function getArrayMean1D
 
+    pure function crossProduct(x, y) result(res)
+        real(real64), intent(in) :: x(3), y(3)
+        real(real64) :: res(3)
+        res(1) = x(2) * y(3) - x(3) * y(2)
+        res(2) = x(3) * y(1) - x(1) * y(3)
+        res(3) = x(1) * y(2) - x(2) * y(1)
+    end function crossProduct
+
+    subroutine rotate2D(v, theta)
+        ! rotate 2D vector by theta, theta going towards y axis
+        real(real64), intent(in out) :: v(2)
+        real(real64), intent(in) :: theta
+        real(real64) :: res(2), cosTheta, sinTheta
+        cosTheta = COS(theta)
+        sinTheta = SIN(theta)
+        res(1) = cosTheta * v(1) - sinTheta * v(2)
+        res(2) = sinTheta * v(1) + cosTheta * v(2)
+        v = res
+    end subroutine rotate2D
+
 
 
 end module mod_BasicFunctions

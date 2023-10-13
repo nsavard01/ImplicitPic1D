@@ -5,6 +5,7 @@ module mod_readInputs
     use mod_domain
     use mod_particle
     use mod_potentialSolver
+    use mod_particleInjection
     use omp_lib
     implicit none
 
@@ -120,6 +121,42 @@ contains
     !     end if
     ! end subroutine readRestart
 
+    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, w_p, angleRad)
+        logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool
+        real(real64), intent(in out) :: injectionFlux
+        real(real64), intent(in) :: w_p, angleRad
+        character(len=*), intent(in) :: InjFilename
+        integer(int32) :: tempInt, io
+        real(real64) :: numFluxPart
+        print *, ""
+        print *, "Reading initial inputs for particle injection:"
+        print *, "------------------"
+        open(10,file='../../SharedModules/InputData/'//InjFilename, IOSTAT=io)
+        read(10, *, IOSTAT = io) tempInt
+        addLostPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt
+        refluxPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt, injectionFlux
+        injectionBool = (tempInt == 1)
+        close(10)
+        print *, "Particle lost is reinjected:", addLostPartBool
+        print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
+        print *, "Particle injection on neumann boundary", injectionBool
+        if (injectionBool) then
+            injectionFlux = injectionFlux * COS(angleRad)
+            print *, 'Particle injection flux:', injectionFlux
+            numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
+            numFluxParticlesLow = floor(numFluxPart)
+            numFluxParticlesHigh = numFluxParticlesLow + 1
+            print *, 'Low end of flux particles:', numFluxParticlesLow
+            print *, 'High end of flux particles:', numFluxParticlesHigh
+            injectionR = numFluxPart - real(numFluxParticlesLow)
+            print *, 'Number for selection of flux particles is:', injectionR
+        end if
+        print *, "------------------"
+        print *, ""
+    end subroutine readInjectionInputs
+
     subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, averagingTime, T_e, T_i
         integer(int32), intent(in out) :: numDiagnosticSteps, numThread
@@ -139,7 +176,7 @@ contains
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) fractionFreq
         read(10, *, IOSTAT = io) averagingTime
-        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) tempName
@@ -148,7 +185,7 @@ contains
         if (len(directoryName) < 2) then
             stop "Directory name length less than 2 characters!"
         end if
-        directoryName = '../../../../ExplicitData/'//directoryName
+        directoryName = '../../../../ExplicitData-BField/'//directoryName
         if (numThread > omp_get_num_procs()) then
             print *, "Number of threads set is larger than the maximum number of threads which is", omp_get_num_procs()
             stop
@@ -178,7 +215,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
         integer(int32) :: io, leftBoundary, rightBoundary
-        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain, fracDebye
+        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain, fracDebye, BFieldMag, angle
 
         print *, ""
         print *, "Reading domain inputs:"
@@ -189,6 +226,7 @@ contains
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         read(10, *, IOSTAT = io) fracDebye
+        read(10, *, IOSTAT = io) BFieldMag, angle
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
         if (L_domain / (NumberXNodes-1) > debyeLength) then
@@ -200,8 +238,8 @@ contains
         print *, "Left boundary type:", leftBoundary
         print *, "Right boundary type:", rightBoundary
         print *, 'Fraction of debye length:', fracDebye
-        print *, "------------------"
-        print *, ""
+        print *, 'BField magnitude:', BFieldMag
+        print *, 'BField angle:', angle
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
@@ -209,7 +247,10 @@ contains
         end if
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(L_domain)
-        solver = potentialSolver(world, leftVoltage, rightVoltage)
+        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle)
+        print *, "BField vector:", solver%BField
+        print *, "------------------"
+        print *, ""
         call solver%construct_diagMatrix(world)
 
     end subroutine readGeometry
@@ -282,6 +323,7 @@ contains
             print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
             print *, "Particle mass is:", particleList(j)%mass
             print *, "Particle charge is:", particleList(j)%q
+            print *, "Particle weight is:", particleList(j)%w_p
             print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
         end do
         

@@ -175,7 +175,7 @@ contains
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) fractionFreq
         read(10, *, IOSTAT = io) averagingTime
-        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) tempName

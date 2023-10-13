@@ -6,6 +6,7 @@ module mod_readInputs
     use mod_particle
     use mod_potentialSolver
     use mod_Scheme
+    use mod_particleInjection
     use omp_lib
     implicit none
 
@@ -121,6 +122,41 @@ contains
     !     end if
     ! end subroutine readRestart
 
+    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, w_p)
+        logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool
+        real(real64), intent(in out) :: injectionFlux
+        real(real64), intent(in) :: w_p
+        character(len=*), intent(in) :: InjFilename
+        integer(int32) :: tempInt, io
+        real(real64) :: numFluxPart
+        print *, ""
+        print *, "Reading initial inputs for particle injection:"
+        print *, "------------------"
+        open(10,file='../../SharedModules/InputData/'//InjFilename, IOSTAT=io)
+        read(10, *, IOSTAT = io) tempInt
+        addLostPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt
+        refluxPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt, injectionFlux
+        injectionBool = (tempInt == 1)
+        close(10)
+        print *, "Particle lost is reinjected:", addLostPartBool
+        print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
+        print *, "Particle injection on neumann boundary", injectionBool
+        if (injectionBool) then
+            print *, 'Particle injection flux:', injectionFlux
+            numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
+            numFluxParticlesLow = floor(numFluxPart)
+            numFluxParticlesHigh = numFluxParticlesLow + 1
+            print *, 'Low end of flux particles:', numFluxParticlesLow
+            print *, 'High end of flux particles:', numFluxParticlesHigh
+            injectionR = numFluxPart - real(numFluxParticlesLow)
+            print *, 'Number for selection of flux particles is:', injectionR
+        end if
+        print *, "------------------"
+        print *, ""
+    end subroutine readInjectionInputs
+
     subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, averagingTime, T_e, T_i
         integer(int32), intent(in out) :: numDiagnosticSteps, numThread
@@ -189,13 +225,6 @@ contains
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
-        print *, "Number of nodes:", NumberXNodes
-        print *, "Grid length:", L_domain
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
-        print *, 'Grid type is:', gridType
-        print *, "------------------"
-        print *, ""
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
@@ -203,6 +232,13 @@ contains
         end if
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(debyeLength, L_domain, gridType)
+        print *, "Number of nodes:", NumberXNodes
+        print *, "Grid length:", world%grid(NumberXNodes) - world%grid(1)
+        print *, "Left boundary type:", leftBoundary
+        print *, "Right boundary type:", rightBoundary
+        print *, 'Grid type is:', gridType
+        print *, "------------------"
+        print *, ""
         solver = potentialSolver(world, leftVoltage, rightVoltage)
         call solver%construct_diagMatrix(world)
 
@@ -267,11 +303,16 @@ contains
 101     continue
         numberChargedParticles = numSpecies
         allocate(particleList(numberChargedParticles))
+
         do j=1, numberChargedParticles
             particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
-            call particleList(j) % initialize_n_ave(n_ave, (world%grid(NumberXNodes) - world%grid(1)))
+            particleList(j) % w_p = n_ave * (world%grid(NumberXNodes) - world%grid(1)) / SUM(particleList(j) % N_p)
             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
-            call initialize_randUniform(particleList(j), world, irand)
+            if (j == 1) then
+                call initialize_randUniform(particleList(j), world, irand)
+            else
+                call initialize_QuasiNeutral(particleList(j), particleList(1))
+            end if
             print *, 'Initializing ', particleList(j) % name
             print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
             print *, "Particle mass is:", particleList(j)%mass

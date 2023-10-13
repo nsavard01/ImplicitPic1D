@@ -106,9 +106,11 @@ class dataSet:
         else:
             raise Warning("No such i diagnostic!")
             
-    def getETemp(self, i):
+    def getTemp(self, name, i):
+        if (name not in self.particles.keys()):
+            raise Warning('No such particle', name, 'in simulation!')
         if (i <= self.numDiag - 1):
-            temp = np.fromfile(self.path + 'ElectronTemperature/eTemp_' + str(i) + '.dat', dtype = 'float', offset = 4)
+            temp = np.fromfile(self.path + 'Temperature/Temp_' + name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
             return temp
         else:
             raise Warning("No such i diagnostic!")

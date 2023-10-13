@@ -52,6 +52,8 @@ contains
         self%accumEnergyLoss = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread))
+        self%refIdx = 0
+        self%delIdx = 0
         self%N_p = N_p
         self%energyLoss = 0.0d0
         self%wallLoss = 0
@@ -171,11 +173,12 @@ contains
         iThread = omp_get_thread_num() + 1
         do j = 1, self%N_p(iThread)
             index = INT(self%phaseSpace(1, j, iThread))
-            temp(index, iThread) = temp(index, iThread) + SUM(self%phaseSpace(2:4, j, iThread)**2)
-            counter(index, iThread) = counter(index, iThread) + 1
+            if (index < NumberXNodes) then
+                temp(index, iThread) = temp(index, iThread) + SUM(self%phaseSpace(2:4, j, iThread)**2)
+                counter(index, iThread) = counter(index, iThread) + 1
+            end if
         end do
         !$OMP end parallel
-        temp = temp * 0.5d0 * self%mass/e
         do j = 1, NumberXNodes-1
             if (SUM(counter(j, :)) > 0) then
                 EHist(j) = SUM(temp(j,:))*self%mass/SUM(counter(j, :))/3.0d0/e
@@ -184,7 +187,7 @@ contains
             end if
         end do
         write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file=dirName//'/ElectronTemperature/eTemp_'//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        open(10,file=dirName//'/Temperature/Temp_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
         write(10) EHist
         close(10)
         

@@ -1,13 +1,13 @@
-32 ! number of processors
+16 ! number of processors
 0.32d-6 ! simulation time
 8.4d19 ! Initial number density (1/m^3) of electrons
 47.0d0 ! Initial electron Temperature (eV) 
 0.1d0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
-0.2 ! Fraction of initial 1/w_p for initial time step
+0.2d0 ! Fraction of initial 1/w_p for initial time step
 0.32d-6 ! amount of time to average final Diagnostics
-0.25d0 ! Fraction Debye length
+2.4d0 0! BField magnitude (T), angle theta from x axis (degrees)
 10 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
-test !save file name
+test_lowPPD !save file name
 END
