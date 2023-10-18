@@ -19,6 +19,8 @@ testExp_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-B
 
 testExp_norm_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
 
+
+test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test/')
 #CIC 2p5e1
 
 # convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]

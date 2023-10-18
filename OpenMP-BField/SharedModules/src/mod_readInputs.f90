@@ -182,7 +182,7 @@ contains
         if (len(directoryName) < 2) then
             stop "Directory name length less than 2 characters!"
         end if
-        directoryName = '../../../../ImplicitData/'//directoryName
+        directoryName = '../../../../ImplicitData-BField/'//directoryName
         if (numThread > omp_get_num_procs()) then
             print *, "Number of threads set is larger than the maximum number of threads which is", omp_get_num_procs()
             stop
@@ -212,7 +212,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
         integer(int32) :: io, leftBoundary, rightBoundary, gridType
-        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain
+        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain, BFieldMag, angle
 
         print *, ""
         print *, "Reading domain inputs:"
@@ -223,6 +223,7 @@ contains
         read(10, *, IOSTAT = io) gridType
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+        read(10, *, IOSTAT = io) BFieldMag, angle
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
@@ -237,9 +238,10 @@ contains
         print *, "Left boundary type:", leftBoundary
         print *, "Right boundary type:", rightBoundary
         print *, 'Grid type is:', gridType
+        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle)
+        print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""
-        solver = potentialSolver(world, leftVoltage, rightVoltage)
         call solver%construct_diagMatrix(world)
 
     end subroutine readGeometry

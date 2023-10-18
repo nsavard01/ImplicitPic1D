@@ -76,7 +76,6 @@ contains
         sinAngle = SIN(BFieldAngle)
         ionSoundSpeed = SQRT(T_e * e / particleList(2)%mass)
         do j = 1, 2
-            print *, 'particle type reflux:', particleList(j)%name
             !$OMP parallel private(iThread, i)
             iThread = omp_get_thread_num() + 1
             do i = 1, particleList(j)%refIdx(iThread)
@@ -85,15 +84,14 @@ contains
                     call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed * cosAngle
-                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed * sinAngle
+                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = -ionSoundSpeed * sinAngle
                     particleList(j)%phaseSpace(4, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
                 end if
-                if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
+                if (world%boundaryConditions(1) == 2) then
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 end if
-                print *, 'v_new', particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread)
                 !energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
             end do
             !$OMP end parallel
@@ -111,7 +109,7 @@ contains
             shift_rand = del_t * ran2(irand(iThread)) * ionSoundSpeed * cosAngle
             call getMaxwellianFluxSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
             particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed * cosAngle
-            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed * sinAngle
+            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = -ionSoundSpeed * sinAngle
             particleList(2)%phaseSpace(4, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
             if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
