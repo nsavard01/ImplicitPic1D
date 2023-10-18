@@ -189,7 +189,7 @@ contains
                         end if
                         k = k + 1
                     end do
-                    solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + particleList(j)%w_p * particleList(j)%q * 0.5d0 * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
+                    solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + particleList(j)%w_p * particleList(j)%q * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
                     
                     if (AtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(INT(l_f)))

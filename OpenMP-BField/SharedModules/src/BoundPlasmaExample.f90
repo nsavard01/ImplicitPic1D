@@ -34,7 +34,7 @@ program BoundPlasmaExample
     ! do j=1, numberChargedParticles
     !     E_i = E_i + globalParticleList(j)%getTotalKE()
     ! end do
-    ! call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
+    ! call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
     ! E_f = globalSolver%getTotalPE(globalWorld, .false.)
@@ -43,19 +43,17 @@ program BoundPlasmaExample
     ! end do
     ! print *, ABS((E_i - E_f)/(E_i))
     ! stop
-    E_i = 0.0d0 !globalSolver%getTotalPE(globalWorld, .false.)
+    E_i = globalSolver%getTotalPE(globalWorld, .false.)
     do j=1, numberChargedParticles
         E_i = E_i + globalParticleList(j)%getTotalKE()
     end do
     remainDel_t = del_t
     currDel_t = del_t
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
-    E_f = 0.0d0 !globalSolver%getTotalPE(globalWorld, .false.)
+    E_f = globalSolver%getTotalPE(globalWorld, .false.)
     do j=1, numberChargedParticles
         E_f = E_f + globalParticleList(j)%getTotalKE() + SUM(globalParticleList(j)%energyLoss) * globalParticleList(j)%mass * globalParticleList(j)%w_p * 0.5d0
     end do
-    EJ = SUM(globalSolver%EField * SUM(globalSolver%J, DIM = 2))
-    print *, EJ, (E_f - E_i) * globalParticleList(1)%w_p
     print *, ABS((E_i - E_f)/(E_i))
     print *, 'took', iterNumPicard, 'iterations'
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
