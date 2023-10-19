@@ -130,7 +130,6 @@ contains
                     else
                         l_cell = INT(l_sub + SIGN(0.5d0, v_sub(1)))
                     end if
-
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
                     v_half = v_sub
@@ -155,7 +154,7 @@ contains
                         Res_k(index) = del_tau - del_tau_k(index)
                         curr_Res = ABS(Res_k(index))
                         if (curr_Res < f_tol) then
-                            if (del_tau < del_tau_max) then
+                            if (del_tau <= del_tau_max) then
                                 AtBoundaryBool = .true.
                                 l_f = real(l_boundary)
                             else
@@ -198,7 +197,15 @@ contains
                         CASE(1,4)
                             exit
                         CASE(2)
-                            v_f(1) = -v_f(1)
+                            if (INT(l_f) == NumberXNodes) then
+                                v_f(1) = -ABS(v_f(1))
+                            else
+                                v_f(1) = ABS(v_f(1))
+                            end if
+                            if (v_f(1) > 0.0d0) then
+                                print *, 'Issue with v_f after neumann'
+                                stop
+                            end if
                         CASE(3)
                             l_f = ABS(l_f - real(NumberXNodes, kind = real64) - 1.0d0)
                         CASE default
@@ -212,10 +219,10 @@ contains
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
+                    if ((l_f < 1) .or. (l_f > NumberXNodes)) then
+                        stop "Have particles travelling outside the domain!"
+                    end if
                 end do
-                if ((l_f < 1) .or. (l_f > NumberXNodes)) then
-                    stop "Have particles travelling oremainDel_tutside domain!"
-                end if
             end do loopParticles
             !$OMP end parallel
         end do loopSpecies
@@ -275,7 +282,11 @@ contains
                             end if
                             exit
                         CASE(2)
-                            v_f(1) = -v_f(1)
+                            if (INT(l_f) == NumberXNodes) then
+                                v_f(1) = -ABS(v_f(1))
+                            else
+                                v_f(1) = ABS(v_f(1))
+                            end if
                             particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
                             particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                         CASE(3)
@@ -314,7 +325,7 @@ contains
                 end do
                 stop
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
-                    stop "Have particles travelling oremainDel_tutside domain!"
+                    stop "Have particles travelling outside domain!"
                 end if
                 
             end do loopParticles
@@ -388,7 +399,7 @@ contains
                         Res_k(index) = del_tau - del_tau_k(index)
                         curr_Res = ABS(Res_k(index))
                         if (curr_Res < f_tol) then
-                            if (del_tau < del_tau_max) then
+                            if (del_tau <= del_tau_max) then
                                 AtBoundaryBool = .true.
                                 l_f = real(l_boundary)
                             else
@@ -439,7 +450,11 @@ contains
                             end if
                             exit
                         CASE(2)
-                            v_f(1) = -v_f(1)
+                            if (INT(l_f) == NumberXNodes) then
+                                v_f(1) = -ABS(v_f(1))
+                            else
+                                v_f(1) = ABS(v_f(1))
+                            end if
                             particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
                             particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                         CASE(3)
@@ -477,7 +492,7 @@ contains
                     v_sub = v_f
                 end do
                 if ((l_f < 1) .or. (l_f > NumberXNodes)) then
-                    stop "Have particles travelling oremainDel_tutside domain!"
+                    stop "Have particles travelling outside domain!"
                 end if
                 
             end do loopParticles
