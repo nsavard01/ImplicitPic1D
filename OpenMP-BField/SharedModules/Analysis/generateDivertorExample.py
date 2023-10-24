@@ -7,104 +7,6 @@ Created on Tue Jun 27 14:07:07 2023
 
 from import_libraries_constants import *
 
-def otherFunc(phi, tau):
-    coeff_1 = 2.0 * np.exp(-tau *  phi**2)/np.sqrt(np.pi * tau)
-    return coeff_1 * scipy.special.dawsn(phi) + scipy.special.erf(np.sqrt(tau) * phi) - 1
-
-def funcPhi_s(phi, B, s):
-    return (2/np.pi/B) * scipy.special.dawsn(phi) - s
-
-def funcNonLinear(eta, A, B, tau, I_G, t, dah):
-    res = np.zeros(eta.size)
-    dt = t[1] - t[0]
-    laplace = eta[0:-2] - 2*eta[1:-1] + eta[2:]
-    firstDer = eta[2:] - eta[0:-2]
-    bracket = laplace * (1 - t[1:-1])**(2-2*dah) / dah**2 / dt**2 + firstDer*(1-t[1:-1])**(1-2*dah) * (dah-1) / dah**2 / dt
-    res[1:-1] = A * bracket * np.exp(-eta[0]) + np.exp(-eta[1:-1]) - B * np.exp(eta[1:-1] * tau) * I_G[1:-1]
-    res[0] = np.exp(-eta[0]) - B * np.exp(eta[0] * tau) * I_G[0] #A * (-2 * eta[0] + 2 * eta[1]) * np.exp(-eta[0]) +
-    res[-1] = eta[-1] - 0
-    return res
-
-def funcNonLinearTrunc(eta, A, B, tau, I_G, truncFact):
-    res = np.zeros(eta.size)
-    laplace = eta[0:-2] - 2*eta[1:-1] + eta[2:]
-    firstDer = eta[2:] - eta[0:-2]
-    bracket = laplace * (1 - t[1:-1])**(2-2*dah) / dah**2 / dt**2 + firstDer*(1-t[1:-1])**(1-2*dah) * (dah-1) / dah**2 / dt
-    res[1:-1] = A * bracket * np.exp(-eta[0]) + np.exp(-eta[1:-1]) * truncFact[1:-1] - B * np.exp(eta[1:-1] * tau) * I_G[1:-1]
-    res[0] = np.exp(-eta[0]) - B * np.exp(eta[0] * tau) * I_G[0] #A * (-2 * eta[0] + 2 * eta[1]) * np.exp(-eta[0]) +
-    res[-1] = eta[-1] - 0
-    return res
-
-def getBoundPlasmaSolutions(L, numNodes, n_ave, T_e, T_i, M):
-    fracDebye = 0.1
-    lambDebye = debye_length(T_e, n_ave)
-    t = np.linspace(0, 1, numNodes)
-    dah = np.log(fracDebye * lambDebye/L)/np.log(1/(numNodes-1))
-    s = 1 - (1-t)**dah
-    dt = t[1] - t[0]
-    phi = np.zeros(numNodes)
-    tau = T_e/T_i
-    M_m = M/m_e
-    if (tau < 36):
-        phi_1 = opt.fsolve(otherFunc, 0.5, args = (tau,))**2
-    else:
-        phi_1 = 0.854
-
-    coeff_1 = np.pi * np.sqrt(M_m / 4 / np.pi) / (1 + T_i/T_e) / 2 / scipy.special.dawsn(np.sqrt(phi_1))
-    phi_w = -np.log(coeff_1)
-    B = 0.5 * np.sqrt(M_m/np.pi) * (tau / (1 + tau)) * np.exp(phi_w)
-
-    phi[0] = - phi_w * T_e
-    phi[-1] = 0.0
-    for i in range(1, numNodes-1):
-        phi[i] = phi[0] - (opt.fsolve(funcPhi_s, 0.2, args = (B, s[i]))**2) * T_e
-        
-
-    eta = (- phi)/T_e
-    eta[-1] = 0.0
-    n_0 = n_ave / np.exp(eta[0])/ np.trapz(np.exp(-eta) * dah * (1-t)**(dah-1), dx = dt)
-    B = 0.5 * np.sqrt(M_m * tau)
-    A = eps_0 * T_e / n_0 / e / L**2 
-
-    I_G = np.zeros(numNodes)
-
-    for i in range(numNodes):
-        I_int = np.where(eta[i] < eta, (1 - t)**(dah-1) * np.exp(-eta * tau), (1 - t)**(dah-1) * np.exp(-eta*tau) * scipy.special.erfc(np.sqrt((eta[i] - eta)*tau)))
-        I_G[i] = np.trapz(I_int, dx = dt)
-    I_G = I_G * dah
-
-    n_e = n_0 * np.exp(eta[0] - eta)
-    n_i = n_0 * np.exp(eta*tau + eta[0]) * B * I_G
-
-    initialR = np.sum(funcNonLinear(eta, A, B, tau, I_G, t, dah)**2)/numNodes
-    eta = opt.fsolve(funcNonLinear, eta, args = (A, B, tau, I_G, t, dah))
-    for i in range(1000):
-        n_0 = n_ave / np.exp(eta[0])/ np.trapz(np.exp(-eta) * dah * (1-t)**(dah-1), dx = dt)
-        A = eps_0 * T_e / n_0 / e / L**2
-        for k in range(numNodes):
-            I_int = np.where(eta[k] < eta, (1 - t)**(dah-1) * np.exp(-eta * tau), (1 - t)**(dah-1) * np.exp(-eta*tau) * scipy.special.erfc(np.sqrt((eta[k] - eta)*tau)))
-            I_G[k] = np.trapz(I_int, dx = dt)
-        I_G = I_G * dah
-        pastEta = eta
-        #currRes = np.sum(funcNonLinear(eta, A, B, tau, I_G, t, dah)**2)/numNodes
-        eta = opt.fsolve(funcNonLinear, pastEta, args = (A, B, tau, I_G, t, dah))
-        currRes = np.sqrt(np.sum((eta - pastEta)**2) / numNodes)
-        if (currRes < 1e-8):
-            print('Took', i, 'iterations for convergence!')
-            break
-        if (i == 999):
-            raise Warning('Iteration has not converged for bounded plasma model')
-            
-    
-    n_e = n_0 * np.exp(eta[0] - eta)
-    n_i = n_0 * np.exp(eta*tau + eta[0]) * B * I_G
-    phi = -eta * T_e
-    sol = np.zeros((4, numNodes))
-    sol[0,:] = L-s*L
-    sol[1,:] = phi
-    sol[2, :] = n_e
-    sol[3, :] = n_i
-    return np.flip(sol, axis = 1)
 
 def compareRefToDatasRes(dataList, labelList, ref, saveFile):
     if (len(dataList) != len(labelList)):
@@ -284,42 +186,18 @@ def compareModelToDatas(dataList, labelList, model, saveFile):
     fig2.savefig(saveFile + '_ionDensity.pdf', bbox_inches = 'tight')
     fig3.savefig(saveFile + '_voltage.pdf', bbox_inches = 'tight')
     
-def compareModelToData(data, model):
-    for name in data.particles.keys():
-        if name != 'e':
-            ion = name
-            break
-    deb = debye_length(data.T_e, data.n_ave)
-    M = data.particles[ion]['mass']
-    plt.figure()
-    n_e = data.getAveDensity('e')
-    plt.plot(data.grid, n_e, 'o', label = 'PIC')
-    plt.plot(model[0, :], model[2, :], label = 'Model')
-    plt.ylabel(r'$n_e$ (m$^-3$)')
-    plt.legend(loc = 'best')
-    modelN_e = np.interp(data.grid[1:-1], model[0,:], model[2,:])
-    res = np.sum(abs((modelN_e - n_e[1:-1])/modelN_e)/(data.Nx - 2))
-    print('Percent diff. root mean square in n_e is:', 100*res)
+def comparePhiToLaplace(data, angle):
+
     
-    plt.figure()
-    n_i = data.getAveDensity(ion)
-    plt.plot(data.grid, n_i, 'o',  label = 'PIC')
-    plt.plot(model[0, :], model[3, :], label = 'Model')
-    plt.ylabel(r'$n_i$ (m$^-3$)')
-    plt.legend(loc = 'best')
-    modelN_i = np.interp(data.grid[1:-1], model[0,:], model[3,:])
-    res = np.sum(abs((modelN_i - n_i[1:-1])/modelN_i))/(data.Nx - 2)
-    print('Percent diff. root mean square in n_i is:', 100*res)
+    fileName = 'Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/OpenMP-BField/SharedModules/Analysis/DivertorComparison/profiles_LePIC25D3V/profiles_LePIC25D3V_alpha_' + str(angle) + '_t_4000000.txt'
+    extrData = np.loadtxt(fileName, skiprows = 2)
     
     plt.figure()
     phi = data.getAvePhi()
-    plt.plot(data.grid, phi, 'o', label = 'PIC')
-    plt.plot(model[0, :], model[1, :], label = 'Model')
+    plt.plot(data.grid * 1e3, phi, 'o', label = 'Nicolas')
+    plt.plot(extrData[:,0], extrData[:, 1], label = 'Laplace')
     plt.ylabel(r'Voltage (V)')
     plt.legend(loc = 'best')
-    modelPhi = np.interp(data.grid[1:-1], model[0,:], model[1,:])
-    res = np.sum(abs((modelPhi - phi[1:-1])/modelPhi)/(data.Nx - 2))
-    print('Percent diff. root mean square in phi is:', 100 * res)
         
 def compareModelToDatasRes(dataList, labelList, model):
     if (len(dataList) != len(labelList)):

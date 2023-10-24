@@ -6,7 +6,7 @@ Created on Tue Jun 27 14:32:42 2023
 """
 
 from plotProduction import *
-from generateBoundExample import *
+from generateDivertorExample import *
 
     
     
@@ -16,12 +16,19 @@ from generateBoundExample import *
 testExp_0deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test/')
 testExp_45deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg/')
 testExp_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg/')
+testExp_extend_0p1delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p1delT/')
+testExp_extend_0p2delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p2delT/')
 
 testExp_norm_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
 
 
 test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test/')
-test_firstB = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_firstBField/')
+test_0deg = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_other/')
+test_0deg_vacuumStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_try/')
+test_0deg_vacuumStart_noExactBoundary = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_vacuumStart_notExactBoundary/')
+test_45deg_vacuumStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_45deg_vacuumStart/')
+test_45deg_vacuumStart_noExactBoundary = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_45deg_vacuumStart_notExactBoundary/')
+vacuumStart_45deg_noExactBoundary_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_notExactBoundary_400nodes_0p2T/')
 #CIC 2p5e1
 
 # convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]

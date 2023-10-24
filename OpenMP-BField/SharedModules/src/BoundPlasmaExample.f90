@@ -15,18 +15,20 @@ program BoundPlasmaExample
     use omp_lib
     implicit none
     
-    integer(int32) :: i, j, iThread
+    integer(int32) :: i, j, iThreadhtop
     real(real64) :: remainDel_t, currDel_t, E_i, E_f, EJ
     call initializeScheme(schemeNum)
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
-    ! do i = 1, numberChargedParticles
-    !     globalParticleList(i)%N_p = 0
-    ! end do
-    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, injectionFlux, globalParticleList(1)%w_p)
+    do i = 1, numberChargedParticles
+        globalParticleList(i)%N_p = 0
+    end do
+    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, injectionFlux, globalParticleList(1)%w_p, globalSolver%BFieldAngle)
     call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
+    if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
+    
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
     ! E_i = globalSolver%getTotalPE(globalWorld, .false.)

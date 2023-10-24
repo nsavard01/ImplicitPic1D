@@ -122,10 +122,10 @@ contains
     !     end if
     ! end subroutine readRestart
 
-    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, w_p)
+    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, w_p, angleRad)
         logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool
         real(real64), intent(in out) :: injectionFlux
-        real(real64), intent(in) :: w_p
+        real(real64), intent(in) :: w_p, angleRad
         character(len=*), intent(in) :: InjFilename
         integer(int32) :: tempInt, io
         real(real64) :: numFluxPart
@@ -144,6 +144,7 @@ contains
         print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
         print *, "Particle injection on neumann boundary", injectionBool
         if (injectionBool) then
+            injectionFlux = injectionFlux * COS(angleRad)
             print *, 'Particle injection flux:', injectionFlux
             numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
             numFluxParticlesLow = floor(numFluxPart)
