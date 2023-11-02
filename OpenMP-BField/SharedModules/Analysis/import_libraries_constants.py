@@ -5,6 +5,8 @@ Created on Wed Jun 21 16:18:53 2023
 @author: Nicolas
 """
 import numpy as np
+import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import scipy.constants as constants
 import scipy.optimize as opt

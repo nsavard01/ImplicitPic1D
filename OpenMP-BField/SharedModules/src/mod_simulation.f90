@@ -372,7 +372,7 @@ contains
                 call system_clock(startTime)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
@@ -399,7 +399,7 @@ contains
                 call system_clock(startTime)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 densities = 0.0d0
@@ -502,7 +502,7 @@ contains
         call system_clock(startTime)
         if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
         if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-        if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+        if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
         call system_clock(endTime)
         collisionTime = collisionTime + (endTime-startTime)
         densities = 0.0d0
@@ -620,7 +620,7 @@ contains
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i+1, heatSkipSteps) == 0) then
@@ -682,7 +682,7 @@ contains
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
             do k = 1, numThread
                 do i=1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)

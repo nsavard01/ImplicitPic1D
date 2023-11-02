@@ -30,12 +30,13 @@ def plotAveDensity(dataSet, name = "", label = ""):
             plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([0, dataSet.grid[-1]])
  
-def plotAvePhi(dataSet):
+def plotAvePhi(dataSet, label = ''):
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid, phi, 'o-', label = 'PIC')
+    plt.plot(dataSet.grid, phi, 'o-', label = label)
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
-    plt.xlim([0, dataSet.grid[-1]]) 
+    plt.xlim([0, dataSet.grid[-1]])
+    plt.show()
     
 def maxwellEDVF(x, T):
     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)  

@@ -9,5 +9,5 @@
 2.4d0 0! BField magnitude (T), angle theta from x axis (degrees)
 10 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
-test_75deg_extend_0p2delT !save file name
+test_45deg_eps100 !save file name
 END

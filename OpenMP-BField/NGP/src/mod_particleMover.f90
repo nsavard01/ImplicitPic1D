@@ -157,17 +157,17 @@ contains
                                     AtBoundaryBool = .true.
                                     l_boundary = NINT(l_f)
                                 end if
-                                if (INT(l_f) /= l_cell) then
-                                    print *, 'l_f not in cell after going del_tau_max!'
-                                    print *, 'del_tau is:', del_tau
-                                    print *, 'l_sub:', l_sub
-                                    print *, 'l_f:', l_f
-                                    print *, 'v_sub:', v_sub
-                                    print *, 'v_half:', v_half
-                                    print *, 'v_f:',v_f
-                                    print *, 'del_tau_max:', del_tau_max
-                                    stop
-                                end if
+                                ! if (INT(l_f) /= l_cell) then
+                                !     print *, 'l_f not in cell after going del_tau_max!'
+                                !     print *, 'del_tau is:', del_tau
+                                !     print *, 'l_sub:', l_sub
+                                !     print *, 'l_f:', l_f
+                                !     print *, 'v_sub:', v_sub
+                                !     print *, 'v_half:', v_half
+                                !     print *, 'v_f:',v_f
+                                !     print *, 'del_tau_max:', del_tau_max
+                                !     stop
+                                ! end if
                             end if
                             if (del_tau <= 0.0d0) then
                                 print *, 'AtBoundaryBool:', AtBoundaryBool
