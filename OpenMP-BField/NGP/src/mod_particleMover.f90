@@ -13,25 +13,19 @@ module mod_particleMover
 
 contains
 
-    subroutine subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, del_t, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, f_tol, AtBoundaryBool)
-        real(real64), intent(in) :: l_sub, v_sub(3), del_t, E_x, q_over_m, BField(3), B_mag, dx_dl, f_tol
+    subroutine subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, f_tol, AtBoundaryBool, &
+            del_t, l_boundary)
         integer(int32), intent(in) :: l_cell
-        real(real64), intent(in out) :: l_f, v_f(3), timePassed, del_tau, v_half(3)
+        real(real64), intent(in) :: E_x, q_over_m, BField(3), B_mag, dx_dl, f_tol, del_t
+        real(real64), intent(in out) :: l_sub, v_sub(3), l_f, v_f(3), v_half(3), del_tau, timePassed
         logical, intent(in out) :: AtBoundaryBool
-        logical :: convergeBool = .false.
-        real(real64) :: Res_k(m_Anderson_Particle+1), del_tau_k(m_Anderson_Particle+1), fitMat(m_Anderson_Particle), minCoeff(m_Anderson_Particle+1), del_tau_max
-        integer(int32) :: m_k, index, k, l_boundary, u
-        real(real64) :: coeffAccel, v_prime(3), curr_Res
-        ! print *, ''
-        ! print *, 'ENTER SUBSTEP SOLVER'
-        ! print *, "--------------"
-        ! print *, 'initial v_sub:', v_sub
-        ! print *, 'initial l_sub:', l_sub
-        ! print *, 'AtBoundaryBool:', AtBoundaryBool
-        ! print *, 'l_cell:', l_cell
-        ! print *, 'E_x:', E_x
-        v_half = v_sub
+        integer(int32), intent(in out) :: l_boundary
+        real(real64) :: v_prime(3), coeffAccel, curr_Res, Res_k(m_Anderson_Particle+1), del_tau_k(m_Anderson_Particle+1), fitMat(m_Anderson_Particle), minCoeff(m_Anderson_Particle+1), del_tau_max
+        integer(int32) :: k, m_k, u, index
+        logical :: convergeBool
+        
         v_prime = v_sub
+        v_half = v_sub
         del_tau_max = del_t - timePassed
         del_tau_k(1) = del_tau_max
         k = 0
@@ -50,21 +44,45 @@ contains
             end if
             del_tau = MIN(del_tau_max, (real(l_boundary) - l_sub) * dx_dl / v_half(1))
             Res_k(index) = del_tau - del_tau_k(index)
-            print *, 'k is:', k, 'with del_tau_k:', del_tau_k
             curr_Res = ABS(Res_k(index))
             if (curr_Res < f_tol) then
-                if (del_tau < del_tau_max) then
-                    AtBoundaryBool = .true.
-                    l_f = real(l_boundary)
-                else
-                    AtBoundaryBool = .false.
-                    l_f = l_sub + v_half(1) * del_tau / dx_dl
-                end if
                 v_f = 2.0d0 * v_half - v_sub
+                AtBoundaryBool = (del_tau < del_tau_max)
+                if(.not. AtBoundaryBool) then
+                    l_f = l_sub + v_half(1) * del_tau / dx_dl
+                    if (MOD(l_f, 1.0d0) == 0.0d0) then
+                        AtBoundaryBool = .true.
+                        l_boundary = NINT(l_f)
+                    end if
+                    ! if (INT(l_f) /= l_cell) then
+                    !     print *, 'l_f not in cell after going del_tau_max!'
+                    !     print *, 'del_tau is:', del_tau
+                    !     print *, 'l_sub:', l_sub
+                    !     print *, 'l_f:', l_f
+                    !     print *, 'v_sub:', v_sub
+                    !     print *, 'v_half:', v_half
+                    !     print *, 'v_f:',v_f
+                    !     print *, 'del_tau_max:', del_tau_max
+                    !     stop
+                    ! end if
+                end if
+                if (del_tau <= 0.0d0) then
+                    print *, 'AtBoundaryBool:', AtBoundaryBool
+                    print *, 'del_tau is 0 or less'
+                    print *, 'del_tau is:', del_tau
+                    print *, 'l_sub:', l_sub
+                    print *, 'l_f:', l_f
+                    print *, 'v_sub:', v_sub
+                    print *, 'v_half:', v_half
+                    print *, 'v_f:',v_f
+                    print *, 'del_tau_max:', del_tau_max
+                    stop
+                end if
                 timePassed = timePassed + del_tau
                 convergeBool = .true.
                 exit
             end if
+
             if (k > m_Anderson_Particle) then
                 if (curr_Res >= SUM(abs(Res_k))/real(m_Anderson_Particle+1)) then
                     del_tau_max = 0.5d0 * del_tau_max
@@ -87,10 +105,6 @@ contains
             end if
             k = k + 1
         end do
-        ! print *, 'v_f is:', v_f
-        ! print *, 'l_f is:', l_f
-        ! print *, 'k is:', k
-        ! print *, ''
 
     end subroutine subStepSolverAA
 
@@ -104,20 +118,15 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, E_x, q_times_wp
-        integer(int32) :: j, i, l_cell, iThread
+        integer(int32) :: j, i, l_cell, iThread, l_boundary
         logical :: AtBoundaryBool
-        logical :: convergeBool = .false.
-        real(real64) :: Res_k(m_Anderson_Particle+1), del_tau_k(m_Anderson_Particle+1), fitMat(m_Anderson_Particle), minCoeff(m_Anderson_Particle+1), del_tau_max
-        integer(int32) :: m_k, index, k, l_boundary, u
-        real(real64) :: coeffAccel, v_prime(3), curr_Res
         solver%J = 0.0d0
         solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         f_tol = del_t * 1.d-8
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             q_times_wp = particleList(j)%q * particleList(j)%w_p
-            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, dx_dl, E_x, &
-            convergeBool, Res_k, del_tau_k, fitMat, minCoeff, del_tau_max, m_k, index, k, l_boundary, u, coeffAccel, v_prime, curr_Res)
+            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, dx_dl, E_x, l_boundary)
             iThread = omp_get_thread_num() + 1 
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 v_sub = particleList(j)%phaseSpace(2:4,i,iThread)
@@ -127,87 +136,11 @@ contains
                     l_cell = INT(l_sub)
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    v_half = v_sub
-                    v_prime = v_sub
-                    del_tau_max = del_t - timePassed
-                    del_tau_k(1) = del_tau_max
-                    k = 0
-                    convergeBool = .false.
-                    do while (.not. convergeBool)
-                        index = MODULO(k, m_Anderson_Particle+1) + 1
-                        m_k = MIN(k, m_Anderson_Particle)
-                        coeffAccel = 0.5d0 * del_tau_k(index) * q_over_m
-                        v_prime(1) = v_sub(1) + coeffAccel * E_x
-                        v_half = v_prime + coeffAccel * (crossProduct(v_prime, solver%BField) + coeffAccel* SUM(v_prime * solver%BField) * solver%BField)
-                        v_half = v_half / (1.0d0 + (coeffAccel*solver%BFieldMag)**2)
-                        if (v_half(1) > 0) then
-                            l_boundary = l_cell + 1
-                        else
-                            l_boundary = l_cell
-                        end if
-                        del_tau = MIN(del_tau_max, (real(l_boundary) - l_sub) * dx_dl / v_half(1))
-                        Res_k(index) = del_tau - del_tau_k(index)
-                        curr_Res = ABS(Res_k(index))
-                        if (curr_Res < f_tol) then
-                            v_f = 2.0d0 * v_half - v_sub
-                            AtBoundaryBool = (del_tau < del_tau_max)
-                            if(.not. AtBoundaryBool) then
-                                l_f = l_sub + v_half(1) * del_tau / dx_dl
-                                if (MOD(l_f, 1.0d0) == 0.0d0) then
-                                    AtBoundaryBool = .true.
-                                    l_boundary = NINT(l_f)
-                                end if
-                                ! if (INT(l_f) /= l_cell) then
-                                !     print *, 'l_f not in cell after going del_tau_max!'
-                                !     print *, 'del_tau is:', del_tau
-                                !     print *, 'l_sub:', l_sub
-                                !     print *, 'l_f:', l_f
-                                !     print *, 'v_sub:', v_sub
-                                !     print *, 'v_half:', v_half
-                                !     print *, 'v_f:',v_f
-                                !     print *, 'del_tau_max:', del_tau_max
-                                !     stop
-                                ! end if
-                            end if
-                            if (del_tau <= 0.0d0) then
-                                print *, 'AtBoundaryBool:', AtBoundaryBool
-                                print *, 'del_tau is 0 or less'
-                                print *, 'del_tau is:', del_tau
-                                print *, 'l_sub:', l_sub
-                                print *, 'l_f:', l_f
-                                print *, 'v_sub:', v_sub
-                                print *, 'v_half:', v_half
-                                print *, 'v_f:',v_f
-                                print *, 'del_tau_max:', del_tau_max
-                                stop
-                            end if
-                            timePassed = timePassed + del_tau
-                            convergeBool = .true.
-                            exit
-                        end if
 
-                        if (k > m_Anderson_Particle) then
-                            if (curr_Res >= SUM(abs(Res_k))/real(m_Anderson_Particle+1)) then
-                                del_tau_max = 0.5d0 * del_tau_max
-                                del_tau_k(1) = del_tau_max
-                                k = -1
-                            end if
-                        end if
-                        if (k > 0) then
-                            do u = 0, m_k-1
-                                fitMat(u+1) = Res_k(MODULO(k - m_k + u, m_Anderson_Particle+1) + 1) - Res_k(index)
-                            end do
-                            minCoeff(1:m_k) = (fitMat(1:m_k) * -Res_k(index))/SUM(fitMat(1:m_k)**2)
-                            minCoeff(m_k+1) = 1.0d0 - SUM(minCoeff(1:m_k))
-                            del_tau_k(MODULO(k+1, m_Anderson_Particle+1) + 1) = minCoeff(1) * (Res_k(MODULO(k-m_k, m_Anderson_Particle+1) + 1) + del_tau_k(MODULO(k-m_k,m_Anderson_Particle+1) + 1))
-                            do u=1, m_k
-                                del_tau_k(MODULO(k+1, m_Anderson_Particle+1) + 1) = del_tau_k(MODULO(k+1, m_Anderson_Particle+1) + 1) + minCoeff(u + 1) * (Res_k(MODULO(k-m_k + u, m_Anderson_Particle+1) + 1) + del_tau_k(MODULO(k-m_k + u, m_Anderson_Particle+1) + 1))
-                            end do
-                        else
-                            del_tau_k(2) = del_tau
-                        end if
-                        k = k + 1
-                    end do
+                    ! Start AA
+                    call subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, f_tol, AtBoundaryBool, &
+                        del_t, l_boundary)
+        
                     solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + q_times_wp * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
                     
                     if (AtBoundaryBool) then
