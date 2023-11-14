@@ -27,7 +27,7 @@ contains
         iThread = omp_get_thread_num() + 1
         do i=1, part%N_p(iThread)
             part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1)
-            part%phaseSpace(1,i, iThread) = getLFromX(part%phaseSpace(1,i, iThread), world)
+            part%phaseSpace(1,i, iThread) = world%getLFromX(part%phaseSpace(1,i, iThread))
         end do
         !$OMP end parallel    
     end subroutine initialize_randUniform

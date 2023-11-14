@@ -30,7 +30,7 @@ contains
             energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
             + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
             x_random = world%grid(NumberXNodes) * ran2(irand(iThread))
-            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(x_random, world)
+            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(x_random)
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do
         particleList(2)%N_p(iThread) = particleList(2)%N_p(iThread) + particleList(1)%delIdx(iThread)
@@ -114,12 +114,12 @@ contains
             if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
                 particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
-                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(world%grid(1) + shift_rand, world)
+                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%grid(1) + shift_rand)
                 particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
             else
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = -ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
                 particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = -ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
-                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(world%grid(NumberXNodes) - shift_rand, world)
+                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%grid(NumberXNodes) - shift_rand)
                 particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
             end if
         end do
@@ -177,7 +177,7 @@ contains
             particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
             particleList(2)%phaseSpace(4, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
             x_random = world%grid(NumberXNodes) * ran2(irand(iThread))
-            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = getLFromX(x_random, world)
+            particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(x_random)
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
             energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
             + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
