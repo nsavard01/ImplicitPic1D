@@ -24,11 +24,11 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, iThread
         real(real64) :: L_domain
-        L_domain = world%grid(NumberXNodes) - world%grid(1)
+        L_domain = SUM(world%dx_dl)
         !$OMP parallel private(iThread, i)
         iThread = omp_get_thread_num() + 1
         do i=1, part%N_p(iThread)
-            part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1)
+            part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1) - 0.5d0 * world%dx_dl(1)
             part%phaseSpace(1,i, iThread) = world%getLFromX(part%phaseSpace(1,i, iThread))
         end do
         !$OMP end parallel    
@@ -43,58 +43,81 @@ contains
         integer(int32) :: i, j, l_center, l_left, l_right, iThread
         real(real64) :: d, rhoTemp(NumberXNodes, numThread)
         rho = 0.0d0
-        do i=1, numberChargedParticles
+        do i=1, 1
             rhoTemp = 0.0d0
             !$OMP parallel private(iThread, j, l_center, l_left, l_right, d)
             iThread = omp_get_thread_num() + 1
             do j = 1, particleList(i)%N_p(iThread)
-                l_center = NINT(particleList(i)%phaseSpace(1, j, iThread))
+                l_center = INT(particleList(i)%phaseSpace(1, j, iThread))
                 d = particleList(i)%phaseSpace(1, j, iThread) - real(l_center)
+                rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (-d**2 + d + 0.5d0)
+                l_right = l_center + 1
+                l_left = l_center - 1
                 SELECT CASE (world%boundaryConditions(l_center))
                 CASE(0)
-                    ! Inside domain
-                    l_left = l_center -1
-                    l_right = l_center + 1
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (0.75 - d**2)
-                    rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! SELECT CASE (world%boundaryConditions(l_right))
-                    ! CASE(0,1)
-                    !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2   
-                    ! CASE(2)
-                    !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    ! CASE(3)
-                    !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    !     rhoTemp(1, iThread) = rhoTemp(1, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    ! END SELECT
-                    
-                    ! SELECT CASE (world%boundaryConditions(l_left))
-                    ! CASE(0,1)
-                    !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! CASE(2)
-                    !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! CASE(3)
-                    !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    !     rhoTemp(NumberXNodes, iThread) = rhoTemp(NumberXNodes, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! END SELECT
+                    ! No Boundary either side
+                    rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                    rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
                 CASE(1)
-                    !Dirichlet
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (1.0d0-ABS(d))
-                    rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) = rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) + ABS(d)
+                    ! Dirichlet to right
+                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * d**2
+                    rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                CASE(-1)
+                    !Dirichlet to left
+                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * (1.0d0 - d)**2
+                    rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
                 CASE(2)
-                    !Neumann symmetric
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (0.75 - d**2)
-                    rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) = rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) + (0.25d0 + d**2)
+                    !Neumann to right
+                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * d**2
+                    rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                CASE(-2)
+                    !Neumann to left
+                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
+                    rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
                 CASE(3)
-                    ! Periodic
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (0.75 - d**2)
-                    rhoTemp(ABS(l_center - NumberXNodes) + 1, iThread) = rhoTemp(ABS(l_center - NumberXNodes) + 1, iThread) + (0.75 - d**2)
-                    ! towards domain
-                    rhoTemp(l_center+INT(SIGN(1.0, d)), iThread) = rhoTemp(l_center+INT(SIGN(1.0, d)), iThread) + 0.5d0 * (0.5d0 + ABS(d))**2
-                    ! across periodic boundary
-                    rhoTemp(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), iThread) = rhoTemp(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), iThread) + 0.5d0 * (0.5d0 - ABS(d))**2
+                    !Periodic to right
+                    rhoTemp(1, iThread) = rhoTemp(1, iThread) + 0.5d0 * d**2
+                    rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                CASE(-3)
+                    !Periodic to left
+                    rhoTemp(NumberXNodes, iThread) = rhoTemp(NumberXNodes, iThread) + 0.5d0 * (1.0d0 - d)**2
+                    rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
                 END SELECT
+
+
+                ! ! interpolate to left
+                ! SELECT CASE (world%boundaryConditions(l_center))
+                ! CASE(0)
+                !     ! Inside domain
+                !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                ! CASE(1)
+                !     !Dirichlet
+                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * (1.0d0 - d)**2
+                ! CASE(2)
+                !     !Neumann symmetric
+                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
+                ! CASE(3)
+                !     ! Periodic
+                !     rhoTemp(NumberXNodes-1, iThread) = rhoTemp(NumberXNodes-1, iThread) + 0.5d0 * (1.0d0 - d)**2
+                ! END SELECT
+                
+                ! ! interpolate to right
+                ! SELECT CASE (world%boundaryConditions(l_right))
+                ! CASE(0)
+                !     ! Inside domain
+                !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
+                ! CASE(1)
+                !     !Dirichlet
+                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * d**2
+                ! CASE(2)
+                !     !Neumann symmetric
+                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * d**2
+                ! CASE(3)
+                !     ! Periodic
+                !     rhoTemp(1, iThread) = rhoTemp(1, iThread) + 0.5d0 * d**2
+                ! END SELECT
             end do
+            
             !$OMP end parallel
             rho = rho + SUM(rhoTemp, DIM = 2) * particleList(i)%w_p * particleList(i)%q
         end do
@@ -183,9 +206,9 @@ contains
         do i=1, numberChargedParticles
             do j = 1, NumberXNodes
                 if (world%boundaryConditions(j) == 0) then
-                    densities(j, i) = densities(j,i)/world%nodeVol(j)
+                    densities(j, i) = densities(j,i)/world%dx_dl(j)
                 else
-                    densities(j, i) = 2.0d0 * densities(j,i)/world%nodeVol(j)
+                    densities(j, i) = 2.0d0 * densities(j,i)/world%dx_dl(j)
                 end if
             end do
             write(char_i, '(I3)'), CurrentDiagStep

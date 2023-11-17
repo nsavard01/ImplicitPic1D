@@ -8,19 +8,36 @@ program BoundPlasmaExample
     use mod_readInputs
     use mod_Scheme
     use mod_particleInjection
-    use mod_particleMover
-    ! use mod_collisions
-    use mod_nonLinSolvers
-    use mod_simulation
+    ! use mod_particleMover
+    ! ! use mod_collisions
+    ! use mod_nonLinSolvers
+    ! use mod_simulation
     use omp_lib
     implicit none
     
-    integer(int32) :: i, j, iThreadhtop
+    integer(int32) :: i, j, iThread
     real(real64) :: remainDel_t, currDel_t, E_i, E_f, EJ
+    type(Domain) :: globalWorld
+    type(Particle), allocatable :: globalParticleList(:)
+    type(potentialSolver) :: globalSolver
     call initializeScheme(schemeNum)
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
+    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
+    print *, globalSolver%rho/globalWorld%dx_dl
+    print *, SUM(globalParticleList(1)%N_p) * globalParticleList(1)%w_p / SUM(globalWorld%dx_dl)
+    call globalSolver%construct_diagMatrix(globalWorld)
+    print *, ''
+    print *, globalSolver%a_tri
+    print *, ''
+    print *, globalSolver%b_tri
+    print *, ""
+    print *, globalSolver%c_tri
+    print *, ''
+    print *, globalSolver%sourceTermVals
+    call globalSolver%solve_tridiag_Poisson(globalWorld)
+    print *, globalSolver%phi
     ! do i = 1, numberChargedParticles
     !     globalParticleList(i)%N_p = 0
     ! end do
