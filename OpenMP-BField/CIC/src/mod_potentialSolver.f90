@@ -26,7 +26,8 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
-        procedure, public, pass(self) :: evaluateEField
+        procedure, public, pass(self) :: evaluateEFieldHalfTime
+        procedure, public, pass(self) :: evaluateEFieldCurrTime
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: solve_CG_Ampere
         procedure, public, pass(self) :: getError_tridiag_Poisson
@@ -45,11 +46,13 @@ contains
         real(real64), intent(in) :: leftVoltage, rightVoltage
         real(real64), intent(in) :: BFieldMag, angle
         real(real64) :: angle_rad
+        integer(int32) :: i
         allocate(self % J(NumberXNodes+1, numThread), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes+1))
         self % rho = 0.0d0
         self % J = 0.0d0
         self % phi = 0.0d0
+        self%EField = 0.0d0
         self % rho_const = 0.0d0
         self%phi_f = self%phi 
         self%BFieldMag = BFieldMag
@@ -60,23 +63,25 @@ contains
         self%BField(2) = BFieldMag * SIN(angle_rad)
         self%BField(3) = 0.0d0 
         self%EField = 0.0d0
-
         self%numDirichletNodes = 0
         if (ABS(world%boundaryConditions(1)) == 1) then
-            self%numDirichletNodes = 1
-            if (ABS(world%boundaryConditions(NumberXNodes)) == 1) then
-                self%numDirichletNodes = 2
-            end if
+            self%numDirichletNodes = self%numDirichletNodes + 1
+        end if
+        if (ABS(world%boundaryConditions(NumberXNodes+1)) == 1) then
+            self%numDirichletNodes = self%numDirichletNodes + 1
         end if
 
         allocate(self%dirichletIndx(self%numDirichletNodes), self%dirichletVals(self%numDirichletNodes), self%sourceTermVals(self%numDirichletNodes))
-        if (ABS(world%boundaryConditions(1)) == 1) then
-            self%dirichletIndx(1) = 1
-            self%dirichletVals(1) = leftVoltage
-            if (ABS(world%boundaryConditions(NumberXNodes)) == 1) then
-                self%dirichletIndx(2) = NumberXNodes
-                self%dirichletVals(2) = rightVoltage
-            end if
+        i = 0
+        if (world%boundaryConditions(1) == 1) then
+            i = i + 1
+            self%dirichletIndx(i) = 1
+            self%dirichletVals(i) = leftVoltage
+        end if
+        if (world%boundaryConditions(NumberXNodes+1) == 1) then
+            i = i + 1
+            self%dirichletIndx(i) = NumberXNodes
+            self%dirichletVals(i) = rightVoltage
         end if
 
     end function potentialSolver_constructor
@@ -88,26 +93,23 @@ contains
         integer(int32) :: i
         ! Construct primary matrix coefficients
         do i = 1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
-            CASE(0)
+            if (world%boundaryConditions(i) == 0 .and. world%boundaryConditions(i+1) == 0) then
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i-1) + world%dx_dl(i)) + 1.0d0/(world%dx_dl(i+1) + world%dx_dl(i)))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i) + world%dx_dl(i+1))
-            CASE(1)
+            else if (world%boundaryConditions(i+1) == 1) then
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i-1) + world%dx_dl(i)) + 1.0d0/world%dx_dl(i))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
-            CASE(-1)
+            else if (world%boundaryConditions(i) == 1) then
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i+1) + world%dx_dl(i)) + 1.0d0/world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i+1) + world%dx_dl(i))
-            CASE(2)
+            else if (world%boundaryConditions(i+1) == 2) then
                 self%b_tri(i) = -2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
-            CASE(-2)
+            else if (world%boundaryConditions(i) == 2) then
                 self%b_tri(i) = -2.0d0 / (world%dx_dl(i+1) + world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i+1) + world%dx_dl(i))
-            CASE default
-                print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
-            END SELECT
+            end if
         end do
 
         ! Construct Source term additions due to boundary conditions
@@ -292,11 +294,37 @@ contains
 
     end function getError_tridiag_Ampere
 
-    subroutine evaluateEField(self, world)
-        class(potentialSolver), intent(in) :: self
+    subroutine evaluateEFieldHalfTime(self, world)
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
+        integer(int32) :: i
+        self%EField(2:NumberXNodes) = (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) &
+            /(world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes))
 
-    end subroutine
+        do i = 1, self%numDirichletNodes
+            if (self%dirichletIndx(i) == 1) then
+                self%EField(1) = (2.0d0 * self%dirichletVals(i) - self%phi(1) - self%phi_f(1))/world%dx_dl(1)
+            else
+                self%EField(NumberXNodes+1) = (self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%dirichletVals(i))/world%dx_dl(NumberXNodes)
+            end if
+        end do
+    end subroutine evaluateEFieldHalfTime
+
+    subroutine evaluateEFieldCurrTime(self, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        integer(int32) :: i
+        self%EField(2:NumberXNodes) = 2.0d0 * (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) &
+            /(world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes))
+
+        do i = 1, self%numDirichletNodes
+            if (self%dirichletIndx(i) == 1) then
+                self%EField(1) = 2.0d0 * (self%dirichletVals(i) - self%phi(1))/world%dx_dl(1)
+            else
+                self%EField(NumberXNodes+1) = 2.0d0 * (self%phi(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
+            end if
+        end do
+    end subroutine evaluateEFieldCurrTime
 
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi

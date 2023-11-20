@@ -43,7 +43,7 @@ contains
         integer(int32) :: i, j, l_center, l_left, l_right, iThread
         real(real64) :: d, rhoTemp(NumberXNodes, numThread)
         rho = 0.0d0
-        do i=1, 1
+        do i=1, numberChargedParticles
             rhoTemp = 0.0d0
             !$OMP parallel private(iThread, j, l_center, l_left, l_right, d)
             iThread = omp_get_thread_num() + 1
@@ -53,69 +53,27 @@ contains
                 rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (-d**2 + d + 0.5d0)
                 l_right = l_center + 1
                 l_left = l_center - 1
-                SELECT CASE (world%boundaryConditions(l_center))
-                CASE(0)
+                if (world%boundaryConditions(l_center) == 0 .and. world%boundaryConditions(l_right) == 0) then
                     ! No Boundary either side
                     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
                     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
-                CASE(1)
+                else if (world%boundaryConditions(l_right) == 1) then
                     ! Dirichlet to right
                     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * d**2
                     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-                CASE(-1)
+                else if (world%boundaryConditions(l_center) == 1) then
                     !Dirichlet to left
                     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * (1.0d0 - d)**2
                     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
-                CASE(2)
+                else if (world%boundaryConditions(l_right) == 2) then
                     !Neumann to right
                     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * d**2
                     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-                CASE(-2)
+                else if (world%boundaryConditions(l_center) == 2) then
                     !Neumann to left
                     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
                     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
-                CASE(3)
-                    !Periodic to right
-                    rhoTemp(1, iThread) = rhoTemp(1, iThread) + 0.5d0 * d**2
-                    rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-                CASE(-3)
-                    !Periodic to left
-                    rhoTemp(NumberXNodes, iThread) = rhoTemp(NumberXNodes, iThread) + 0.5d0 * (1.0d0 - d)**2
-                    rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
-                END SELECT
-
-
-                ! ! interpolate to left
-                ! SELECT CASE (world%boundaryConditions(l_center))
-                ! CASE(0)
-                !     ! Inside domain
-                !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-                ! CASE(1)
-                !     !Dirichlet
-                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * (1.0d0 - d)**2
-                ! CASE(2)
-                !     !Neumann symmetric
-                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
-                ! CASE(3)
-                !     ! Periodic
-                !     rhoTemp(NumberXNodes-1, iThread) = rhoTemp(NumberXNodes-1, iThread) + 0.5d0 * (1.0d0 - d)**2
-                ! END SELECT
-                
-                ! ! interpolate to right
-                ! SELECT CASE (world%boundaryConditions(l_right))
-                ! CASE(0)
-                !     ! Inside domain
-                !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * d**2
-                ! CASE(1)
-                !     !Dirichlet
-                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) - 0.5d0 * d**2
-                ! CASE(2)
-                !     !Neumann symmetric
-                !     rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + 0.5d0 * d**2
-                ! CASE(3)
-                !     ! Periodic
-                !     rhoTemp(1, iThread) = rhoTemp(1, iThread) + 0.5d0 * d**2
-                ! END SELECT
+                end if
             end do
             
             !$OMP end parallel

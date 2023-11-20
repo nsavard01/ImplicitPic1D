@@ -8,7 +8,7 @@ program BoundPlasmaExample
     use mod_readInputs
     use mod_Scheme
     use mod_particleInjection
-    ! use mod_particleMover
+    use mod_particleMover
     ! ! use mod_collisions
     ! use mod_nonLinSolvers
     ! use mod_simulation
@@ -17,6 +17,7 @@ program BoundPlasmaExample
     
     integer(int32) :: i, j, iThread
     real(real64) :: remainDel_t, currDel_t, E_i, E_f, EJ
+    real(real64), allocatable :: rho_i(:)
     type(Domain) :: globalWorld
     type(Particle), allocatable :: globalParticleList(:)
     type(potentialSolver) :: globalSolver
@@ -25,19 +26,36 @@ program BoundPlasmaExample
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
-    print *, globalSolver%rho/globalWorld%dx_dl
-    print *, SUM(globalParticleList(1)%N_p) * globalParticleList(1)%w_p / SUM(globalWorld%dx_dl)
     call globalSolver%construct_diagMatrix(globalWorld)
-    print *, ''
-    print *, globalSolver%a_tri
-    print *, ''
-    print *, globalSolver%b_tri
-    print *, ""
-    print *, globalSolver%c_tri
-    print *, ''
-    print *, globalSolver%sourceTermVals
     call globalSolver%solve_tridiag_Poisson(globalWorld)
     print *, globalSolver%phi
+    print *, ''
+    call globalSolver%evaluateEFieldCurrTime(globalWorld)
+    print *, globalSolver%EField
+    print *, ''
+    allocate(rho_i(NumberXNodes))
+    rho_i = globalSolver%rho
+    print *, 'past rho is:'
+    print *, rho_i
+    call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
+    call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
+    print *, 'J is:'
+    print *, SUM(globalSolver%J, dim = 2)
+    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
+    print *, 'Future rho is:'
+    print *, globalSolver%rho
+    print *, 'Number electrons left:', SUM(globalParticleList(1)%N_p)
+    print *, 'Number ions left:', SUM(globalParticleList(2)%N_p)
+    print *, ''
+    do i = 1, NumberXNodes
+        if (i == 1) then
+            print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - 2.0d0 * SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+        else if (i == NumberXNodes) then
+            print *, 1.0d0 + del_t * ( - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+        else
+            print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+        end if
+    end do
     ! do i = 1, numberChargedParticles
     !     globalParticleList(i)%N_p = 0
     ! end do

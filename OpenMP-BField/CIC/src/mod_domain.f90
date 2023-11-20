@@ -35,15 +35,15 @@ contains
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         integer(int32), intent(in) :: leftBoundary, rightBoundary
         integer(int32) :: i
-        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes), self%boundaryConditions(NumberXNodes))
+        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes), self%boundaryConditions(NumberXNodes+1))
         self % grid = (/(i, i=1, NumberXNodes)/)
         self % dx_dl = 1.0d0
         self % boundaryConditions = 0
-        self%boundaryConditions(1) = -leftBoundary
-        self%boundaryConditions(NumberXNodes) = rightBoundary
+        self%boundaryConditions(1) = leftBoundary
+        self%boundaryConditions(NumberXNodes+1) = rightBoundary
         if (ABS(leftBoundary) == 3 .or. ABS(rightBoundary) == 3) then
-            self%boundaryConditions(1) = -3
-            self%boundaryConditions(NumberXNodes) = 3
+            self%boundaryConditions(1) = 3
+            self%boundaryConditions(NumberXNodes+1) = 3
         end if
     end function domain_constructor
 
