@@ -197,11 +197,21 @@ contains
             !         k = -1
             !     end if
             ! end if
-            if (k > 5) then
-                del_tau_max = 0.5d0 * del_tau_max
-                deltau_lf_k(1, 1) = del_tau_max
-                deltau_lf_k(2,1) = l_sub
-                k = -1
+            ! if (k > 5) then
+            !     del_tau_max = 0.5d0 * del_tau_max
+            !     deltau_lf_k(1, 1) = del_tau_max
+            !     deltau_lf_k(2,1) = l_sub
+            !     k = -1
+            ! end if
+            if (k > 50) then
+                print *, 'AA solver taking forever'
+                print *, 'l_sub is:', l_sub
+                print *, 'v_sub is:', v_sub
+                print *, 'del_tau is:', del_tau
+                print *, 'del_tau faction is:', del_tau/del_t
+                print *, 'v_half is:', v_half
+                print *, 'l_f is:', l_f
+                stop
             end if
             if (k > 0) then
                 do u = 0, m_k-1
@@ -226,55 +236,13 @@ contains
             k = k + 1
         end do
 
-        if (ABS((SUM(v_f**2) - SUM(v_sub**2) - 2.0d0 * q_over_m * E_x * dx_dl * (l_f - l_sub))/(SUM(v_f**2) - SUM(v_sub**2))) > 1.d-5) then
-            print *, 'energy issue!'
-            print *, 'Energy is:', ABS((SUM(v_f**2) - SUM(v_sub**2) - 2.0d0 * q_over_m * E_x * dx_dl * (l_f - l_sub))/(SUM(v_f**2) - SUM(v_sub**2))) 
-            stop
-        end if
+        ! if (ABS((SUM(v_f**2) - SUM(v_sub**2) - 2.0d0 * q_over_m * E_x * dx_dl * (l_f - l_sub))/(SUM(v_f**2) - SUM(v_sub**2))) > 1.d-5) then
+        !     print *, 'energy issue!'
+        !     print *, 'Energy is:', ABS((SUM(v_f**2) - SUM(v_sub**2) - 2.0d0 * q_over_m * E_x * dx_dl * (l_f - l_sub))/(SUM(v_f**2) - SUM(v_sub**2))) 
+        !     stop
+        ! end if
 
     end subroutine subStepSolverAA
-
-    subroutine subStepFreeDrift(l_sub, v_sub, l_f, d_half, v_f, v_half, del_tau, timePassed, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, f_tol, AtBoundaryBool, &
-        del_t, l_boundary)
-        ! picard iteration particle mover, like Chen in 2015 paper
-        integer(int32), intent(in) :: l_cell
-        real(real64), intent(in) :: E_x, q_over_m, BField(3), B_mag, dx_dl, f_tol, del_t
-        real(real64), intent(in out) :: l_sub, v_sub(3), l_f, v_f(3), v_half(3), del_tau, timePassed, d_half
-        logical, intent(in out) :: AtBoundaryBool
-        integer(int32), intent(in out) :: l_boundary
-        real(real64) :: del_tau_max
-        
-        del_tau_max = del_t - timePassed
-        if (v_sub(1) > 0) then
-            l_boundary = l_cell + 1
-        else
-            l_boundary = l_cell
-        end if
-        del_tau = MIN(del_tau_max, (real(l_boundary) - l_sub) * dx_dl / v_sub(1))
-        v_half = v_sub
-        v_f = v_sub
-        l_f = l_sub + v_half(1) * del_tau / dx_dl
-        d_half = 0.5d0 * (l_f + l_sub) - real(l_cell)
-        if (d_half > 1 .or. d_half < 0) then
-            print *, 'd_half not good!'
-            stop
-        end if
-        AtBoundaryBool = (del_tau < del_tau_max)
-        if(.not. AtBoundaryBool) then
-            if (MOD(l_f, 1.0d0) == 0.0d0) then
-                AtBoundaryBool = .true.
-                l_boundary = NINT(l_f)
-            end if
-        end if
-        if (ABS(l_f - (real(l_cell) + 0.5d0)) > 0.5d0 + 1.d-12) then
-            print *, 'Final l_f in drift not inside'
-            print *, 'val sub is:', ABS(l_f - (real(l_cell) + 0.5d0))
-            print *, 'l_f is:', l_f
-            print *, 'l_sub is:', l_sub
-            print *, 'l_cell is:', l_cell
-            stop
-        end if 
-    end subroutine subStepFreeDrift
     
     subroutine GetRho(rho, l, world) 
         real(real64), intent(in out) :: rho(NumberXNodes)
@@ -342,7 +310,7 @@ contains
                     ! print *, 'l_sub:', l_sub
                     ! print *, 'v_sub:', v_sub
                     ! Start AA
-                    call subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell + 1), solver%BField, &
+                    call subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell + 1), solver%BField, &
                         solver%BFieldMag, dx_dl, f_tol, AtBoundaryBool, del_t, l_boundary)
                     ! print *, 'v_half is:', v_half
                     ! print *, 'del_tau is:', del_tau
@@ -424,7 +392,7 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     
                     ! AA particle mover
-                    call subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell + 1), solver%BField, &
+                    call subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell + 1), solver%BField, &
                         solver%BFieldMag, dx_dl, f_tol, AtBoundaryBool, del_t, l_boundary)
                     
                     if (AtBoundaryBool) then

@@ -1,4 +1,4 @@
-32 ! number of threads
+1 ! number of threads
 0.32d-6 ! simulation time
 5.d14 ! Initial number density (1/m^3) of particles
 47.0d0 ! T_e (eV)
