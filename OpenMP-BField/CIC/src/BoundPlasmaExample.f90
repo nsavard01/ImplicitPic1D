@@ -38,6 +38,7 @@ program BoundPlasmaExample
     print *, 'past rho is:'
     print *, rho_i
     call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
+    stop
     call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
     print *, 'J is:'
     print *, SUM(globalSolver%J, dim = 2)
