@@ -8,7 +8,6 @@ module mod_particleMover
     use omp_lib
     implicit none
     integer(int32), parameter :: m_Anderson_Particle = 2
-    integer(int32) :: picIterCounter, nonLinCounter
 
 
 contains
@@ -118,13 +117,13 @@ contains
         ! end if
     end subroutine subStepSolverPI
 
-    subroutine subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, d_half, q_over_m, l_cell, E_left, E_right, E_x, BField, B_mag, dx_dl, FutureAtBoundaryBool, l_boundary)
+    subroutine subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, d_half, q_over_m, l_cell, E_left, E_right, E_x, BField, B_mag, dx_dl, FutureAtBoundaryBool, l_boundary, numIter)
         ! Anderson Acceleration particle mover
         integer(int32), intent(in) :: l_cell
         real(real64), intent(in) :: q_over_m, BField(3), B_mag, dx_dl, E_left, E_right, l_sub, v_sub(3)
         real(real64), intent(in out) :: l_f, v_half(3), del_tau, d_half, E_x
         logical, intent(in out) :: FutureAtBoundaryBool
-        integer(int32), intent(in out) :: l_boundary
+        integer(int32), intent(in out) :: l_boundary, numIter
         real(real64) :: v_prime(3), coeffAccel, l_f_prev
         integer(int32) :: k
 
@@ -157,7 +156,7 @@ contains
             end if
 
             if (ABS(l_f - l_f_prev) < 1.d-10) then
-                picIterCounter = picIterCounter + k
+                numIter = k
                 if (.not. FutureAtBoundaryBool .and. INT(l_f) /= l_cell) then
                     print *, 'l_f should be in same cell since not at boundary!'
                     stop
@@ -176,11 +175,12 @@ contains
 
     end subroutine subStepSolverGetPosition
 
-    subroutine subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, BField, B_mag, dx_dl, f_tol, l_boundary)
+    subroutine subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, BField, B_mag, dx_dl, f_tol, l_boundary, numIter)
         ! Anderson Acceleration particle mover
         real(real64), intent(in) :: q_over_m, l_sub, v_sub(3), BField(3), B_mag, dx_dl, E_x, f_tol
         real(real64), intent(in out) :: l_f, v_half(3), del_tau
         integer(int32), intent(in) :: l_boundary
+        integer(int32), intent(in out) :: numIter
         real(real64) :: v_prime(3), coeffAccel, Res_a, Res_b, Res_c, Res_s, del_tau_a, del_tau_b, del_tau_c, del_tau_d, del_tau_s, tempVar
         integer(int32) :: k
         logical :: usedBiSection
@@ -245,7 +245,7 @@ contains
             if (ABS(del_tau_s - del_tau_b) < f_tol) then
                 del_tau = del_tau_s
                 l_f = real(l_boundary)
-                nonLinCounter = nonLinCounter + k
+                numIter = k+1
                 exit
             end if
             coeffAccel = 0.5d0 * del_tau_s * q_over_m
@@ -291,11 +291,12 @@ contains
 
     end subroutine subStepSolverGetTimeBoundaryBrent
 
-    subroutine subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, BField, B_mag, dx_dl, f_tol, l_boundary)
+    subroutine subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, BField, B_mag, dx_dl, f_tol, l_boundary, numIter)
         ! When particle loops back on itself on boundary
         real(real64), intent(in) :: q_over_m, l_sub, v_sub(3), BField(3), B_mag, dx_dl, E_x, f_tol
         real(real64), intent(in out) :: v_half(3), del_tau
         integer(int32), intent(in) :: l_boundary
+        integer(int32), intent(in out) :: numIter
         real(real64) :: v_prime(3), coeffAccel, Res_a, Res_b, Res_c, Res_s, del_tau_a, del_tau_b, del_tau_c, del_tau_d, del_tau_s, tempVar
         integer(int32) :: k
         logical :: usedBiSection
@@ -362,7 +363,7 @@ contains
 
             if (ABS(del_tau_s - del_tau_b) < f_tol) then
                 del_tau = del_tau_s
-                nonLinCounter = nonLinCounter + k
+                numIter = k+1
                 exit
             end if
 
@@ -460,7 +461,7 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, q_times_wp, J_part, d_half, E_x
-        integer(int32) :: j, i, l_cell, iThread, l_boundary
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: FutureAtBoundaryBool, AtBoundaryBool
         solver%J = 0.0d0
         call solver%evaluateEFieldHalfTime(world)
@@ -468,9 +469,7 @@ contains
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             q_times_wp = particleList(j)%q * particleList(j)%w_p
-            picIterCounter = 0
-            nonLinCounter = 0
-            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, AtBoundaryBool, dx_dl, l_boundary, J_part, d_half)
+            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, AtBoundaryBool, dx_dl, l_boundary, J_part, d_half, numIter)
             iThread = omp_get_thread_num() + 1 
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 v_sub = particleList(j)%phaseSpace(2:4,i,iThread)
@@ -488,13 +487,13 @@ contains
                     ! Start AA
 
                     call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, solver%BField, &
-                        solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
+                        solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary, numIter)
 
                     if (FutureAtBoundaryBool) then
                         if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
-                            call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary)
+                            call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
                         else
-                            call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary)
+                            call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
                         end if
                     end if
                     v_f = 2.0d0 * v_half - v_sub
@@ -552,18 +551,18 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, d_half, v_half(3), dx_dl, E_x
-        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numSubStep, numSubStepAve(numThread)
+        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numSubStepAve(numThread), numIter, funcEvalCounter(numThread)
         logical :: FutureAtBoundaryBool, AtBoundaryBool
         call solver%evaluateEFieldHalfTime(world)
         f_tol = del_t * 1.d-8
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             numSubStepAve = 0
-            picIterCounter = 0
-            nonLinCounter = 0
-            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, AtBoundaryBool, dx_dl, l_boundary, d_half, delIdx, numSubStep)
+            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, AtBoundaryBool, dx_dl, l_boundary, d_half, delIdx, numIter)
             iThread = omp_get_thread_num() + 1 
             delIdx = 0
+            funcEvalCounter(iThread) = 0
+            numSubStepAve(iThread) = 0
             particleList(j)%refIdx(iThread) = 0
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             particleList(j)%wallLoss(:, iThread) = 0.0d0
@@ -571,10 +570,9 @@ contains
                 v_sub = particleList(j)%phaseSpace(2:4,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
-                numSubStep = 0
                 AtBoundaryBool = .false.
                 do while((timePassed < del_t))
-                    numSubStep = numSubStep + 1
+                    numSubStepAve(iThread) = numSubStepAve(iThread) + 1
                     if (.not. AtBoundaryBool) then
                         l_cell = INT(l_sub)
                     else
@@ -586,15 +584,16 @@ contains
                     ! AA particle mover
 
                     call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, solver%BField, &
-                        solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
-
+                        solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary, numIter)
+                    funcEvalCounter(iThread) = funcEvalCounter(iThread) + numIter
                     if (FutureAtBoundaryBool) then
                         if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
-                            call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary)
+                            call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
                         else
-                            call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary)
+                            call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
                         end if
                     end if
+                    funcEvalCounter(iThread) = funcEvalCounter(iThread) + numIter
                     v_f = 2.0d0 * v_half - v_sub
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
@@ -646,7 +645,6 @@ contains
                         stop "Have particles travelling outside the domain in depositJ!"
                     end if
                 end do
-                numSubStepAve(iThread) = numSubStepAve(iThread) + numSubStep
             end do loopParticles
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
@@ -654,9 +652,8 @@ contains
             particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
             print *, 'Average substeps for', particleList(j)%name, 'is:'
-            print *, real(SUM(numSubStepAve))/real(SUM(particleList(j)%N_p))
-            print *, 'Average picard iter per particle:', real(picIterCounter)/real(SUM(particleList(j)%N_p))
-            print *, 'Average nonLin iter per particle:', real(nonLinCounter)/real(SUM(particleList(j)%N_p))
+            print *, real(SUM(numSubStepAve))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
+            print *, 'Average function evaluations per particle is:', real(SUM(funcEvalCounter))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
         end do loopSpecies
     end subroutine moveParticles
 
