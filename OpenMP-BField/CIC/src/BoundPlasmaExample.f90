@@ -15,7 +15,7 @@ program BoundPlasmaExample
     use omp_lib
     implicit none
     
-    integer(int32) :: i, j, iThread
+    integer(int32) :: i, j, iThread, startTime, endTime
     real(real64) :: remainDel_t, currDel_t, E_i, E_f, EJ
     real(real64), allocatable :: rho_i(:)
     type(Domain) :: globalWorld
@@ -37,8 +37,14 @@ program BoundPlasmaExample
     rho_i = globalSolver%rho
     print *, 'past rho is:'
     print *, rho_i
+    ! call system_clock(startTime)
+    ! do i = 1, 100
+    !     call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
+    ! end do
+    ! call system_clock(endTime)
+    ! print *, 'Time:', endTime - startTime
+    ! stop
     call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
-    stop
     call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
     print *, 'J is:'
     print *, SUM(globalSolver%J, dim = 2)
