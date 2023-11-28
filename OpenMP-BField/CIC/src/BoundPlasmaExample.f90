@@ -97,12 +97,21 @@ program BoundPlasmaExample
     do j=1, numberChargedParticles
         KE_f = KE_f + globalParticleList(j)%getTotalKE() + SUM(globalParticleList(j)%energyLoss) * globalParticleList(j)%mass * globalParticleList(j)%w_p * 0.5d0
     end do
+    print *, ''
+    print *, 'J is:'
+    print *, SUM(globalSolver%J, DIM=2)
+    print *, ''
+    print *, 'Field half logical is:'
+    print *, globalSolver%EField
     print *, 'KE_i:', KE_i
     print *, 'PE_i:', PE_i
     print *, 'KE_f:', KE_f
     print *, 'PE_f:', PE_f
     print *, 'Energy conservation:'
     print *, ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
+    EJ = del_t * SUM(SUM(globalSolver%J, DIM = 2) * globalSolver%EField)
+    print *, 'E*J is:', EJ
+    print *, 'KE_f - KE_i:', KE_f - KE_i
     print *, 'took', iterNumPicard, 'iterations'
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     do i = 1, NumberXNodes

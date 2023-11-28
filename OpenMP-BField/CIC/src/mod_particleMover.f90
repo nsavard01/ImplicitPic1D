@@ -109,7 +109,7 @@ contains
         ! print *, 'del_tau_max:', del_tau_max
         l_f_prev = l_sub
 
-        do k = 1, 10
+        do k = 1, 50
             ! print *, ''
             ! print *, 'Iteration k:', k
             ! print *, 'l_f:', param_k(index)
@@ -140,7 +140,7 @@ contains
             end if
             l_f_prev = l_f
         end do
-        if (k > 10) then
+        if (k > 50) then
             print *, 'Get position did not converge!'
             print *, 'l_sub:', l_sub
             print *, 'v_sub:', v_sub

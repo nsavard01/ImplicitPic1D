@@ -160,7 +160,11 @@ contains
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-        d = 1.0d0 - Ax/((-self%rho - self%rho_const) / eps_0 + 1.d-15)
+        d = (-self%rho - self%rho_const) / eps_0
+        do i=1, self%numDirichletNodes
+            d(self%dirichletIndx(i)) = d(self%dirichletIndx(i)) + self%sourceTermVals(i)
+        end do
+        d = 1.0d0 - Ax/(d + 1.d-15)
         
         !res = Ax*eps_0 - 
         res = SQRT(SUM(d**2)/NumberXNodes)
@@ -289,32 +293,28 @@ contains
     subroutine evaluateEFieldHalfTime(self, world)
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        integer(int32) :: i
+        integer(int32) :: i, sign, Eindx
         ! 'logical' field, dphi_dl
         self%EField(2:NumberXNodes) = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes))
 
         do i = 1, self%numDirichletNodes
-            if (self%dirichletIndx(i) == 1) then
-                self%EField(1) = (2.0d0 * self%dirichletVals(i) - self%phi(1) - self%phi_f(1))
-            else
-                self%EField(NumberXNodes+1) = (self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%dirichletVals(i))
-            end if
+            sign = world%boundaryConditions(self%dirichletIndx(i)+1) - world%boundaryConditions(self%dirichletIndx(i))
+            Eindx = self%dirichletIndx(i) + world%boundaryConditions(self%dirichletIndx(i)+1)
+            self%EField(Eindx) = real(sign) * (self%phi(self%dirichletIndx(i)) +self%phi_f(self%dirichletIndx(i))  - 2.0d0 * self%dirichletVals(i))
         end do
     end subroutine evaluateEFieldHalfTime
 
     subroutine evaluateEFieldCurrTime(self, world)
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        integer(int32) :: i
+        integer(int32) :: i, sign, Eindx
         self%EField(2:NumberXNodes) = (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) &
             /world%centerDiff
 
         do i = 1, self%numDirichletNodes
-            if (self%dirichletIndx(i) == 1) then
-                self%EField(1) = 2.0d0 * (self%dirichletVals(i) - self%phi(1))/world%dx_dl(1)
-            else
-                self%EField(NumberXNodes+1) = 2.0d0 * (self%phi(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
-            end if
+            sign = world%boundaryConditions(self%dirichletIndx(i)+1) - world%boundaryConditions(self%dirichletIndx(i))
+            Eindx = self%dirichletIndx(i) + world%boundaryConditions(self%dirichletIndx(i)+1)
+            self%EField(Eindx) = real(sign) * 2.0d0 * (self%phi(self%dirichletIndx(i)) - self%dirichletVals(i))/world%dx_dl(self%dirichletIndx(i))
         end do
     end subroutine evaluateEFieldCurrTime
 
@@ -329,12 +329,12 @@ contains
         if (future) then
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f, NumberXNodes)**2 / world%centerDiff)
             do i = 1, self%numDirichletNodes
-                res = res + eps_0 * (self%dirichletVals(i) - self%phi_f(i))**2 / world%dx_dl(i)
+                res = res + eps_0 * (self%dirichletVals(i) - self%phi_f(self%dirichletIndx(i)))**2 / world%dx_dl(self%dirichletIndx(i))
             end do
         else
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%centerDiff)
             do i = 1, self%numDirichletNodes
-                res = res + eps_0 * (self%dirichletVals(i) - self%phi(i))**2 / world%dx_dl(i)
+                res = res + eps_0 * (self%dirichletVals(i) - self%phi(self%dirichletIndx(i)))**2 / world%dx_dl(self%dirichletIndx(i))
             end do
         end if
     end function getTotalPE
