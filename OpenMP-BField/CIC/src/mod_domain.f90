@@ -9,7 +9,7 @@ module mod_domain
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
         real(real64), allocatable :: grid(:) !array representing values at grid in m
-        real(real64), allocatable :: dx_dl(:) !ratio of grid differences from physical to logical, assume logical separated by 1
+        real(real64), allocatable :: dx_dl(:), centerDiff(:) !ratio of grid differences from physical to logical, assume logical separated by 1
         integer(int32), allocatable :: boundaryConditions(:) ! Boundary condition flags for fields and particles
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
@@ -35,7 +35,7 @@ contains
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         integer(int32), intent(in) :: leftBoundary, rightBoundary
         integer(int32) :: i
-        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes), self%boundaryConditions(NumberXNodes+1))
+        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes), self%centerDiff(NumberXNodes-1), self%boundaryConditions(NumberXNodes+1))
         self % grid = (/(i, i=1, NumberXNodes)/)
         self % dx_dl = 1.0d0
         self % boundaryConditions = 0
@@ -89,6 +89,7 @@ contains
             self%dx_dl(i) = gridField(i+1) - gridField(i)
         end do
         self%grid = 0.5d0 * (gridField(1:NumberNodes-1) + gridField(2:))
+        self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
 
     end subroutine constructSineGrid
 
@@ -112,6 +113,7 @@ contains
             self%dx_dl(i) = gridField(i+1) - gridField(i)
         end do
         self%grid = 0.5d0 * (gridField(1:NumberNodes-1) + gridField(2:))
+        self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
 
     end subroutine constructHalfSineGrid
 
@@ -141,6 +143,7 @@ contains
             self%dx_dl(i) = self%grid(i+1) - self%grid(i)
         end do
         self%grid = 0.5d0 * (gridField(1:NumberNodes-1) + gridField(2:))
+        self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
         if (self%boundaryConditions(1) == 3 .or. self%boundaryConditions(NumberXNodes) == 3) then
             print *, "Mesh is not periodic, cannot have periodic boundary!"
             stop
@@ -162,6 +165,7 @@ contains
             self%dx_dl(i) = gridField(i+1) - gridField(i)
         end do
         self%grid = 0.5d0 * (gridField(1:NumberNodes-1) + gridField(2:))
+        self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
     end subroutine constructUniformGrid
 
     function getLFromX(self, x) result(l)

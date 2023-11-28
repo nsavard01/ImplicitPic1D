@@ -10,24 +10,23 @@ program BoundPlasmaExample
     use mod_particleInjection
     use mod_particleMover
     ! ! use mod_collisions
-    ! use mod_nonLinSolvers
+    use mod_nonLinSolvers
     ! use mod_simulation
     use omp_lib
     implicit none
     
-    integer(int32) :: i, j, iThread, startTime, endTime
-    real(real64) :: remainDel_t, currDel_t, E_i, E_f, EJ
+    integer(int32) :: i, j, iThread
+    real(real64) :: remainDel_t, currDel_t, KE_i, KE_f, PE_i, PE_f, EJ
     real(real64), allocatable :: rho_i(:)
-    type(Domain) :: globalWorld
-    type(Particle), allocatable :: globalParticleList(:)
-    type(potentialSolver) :: globalSolver
     call initializeScheme(schemeNum)
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
+    call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     call globalSolver%construct_diagMatrix(globalWorld)
     call globalSolver%solve_tridiag_Poisson(globalWorld)
+    print *, 'past phi:'
     print *, globalSolver%phi
     print *, ''
     call globalSolver%evaluateEFieldCurrTime(globalWorld)
@@ -37,32 +36,28 @@ program BoundPlasmaExample
     rho_i = globalSolver%rho
     print *, 'past rho is:'
     print *, rho_i
-    ! call system_clock(startTime)
-    ! do i = 1, 100
-    !     call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
-    ! end do
-    ! call system_clock(endTime)
-    ! print *, 'Time:', endTime - startTime
-    ! stop
-    call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
-    call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
-    print *, 'J is:'
-    print *, SUM(globalSolver%J, dim = 2)
-    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
-    print *, 'Future rho is:'
-    print *, globalSolver%rho
-    print *, 'Number electrons left:', SUM(globalParticleList(1)%N_p)
-    print *, 'Number ions left:', SUM(globalParticleList(2)%N_p)
     print *, ''
-    do i = 1, NumberXNodes
-        if (i == 1) then
-            print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - 2.0d0 * SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
-        else if (i == NumberXNodes) then
-            print *, 1.0d0 + del_t * ( - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
-        else
-            print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
-        end if
-    end do
+    
+    ! call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
+    ! call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
+    ! print *, 'J is:'
+    ! print *, SUM(globalSolver%J, dim = 2)
+    ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
+    ! print *, 'Future rho is:'
+    ! print *, globalSolver%rho
+    ! print *, 'Number electrons left:', SUM(globalParticleList(1)%N_p)
+    ! print *, 'Number ions left:', SUM(globalParticleList(2)%N_p)
+    ! print *, ''
+    ! do i = 1, NumberXNodes
+    !     if (i == 1) then
+    !         print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - 2.0d0 * SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+    !     else if (i == NumberXNodes) then
+    !         print *, 1.0d0 + del_t * ( - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+    !     else
+    !         print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+    !     end if
+    ! end do
+
     ! do i = 1, numberChargedParticles
     !     globalParticleList(i)%N_p = 0
     ! end do
@@ -86,22 +81,41 @@ program BoundPlasmaExample
     ! ! end do
     ! ! print *, ABS((E_i - E_f)/(E_i))
     ! ! stop
-    ! ! E_i = globalSolver%getTotalPE(globalWorld, .false.)
-    ! ! do j=1, numberChargedParticles
-    ! !     E_i = E_i + globalParticleList(j)%getTotalKE()
-    ! ! end do
-    ! ! remainDel_t = del_t
-    ! ! currDel_t = del_t
-    ! ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
-    ! ! E_f = globalSolver%getTotalPE(globalWorld, .false.)
-    ! ! do j=1, numberChargedParticles
-    ! !     E_f = E_f + globalParticleList(j)%getTotalKE() + SUM(globalParticleList(j)%energyLoss) * globalParticleList(j)%mass * globalParticleList(j)%w_p * 0.5d0
-    ! ! end do
-    ! ! print *, ABS((E_i - E_f)/(E_i))
-    ! ! print *, 'took', iterNumPicard, 'iterations'
-    ! ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
-    ! ! print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
-    ! ! stop
+    PE_i = globalSolver%getTotalPE(globalWorld, .false.)
+    KE_i = 0.0d0
+    do j=1, numberChargedParticles
+        KE_i = KE_i + globalParticleList(j)%getTotalKE()
+    end do
+    remainDel_t = del_t
+    currDel_t = del_t
+    call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+    print *, ''
+    print *, 'new phi:'
+    print *, globalSolver%phi
+    PE_f = globalSolver%getTotalPE(globalWorld, .false.)
+    KE_f = 0.0d0
+    do j=1, numberChargedParticles
+        KE_f = KE_f + globalParticleList(j)%getTotalKE() + SUM(globalParticleList(j)%energyLoss) * globalParticleList(j)%mass * globalParticleList(j)%w_p * 0.5d0
+    end do
+    print *, 'KE_i:', KE_i
+    print *, 'PE_i:', PE_i
+    print *, 'KE_f:', KE_f
+    print *, 'PE_f:', PE_f
+    print *, 'Energy conservation:'
+    print *, ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
+    print *, 'took', iterNumPicard, 'iterations'
+    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
+    do i = 1, NumberXNodes
+        if (i == 1) then
+            print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - 2.0d0 * SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+        else if (i == NumberXNodes) then
+            print *, 1.0d0 + del_t * ( - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+        else
+            print *, 1.0d0 + del_t * (SUM(globalSolver%J(i+1, :)) - SUM(globalSolver%J(i,:)))/(globalSolver%rho(i) - rho_i(i))
+        end if
+    end do
+    print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
+    stop
     ! call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime)
     ! call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
 end program BoundPlasmaExample

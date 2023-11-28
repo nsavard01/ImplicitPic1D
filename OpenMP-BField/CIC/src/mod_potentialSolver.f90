@@ -158,23 +158,12 @@ contains
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes), res
+        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-        res = 0.0d0
-        do i = 1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
-            CASE(0,2)
-                res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + 1d-15) - 1.0d0)**2
-                !d(i) = -self%rho(i) - self%rho_const
-            CASE(1,3)
-                res = res + ((Ax(i) + 1d-15)/(self.phi_f(i) + 1d-15) - 1.0d0)**2
-                !d(i) = self%phi_f(i)*eps_0
-            CASE(4)
-                res = res + (Ax(i))**2
-            END SELECT
-        end do
+        d = 1.0d0 - Ax/((-self%rho - self%rho_const) / eps_0 + 1.d-15)
+        
         !res = Ax*eps_0 - 
-        res = SQRT(res/NumberXNodes)
+        res = SQRT(SUM(d**2)/NumberXNodes)
 
     end function getError_tridiag_Poisson
 
@@ -186,21 +175,24 @@ contains
         integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
 
+        call self%evaluateEFieldCurrTime(world)
         do i =1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
+            SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
             CASE(0)
-                d(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
-            CASE(1,3)
-                d(i) = self%phi_f(i)
+                d(i) = (SUM(self%J(i+1, :)) - SUM(self%J(i, :))) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
+            CASE(-1)
+                d(i) = (SUM(self%J(i+1, :)) - 2.0d0 * SUM(self%J(i, :))) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
+            CASE(1)
+                d(i) = (2.0d0 * SUM(self%J(i+1, :)) - SUM(self%J(i, :))) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
+            CASE(-2)
+                d(i) = SUM(self%J(i+1, :)) * del_t / eps_0 - self%EField(i+1)
             CASE(2)
-                if (i == 1) then
-                    d(i) = (del_t * SUM(self%J(i, :))/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
-                else if (i == NumberXNodes) then
-                    d(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
-                end if
-            CASE(4)
-                d(i) = 0.0d0
+                d(i) = -SUM(self%J(i, :)) * del_t / eps_0 + self%EField(i)
             END SELECT
+        end do
+
+        do i=1, self%numDirichletNodes
+            d(self%dirichletIndx(i)) = d(self%dirichletIndx(i)) + self%sourceTermVals(i)
         end do
     ! initialize c-prime and d-prime
         cp(1) = self%c_tri(1)/self%b_tri(1)
@@ -298,14 +290,14 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
-        self%EField(2:NumberXNodes) = (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) &
-            /(world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes))
+        ! 'logical' field, dphi_dl
+        self%EField(2:NumberXNodes) = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes))
 
         do i = 1, self%numDirichletNodes
             if (self%dirichletIndx(i) == 1) then
-                self%EField(1) = (2.0d0 * self%dirichletVals(i) - self%phi(1) - self%phi_f(1))/world%dx_dl(1)
+                self%EField(1) = (2.0d0 * self%dirichletVals(i) - self%phi(1) - self%phi_f(1))
             else
-                self%EField(NumberXNodes+1) = (self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%dirichletVals(i))/world%dx_dl(NumberXNodes)
+                self%EField(NumberXNodes+1) = (self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%dirichletVals(i))
             end if
         end do
     end subroutine evaluateEFieldHalfTime
@@ -314,8 +306,8 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
-        self%EField(2:NumberXNodes) = 2.0d0 * (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) &
-            /(world%dx_dl(1:NumberXNodes-1) + world%dx_dl(2:NumberXNodes))
+        self%EField(2:NumberXNodes) = (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) &
+            /world%centerDiff
 
         do i = 1, self%numDirichletNodes
             if (self%dirichletIndx(i) == 1) then
@@ -332,11 +324,18 @@ contains
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         logical :: future
+        integer(int32) :: i
         real(real64) :: res
         if (future) then
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f, NumberXNodes)**2 / world%dx_dl)
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f, NumberXNodes)**2 / world%centerDiff)
+            do i = 1, self%numDirichletNodes
+                res = res + eps_0 * (self%dirichletVals(i) - self%phi_f(i))**2 / world%dx_dl(i)
+            end do
         else
-            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%dx_dl)
+            res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%centerDiff)
+            do i = 1, self%numDirichletNodes
+                res = res + eps_0 * (self%dirichletVals(i) - self%phi(i))**2 / world%dx_dl(i)
+            end do
         end if
     end function getTotalPE
 

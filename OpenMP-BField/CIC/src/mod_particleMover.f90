@@ -12,26 +12,20 @@ module mod_particleMover
 
 contains
 
-    subroutine subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, d_half, q_over_m, l_cell, E_left, E_right, BField, B_mag, dx_dl, f_tol, FutureAtBoundaryBool, &
-        del_t, l_boundary)
+    subroutine subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, d_half, q_over_m, l_cell, E_left, E_right, BField, B_mag, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
         ! picard iteration particle mover, like Chen in 2015 paper
         integer(int32), intent(in) :: l_cell
-        real(real64), intent(in) :: q_over_m, BField(3), B_mag, dx_dl, f_tol, del_t, E_left, E_right
-        real(real64), intent(in out) :: l_sub, v_sub(3), l_f, v_f(3), v_half(3), del_tau, timePassed, d_half
+        real(real64), intent(in) :: q_over_m, BField(3), B_mag, dx_dl, f_tol, E_left, E_right
+        real(real64), intent(in out) :: l_sub, v_sub(3), l_f, v_f(3), v_half(3), del_tau, d_half
         logical, intent(in out) :: FutureAtBoundaryBool
-        integer(int32), intent(in out) :: l_boundary
+        integer(int32), intent(in out) :: l_boundary, numIter
         real(real64) :: v_prime(3), coeffAccel, curr_Res, l_f_prev, E_x, del_tau_prev
         integer(int32) :: k
-        logical :: convergeBool
         
         v_prime = v_sub
-        v_half = v_sub
-        ! del_tau_prev being smaller (like fraction gyro-period) makes things way slower, more substeps
-        del_tau_prev = del_t - timePassed
+        del_tau_prev = del_tau
         l_f_prev = l_sub
-        convergeBool = .false.
-        k = 0
-        do while (.not. convergeBool)
+        do k = 1, 30
             ! First try full time, see where it ends up
             coeffAccel = 0.5d0 * del_tau_prev * q_over_m
             d_half = (l_sub + l_f_prev) * 0.5d0 - real(l_cell)
@@ -50,10 +44,15 @@ contains
             l_f = l_sub + v_half(1) * del_tau / dx_dl
             ! print *, 'l_f in iteration is:', l_f
             
-            if (ABS(l_f_prev - l_f) < 1.d-8 .and. ABS(del_tau_prev - del_tau) < f_tol) then
-                v_f = 2.0d0 * v_half - v_sub
+            if (ABS(l_f_prev - l_f) < 1.d-10 .and. ABS(del_tau_prev - del_tau) < f_tol) then
                 FutureAtBoundaryBool = (ABS(l_f - real(l_boundary)) < 1.d-10)
+                if (FutureAtBoundaryBool) l_f = real(l_boundary)
+                numIter = k
                 if (.not. FutureAtBoundaryBool .and. INT(l_f) /= l_cell) then
+                    print *, 'l_sub:', l_sub
+                    print *, 'v_sub:', v_sub
+                    print *, 'l_f:', l_f
+                    print *, 'del_tau:', del_tau
                     print *, "not at boundary but l_f not in cell"
                     stop
                 end if
@@ -70,38 +69,14 @@ contains
                 end if
                 exit
             end if
-            ! if (k > 30) then
-            !     print *, 'PI iteration is:', k
-            !     print *, 'l_sub is:', l_sub
-            !     print *, 'v_sub is:', v_sub
-            !     print *, 'v_half is:', v_half
-            !     print *, 'l_f is:', l_f
-            !     print *, 'l_f prev is:', l_f_prev
-            !     print *, 'del_tau_prev is:', del_tau_prev
-            !     print *, 'del_tau is:', del_tau
-            !     l_f_prev = l_f
-            !     del_tau_prev = del_tau
-            !     coeffAccel = 0.5d0 * del_tau_prev * q_over_m
-            !     d_half = (l_sub + l_f_prev) * 0.5d0 - real(l_cell)
-            !     E_x = E_right * d_half + E_left * (1.0d0 - d_half)
-            !     v_prime(1) = v_sub(1) + coeffAccel * E_x
-            !     v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
-            !     v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
-            !     if (v_half(1) > 0) then
-            !         l_boundary = l_cell + 1
-            !     else
-            !         l_boundary = l_cell
-            !     end if
-            !     del_tau = (real(l_boundary, kind = real64) - l_sub) * dx_dl / v_half(1)
-            !     del_tau = MIN(del_tau, del_tau_prev)
-            !     print *, 'next del_tau is:', del_tau
-            !     stop
-            ! end if
             del_tau_prev = del_tau
             l_f_prev = l_f
-            k = k + 1
         end do
 
+        if (k > 30) then
+            print *, 'more than 30 iterations for general PI solver'
+            stop
+        end if
         ! if (del_tau/del_t > 1.d-4) then
         !     if (ABS((SUM(v_f**2) - SUM(v_sub**2) - 2.0d0 * q_over_m * E_x * dx_dl * (l_f - l_sub))/(SUM(v_f**2) - SUM(v_sub**2))) > 1.d-5) then
         !         print *, 'energy issue for large enough del_tau'
@@ -140,7 +115,7 @@ contains
             ! print *, 'l_f:', param_k(index)
             coeffAccel = 0.5d0 * del_tau * q_over_m
             d_half = (l_sub + l_f_prev) * 0.5d0 - real(l_cell)
-            E_x = E_right * d_half + E_left * (1.0d0 - d_half)
+            E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
             v_prime(1) = v_sub(1) + coeffAccel * E_x
             v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
             v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
@@ -223,7 +198,7 @@ contains
         Res_c = Res_a
         usedBiSection = .true.
 
-        do k = 1, 30
+        do k = 1, 50
             if (Res_a /= Res_c .and. Res_b /= Res_c) then
                 del_tau_s = del_tau_a * Res_b * Res_c/((Res_a - Res_b) * (Res_a - Res_c)) + del_tau_b * Res_a * Res_c/((Res_b - Res_a) * (Res_b - Res_c)) &
                     + del_tau_c * Res_a * Res_b/((Res_c - Res_a) * (Res_c - Res_b))
@@ -279,7 +254,7 @@ contains
             
         end do
 
-        if (k > 30) then
+        if (k > 50) then
             print *, 'issue solving time with Brent solver'
             print *, 'l_sub:', l_sub
             print *, 'del_tau_max:', del_tau
@@ -341,7 +316,7 @@ contains
         Res_c = Res_a
         usedBiSection = .true.
 
-        do k = 1, 30
+        do k = 1, 50
             if (Res_a /= Res_c .and. Res_b /= Res_c) then
                 del_tau_s = del_tau_a * Res_b * Res_c/((Res_a - Res_b) * (Res_a - Res_c)) + del_tau_b * Res_a * Res_c/((Res_b - Res_a) * (Res_b - Res_c)) &
                     + del_tau_c * Res_a * Res_b/((Res_c - Res_a) * (Res_c - Res_b))
@@ -404,7 +379,7 @@ contains
             
         end do
 
-        if (k > 30) then
+        if (k > 50) then
             print *, 'issue solving time with Brent solver'
             print *, 'l_sub:', l_sub
             print *, 'del_tau_max:', del_tau
@@ -485,7 +460,8 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
                     ! Start AA
-
+                    ! call subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), solver%BField, &
+                    !     solver%BFieldMag, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
                     call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, solver%BField, &
                         solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary, numIter)
 
@@ -583,6 +559,8 @@ contains
                     
                     ! AA particle mover
 
+                    ! call subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), solver%BField, &
+                    !     solver%BFieldMag, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
                     call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, solver%BField, &
                         solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary, numIter)
                     funcEvalCounter(iThread) = funcEvalCounter(iThread) + numIter
@@ -649,11 +627,12 @@ contains
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             !$OMP end parallel
+            print *, 'Average amount substeps per particle for:', particleList(j)%name
+            print *, real(SUM(numSubStepAve))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
+            print *, 'Average function evlatuations per particle:'
+            print *, real(SUM(funcEvalCounter))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
             particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
-            print *, 'Average substeps for', particleList(j)%name, 'is:'
-            print *, real(SUM(numSubStepAve))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
-            print *, 'Average function evaluations per particle is:', real(SUM(funcEvalCounter))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
         end do loopSpecies
     end subroutine moveParticles
 
