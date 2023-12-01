@@ -18,7 +18,7 @@ setDebug:
 BoundPlasmaExample: $(OBJ)
 	$(FC) $(BASE) -o $@ $(OBJ)
 
-BoundPlasmaExample.o: BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_particleInjection.o mod_Scheme.o mod_potentialSolver.o mod_readInputs.o mod_particleMover.o ../../Libraries/Nitsol/libnitsol.a mod_nonLinSolvers.o #mod_simulation.o
+BoundPlasmaExample.o: ../../SharedModules/src/BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_particleInjection.o mod_Scheme.o mod_potentialSolver.o mod_readInputs.o mod_particleMover.o ../../Libraries/Nitsol/libnitsol.a mod_nonLinSolvers.o #mod_simulation.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 # mod_simulation.o: ../../SharedModules/src/mod_simulation.f90 constants.o mod_BasicFunctions.o mod_domain.o mod_particle.o mod_Scheme.o mod_particleInjection.o mod_potentialSolver.o mod_particleMover.o ../../Libraries/Nitsol/libnitsol.a mod_nonLinSolvers.o

@@ -7,10 +7,11 @@ module mod_particleMover
     use mod_potentialSolver
     use omp_lib
     implicit none
-    integer(int32), parameter :: m_Anderson_Particle = 2
+
 
 
 contains
+
 
     subroutine subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, d_half, q_over_m, l_cell, E_left, E_right, BField, B_mag, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
         ! picard iteration particle mover, like Chen in 2015 paper
@@ -513,7 +514,7 @@ contains
             end do loopParticles
             !$OMP end parallel
         end do loopSpecies
-        
+       
     end subroutine depositJ
 
 
@@ -627,10 +628,8 @@ contains
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             !$OMP end parallel
-            print *, 'Average amount substeps per particle for:', particleList(j)%name
-            print *, real(SUM(numSubStepAve))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
-            print *, 'Average function evlatuations per particle:'
-            print *, real(SUM(funcEvalCounter))/real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
+            particleList(j)%numSubStepsAve = real(SUM(numSubStepAve)) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
+            particleList(j)%numFuncEvalAve = real(SUM(funcEvalCounter)) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
             particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
         end do loopSpecies

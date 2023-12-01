@@ -84,6 +84,7 @@ contains
             self%dirichletVals(i) = rightVoltage
         end if
 
+        call self%construct_diagMatrix(world)
     end function potentialSolver_constructor
 
     subroutine construct_diagMatrix(self, world)

@@ -16,8 +16,8 @@ program BoundPlasmaExample
     implicit none
     
     integer(int32) :: i, j, iThread
-    real(real64) :: remainDel_t, currDel_t, KE_i, KE_f, PE_i, PE_f, EJ
-    real(real64), allocatable :: rho_i(:)
+    real(real64) :: remainDel_t, currDel_t, KE_i, KE_f, PE_i, PE_f, EJ, delJ_phi
+    real(real64), allocatable :: rho_i(:), Field_past(:)
     call initializeScheme(schemeNum)
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
@@ -81,6 +81,7 @@ program BoundPlasmaExample
     ! ! end do
     ! ! print *, ABS((E_i - E_f)/(E_i))
     ! ! stop
+    allocate(Field_past(NumberXNodes+1))
     PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     KE_i = 0.0d0
     do j=1, numberChargedParticles
@@ -88,6 +89,8 @@ program BoundPlasmaExample
     end do
     remainDel_t = del_t
     currDel_t = del_t
+    call globalSolver%evaluateEFieldCurrTime(globalWorld)
+    Field_past = globalSolver%EField
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
     print *, ''
     print *, 'new phi:'
@@ -110,8 +113,13 @@ program BoundPlasmaExample
     print *, 'Energy conservation:'
     print *, ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
     EJ = del_t * SUM(SUM(globalSolver%J, DIM = 2) * globalSolver%EField)
-    print *, 'E*J is:', EJ
+    print *, 'E*J:', SUM(globalSolver%J, DIM = 2) * globalSolver%EField
+    print *, 'Total E*J is:', EJ
     print *, 'KE_f - KE_i:', KE_f - KE_i
+    print *, 'PE_f - PE_i:', PE_f - PE_i
+    print *, 'offset energy is:', PE_f + KE_f - KE_i - PE_i
+    call globalSolver%evaluateEFieldCurrTime(globalWorld)
+    print *, 'JV is:', (2.0d0 * SUM(globalSolver%J(1,:)) + (eps_0/del_t) * (globalSolver%EField(1) - Field_past(1))) * del_t * (globalSolver%dirichletVals(1) - globalSolver%dirichletVals(2))
     print *, 'took', iterNumPicard, 'iterations'
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     do i = 1, NumberXNodes
