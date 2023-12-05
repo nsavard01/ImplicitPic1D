@@ -24,7 +24,7 @@ testExp_extend_0p04delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1
 testExp_norm_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
 
 
-test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test/')
+testNGP = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP/')
 test_0deg_picard = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_0deg_picard/')
 test_0deg = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_other/')
 test_0deg_vacuumStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_try/')

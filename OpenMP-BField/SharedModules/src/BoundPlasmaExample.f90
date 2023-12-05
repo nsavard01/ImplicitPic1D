@@ -18,7 +18,6 @@ program BoundPlasmaExample
     integer(int32) :: i, j, iThreadhtop
     real(real64) :: remainDel_t, currDel_t, E_i, E_f, EJ
     call initializeScheme(schemeNum)
-    stop
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
