@@ -177,6 +177,7 @@ contains
         idxHigher = NumberXNodes
         if ((x<self%grid(1) - 0.5d0 * self%dx_dl(1)) .or. (x > self%grid(NumberXNodes) + 0.5d0 * self%dx_dl(NumberXNodes))) then
             print *, 'x value outside of grid range in getLFromX!'
+            print *, 'x is:', x
             stop
         end if
         do while (idxLower /= idxHigher-1)

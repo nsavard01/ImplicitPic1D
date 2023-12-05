@@ -65,15 +65,17 @@ contains
     end subroutine interpolateParticleToNodes
 
 
-    subroutine loadParticleDensity(particleList, world)
+    subroutine loadParticleDensity(particleList, world, reset)
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
+        logical, intent(in) :: reset
         integer(int32) :: i, iThread
-        real(real64) :: d
         do i = 1, numberChargedParticles
             !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1 
-            particleList(i)%densities(:, iThread) = 0.0d0
+            if (reset) then
+                particleList(i)%densities(:,iThread) = 0.0d0
+            end if
             call interpolateParticleToNodes(particleList(i), world, iThread)
             !$OMP end parallel
         end do
@@ -86,10 +88,11 @@ contains
         integer(int32) :: i, iThread
         rho = 0.0d0
         do i = 1, numberChargedParticles
-            particleList(i)%densities = 0.0d0
-        end do
-        call loadParticleDensity(particleList, world)
-        do i = 1, numberChargedParticles
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1 
+            particleList(i)%densities(:,iThread) = 0.0d0
+            call interpolateParticleToNodes(particleList(i), world, iThread)
+            !$OMP end parallel   
             rho = rho + SUM(particleList(i)%densities, DIM = 2) * particleList(i)%w_p * particleList(i)%q
         end do
     end subroutine depositRho
@@ -133,7 +136,7 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         real(real64) :: densities(NumberXNodes)
-        integer(int32) :: i, j
+        integer(int32) :: i
         logical, intent(in) :: boolAverage
         character(len=5) :: char_i
         

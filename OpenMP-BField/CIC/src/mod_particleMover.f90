@@ -26,7 +26,7 @@ contains
         v_prime = v_sub
         del_tau_prev = del_tau
         l_f_prev = l_sub
-        do k = 1, 30
+        do k = 1, 100
             ! First try full time, see where it ends up
             coeffAccel = 0.5d0 * del_tau_prev * q_over_m
             d_half = (l_sub + l_f_prev) * 0.5d0 - real(l_cell)
@@ -110,7 +110,7 @@ contains
         ! print *, 'del_tau_max:', del_tau_max
         l_f_prev = l_sub
 
-        do k = 1, 50
+        do k = 1, 100
             ! print *, ''
             ! print *, 'Iteration k:', k
             ! print *, 'l_f:', param_k(index)
@@ -141,10 +141,49 @@ contains
             end if
             l_f_prev = l_f
         end do
-        if (k > 50) then
+        if (k > 100) then
             print *, 'Get position did not converge!'
             print *, 'l_sub:', l_sub
             print *, 'v_sub:', v_sub
+            print *, 'del_tau:', del_tau
+            v_prime = v_sub
+            v_half = v_sub
+            ! print *, 'l_sub:', l_sub
+            ! print *, 'v_sub:', v_sub
+            ! print *, 'del_tau_max:', del_tau_max
+            l_f_prev = l_sub
+            do k = 1, 50
+                ! print *, ''
+                ! print *, 'Iteration k:', k
+                ! print *, 'l_f:', param_k(index)
+                coeffAccel = 0.5d0 * del_tau * q_over_m
+                d_half = (l_sub + l_f_prev) * 0.5d0 - real(l_cell)
+                E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+                v_prime(1) = v_sub(1) + coeffAccel * E_x
+                v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
+                v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
+                l_f = l_sub + del_tau * v_half(1) / dx_dl
+                print *, 'l_f:', l_f
+                if (v_half(1) > 0) then
+                    l_boundary = l_cell + 1
+                    FutureAtBoundaryBool = (l_f >= real(l_boundary))
+                    if (FutureAtBoundaryBool) l_f = real(l_boundary)
+                else
+                    l_boundary = l_cell
+                    FutureAtBoundaryBool = (l_f <= real(l_boundary))
+                    if (FutureAtBoundaryBool) l_f = real(l_boundary)
+                end if
+    
+                if (ABS(l_f - l_f_prev) < 1.d-10) then
+                    numIter = k
+                    if (.not. FutureAtBoundaryBool .and. INT(l_f) /= l_cell) then
+                        print *, 'l_f should be in same cell since not at boundary!'
+                        stop
+                    end if
+                    exit      
+                end if
+                l_f_prev = l_f
+            end do
             stop
         end if
 
@@ -441,7 +480,7 @@ contains
         logical :: FutureAtBoundaryBool, AtBoundaryBool
         solver%J = 0.0d0
         call solver%evaluateEFieldHalfTime(world)
-        f_tol = del_t * 1.d-8
+        f_tol = del_t * 1.d-10
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             q_times_wp = particleList(j)%q * particleList(j)%w_p
@@ -531,7 +570,7 @@ contains
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numSubStepAve(numThread), numIter, funcEvalCounter(numThread)
         logical :: FutureAtBoundaryBool, AtBoundaryBool
         call solver%evaluateEFieldHalfTime(world)
-        f_tol = del_t * 1.d-8
+        f_tol = del_t * 1.d-10
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             numSubStepAve = 0
@@ -596,8 +635,8 @@ contains
                             end if
                             l_f = real(l_boundary)
                             v_f(2:3) = -v_f(2:3)  
-                            ! particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                            ! particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                            particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                            particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
                         CASE default

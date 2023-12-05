@@ -156,7 +156,7 @@ contains
         character(len=5) :: char_i
         integer(int32) :: i
         write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file=dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+        open(10,file=dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED', access = 'STREAM', status = 'REPLACE')
         do i = 1, numThread
             write(10) self%phaseSpace(:, 1:self%N_p(i), i)
         end do

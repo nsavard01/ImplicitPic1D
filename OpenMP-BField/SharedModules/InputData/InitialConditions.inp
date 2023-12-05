@@ -1,10 +1,10 @@
 32 ! number of threads
-0.32d-6 ! simulation time
-5.d14 ! Initial number density (1/m^3) of particles
+0.32d-8 ! simulation time
+8.4d19 ! Initial number density (1/m^3) of particles
 47.0d0 ! T_e (eV)
 0.1d0 ! T_i (eV)
-20 ! number of diagnostic data dumps    
+10 ! number of diagnostic data dumps    
 2.0d0 ! Fraction of initial 1/w_p for initial time step
-0.32d-6 ! amount of time to average final Diagnostics
-testCIC !filename
+0.32d-9 ! amount of time to average final Diagnostics
+testNGP !filename
 END

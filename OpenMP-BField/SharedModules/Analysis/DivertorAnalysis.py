@@ -12,6 +12,7 @@ print('Loaded modules')
 #%%
 
 print('Loading data')
+
 testExp_0deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test/')
 testExp_0deg_Mach2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_0deg_Mach2/')
 testExp_45deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg/')
@@ -24,7 +25,7 @@ testExp_extend_0p04delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1
 testExp_norm_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
 
 
-test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test/')
+testNGP = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP/')
 test_0deg_picard = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_0deg_picard/')
 test_0deg = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_other/')
 test_0deg_vacuumStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_try/')
@@ -39,7 +40,10 @@ test_45deg_vacuumStart_noExactBoundary_0p2T = dataSet('Y:/scratch/nsavard/Implic
 vacuumStart_45deg_noExactBoundary_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_notExactBoundary_400nodes_0p2T/')
 vacuumStart_75deg_noExactBoundary_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_75deg_400nodes_0p2T/')
 vacuumStart_75deg_noExactBoundary_433nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_75deg_433nodes_0p2T/')
-#CIC 2p5e1
+
+
+#CIC
+vacuumStart_45deg_CIC_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_2p0T_31nodes/')
 
 # convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
