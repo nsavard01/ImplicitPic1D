@@ -9,7 +9,7 @@ module mod_particleMover
     use omp_lib
     implicit none
     ! Procedures for moving particles and depositing J 
-    integer(int32) :: m_Anderson_Particle = 2
+    integer(int32), parameter :: m_Anderson_Particle = 2
 
 contains
 
