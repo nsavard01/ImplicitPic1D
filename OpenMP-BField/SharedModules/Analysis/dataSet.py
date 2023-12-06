@@ -52,6 +52,12 @@ class dataSet:
             
         self.grid = np.fromfile(self.path + 'domainGrid.dat', dtype = 'float', offset = 4)
         self.dx_dl = np.fromfile(self.path + 'domainDxDl.dat', dtype = 'float', offset = 4)
+        if (self.scheme == 0):
+            self.x_min = self.grid[0]
+            self.x_max = self.grid[-1]
+        else:
+            self.x_min = self.grid[0] - 0.5 * self.dx_dl[0]
+            self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
         self.totTime = endDiag[0]
         self.totPotTime = endDiag[1]

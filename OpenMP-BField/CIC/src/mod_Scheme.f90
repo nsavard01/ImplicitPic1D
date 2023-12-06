@@ -92,7 +92,7 @@ contains
         real(real64), intent(in out) :: rho(NumberXNodes)
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
-        integer(int32) :: i
+        integer(int32) :: i, iThread
         rho = 0.0d0
         do i = 1, numberChargedParticles
             !$OMP parallel private(iThread)

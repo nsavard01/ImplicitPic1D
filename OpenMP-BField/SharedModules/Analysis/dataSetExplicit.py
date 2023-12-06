@@ -41,6 +41,8 @@ class dataSetExplicit:
             self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, delim_whitespace=True, names = partDiag)
             
         self.grid = np.fromfile(self.path + 'domainGrid.dat', offset = 4)
+        self.x_min = self.grid[0]
+        self.x_max = self.grid[-1]
         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
         self.totTime = endDiag[0]
         self.totPotTime = endDiag[1]

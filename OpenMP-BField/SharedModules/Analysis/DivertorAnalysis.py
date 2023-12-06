@@ -43,9 +43,10 @@ vacuumStart_75deg_noExactBoundary_433nodes_0p2T = dataSet('Y:/scratch/nsavard/Im
 
 
 #CIC
-vacuumStart_45deg_CIC_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_2p0T_31nodes/')
+vacuumStart_45deg_CIC_2p0T_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_2p0T_31nodes/')
+vacuumStart_45deg_CIC_0p2T_400nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_0p2T_400nodes/')
 
-# convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
+#vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
 
 # compareModelToDatas(convergenceDataExp, convergenceLabelExp, modelOther, 'ICIS2023/converge')
