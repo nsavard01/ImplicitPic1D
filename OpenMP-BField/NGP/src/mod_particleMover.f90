@@ -14,13 +14,13 @@ module mod_particleMover
 contains
 
     subroutine subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, f_tol, AtBoundaryBool, &
-            del_t, l_boundary)
+            del_t, l_boundary, numIter)
         ! Anderson Acceleration particle mover
         integer(int32), intent(in) :: l_cell
         real(real64), intent(in) :: E_x, q_over_m, BField(3), B_mag, dx_dl, f_tol, del_t
         real(real64), intent(in out) :: l_sub, v_sub(3), l_f, v_f(3), v_half(3), del_tau, timePassed
         logical, intent(in out) :: AtBoundaryBool
-        integer(int32), intent(in out) :: l_boundary
+        integer(int32), intent(in out) :: l_boundary, numIter
         real(real64) :: v_prime(3), coeffAccel, curr_Res, Res_k(m_Anderson_Particle+1), del_tau_k(m_Anderson_Particle+1), fitMat(m_Anderson_Particle), minCoeff(m_Anderson_Particle+1), del_tau_max
         integer(int32) :: k, m_k, u, index
         logical :: convergeBool
@@ -48,6 +48,7 @@ contains
             curr_Res = ABS(Res_k(index))
             if (curr_Res < f_tol) then
                 v_f = 2.0d0 * v_half - v_sub
+                numIter = k+1
                 AtBoundaryBool = (del_tau < del_tau_max)
                 if(.not. AtBoundaryBool) then
                     l_f = l_sub + v_half(1) * del_tau / dx_dl
@@ -177,7 +178,7 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, E_x, q_times_wp
-        integer(int32) :: j, i, l_cell, iThread, l_boundary
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: AtBoundaryBool
         solver%J = 0.0d0
         solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
@@ -185,7 +186,7 @@ contains
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             q_times_wp = particleList(j)%q * particleList(j)%w_p
-            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, dx_dl, E_x, l_boundary)
+            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, dx_dl, E_x, l_boundary, numIter)
             iThread = omp_get_thread_num() + 1 
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 v_sub = particleList(j)%phaseSpace(2:4,i,iThread)
@@ -198,7 +199,7 @@ contains
 
                     ! Start AA
                     call subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, f_tol, AtBoundaryBool, &
-                        del_t, l_boundary)
+                        del_t, l_boundary, numIter)
         
                     solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + q_times_wp * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
                     
@@ -251,15 +252,17 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, E_x
-        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary
+        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numThread), funcEvalCounter(numThread)
         logical :: AtBoundaryBool
         solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         f_tol = del_t * 1.d-8
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
-            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, delIdx, dx_dl, E_x, l_boundary)
+            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, delIdx, dx_dl, E_x, l_boundary, numIter)
             iThread = omp_get_thread_num() + 1 
             delIdx = 0
+            funcEvalCounter(iThread) = 0
+            numSubStepAve(iThread) = 0
             particleList(j)%refIdx(iThread) = 0
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             particleList(j)%wallLoss(:, iThread) = 0.0d0
@@ -268,15 +271,15 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 do while((timePassed < del_t))
-                    
+                    numSubStepAve(iThread) = numSubStepAve(iThread) + 1
                     l_cell = INT(l_sub)
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
                     
                     ! AA particle mover
                     call subStepSolverAA(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, f_tol, AtBoundaryBool, &
-                        del_t, l_boundary)
-                    
+                        del_t, l_boundary, numIter)
+                    funcEvalCounter(iThread) = funcEvalCounter(iThread) + numIter
                     if (AtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
@@ -350,6 +353,8 @@ contains
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             !$OMP end parallel
+            particleList(j)%numSubStepsAve = real(SUM(numSubStepAve)) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
+            particleList(j)%numFuncEvalAve = real(SUM(funcEvalCounter)) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
             particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
         end do loopSpecies

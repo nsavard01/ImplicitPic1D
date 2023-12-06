@@ -235,7 +235,7 @@ contains
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(debyeLength, L_domain, gridType)
         print *, "Number of nodes:", NumberXNodes
-        print *, "Grid length:", world%grid(NumberXNodes) - world%grid(1)
+        print *, "Grid length:", SUM(world%dx_dl)
         print *, "Left boundary type:", leftBoundary
         print *, "Right boundary type:", rightBoundary
         print *, 'Grid type is:', gridType
@@ -243,7 +243,6 @@ contains
         print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""
-        call solver%construct_diagMatrix(world)
 
     end subroutine readGeometry
 
@@ -309,7 +308,7 @@ contains
 
         do j=1, numberChargedParticles
             particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
-            particleList(j) % w_p = n_ave * (world%grid(NumberXNodes) - world%grid(1)) / SUM(particleList(j) % N_p)
+            particleList(j) % w_p = n_ave * SUM(world%dx_dl) / SUM(particleList(j) % N_p)
             call particleList(j) % generate3DMaxwellian(Ti(j), irand)
             call initialize_randUniform(particleList(j), world, irand)
             print *, 'Initializing ', particleList(j) % name

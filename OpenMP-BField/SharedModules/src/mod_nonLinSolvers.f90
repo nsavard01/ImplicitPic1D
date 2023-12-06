@@ -42,7 +42,7 @@ contains
     subroutine solveInitialPotential(solver, particleList, world)
         ! Solve for initial potential
         class(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         call depositRho(solver%rho, particleList, world)
         call solver%solve_tridiag_Poisson(world)

@@ -13,6 +13,9 @@ contains
     subroutine initializeScheme(schemeNum)
         integer(int32), intent(in out) :: schemeNum
         schemeNum = 0
+        print *, "--Scheme---"
+        print *, "NGP constant grid size between phi/rho nodes"
+        print *, '----------'
     end subroutine initializeScheme
 
     subroutine initialize_randUniform(part, world, irand)
@@ -44,97 +47,108 @@ contains
         !$OMP end parallel  
     end subroutine initialize_QuasiNeutral
 
-    function getLFromX(x, world) result(l)
-        real(real64), intent(in) :: x
+    subroutine interpolateParticleToNodes(part, world, iThread)
+        ! Interpolate particles to logical grid for a single thread
+        type(Particle), intent(in out) :: part
         type(Domain), intent(in) :: world
-        integer(int32) :: idxLower, idxHigher, idxMiddle
-        real(real64) :: l
-        idxLower = 1
-        idxHigher = NumberXNodes
-        if ((x<world%grid(1)) .or. (x > world%grid(NumberXNodes))) then
-            print *, 'x value outside of grid range in getLFromX!'
-            stop
-        end if
-        do while (idxLower /= idxHigher-1)
-            idxMiddle = (idxLower + idxHigher)/2
-            if (world%grid(idxMiddle) <= x) then
-                idxLower = idxMiddle
-            else
-                idxHigher = idxMiddle
-            end if
-        end do
-        l = idxLower + (x - world%grid(idxLower))/world%dx_dl(idxLower)
-        
-    end function getLFromX
+        integer(int32), intent(in) :: iThread
+        integer(int32) :: j, l_left, l_right
+        real(real64) :: d
 
-    ! --------------------------- Diagnostics ------------------------------------
+        do j = 1, part%N_p(iThread)
+            l_left = INT(part%phaseSpace(1, j, iThread))
+            l_right = l_left + 1
+            d = part%phaseSpace(1, j, iThread) - real(l_left)
+            part%densities(l_left, iThread) = part%densities(l_left, iThread) + (1.0d0-d)
+            part%densities(l_right, iThread) = part%densities(l_right, iThread) + d
+        end do
+    end subroutine interpolateParticleToNodes
+
+
+    subroutine loadParticleDensity(particleList, world, reset)
+        type(Particle), intent(in out) :: particleList(:)
+        type(Domain), intent(in) :: world
+        logical, intent(in) :: reset
+        integer(int32) :: i, iThread
+        do i = 1, numberChargedParticles
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1 
+            if (reset) then
+                particleList(i)%densities(:,iThread) = 0.0d0
+            end if
+            call interpolateParticleToNodes(particleList(i), world, iThread)
+            !$OMP end parallel
+        end do
+    end subroutine
 
     subroutine depositRho(rho, particleList, world) 
-        type(Domain), intent(in) :: world
-        type(Particle), intent(in) :: particleList(:)
         real(real64), intent(in out) :: rho(NumberXNodes)
-        integer(int32) :: i, j, l_left, l_right, iThread
-        real(real64) :: d, rhoTemp(NumberXNodes, numThread)
+        type(Particle), intent(in out) :: particleList(:)
+        type(Domain), intent(in) :: world
+        integer(int32) :: i, iThread
         rho = 0.0d0
-        do i=1, numberChargedParticles
-            rhoTemp = 0.0d0
-            !$OMP parallel private(iThread, j, l_left, l_right, d)
-            iThread = omp_get_thread_num() + 1
-            do j = 1, particleList(i)%N_p(iThread)
-                l_left = INT(particleList(i)%phaseSpace(1, j, iThread))
-                l_right = l_left + 1
-                d = particleList(i)%phaseSpace(1, j, iThread) - real(l_left)
-                rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + (1.0d0-d)
-                if (l_left < NumberXNodes) rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + d
-            end do
-            !$OMP end parallel
-            rho = rho + SUM(rhoTemp, DIM = 2) * particleList(i)%w_p * particleList(i)%q
+        do i = 1, numberChargedParticles
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1 
+            particleList(i)%densities(:,iThread) = 0.0d0
+            call interpolateParticleToNodes(particleList(i), world, iThread)
+            !$OMP end parallel   
+            rho = rho + SUM(particleList(i)%densities, DIM = 2) * particleList(i)%w_p * particleList(i)%q
         end do
     end subroutine depositRho
 
-    subroutine loadParticleDensity(densities, particleList, world)
-        type(Particle), intent(in) :: particleList(numberChargedParticles)
+    function getChargeContinuityError(rho_i, rho_f, J_total, world, del_t) result(chargeError)
+        real(real64), intent(in) :: del_t, rho_i(NumberXNodes), rho_f(NumberXNodes), J_total(NumberXNodes-1, numThread)
         type(Domain), intent(in) :: world
-        real(real64), intent(in out) :: densities(NumberXNodes,numberChargedParticles)
-        integer(int32) :: i,j, l_left, l_right, iThread
-        real(real64) :: d, tempDensity(NumberXNodes, numThread)
-        do i=1, numberChargedParticles
-            tempDensity = 0.0d0
-            !$OMP parallel private(iThread, j, l_left, l_right, d)
-            iThread = omp_get_thread_num() + 1
-            do j = 1, particleList(i)%N_p(iThread)
-                l_left = INT(particleList(i)%phaseSpace(1,j, iThread))
-                l_right = l_left + 1
-                d = particleList(i)%phaseSpace(1,j, iThread) - l_left
-                tempDensity(l_left, iThread) = tempDensity(l_left, iThread) + (1.0d0-d)
-                if (l_left < NumberXNodes) tempDensity(l_right, iThread) = tempDensity(l_right, iThread) + d
-            end do
-            !$OMP end parallel
-            densities(:, i) = densities(:, i) + SUM(tempDensity, DIM = 2) * particleList(i)%w_p
+        integer(int32) :: i, k
+        real(real64) :: chargeError, J(NumberXNodes-1), del_Rho
+        J = SUM(J_total, DIM=2)
+        chargeError = 0.0d0
+        k = 0
+        do i = 1, NumberXNodes
+            del_Rho = rho_f(i) - rho_i(i)
+            if (del_Rho /= 0) then
+                SELECT CASE (world%boundaryConditions(i))
+                CASE(0)
+                    chargeError = chargeError + (1.0d0 + del_t * (J(i) - J(i-1))/del_Rho)**2
+                    k = k + 1
+                CASE(1)
+                    continue
+                CASE(2)
+                    if (i == 1) then
+                        chargeError = chargeError + (1.0d0 + del_t * J(1)/del_Rho)**2
+                    else
+                        chargeError = chargeError + (1.0d0 - del_t * J(NumberXNodes-1)/del_Rho)**2
+                    end if
+                    k = k + 1
+                END SELECT
+            end if
         end do
-    end subroutine loadParticleDensity
+        chargeError = SQRT(chargeError/k)
+    end function getChargeContinuityError
 
-    subroutine WriteParticleDensity(densities, particleList, world, CurrentDiagStep, boolAverage, dirName) 
+
+    subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
         ! Re-use rho array since it doesn't get used after first Poisson
-        real(real64), intent(in out) :: densities(:,:)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
+        real(real64) :: densities(NumberXNodes)
         integer(int32) :: i
         logical, intent(in) :: boolAverage
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            densities(:, i) = densities(:,i)/world%nodeVol
+            densities = (SUM(particleList(i)%densities, DIM=2)/world%nodeVol) * particleList(i)%w_p
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
             end if
-            write(41) densities(:, i)
+            write(41) densities
             close(41)
         end do
         

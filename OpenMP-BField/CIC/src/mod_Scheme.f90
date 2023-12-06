@@ -24,177 +24,134 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, iThread
         real(real64) :: L_domain
-        L_domain = world%grid(NumberXNodes) - world%grid(1)
+        L_domain = SUM(world%dx_dl)
         !$OMP parallel private(iThread, i)
         iThread = omp_get_thread_num() + 1
         do i=1, part%N_p(iThread)
-            part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1)
+            part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1) - 0.5d0 * world%dx_dl(1)
             part%phaseSpace(1,i, iThread) = world%getLFromX(part%phaseSpace(1,i, iThread))
         end do
         !$OMP end parallel    
     end subroutine initialize_randUniform
 
+    subroutine interpolateParticleToNodes(part, world, iThread)
+        ! Interpolate particles to logical grid for a single thread
+        type(Particle), intent(in out) :: part
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in) :: iThread
+        integer(int32) :: j, l_center, l_left, l_right
+        real(real64) :: d
 
+        do j = 1, part%N_p(iThread)
+            l_center = INT(part%phaseSpace(1, j, iThread))
+            d = part%phaseSpace(1, j, iThread) - real(l_center)
+            part%densities(l_center, iThread) = part%densities(l_center, iThread) + (-d**2 + d + 0.5d0)
+            l_right = l_center + 1
+            l_left = l_center - 1
+            if (world%boundaryConditions(l_center) == 0 .and. world%boundaryConditions(l_right) == 0) then
+                ! No Boundary either side
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            else if (world%boundaryConditions(l_right) == 1) then
+                ! Dirichlet to right
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) - 0.5d0 * d**2
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+            else if (world%boundaryConditions(l_center) == 1) then
+                !Dirichlet to left
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) - 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            else if (world%boundaryConditions(l_right) == 2) then
+                !Neumann to right
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * d**2
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+            else if (world%boundaryConditions(l_center) == 2) then
+                !Neumann to left
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            end if
+        end do
+    end subroutine interpolateParticleToNodes
+
+    subroutine loadParticleDensity(particleList, world, reset)
+        type(Particle), intent(in out) :: particleList(:)
+        type(Domain), intent(in) :: world
+        logical, intent(in) :: reset
+        integer(int32) :: i, iThread
+        do i = 1, numberChargedParticles
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1 
+            if (reset) then
+                particleList(i)%densities(:,iThread) = 0.0d0
+            end if
+            call interpolateParticleToNodes(particleList(i), world, iThread)
+            !$OMP end parallel
+        end do
+    end subroutine
 
     subroutine depositRho(rho, particleList, world) 
         real(real64), intent(in out) :: rho(NumberXNodes)
-        type(Particle), intent(in) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
-        integer(int32) :: i, j, l_center, l_left, l_right, iThread
-        real(real64) :: d, rhoTemp(NumberXNodes, numThread)
+        integer(int32) :: i, iThread
         rho = 0.0d0
-        do i=1, numberChargedParticles
-            rhoTemp = 0.0d0
-            !$OMP parallel private(iThread, j, l_center, l_left, l_right, d)
-            iThread = omp_get_thread_num() + 1
-            do j = 1, particleList(i)%N_p(iThread)
-                l_center = NINT(particleList(i)%phaseSpace(1, j, iThread))
-                d = particleList(i)%phaseSpace(1, j, iThread) - real(l_center)
-                SELECT CASE (world%boundaryConditions(l_center))
-                CASE(0)
-                    ! Inside domain
-                    l_left = l_center -1
-                    l_right = l_center + 1
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (0.75 - d**2)
-                    rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! SELECT CASE (world%boundaryConditions(l_right))
-                    ! CASE(0,1)
-                    !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2   
-                    ! CASE(2)
-                    !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    ! CASE(3)
-                    !     rhoTemp(l_right, iThread) = rhoTemp(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    !     rhoTemp(1, iThread) = rhoTemp(1, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    ! END SELECT
-                    
-                    ! SELECT CASE (world%boundaryConditions(l_left))
-                    ! CASE(0,1)
-                    !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! CASE(2)
-                    !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! CASE(3)
-                    !     rhoTemp(l_left, iThread) = rhoTemp(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    !     rhoTemp(NumberXNodes, iThread) = rhoTemp(NumberXNodes, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! END SELECT
-                CASE(1)
-                    !Dirichlet
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (1.0d0-ABS(d))
-                    rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) = rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) + ABS(d)
-                CASE(2)
-                    !Neumann symmetric
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (0.75 - d**2)
-                    rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) = rhoTemp(l_center + INT(SIGN(1.0, d)), iThread) + (0.25d0 + d**2)
-                CASE(3)
-                    ! Periodic
-                    rhoTemp(l_center, iThread) = rhoTemp(l_center, iThread) + (0.75 - d**2)
-                    rhoTemp(ABS(l_center - NumberXNodes) + 1, iThread) = rhoTemp(ABS(l_center - NumberXNodes) + 1, iThread) + (0.75 - d**2)
-                    ! towards domain
-                    rhoTemp(l_center+INT(SIGN(1.0, d)), iThread) = rhoTemp(l_center+INT(SIGN(1.0, d)), iThread) + 0.5d0 * (0.5d0 + ABS(d))**2
-                    ! across periodic boundary
-                    rhoTemp(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), iThread) = rhoTemp(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), iThread) + 0.5d0 * (0.5d0 - ABS(d))**2
-                END SELECT
-            end do
-            !$OMP end parallel
-            rho = rho + SUM(rhoTemp, DIM = 2) * particleList(i)%w_p * particleList(i)%q
+        do i = 1, numberChargedParticles
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1 
+            particleList(i)%densities(:,iThread) = 0.0d0
+            call interpolateParticleToNodes(particleList(i), world, iThread)
+            !$OMP end parallel   
+            rho = rho + SUM(particleList(i)%densities, DIM = 2) * particleList(i)%w_p * particleList(i)%q
         end do
     end subroutine depositRho
 
-    subroutine loadParticleDensity(densities, particleList, world)
-        type(Particle), intent(in) :: particleList(numberChargedParticles)
+    function getChargeContinuityError(rho_i, rho_f, J_total, world, del_t) result(chargeError)
+        real(real64), intent(in) :: del_t, rho_i(NumberXNodes), rho_f(NumberXNodes), J_total(NumberXNodes+1, numThread)
         type(Domain), intent(in) :: world
-        real(real64), intent(in out) :: densities(NumberXNodes,numberChargedParticles)
-        integer(int32) :: i,j, l_left, l_right, l_center, iThread
-        real(real64) :: d, tempDensity(NumberXNodes, numThread)
-        do i=1, numberChargedParticles
-            tempDensity = 0.0d0
-            !$OMP parallel private(iThread, j, l_center, l_left, l_right, d)
-            iThread = omp_get_thread_num() + 1
-            do j = 1, particleList(i)%N_p(iThread)
-                l_center = NINT(particleList(i)%phaseSpace(1, j, iThread))
-                d = particleList(i)%phaseSpace(1, j, iThread) - real(l_center)
-                SELECT CASE (world%boundaryConditions(l_center))
+        integer(int32) :: i
+        real(real64) :: chargeError, J(NumberXNodes+1), del_Rho
+        J = SUM(J_total, DIM=2)
+        chargeError = 0.0d0
+        do i = 1, NumberXNodes
+            del_Rho = rho_f(i) - rho_i(i)
+            if (del_Rho /= 0) then
+                SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
                 CASE(0)
-                    ! Inside domain
-                    l_left = l_center -1
-                    l_right = l_center + 1
-                    tempDensity(l_center, iThread) = tempDensity(l_center, iThread) + (0.75 - d**2)
-                    tempDensity(l_right, iThread) = tempDensity(l_right, iThread) + 0.5d0 * (0.5d0 + d)**2
-                    tempDensity(l_left, iThread) = tempDensity(l_left, iThread) + 0.5d0 * (0.5d0 - d)**2
-                    ! SELECT CASE (world%boundaryConditions(l_right))
-                    ! CASE(0,1)
-                    !     rhoTemp(l_right) = rhoTemp(l_right) + 0.5d0 * (0.5d0 + d)**2   
-                    ! CASE(1)
-                    !     rhoTemp(l_right) = rhoTemp(l_right) + 0.5d0 * (0.5d0 + d)**2
-                    ! CASE(2)
-                    !     rhoTemp(l_right) = rho(l_right) + particleList(i)%q * particleList(i)%w_p * (0.5d0 + d)**2
-                    ! CASE(3)
-                    !     rho(l_right) = rho(l_right) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
-                    !     rho(1) = rho(1) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 + d)**2
-                    ! END SELECT
-                    ! if (l_left /= 1) then
-                    !     rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                    ! else
-                    !     SELECT CASE (world%boundaryConditions(l_left))
-                    !     CASE(1)
-                    !         rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                    !     CASE(2)
-                    !         rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * (0.5d0 - d)**2
-                    !     CASE(3)
-                    !         rho(l_left) = rho(l_left) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                    !         rho(NumberXNodes) = rho(NumberXNodes) + particleList(i)%q * particleList(i)%w_p * 0.5d0 * (0.5d0 - d)**2
-                    !     END SELECT
-                    ! end if
+                    chargeError = chargeError + (1.0d0 + del_t * (J(i+1) - J(i))/(del_Rho))**2
+                CASE(-1)
+                    chargeError = chargeError + (1.0d0 + del_t * (J(i+1) - 2.0d0 * J(i))/(del_Rho))**2
                 CASE(1)
-                    !Dirichlet
-                    tempDensity(l_center, iThread) = tempDensity(l_center, iThread) + (1.0d0-ABS(d))
-                    tempDensity(l_center + INT(SIGN(1.0, d)), iThread) = tempDensity(l_center + INT(SIGN(1.0, d)), iThread) + ABS(d)
+                    chargeError = chargeError + (1.0d0 + del_t * (2.0d0 * J(i+1) - J(i))/del_Rho)**2
                 CASE(2)
-                    !Neumann symmetric
-                    tempDensity(l_center, iThread) = tempDensity(l_center, iThread) + (0.75 - d**2)
-                    tempDensity(l_center + INT(SIGN(1.0, d)), iThread) = tempDensity(l_center + INT(SIGN(1.0, d)), iThread) + (0.25d0 + d**2)
-                CASE(3)
-                    ! Periodic
-                    tempDensity(l_center, iThread) = tempDensity(l_center, iThread) + (0.75 - d**2)
-                    tempDensity(ABS(l_center - NumberXNodes) + 1, iThread) = tempDensity(ABS(l_center - NumberXNodes) + 1, iThread) + (0.75 - d**2)
-                    ! towards domain
-                    tempDensity(l_center+INT(SIGN(1.0, d)), iThread) = tempDensity(l_center+INT(SIGN(1.0, d)), iThread) + 0.5d0 * (0.5d0 + ABS(d))**2
-                    ! across periodic boundary
-                    tempDensity(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), iThread) = tempDensity(MODULO(l_center-2*INT(SIGN(1.0, d)),NumberXNodes), iThread) + 0.5d0 * (0.5d0 - ABS(d))**2
+                    chargeError = chargeError + (1.0d0 + del_t * (-J(i))/del_Rho)**2 
+                CASE(-2)
+                    chargeError = chargeError + (1.0d0 + del_t * (J(i+1))/del_Rho)**2
                 END SELECT
-            end do
-            !$OMP end parallel
-            densities(:, i) = densities(:, i) + SUM(tempDensity, DIM = 2) * particleList(i)%w_p
+            end if
         end do
-    end subroutine loadParticleDensity
+        chargeError = SQRT(chargeError/NumberXNodes)
+    end function getChargeContinuityError
 
-    subroutine WriteParticleDensity(densities, particleList, world, CurrentDiagStep, boolAverage, dirName) 
+    subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
         ! Re-use rho array since it doesn't get used after first Poisson
-        real(real64), intent(in out) :: densities(:,:)
         type(Particle), intent(in) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
-        integer(int32) :: i, j
+        real(real64) :: densities(NumberXNodes)
+        integer(int32) :: i
         logical, intent(in) :: boolAverage
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            do j = 1, NumberXNodes
-                if (world%boundaryConditions(j) == 0) then
-                    densities(j, i) = densities(j,i)/world%nodeVol(j)
-                else
-                    densities(j, i) = 2.0d0 * densities(j,i)/world%nodeVol(j)
-                end if
-            end do
+            densities = (SUM(particleList(i)%densities, DIM=2)/world%dx_dl) * particleList(i)%w_p
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
             end if
-            write(41) densities(:, i)
+            write(41) densities
             close(41)
         end do
         

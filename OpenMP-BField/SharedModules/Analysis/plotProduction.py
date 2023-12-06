@@ -18,7 +18,7 @@ def plotAveDensity(dataSet, name = "", label = ""):
             plt.plot(dataSet.grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name +  '}$')
         plt.xlabel('Distance (m)')
         plt.ylabel('Particle Density (1/m^3)')
-        plt.xlim([0, dataSet.grid[-1]])
+        plt.xlim([dataSet.x_min, dataSet.x_max])
         plt.legend(loc = 'best')
     else:
         if name not in dataSet.particles.keys():
@@ -28,14 +28,15 @@ def plotAveDensity(dataSet, name = "", label = ""):
             plt.plot(dataSet.grid, n,  linestyle = '-', marker = 'o', label = label)
             plt.xlabel('Distance (m)')
             plt.ylabel(name + ' Density (1/m^3)')
-            plt.xlim([0, dataSet.grid[-1]])
+            plt.xlim([dataSet.x_min, dataSet.x_max])
  
 def plotAvePhi(dataSet, label = ''):
+
     phi = dataSet.getAvePhi()
     plt.plot(dataSet.grid, phi, 'o-', label = label)
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
-    plt.xlim([0, dataSet.grid[-1]])
+    plt.xlim([dataSet.x_min, dataSet.x_max])
     plt.show()
     
 def maxwellEDVF(x, T):
@@ -56,17 +57,19 @@ def plotAveEVDF(dataSet):
 #-------------------------- Time Dependent ---------------------
     
 def update_plot_Phi(i, dataSet, ax):
+
     ax.clear()
     phi = dataSet.getPhi(i)
     ax.plot(dataSet.grid, phi, 'o-')
         
     ax.set_xlabel('Distance (m)')
     ax.set_ylabel('Potential (V)')
-    ax.set_xlim([0, dataSet.grid[-1]])
+    ax.set_xlim([dataSet.x_min, dataSet.x_max])
     #ax.set_ylim([-20, 40])
 
     
 def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPlasmaPhi.gif"):
+
     if boolMakeAnimation:
         numframes = dataSet.numDiag
         fig, ax = plt.subplots()
@@ -75,7 +78,7 @@ def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPl
             
         ax.set_xlabel('Distance (m)')
         ax.set_ylabel('Potential (V)')
-        ax.set_xlim([0, dataSet.grid[-1]])
+        ax.set_xlim([dataSet.x_min, dataSet.x_max])
         #ax.set_ylim([-20, 40])
         ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(dataSet, ax))
         
@@ -93,20 +96,22 @@ def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPl
             plt.plot(dataSet.grid, phi, 'o-')
             plt.xlabel('Distance (m)')
             plt.ylabel('Potential (V)')
-            plt.xlim([0, dataSet.grid[-1]])
+            plt.xlim([dataSet.x_min, dataSet.x_max])
             plt.pause(0.05)  
 
 def update_plot_Density(i, dataSet, ax, nameList):
+
     ax.clear()
     for name in nameList:
         n = dataSet.getDensity(name, i)
         ax.plot(dataSet.grid, n, 'o-', label = name)
     ax.set_xlabel('Distance (m)')
     ax.set_ylabel('Particle Density (1/m^3)')
-    ax.set_xlim([0, dataSet.grid[-1]])
+    ax.set_xlim([dataSet.x_min, dataSet.x_max])
     plt.legend(loc = 'lower center')            
             
 def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Figures/BoundPlasmaDensity.gif"):
+
     if boolMakeAnimation:
         numframes = dataSet.numDiag
         fig, ax = plt.subplots()
@@ -116,7 +121,7 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
             
         ax.set_xlabel('Distance (m)')
         ax.set_ylabel(r'Density (m$^{-3}$)')
-        ax.set_xlim([0, dataSet.grid[-1]])
+        ax.set_xlim([dataSet.x_min, dataSet.x_max])
         #ax.set_ylim([-20, 40])
         ani = animation.FuncAnimation(fig, update_plot_Density, frames=range(numframes), interval = 100,fargs=(dataSet, ax, nameList))
         
@@ -135,7 +140,7 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
                 plt.plot(dataSet.grid, n, 'o-', label = name)
             plt.xlabel('Distance (m)')
             plt.ylabel(r'Density (m$^{-3}$)')
-            plt.xlim([0, dataSet.grid[-1]])
+            plt.xlim([dataSet.xmin, dataSet.x_max])
             plt.pause(0.05)  
             
             
