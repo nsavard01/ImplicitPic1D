@@ -18,7 +18,8 @@ module mod_nonLinSolvers
     real(real64) :: Beta_k
 
     !allocatable arrays for JFNK or Anderson
-    integer(int32), allocatable :: inputJFNK(:)
+    integer(int32), private, allocatable :: inputJFNK(:)
+    real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :), work(:), alpha(:)
 
     ! Common blocks for nitsol
     integer iplvl, ipunit
@@ -79,6 +80,9 @@ contains
         print *, "Relaxation parameter is:", Beta_k
         print *, ""
         SELECT CASE (solverType)
+        CASE(0)
+            allocate(Residual_k(NumberXNodes, m_Anderson+1), phi_k(NumberXNodes, m_Anderson+1), fitMat(NumberXNodes, m_Anderson), &
+            work(MAX(m_Anderson, (NumberXNodes)) + MIN((NumberXNodes),m_Anderson)), alpha(MAX(m_Anderson, (NumberXNodes))))
         CASE(1)
             allocate(inputJFNK(10))
             iplvl = 4 ! print level
@@ -98,66 +102,7 @@ contains
 
     end subroutine initializeSolver
 
-    ! ---------------- Basic Picard ----------------------------
-    subroutine solveDivAmperePicard(solver, particleList, world, del_t, maxIter, eps_r)
-        ! Solve for divergence of ampere using picard iterations
-        type(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in out) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: errorCurrent, errorInitial
-        integer(int32) :: i
-        call depositJ(solver,particleList, world, del_t)
-        errorInitial = SQRT(SUM(solver%getError_tridiag_Ampere(world, del_t)**2))
-        do i = 1, maxIter
-            call solver%solve_tridiag_Ampere(world, del_t)
-            call depositJ(solver,particleList, world, del_t)
-            errorCurrent = SQRT(SUM(solver%getError_tridiag_Ampere(world, del_t)**2))
-            if (i > 2) then
-                if (errorCurrent < eps_r*errorInitial) then
-                    call moveParticles(solver,particleList, world, del_t)
-                    solver%phi = solver%phi_f
-                    exit
-                end if
-            end if
-        end do
-        iterNumPicard = i-1
-
-    end subroutine solveDivAmperePicard
-
-    subroutine adaptiveSolveDivAmperePicard(solver, particleList, world, del_t, maxIter, eps_r)
-        ! Solve for divergence of ampere's law with picard
-        ! cut del_t in two if non-convergence after maxIter, repeat until convergence
-        type(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in out) :: particleList(:)
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
-        real(real64) :: remainDel_t, currDel_t
-        call solveDivAmperePicard(solver, particleList, world, del_t, maxIter, eps_r)
-        remainDel_t = del_t  
-        if (iterNumPicard == maxIter) then
-            amountTimeSplits = amountTimeSplits + 1
-            do while (iterNumPicard == maxIter)
-                print *, "Reducing time step adaptively"
-                iterNumAdaptiveSteps = 0
-                currDel_t = remainDel_t
-                do while (iterNumPicard == maxIter)
-                    currDel_t = currDel_t/2.0d0
-                    iterNumAdaptiveSteps = iterNumAdaptiveSteps + 1
-                    if (iterNumAdaptiveSteps > 4) then
-                        stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
-                    end if
-                    call solveDivAmperePicard(solver, particleList, world, currDel_t, maxIter, eps_r)   
-                end do
-                remainDel_t = remainDel_t - currDel_t 
-                call solveDivAmperePicard(solver, particleList, world, remainDel_t, maxIter, eps_r)
-            end do
-        end if
-        
-
-    end subroutine adaptiveSolveDivAmperePicard
+    
 
     ! ----------- Picard with Anderson Acceleration -------------------------------
 
@@ -169,9 +114,8 @@ contains
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
         real(real64) :: initialR, sumPastResiduals, initialNorm
-        real(real64) :: Residual_k(NumberXNodes, m_Anderson+1), phi_k(NumberXNodes, m_Anderson+1), fitMat(NumberXNodes, m_Anderson), normResidual(m_Anderson+1)
+        real(real64) :: normResidual(m_Anderson+1)
         integer(int32) :: lwork!, ipar(2), itrmf
-        real(real64) :: work(MAX(m_Anderson, (NumberXNodes)) + MIN((NumberXNodes),m_Anderson)), alpha(MAX(m_Anderson, (NumberXNodes)))!, fcurSolver(NumberXNodes-2)
         integer(int32) :: i, j, index, m_k, info, ldb
         ldb = MAX(m_Anderson, (NumberXNodes))
         lwork= MIN((NumberXNodes),m_Anderson) + ldb

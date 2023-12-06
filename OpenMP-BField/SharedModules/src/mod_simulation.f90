@@ -15,7 +15,7 @@ module mod_simulation
     implicit none
 
     integer(int32) :: numTimeSteps, heatSkipSteps
-    real(real64) :: energyError, chargeError, gaussError, Power, nu_h, inelasticEnergyLoss
+    real(real64), private :: energyError, chargeError, gaussError, Power, nu_h, inelasticEnergyLoss
 
 
 contains
