@@ -43,6 +43,7 @@ vacuumStart_75deg_noExactBoundary_433nodes_0p2T = dataSet('Y:/scratch/nsavard/Im
 
 
 #CIC
+testCIC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC/')
 vacuumStart_45deg_CIC_2p0T_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_2p0T_31nodes/')
 vacuumStart_45deg_CIC_0p2T_400nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_0p2T_400nodes/')
 
