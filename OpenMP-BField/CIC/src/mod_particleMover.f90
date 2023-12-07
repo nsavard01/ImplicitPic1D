@@ -13,6 +13,7 @@ module mod_particleMover
 contains
 
 
+
     subroutine subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, d_half, q_over_m, l_cell, E_left, E_right, BField, B_mag, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
         ! picard iteration particle mover, like Chen in 2015 paper
         integer(int32), intent(in) :: l_cell
@@ -567,7 +568,7 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, d_half, v_half(3), dx_dl, E_x
-        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numSubStepAve, numIter, funcEvalCounter
+        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numSubStepAve, numIter, funcEvalCounter, refIdx
         logical :: FutureAtBoundaryBool, AtBoundaryBool
         call solver%evaluateEFieldHalfTime(world)
         f_tol = del_t * 1.d-10
@@ -576,9 +577,10 @@ contains
             numSubStepAve = 0
             funcEvalCounter = 0
             !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, &
-                AtBoundaryBool, dx_dl, l_boundary, d_half, delIdx, numIter) reduction(+:numSubStepAve, funcEvalCounter)
+                AtBoundaryBool, dx_dl, l_boundary, d_half, delIdx, numIter, refIdx) reduction(+:numSubStepAve, funcEvalCounter)
             iThread = omp_get_thread_num() + 1 
             delIdx = 0
+            refIdx = 0
             particleList(j)%refIdx(iThread) = 0
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             particleList(j)%wallLoss(:, iThread) = 0.0d0
@@ -635,8 +637,9 @@ contains
                             end if
                             l_f = real(l_boundary)
                             v_f(2:3) = -v_f(2:3)  
-                            particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                            particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                            refIdx = refIdx + 1
+                            !particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+                            particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
                         CASE default
@@ -666,6 +669,7 @@ contains
             end do loopParticles
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
+            particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
             !$OMP end parallel
             particleList(j)%numSubStepsAve = real(numSubStepAve) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
             particleList(j)%numFuncEvalAve = real(funcEvalCounter) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))

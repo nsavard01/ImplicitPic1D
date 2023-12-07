@@ -433,7 +433,7 @@ contains
                 do j=1, numberChargedParticles
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
                     call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
-                    chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
+                    chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
                     Etotal = Etotal + particleList(j)%getTotalKE()
                     energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%w_p * particleList(j)%mass * 0.5d0
                     write(unitPart1+j,"(5(es16.8,1x), (I6, 1x), 3(es16.8,1x))") currentTime + currDel_t, &
@@ -516,7 +516,7 @@ contains
         do j=1, numberChargedParticles
             call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
             call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
-            chargeTotal = chargeTotal + SUM(particleList(j)%wallLoss) * particleList(j)%q * particleList(j)%w_p
+            chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
             Etotal = Etotal + particleList(j)%getTotalKE()
             energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%w_p * particleList(j)%mass * 0.5d0
             write(unitPart1+j,"(5(es16.8,1x), (I6, 1x), 3(es16.8,1x))") currentTime + currDel_t, &
