@@ -7,7 +7,7 @@ module mod_particleMover
     use mod_potentialSolver
     use omp_lib
     implicit none
-
+    integer(int32), parameter :: m_Anderson_Particle = 2
 
 
 contains
@@ -101,22 +101,39 @@ contains
         real(real64), intent(in out) :: l_f, v_half(3), del_tau, d_half, E_x
         logical, intent(in out) :: FutureAtBoundaryBool
         integer(int32), intent(in out) :: l_boundary, numIter
-        real(real64) :: v_prime(3), coeffAccel, l_f_prev
-        integer(int32) :: k
+        real(real64) :: v_prime(3), coeffAccel, Res_k(m_Anderson_Particle+1), param_k(m_Anderson_Particle+1), fitMat(m_Anderson_Particle), minCoeff(m_Anderson_Particle+1)
+        integer(int32) :: k, index, m_k, u
 
         v_prime = v_sub
         v_half = v_sub
         ! print *, 'l_sub:', l_sub
         ! print *, 'v_sub:', v_sub
         ! print *, 'del_tau_max:', del_tau_max
-        l_f_prev = l_sub
+        param_k(1) = l_sub
+        coeffAccel = 0.5d0 * del_tau * q_over_m
+        d_half = (l_sub + param_k(1)) * 0.5d0 - real(l_cell)
+        E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+        v_prime(1) = v_sub(1) + coeffAccel * E_x
+        v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
+        v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
+        l_f = l_sub + del_tau * v_half(1) / dx_dl
+        if (v_half(1) > 0) then
+            l_boundary = l_cell + 1
+            FutureAtBoundaryBool = (l_f >= real(l_boundary))
+            if (FutureAtBoundaryBool) l_f = real(l_boundary)
+        else
+            l_boundary = l_cell
+            FutureAtBoundaryBool = (l_f <= real(l_boundary))
+            if (FutureAtBoundaryBool) l_f = real(l_boundary)
+        end if
+        param_k(2) = l_f
+        Res_k(1) = param_k(2) - param_k(1)
 
-        do k = 1, 100
-            ! print *, ''
-            ! print *, 'Iteration k:', k
-            ! print *, 'l_f:', param_k(index)
+        do k = 1, 50
+            index = MODULO(k, m_Anderson_Particle+1) + 1
+            m_k = MIN(k, m_Anderson_Particle)
             coeffAccel = 0.5d0 * del_tau * q_over_m
-            d_half = (l_sub + l_f_prev) * 0.5d0 - real(l_cell)
+            d_half = (l_sub + param_k(index)) * 0.5d0 - real(l_cell)
             E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
             v_prime(1) = v_sub(1) + coeffAccel * E_x
             v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
@@ -131,18 +148,27 @@ contains
                 FutureAtBoundaryBool = (l_f <= real(l_boundary))
                 if (FutureAtBoundaryBool) l_f = real(l_boundary)
             end if
+            Res_k(index) = l_f - param_k(index)
 
-            if (ABS(l_f - l_f_prev) < 1.d-10) then
-                numIter = k
+            if (ABS(Res_k(index)) < 1.d-10) then
+                numIter = k+1
                 if (.not. FutureAtBoundaryBool .and. INT(l_f) /= l_cell) then
                     print *, 'l_f should be in same cell since not at boundary!'
                     stop
                 end if
                 exit      
             end if
-            l_f_prev = l_f
+            do u = 0, m_k-1
+                fitMat(u+1) = Res_k(MODULO(k - m_k + u, m_Anderson_Particle+1) + 1) - Res_k(index)
+            end do
+            minCoeff(1:m_k) = (fitMat(1:m_k) * -Res_k(index))/SUM(fitMat(1:m_k)**2)
+            minCoeff(m_k+1) = 1.0d0 - SUM(minCoeff(1:m_k))
+            param_k(MODULO(k+1, m_Anderson_Particle+1) + 1) = minCoeff(1) * (Res_k(MODULO(k-m_k, m_Anderson_Particle+1) + 1) + param_k(MODULO(k-m_k,m_Anderson_Particle+1) + 1))
+            do u=1, m_k
+                param_k(MODULO(k+1, m_Anderson_Particle+1) + 1) = param_k(MODULO(k+1, m_Anderson_Particle+1) + 1) + minCoeff(u + 1) * (Res_k(MODULO(k-m_k + u, m_Anderson_Particle+1) + 1) + param_k(MODULO(k-m_k + u, m_Anderson_Particle+1) + 1))
+            end do
         end do
-        if (k > 100) then
+        if (k > 50) then
             print *, 'Get position did not converge!'
             print *, 'l_sub:', l_sub
             print *, 'v_sub:', v_sub
@@ -152,39 +178,6 @@ contains
             ! print *, 'l_sub:', l_sub
             ! print *, 'v_sub:', v_sub
             ! print *, 'del_tau_max:', del_tau_max
-            l_f_prev = l_sub
-            do k = 1, 50
-                ! print *, ''
-                ! print *, 'Iteration k:', k
-                ! print *, 'l_f:', param_k(index)
-                coeffAccel = 0.5d0 * del_tau * q_over_m
-                d_half = (l_sub + l_f_prev) * 0.5d0 - real(l_cell)
-                E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
-                v_prime(1) = v_sub(1) + coeffAccel * E_x
-                v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
-                v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
-                l_f = l_sub + del_tau * v_half(1) / dx_dl
-                print *, 'l_f:', l_f
-                if (v_half(1) > 0) then
-                    l_boundary = l_cell + 1
-                    FutureAtBoundaryBool = (l_f >= real(l_boundary))
-                    if (FutureAtBoundaryBool) l_f = real(l_boundary)
-                else
-                    l_boundary = l_cell
-                    FutureAtBoundaryBool = (l_f <= real(l_boundary))
-                    if (FutureAtBoundaryBool) l_f = real(l_boundary)
-                end if
-    
-                if (ABS(l_f - l_f_prev) < 1.d-10) then
-                    numIter = k
-                    if (.not. FutureAtBoundaryBool .and. INT(l_f) /= l_cell) then
-                        print *, 'l_f should be in same cell since not at boundary!'
-                        stop
-                    end if
-                    exit      
-                end if
-                l_f_prev = l_f
-            end do
             stop
         end if
 
@@ -476,17 +469,22 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, q_times_wp, J_part, d_half, E_x
+        real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, q_times_wp, J_part, d_half, E_x, J_temp(NumberXNodes+1)
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: FutureAtBoundaryBool, AtBoundaryBool
-        solver%J = 0.0d0
+        !$OMP parallel private(iThread)
+        iThread = omp_get_thread_num() + 1 
+        solver%J(:, iThread) = 0.0d0
+        !$OMP end parallel
         call solver%evaluateEFieldHalfTime(world)
         f_tol = del_t * 1.d-10
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             q_times_wp = particleList(j)%q * particleList(j)%w_p
-            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, AtBoundaryBool, dx_dl, l_boundary, J_part, d_half, numIter)
+            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, AtBoundaryBool, &
+                dx_dl, l_boundary, J_part, d_half, numIter, J_temp)
             iThread = omp_get_thread_num() + 1 
+            J_temp = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 v_sub = particleList(j)%phaseSpace(2:4,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
@@ -515,8 +513,10 @@ contains
                     end if
                     v_f = 2.0d0 * v_half - v_sub
                     J_part = q_times_wp * (v_half(1))*del_tau/dx_dl/del_t
-                    solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + J_part * (1.0d0 - d_half)
-                    solver%J(l_cell+1, iThread) = solver%J(l_cell+1, iThread) + J_part * (d_half)
+                    J_temp(l_cell) = J_temp(l_cell) + J_part * (1.0d0 - d_half)
+                    J_temp(l_cell+1) = J_temp(l_cell+1) + J_part * (d_half)
+                    ! solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + J_part * (1.0d0 - d_half)
+                    ! solver%J(l_cell+1, iThread) = solver%J(l_cell+1, iThread) + J_part * (d_half)
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
@@ -552,6 +552,7 @@ contains
                     end if
                 end do
             end do loopParticles
+            solver%J(:, iThread) = solver%J(:, iThread) + J_temp
             !$OMP end parallel
         end do loopSpecies
        
@@ -568,8 +569,13 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, d_half, v_half(3), dx_dl, E_x
+<<<<<<< HEAD
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numSubStepAve, numIter, funcEvalCounter, refIdx
         logical :: FutureAtBoundaryBool, AtBoundaryBool
+=======
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numSubStepAve, numIter, funcEvalCounter, delIdx, refIdx
+        logical :: FutureAtBoundaryBool, AtBoundaryBool, refluxedBool
+>>>>>>> temp
         call solver%evaluateEFieldHalfTime(world)
         f_tol = del_t * 1.d-10
         loopSpecies: do j = 1, numberChargedParticles
@@ -577,11 +583,18 @@ contains
             numSubStepAve = 0
             funcEvalCounter = 0
             !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, &
+<<<<<<< HEAD
                 AtBoundaryBool, dx_dl, l_boundary, d_half, delIdx, numIter, refIdx) reduction(+:numSubStepAve, funcEvalCounter)
             iThread = omp_get_thread_num() + 1 
             delIdx = 0
             refIdx = 0
             particleList(j)%refIdx(iThread) = 0
+=======
+                AtBoundaryBool, dx_dl, l_boundary, d_half, numIter, delIdx, refIdx, refluxedBool) reduction(+:numSubStepAve, funcEvalCounter)
+            iThread = omp_get_thread_num() + 1 
+            delIdx = 0
+            refIdx = 0
+>>>>>>> temp
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             particleList(j)%wallLoss(:, iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
@@ -589,6 +602,7 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 AtBoundaryBool = .false.
+                refluxedBool = .false.
                 do while((timePassed < del_t))
                     numSubStepAve = numSubStepAve + 1
                     if (.not. AtBoundaryBool) then
@@ -637,9 +651,17 @@ contains
                             end if
                             l_f = real(l_boundary)
                             v_f(2:3) = -v_f(2:3)  
+<<<<<<< HEAD
                             refIdx = refIdx + 1
                             !particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
                             particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
+=======
+                            if (.not. refluxedBool) then
+                                refIdx = refIdx + 1
+                                particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
+                                refluxedBool = .true.
+                            end if
+>>>>>>> temp
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
                         CASE default
@@ -669,7 +691,11 @@ contains
             end do loopParticles
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
+<<<<<<< HEAD
             particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
+=======
+            particleList(j)%refIdx(iThread) = refIdx
+>>>>>>> temp
             !$OMP end parallel
             particleList(j)%numSubStepsAve = real(numSubStepAve) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
             particleList(j)%numFuncEvalAve = real(funcEvalCounter) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))

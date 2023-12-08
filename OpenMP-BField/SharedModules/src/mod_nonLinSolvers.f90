@@ -136,6 +136,7 @@ contains
             call solver%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
+            !print *, normResidual(index)
             if (normResidual(index) < eps_r*(initialR)) then
                 call moveParticles(solver,particleList, world, del_t)
                 solver%phi = solver%phi_f
@@ -287,7 +288,6 @@ contains
             stop
         END SELECT
         print *, 'iterNumPicard is:', iterNumPicard
-        stop
     end subroutine solveJFNK
 
     subroutine adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r)

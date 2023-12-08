@@ -1,4 +1,8 @@
+<<<<<<< HEAD
         !COMPILER-GENERATED INTERFACE MODULE: Thu Dec  7 16:42:37 2023
+=======
+        !COMPILER-GENERATED INTERFACE MODULE: Thu Dec  7 17:55:47 2023
+>>>>>>> temp
         ! This source file is for reference only and may not completely
         ! represent the generated interface used by the compiler.
         MODULE NITJV__genmod
