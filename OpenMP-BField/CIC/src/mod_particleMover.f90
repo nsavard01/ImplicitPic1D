@@ -569,13 +569,8 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, d_half, v_half(3), dx_dl, E_x
-<<<<<<< HEAD
-        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numSubStepAve, numIter, funcEvalCounter, refIdx
-        logical :: FutureAtBoundaryBool, AtBoundaryBool
-=======
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numSubStepAve, numIter, funcEvalCounter, delIdx, refIdx
         logical :: FutureAtBoundaryBool, AtBoundaryBool, refluxedBool
->>>>>>> temp
         call solver%evaluateEFieldHalfTime(world)
         f_tol = del_t * 1.d-10
         loopSpecies: do j = 1, numberChargedParticles
@@ -583,18 +578,10 @@ contains
             numSubStepAve = 0
             funcEvalCounter = 0
             !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, E_x, l_cell, FutureAtBoundaryBool, &
-<<<<<<< HEAD
-                AtBoundaryBool, dx_dl, l_boundary, d_half, delIdx, numIter, refIdx) reduction(+:numSubStepAve, funcEvalCounter)
-            iThread = omp_get_thread_num() + 1 
-            delIdx = 0
-            refIdx = 0
-            particleList(j)%refIdx(iThread) = 0
-=======
                 AtBoundaryBool, dx_dl, l_boundary, d_half, numIter, delIdx, refIdx, refluxedBool) reduction(+:numSubStepAve, funcEvalCounter)
             iThread = omp_get_thread_num() + 1 
             delIdx = 0
             refIdx = 0
->>>>>>> temp
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             particleList(j)%wallLoss(:, iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
@@ -651,17 +638,11 @@ contains
                             end if
                             l_f = real(l_boundary)
                             v_f(2:3) = -v_f(2:3)  
-<<<<<<< HEAD
-                            refIdx = refIdx + 1
-                            !particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                            particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
-=======
                             if (.not. refluxedBool) then
                                 refIdx = refIdx + 1
                                 particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                                 refluxedBool = .true.
                             end if
->>>>>>> temp
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
                         CASE default
@@ -691,11 +672,7 @@ contains
             end do loopParticles
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
-<<<<<<< HEAD
-            particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-=======
             particleList(j)%refIdx(iThread) = refIdx
->>>>>>> temp
             !$OMP end parallel
             particleList(j)%numSubStepsAve = real(numSubStepAve) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
             particleList(j)%numFuncEvalAve = real(funcEvalCounter) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
