@@ -9,6 +9,34 @@ module mod_nonLinSolvers
     use mod_particleMover
     use mod_Scheme
     implicit none
+    
+    interface
+        subroutine dgels(trans, m, n, nrhs, a, lda, b, ldb, work, lwork, info)
+            Character*1, intent(in) :: trans
+            integer, intent(in) :: m, n, nrhs, lda, ldb, lwork
+            integer, intent(out) :: info
+            real(kind=8), intent(in out) :: a(lda, *), b(ldb, *), work(lwork)
+
+        end subroutine dgels
+
+        subroutine nitsol(n, x, f, jacv, ftol, stptol, input, info, rwork, rpar, ipar, iterm, dinpr, dnorm)
+            integer, intent(in)                   :: n
+            real(kind=8), dimension(n), intent(inout) :: x
+            external :: f, jacv
+            real(kind=8), intent(in)                  :: ftol
+            real(kind=8), intent(in)                  :: stptol
+            integer, dimension(10), intent(in)    :: input
+            integer, dimension(6), intent(out)    :: info
+            real(kind=8), dimension(*), intent(inout) :: rwork
+            real(kind=8), intent(in) :: rpar
+            integer, dimension(*), intent(in out)  :: ipar
+            integer, intent(out)                  :: iterm
+            
+            real(kind=8), external :: dinpr, dnorm
+
+        end subroutine nitsol
+
+    end interface
 
     ! Initialize objects needed
     type(Domain) :: globalWorld

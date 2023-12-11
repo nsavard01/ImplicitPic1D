@@ -11,8 +11,6 @@
      $     r(n), rtil(n), p(n), phat(n), v(n), t(n), rwork1(n), 
      $     rwork2(n), rsnrm, dinpr, dnorm 
       external f, jacv, dinpr, dnorm 
-      external dcopy, dscal, daxpy
-      external nitjv
 
 c ------------------------------------------------------------------------
 c

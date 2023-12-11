@@ -11,8 +11,7 @@
      $     nrpre, nli, nni, nbt
       double precision xcur(n), fcur(n), xpls(n), fpls(n), 
      $     step(n), rpar(*), ftol, stptol, rwork(*), dinpr, dnorm
-      external f, jacv, dinpr, dnorm, nitgm
-      external nitstb, nittfq, nitbt, dcopy, nitfd, daxpy
+      external f, jacv, dinpr, dnorm
 
 c ------------------------------------------------------------------------
 c

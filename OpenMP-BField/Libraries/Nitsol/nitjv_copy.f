@@ -9,7 +9,6 @@
       double precision xcur(n), fcur(n), rpar(*), v(n), z(n), 
      $     rwork1(n), rwork2(n), dnorm 
       external f, jacv, dnorm
-      external dcopy, nitfd
 
 c ------------------------------------------------------------------------
 c
@@ -219,7 +218,6 @@ c ------------------------------------------------------------------------
       double precision xcur(n), fcur(n), rpar(*), v(n), z(n), 
      $     rwork(n), dnorm 
       external f, dnorm
-      external daxpy, dscal
 
 c ------------------------------------------------------------------------
 c

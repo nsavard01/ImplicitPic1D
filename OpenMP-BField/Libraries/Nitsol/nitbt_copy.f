@@ -7,7 +7,7 @@
       integer n, nfe, ibt, ibtmax, ipar(*), itrmbt
       double precision xcur(n), fcnrm, step(n), eta, 
      $     xpls(n), fpls(n), fpnrm, oftjs, redfac, rpar(*), dnorm
-      external f, dnorm, dscal
+      external f, dnorm 
 
 c ------------------------------------------------------------------------
 c
