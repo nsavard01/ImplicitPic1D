@@ -36,6 +36,24 @@ module mod_nonLinSolvers
 
         end subroutine nitsol
 
+        function ddot(n, x, sx, y, sy)
+            implicit none
+            integer, intent(in)                :: n
+            real(kind=8), dimension(*), intent(in) :: x
+            integer, intent(in)                :: sx
+            real(kind=8), dimension(*), intent(in) :: y
+            integer, intent(in)                :: sy
+            real(kind=8)                           :: ddot
+          end function ddot
+      
+          function dnrm2(n, x, sx)
+            implicit none
+            integer, intent(in)                :: n
+            real(kind=8), dimension(*), intent(in) :: x
+            integer, intent(in)                :: sx
+            real(kind = 8)                           :: dnrm2
+          end function dnrm2
+
     end interface
 
     ! Initialize objects needed
@@ -55,8 +73,6 @@ module mod_nonLinSolvers
     double precision choice1_exp, choice2_exp, choice2_coef
     double precision eta_cutoff, etamax
     double precision thmin, thmax, etafixed
-    double precision, external :: ddot
-    double precision, external :: dnrm2
 
     common /nitparam/ choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed
 
@@ -120,7 +136,7 @@ contains
             inputJFNK(3) = 0 ! krylov solver
             inputJFNK(4) = m_Anderson ! maximum krylov subspace dimension
             inputJFNK(5) = 0 !ipre
-            inputJFNK(9) = -1
+            inputJFNK(9) = -1 !number backtracks
             inputJFNK(6) = m_Anderson*10
             inputJFNK(10) = 2 ! eta with gamma and alpha
             etamax = 0.8d0 ! eta max
@@ -303,7 +319,7 @@ contains
         call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, del_t, ipar, itrmf)
         initialNorm = dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
-        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), eps_r,inputJFNK, info, rworkSolver, del_t, ipar, iterm, ddot, dnrm2)
+        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), 1.d-20,inputJFNK, info, rworkSolver, del_t, ipar, iterm, ddot, dnrm2)
         SELECT CASE (iterm)
         CASE(0)
             iterNumPicard = info(4)
