@@ -109,12 +109,11 @@ contains
 
     end subroutine subStepSolverAA
 
-    subroutine subStepSolverGetPosition(l_sub, v_sub, l_f, v_f, v_half, del_tau, timePassed, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, FutureAtBoundaryBool, &
-        del_t, l_boundary)
+    subroutine subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, FutureAtBoundaryBool, l_boundary)
         ! Anderson Acceleration particle mover
         integer(int32), intent(in) :: l_cell
-        real(real64), intent(in) :: q_over_m, BField(3), B_mag, dx_dl, E_left, E_right, l_sub, v_sub(3)
-        real(real64), intent(in out) :: l_f, v_half(3), del_tau, d_half, E_x
+        real(real64), intent(in) :: q_over_m, BField(3), B_mag, dx_dl, l_sub, v_sub(3), del_tau
+        real(real64), intent(in out) :: l_f, v_half(3), E_x
         logical, intent(in out) :: FutureAtBoundaryBool
         integer(int32), intent(in out) :: l_boundary
         real(real64) :: coeffAccel
@@ -125,8 +124,8 @@ contains
         v_half = v_half + coeffAccel * (crossProduct(v_half, BField) + coeffAccel* SUM(v_half * BField) * BField)
         v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
         l_f = l_sub + v_half(1) * del_tau / dx_dl
-        FurtureAtBoundaryBool = (INT(l_f) /= l_cell)
-        if (AtBoundaryBool) then
+        FutureAtBoundaryBool = (INT(l_f) /= l_cell)
+        if (FutureAtBoundaryBool) then
             if (v_half(1) > 0) then
                 l_boundary = l_cell + 1
             else
