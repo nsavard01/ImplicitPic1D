@@ -19,13 +19,11 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
         integer(int32) :: i, iThread
-        real(real64) :: x_random
-        !$OMP parallel private(iThread, i, x_random)
+        !$OMP parallel private(iThread, i)
         iThread = omp_get_thread_num() + 1
         do i=1, particleList(1)%delIdx(iThread)
             call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
             call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
-            x_random = world%grid(NumberXNodes) * ran2(irand(iThread))
             particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = ran2(irand(iThread)) * real(NumberXNodes - 1) + 1.0d0
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do

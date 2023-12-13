@@ -1,6 +1,6 @@
 FC = ifort
 CC=mpiifort
-BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -unroll-aggressive -qmkl -mtune=skylake -heap-arrays 8192 -ffloat-store -xHost #-xCORE-AVX512 -mt_mpi 
+BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -unroll-aggressive -qmkl -mtune=skylake -heap-arrays 8192 -xHost #-xCORE-AVX512 -mt_mpi 
 DEBUG= -traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
 OPT= $(BASE)
 OBJ= BoundPlasmaExample.o mod_simulation.o mod_readInputs.o mod_potentialSolver.o mod_particleInjection.o mod_particle.o mod_domain.o mod_BasicFunctions.o constants.o #    mod_collisions.o   mod_potentialSolver.o 

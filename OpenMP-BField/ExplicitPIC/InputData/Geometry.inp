@@ -3,5 +3,5 @@
 1 2 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 Neumann-absorbing-neutral, <=-4 dielectric)
 0. 0. ! Voltage for left and right side boundary, used for dirichlet and periodic conditions
 0.5d0 ! fraction of debye length
-2.94d0 45. ! BField magnitude (T), angle theta from x axis (degrees)
+0.0d0 45. ! BField magnitude (T), angle theta from x axis (degrees)
 END

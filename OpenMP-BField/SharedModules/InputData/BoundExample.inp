@@ -1,14 +1,14 @@
 ELECTRONS
 name	 NumParticles/thread   ArraySizeMultiplication
 -------------------------------------------
-e 	   2000	   3
+e 	   1902	   3
 -------------------------------------------
 
 
 IONS
 name   mass  charge	NumParticles/thread   ArraySizeMultiplication
 --------------------------------------------------
-H+        1.     1.		2000    3
+H+        1.     1.		1902    3
 --------------------------------------------------
 
 ENDFILE

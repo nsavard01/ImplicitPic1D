@@ -131,7 +131,7 @@ contains
         print *, ""
         print *, "Reading initial inputs for particle injection:"
         print *, "------------------"
-        open(10,file='../../SharedModules/InputData/'//InjFilename, IOSTAT=io)
+        open(10,file='../InputData/'//InjFilename, IOSTAT=io)
         read(10, *, IOSTAT = io) tempInt
         addLostPartBool = (tempInt == 1)
         read(10, *, IOSTAT = io) tempInt

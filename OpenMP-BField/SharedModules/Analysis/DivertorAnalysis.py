@@ -13,6 +13,7 @@ print('Loaded modules')
 
 print('Loading data')
 
+test_noField_uniformDomain = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_noField_uniformDomain/')
 testExp_0deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test/')
 testExp_0deg_Mach2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_0deg_Mach2/')
 testExp_45deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg/')
@@ -21,11 +22,15 @@ testExp_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-B
 testExp_extend_0p1delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p1delT/')
 testExp_extend_0p2delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p2delT/')
 testExp_extend_0p04delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p04delT/')
-
+test_45deg_fourTimesIonSpeed = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg_fourTimesIonSpeed/')
 testExp_norm_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
-
+test_45deg_uniformDomain = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg_uniformDomain/')
 
 testNGP = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP/')
+testNGP_noField_uniformDomain_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_uniformDomain_32nodes_2p0T/')
+testNGP_45deg_uniformDomain_32nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_45deg_uniformDomain_32nodes_0p2T/')
+testNGP_45deg_uniformDomain_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_45deg_uniformDomain_400nodes_0p2T/')
+testNGP_45deg_uniformDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_45deg_uniformDomain/')
 test_0deg_picard = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_0deg_picard/')
 test_0deg = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_other/')
 test_0deg_vacuumStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_try/')
@@ -44,9 +49,11 @@ vacuumStart_75deg_noExactBoundary_433nodes_0p2T = dataSet('Y:/scratch/nsavard/Im
 
 #CIC
 testCIC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC/')
+testCIC_45deg_uniformDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_45deg_uniformDomain/')
 vacuumStart_45deg_CIC_2p0T_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_2p0T_31nodes/')
+testCIC_45deg_CIC_0p2T_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_45deg_0p2delT/')
 vacuumStart_45deg_CIC_0p2T_400nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_0p2T_400nodes/')
-
+testCIC_45deg_fourTimesIonSpeed = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_45deg_fourTimesIonSpeed/')
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
 

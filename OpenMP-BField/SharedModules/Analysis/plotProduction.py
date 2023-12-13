@@ -140,7 +140,7 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
                 plt.plot(dataSet.grid, n, 'o-', label = name)
             plt.xlabel('Distance (m)')
             plt.ylabel(r'Density (m$^{-3}$)')
-            plt.xlim([dataSet.xmin, dataSet.x_max])
+            plt.xlim([dataSet.x_min, dataSet.x_max])
             plt.pause(0.05)  
             
             

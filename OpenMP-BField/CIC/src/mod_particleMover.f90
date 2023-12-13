@@ -325,12 +325,12 @@ contains
         del_tau_a = 0.0d0
         del_tau_b = del_tau
 
-        coeffAccel = 0.5d0 * del_tau_a * q_over_m
-        v_prime(1) = v_sub(1) + coeffAccel * E_x
-        v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
-        v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
-        l_f = l_sub + del_tau_a * v_half(1) / dx_dl
-        Res_a = l_f - real(l_boundary)
+        ! coeffAccel = 0.5d0 * del_tau_a * q_over_m
+        ! v_prime(1) = v_sub(1) + coeffAccel * E_x
+        ! v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
+        ! v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
+        ! l_f = l_sub + del_tau_a * v_half(1) / dx_dl
+        Res_a = l_sub - real(l_boundary)
             
         coeffAccel = 0.5d0 * del_tau_b * q_over_m
         v_prime(1) = v_sub(1) + coeffAccel * E_x
@@ -380,7 +380,7 @@ contains
             if (ABS(del_tau_s - del_tau_b) < f_tol) then
                 del_tau = del_tau_s
                 l_f = real(l_boundary)
-                numIter = k+1
+                numIter = k
                 exit
             end if
             coeffAccel = 0.5d0 * del_tau_s * q_over_m
@@ -441,11 +441,11 @@ contains
         del_tau_a = 0.0d0
         del_tau_b = del_tau
        
-        coeffAccel = 0.5d0 * del_tau_a * q_over_m
-        v_prime(1) = v_sub(1) + coeffAccel * E_x
-        v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
-        v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
-        Res_a = v_half(1)
+        ! coeffAccel = 0.5d0 * del_tau_a * q_over_m
+        ! v_prime(1) = v_sub(1) + coeffAccel * E_x
+        ! v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
+        ! v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
+        Res_a = v_sub(1)
           
         coeffAccel = 0.5d0 * del_tau_b * q_over_m
         v_prime(1) = v_sub(1) + coeffAccel * E_x
@@ -498,7 +498,7 @@ contains
 
             if (ABS(del_tau_s - del_tau_b) < f_tol) then
                 del_tau = del_tau_s
-                numIter = k+1
+                numIter = k
                 exit
             end if
 
@@ -644,8 +644,6 @@ contains
                     J_part = q_times_wp * (v_half(1))*del_tau/dx_dl/del_t
                     J_temp(l_cell) = J_temp(l_cell) + J_part * (1.0d0 - d_half)
                     J_temp(l_cell+1) = J_temp(l_cell+1) + J_part * (d_half)
-                    ! solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + J_part * (1.0d0 - d_half)
-                    ! solver%J(l_cell+1, iThread) = solver%J(l_cell+1, iThread) + J_part * (d_half)
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
@@ -662,6 +660,9 @@ contains
                             v_f(2:3) = -v_f(2:3)  
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
+                        CASE(4)
+                            J_temp(l_boundary) = J_temp(l_boundary) + q_times_wp * v_f(1) * (del_t - timePassed-del_tau) * dx_dl / del_t
+                            exit
                         CASE default
                             print *, "l_sub is:", l_sub
                             print *, 'l_f is:', l_f
@@ -781,6 +782,16 @@ contains
                             end if
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
+                        CASE(4)
+                            delIdx = delIdx + 1
+                            if (l_boundary == 1) then
+                                particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (SUM(v_f**2))!J/m^2 in 1D
+                                particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                            else if (l_boundary == NumberXNodes+1) then
+                                particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + (SUM(v_f**2)) !J/m^2 in 1D
+                                particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                            end if
+                            exit
                         CASE default
                             print *, "l_sub is:", l_sub
                             print *, 'l_f is:', l_f

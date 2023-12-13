@@ -29,7 +29,11 @@ contains
             call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
             energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
             + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
-            x_random = world%grid(NumberXNodes) * ran2(irand(iThread))
+            if (schemeNum == 0) then
+                x_random = world%grid(1) + (world%grid(NumberXNodes) - world%grid(NumberXNodes)) * ran2(irand(iThread))
+            else
+                x_random = world%grid(1) - 0.5d0*world%dx_dl(1) + (world%grid(NumberXNodes) + 0.5d0*world%dx_dl(NumberXNodes) - world%grid(1) + 0.5d0 * world%dx_dl(1)) * ran2(irand(iThread))
+            end if
             particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(x_random)
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do
