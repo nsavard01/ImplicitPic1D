@@ -110,6 +110,70 @@ contains
 
     end subroutine subStepSolverAA
 
+    subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+        ! Do initial substep, where particles start between nodes
+        integer(int32), intent(in) :: l_cell
+        real(real64), intent(in) :: q_over_m, dx_dl, l_sub, v_sub(3), E_x
+        real(real64), intent(in out) :: l_f, v_half(3), del_tau
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary
+        real(real64) :: c,a, b, del_tau_temp
+        integer(int32) :: l_alongV, l_awayV
+        
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        a = 0.5d0 * q_over_m * E_x
+        if (v_sub(1) > 0) then
+            l_alongV = l_cell + 1
+            l_awayV = l_cell
+        else
+            l_alongV = l_cell
+            l_awayV = l_cell + 1
+        end if
+        c = (l_sub - real(l_alongV)) * dx_dl
+        b = v_sub(1)**2 - 4.0d0*a*c
+        if (b > 0) then
+            ! v and a opposite direction, but particle can still reach boundary along v
+            del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub(1)) + SQRT(b))
+            FutureAtBoundaryBool = (del_tau_temp < del_tau)
+            if (FutureAtBoundaryBool) then
+                del_tau = del_tau_temp
+                l_boundary = l_alongV
+            end if
+        else
+            ! v and a opposite direction, boundary opposite direction of v
+            if (l_sub /= real(l_awayV)) then
+                c = (l_sub - real(l_awayV)) * dx_dl
+                del_tau_temp = 2.0d0 * ABS(c)/(SQRT(v_sub(1)**2 - 4.0d0*a*c) - ABS(v_sub(1)))
+                FutureAtBoundaryBool = (del_tau_temp < del_tau) 
+            else
+            ! v and a opposite direction, reverses back to initial position
+                del_tau_temp = ABS(v_sub(1))/ABS(a)
+                FutureAtBoundaryBool = (del_tau_temp < del_tau)
+            end if
+            if (FutureAtBoundaryBool) then
+                del_tau = del_tau_temp
+                l_boundary = l_awayV
+            end if
+        end if
+        if (del_tau < 0.0d0) then
+            print *, 'del_tau < 0'
+            stop
+        end if
+        v_half(1) = v_sub(1) + a * del_tau
+        v_half(2:3) = v_sub(2:3)
+        if (.not. FutureAtBoundaryBool) then
+            l_f = l_sub + v_half(1) * del_tau / dx_dl
+        else
+            l_f = real(l_boundary)
+        end if 
+        if (l_f < real(l_cell) .or. l_f > real(l_cell + 1)) then
+            print *, 'l_f out of bounds'
+            stop
+        end if
+       
+    end subroutine particleSubStepNoBField
+
+
     subroutine subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, FutureAtBoundaryBool, l_boundary)
         ! Anderson Acceleration particle mover
         integer(int32), intent(in) :: l_cell
@@ -422,14 +486,20 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
 
-                    ! Start AA
-                    call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
-                    
-                    if (FutureAtBoundaryBool) then
-                        if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
-                            call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
-                        else
-                            call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                    if (.not. solver%BFieldBool) then
+                        call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+                    else
+                     
+
+                        ! Start AA
+                        call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
+                        
+                        if (FutureAtBoundaryBool) then
+                            if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
+                                call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                            else
+                                call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                            end if
                         end if
                     end if
                     v_f = 2.0d0 * v_half - v_sub
@@ -470,7 +540,6 @@ contains
                         stop "Have particles travelling outside the domain in depositJ!"
                     end if
                 end do
-                
             end do loopParticles
             !$OMP end parallel
         end do loopSpecies
@@ -519,17 +588,22 @@ contains
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
+
+                    if (.not. solver%BFieldBool) then
+                        call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+                    else
                     
-                    ! AA particle mover
-                    call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
-                    funcEvalCounter = funcEvalCounter + 1
-                    if (FutureAtBoundaryBool) then
-                        if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
-                            call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
-                        else
-                            call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                        ! AA particle mover
+                        call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
+                        funcEvalCounter = funcEvalCounter + 1
+                        if (FutureAtBoundaryBool) then
+                            if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
+                                call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                            else
+                                call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                            end if
+                            funcEvalCounter = funcEvalCounter + numIter
                         end if
-                        funcEvalCounter = funcEvalCounter + numIter
                     end if
                     
                     v_f = 2.0d0 * v_half - v_sub
