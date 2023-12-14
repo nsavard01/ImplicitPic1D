@@ -659,7 +659,7 @@ contains
                             l_f = real(l_boundary)
                             v_f(2:3) = -v_f(2:3)  
                         CASE(3)
-                            l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
+                            l_f = REAL(ABS(l_boundary - real(NumberXNodes+1, kind = real64) - 1))
                         CASE(4)
                             J_temp(l_boundary) = J_temp(l_boundary) + q_times_wp * v_f(1) * (del_t - timePassed-del_tau) * dx_dl / del_t
                             exit
@@ -750,8 +750,9 @@ contains
                         else
                             call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
                         end if
+                        funcEvalCounter = funcEvalCounter + numIter
                     end if
-                    funcEvalCounter = funcEvalCounter + numIter
+                    
                     v_f = 2.0d0 * v_half - v_sub
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
@@ -781,7 +782,7 @@ contains
                                 refluxedBool = .true.
                             end if
                         CASE(3)
-                            l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
+                            l_f = REAL(ABS(l_boundary - real(NumberXNodes+1, kind = real64) - 1))
                         CASE(4)
                             delIdx = delIdx + 1
                             if (l_boundary == 1) then
