@@ -91,6 +91,7 @@ NGP_1902PPD_64nodes_2p0delT_2p5e16_noFieldTest = dataSet('Y:/scratch/nsavard/Imp
 testNGP_noField_boundExample_64nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_64nodes_0p2T/')
 testNGP_noField_boundExample_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_32nodes_2p0T/')
 testNGP_noField_boundExample_32nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_32nodes_0p2T/')
+testNGP_noFieldAlg_boundExample_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noFieldAlg_boundExample_32nodes_2p0T/')
 
 #CIC 2p5e16
 CIC_475PPD_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_2p5e16_475PPD_2p0delT_64nodes/')

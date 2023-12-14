@@ -538,7 +538,7 @@ contains
         ! Write Particle properties
         open(9,file=directoryName//'/SimulationFinalData.dat')
         write(9,'("Elapsed Times(s), Potential Time (s), Collision Time (s), Total Steps, Number Adaptive Steps")')
-        write(9,"(3(es16.8,1x), 2(I6, 1x))") elapsed_time, real(potentialTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1, amountTimeSplits
+        write(9,"(3(es16.8,1x), 2(I7, 1x))") elapsed_time, real(potentialTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1, amountTimeSplits
         close(9)
 
     end subroutine solveSimulation

@@ -174,6 +174,68 @@ contains
     end subroutine particleSubStepNoBField
 
 
+    subroutine particleSubStepNoBFieldVStop(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary, f_tol)
+        ! Do initial substep, where particles start between nodes
+        integer(int32), intent(in) :: l_cell
+        real(real64), intent(in) :: q_over_m, dx_dl, l_sub, v_sub(3), E_x, f_tol
+        real(real64), intent(in out) :: l_f, v_half(3), del_tau
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary
+        real(real64) :: c,a, b, del_tau_temp
+        integer(int32) :: l_alongV, l_awayV
+        
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        a = 0.5d0 * q_over_m * E_x
+        if (v_sub(1) > 0) then
+            l_alongV = l_cell + 1
+            l_awayV = l_cell
+        else
+            l_alongV = l_cell
+            l_awayV = l_cell + 1
+        end if
+        c = (l_sub - real(l_alongV)) * dx_dl
+        b = v_sub(1)**2 - 4.0d0*a*c
+        if (b > 0) then
+            ! v and a opposite direction, but particle can still reach boundary along v
+            del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub(1)) + SQRT(b))
+            FutureAtBoundaryBool = (del_tau_temp < del_tau)
+            if (FutureAtBoundaryBool) then
+                del_tau = del_tau_temp
+                l_boundary = l_alongV
+            end if
+        else
+            FutureAtBoundaryBool = .false.
+            del_tau = MIN(- 0.5d0 * v_sub(1)/a + f_tol, del_tau)
+        end if
+        if (del_tau < 0.0d0) then
+            print *, 'del_tau < 0'
+            stop
+        end if
+        v_half(1) = v_sub(1) + a * del_tau
+        v_half(2:3) = v_sub(2:3)
+        if (.not. FutureAtBoundaryBool) then
+            l_f = l_sub + v_half(1) * del_tau / dx_dl
+        else
+            l_f = real(l_boundary)
+        end if 
+        if (l_f < real(l_cell) .or. l_f > real(l_cell + 1)) then
+            print *, 'l_f out of bounds'
+            stop
+        end if
+        if (v_sub(1) > 0) then
+            if (2.0d0 * v_half(1) - v_sub(1) < -1.0d0) then
+                print *, 'issue with particle when v_sub positive'
+            end if
+        else
+            if (2.0d0 * v_half(1) - v_sub(1) > 1.0d0) then
+                print *, 'issue with particle when v_sub negative'
+            end if
+        end if
+       
+    end subroutine particleSubStepNoBFieldVStop
+
+
+
     subroutine subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, BField, B_mag, dx_dl, FutureAtBoundaryBool, l_boundary)
         ! Anderson Acceleration particle mover
         integer(int32), intent(in) :: l_cell
@@ -487,7 +549,7 @@ contains
                     del_tau = del_t - timePassed
 
                     if (.not. solver%BFieldBool) then
-                        call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+                        call particleSubStepNoBFieldVStop(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary, f_tol)
                     else
                      
 
@@ -590,7 +652,7 @@ contains
                     del_tau = del_t - timePassed
 
                     if (.not. solver%BFieldBool) then
-                        call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+                        call particleSubStepNoBFieldVStop(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary, f_tol)
                     else
                     
                         ! AA particle mover

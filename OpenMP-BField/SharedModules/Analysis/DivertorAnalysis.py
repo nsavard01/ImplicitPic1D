@@ -45,7 +45,11 @@ test_45deg_vacuumStart_noExactBoundary_0p2T = dataSet('Y:/scratch/nsavard/Implic
 vacuumStart_45deg_noExactBoundary_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_notExactBoundary_400nodes_0p2T/')
 vacuumStart_75deg_noExactBoundary_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_75deg_400nodes_0p2T/')
 vacuumStart_75deg_noExactBoundary_433nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_75deg_433nodes_0p2T/')
-
+testNGP_Divertor_noField_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_noField_32nodes_2p0T/')
+testNGP_Divertor_noField_32nodes_0p1T_vacStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_noField_32nodes_0p1T/')
+testNGP_Divertor_noFieldVStop_32nodes_2p0T_vacStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_noFieldVStop_32nodes_2p0T/')
+testNGP_DivertorBigStart_noFieldVStop_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_DivertorBigStart_noFieldVStop_32nodes_2p0T/')
+testNGP_DivertorBigStart_noFieldVStop_32nodes_0p1T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_DivertorBigStart_noFieldVStop_32nodes_0p1T/')
 
 #CIC
 testCIC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC/')
