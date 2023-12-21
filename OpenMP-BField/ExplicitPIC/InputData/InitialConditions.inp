@@ -9,5 +9,5 @@
 2.4d0 45.! BField magnitude (T), angle theta from x axis (degrees)
 10 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
-Exp_noField_keepBoris !save file name
+Exp_45deg_0p05T_3000PPD_invertV !save file name
 END

@@ -18,12 +18,15 @@ model = np.load('BoundModels/modelNonTruncSparse_2p5e+16nave_5Te_1Ti.npy')
 Exp_noField = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField/')
 Exp_45deg_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_45deg_0p05T/')
 Exp_noField_keepBoris = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_keepBoris/')
+Exp_45deg_0p05T_3000PPD = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_45deg_0p05T_3000PPD/')
+Exp_45deg_0p05T_3000PPD_invertV = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_45deg_0p05T_3000PPD_invertV/')
 
 #---------------------- NGP -------------------------------------------------
 NGP_noField = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField/')
 NGP_noFieldVStop = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noFieldVStop/')
 NGP_45deg_0p05T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T/')
 NGP_45deg_0p05T_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_0p2T/')
+
 
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
