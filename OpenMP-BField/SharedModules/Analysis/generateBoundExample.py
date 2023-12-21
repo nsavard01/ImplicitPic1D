@@ -277,12 +277,12 @@ def compareModelToDatas(dataList, labelList, model, saveFile):
     
     ax3.set_xlim(dataList[0].grid[0], dataList[0].grid[-1])
     ax3.set_xlabel('Distance (m)', fontsize = 14)
-    ax3.set_ylabel('Voltage (V)', fontsize = 14)
+    ax3.set_ylabel(r'$\phi$ (V)', fontsize = 14)
     ax3.tick_params(labelsize = 14)
     
-    fig1.savefig(saveFile + '_eDensity.pdf', bbox_inches = 'tight')
-    fig2.savefig(saveFile + '_ionDensity.pdf', bbox_inches = 'tight')
-    fig3.savefig(saveFile + '_voltage.pdf', bbox_inches = 'tight')
+    # fig1.savefig(saveFile + '_eDensity.pdf', bbox_inches = 'tight')
+    # fig2.savefig(saveFile + '_ionDensity.pdf', bbox_inches = 'tight')
+    # fig3.savefig(saveFile + '_voltage.pdf', bbox_inches = 'tight')
     
 def compareModelToData(data, model):
     for name in data.particles.keys():

@@ -50,6 +50,7 @@ testNGP_Divertor_noField_32nodes_0p1T_vacStart = dataSet('Y:/scratch/nsavard/Imp
 testNGP_Divertor_noFieldVStop_32nodes_2p0T_vacStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_noFieldVStop_32nodes_2p0T/')
 testNGP_DivertorBigStart_noFieldVStop_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_DivertorBigStart_noFieldVStop_32nodes_2p0T/')
 testNGP_DivertorBigStart_noFieldVStop_32nodes_0p1T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_DivertorBigStart_noFieldVStop_32nodes_0p1T/')
+testNGP_Divertor_sinGrid_noFieldVStop_64nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_sinGrid_noFieldVStop_64nodes_2p0T/')
 
 #CIC
 testCIC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC/')

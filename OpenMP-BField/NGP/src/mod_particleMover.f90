@@ -251,15 +251,24 @@ contains
         v_half = v_half + coeffAccel * (crossProduct(v_half, BField) + coeffAccel* SUM(v_half * BField) * BField)
         v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
         l_f = l_sub + v_half(1) * del_tau / dx_dl
-        FutureAtBoundaryBool = (INT(l_f) /= l_cell)
+        FutureAtBoundaryBool = (ABS(l_f - l_cell - 0.5d0) >= 0.5d0)
         if (FutureAtBoundaryBool) then
-            if (v_half(1) > 0) then
+            if (l_f > l_cell + 1) then
                 l_boundary = l_cell + 1
-            else
+            else if (l_f < l_cell) then
                 l_boundary = l_cell
+            else
+                FutureAtBoundaryBool = .false.
+                if (l_f == l_cell + 1) then
+                    l_f = real(l_cell) + 1.0d0 - 1.0d-12
+                else if (l_f == l_cell) then
+                    l_f = real(l_cell) + 1.0d-12
+                else
+                    print *, 'issue re-assigning particle outside boundary!'
+                    stop
+                end if    
             end if
         end if
-
         
 
 
@@ -297,9 +306,13 @@ contains
         if (Res_a * Res_b >= 0) then
             print *, 'first res are not opposite in time Boundary!'
             print *, 'l_sub:', l_sub
+            print *, 'l_f:', l_f
             print *, 'del_tau:', del_tau
             print *, 'v_sub:', v_sub
             print *, 'l_boundary:', l_boundary
+            print *, 'v_half:', v_half
+            print *, 'Res_a:', Res_a
+            print *, 'Res_b:', Res_b
             stop
         end if
 
@@ -413,9 +426,12 @@ contains
         Res_b = v_half(1)
 
         if (Res_a * Res_b >= 0) then
-            print *, 'first res are not opposite!'
+            print *, 'first res are not opposite self boundary!'
             print *, 'l_sub:', l_sub
+            print *, 'del_tau:', del_tau
             print *, 'v_sub:', v_sub
+            print *, 'l_boundary:', l_boundary
+            print *, 'v_half:', v_half
             print *, 'Res_a:', Res_a
             print *, 'Res_b:', Res_b
             stop
@@ -549,10 +565,8 @@ contains
                     del_tau = del_t - timePassed
 
                     if (.not. solver%BFieldBool) then
-                        call particleSubStepNoBFieldVStop(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary, f_tol)
+                        call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     else
-                     
-
                         ! Start AA
                         call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
                         
@@ -580,8 +594,7 @@ contains
                             else
                                 v_f(1) = ABS(v_f(1))
                             end if
-                            l_f = real(l_boundary)
-                            v_f(2:3) = -v_f(2:3)  
+                            l_f = real(l_boundary) 
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
                         CASE default
@@ -652,7 +665,7 @@ contains
                     del_tau = del_t - timePassed
 
                     if (.not. solver%BFieldBool) then
-                        call particleSubStepNoBFieldVStop(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary, f_tol)
+                        call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     else
                     
                         ! AA particle mover
@@ -690,8 +703,7 @@ contains
                             else
                                 v_f(1) = ABS(v_f(1))
                             end if
-                            l_f = real(l_boundary)
-                            v_f(2:3) = -v_f(2:3)  
+                            l_f = real(l_boundary) 
                             if (.not. refluxedBool) then
                                 refIdx = refIdx + 1
                                 particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx

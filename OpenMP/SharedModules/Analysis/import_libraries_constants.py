@@ -4,7 +4,9 @@ Created on Wed Jun 21 16:18:53 2023
 
 @author: Nicolas
 """
+
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import scipy.constants as constants
 import scipy.optimize as opt
@@ -13,6 +15,7 @@ import scipy
 import glob, os
 import matplotlib.animation as animation
 import math
+matplotlib.use('Qt5Agg')
 
 eps_0 = constants.epsilon_0
 c = constants.c

@@ -382,6 +382,7 @@ contains
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             particleList(j)%wallLoss(:, iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
+                ! First half step acceleration
                 if (self%BFieldBool) then
                     coeffField = 0.5d0 * (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                     ! First half step acceleration
