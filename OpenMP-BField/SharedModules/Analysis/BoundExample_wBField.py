@@ -26,7 +26,7 @@ NGP_noField = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_
 NGP_noFieldVStop = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noFieldVStop/')
 NGP_45deg_0p05T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T/')
 NGP_45deg_0p05T_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_0p2T/')
-
+NGP_45deg_0p05T_2p0T_minDelTau = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0T_minDelTau/')
 
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
