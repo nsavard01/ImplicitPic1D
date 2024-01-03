@@ -54,6 +54,9 @@ program BoundPlasmaExample
     end do
     remainDel_t = del_t
     currDel_t = del_t
+    ! call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
+    ! print *, SUM(globalSolver%J, DIM = 2)
+    ! stop
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
     do i = 1, numberChargedParticles
         print *, 'Particle:', globalParticleList(i)%name
