@@ -536,7 +536,7 @@ contains
         logical, intent(in out) :: FutureAtBoundaryBool
         real(real64) :: coeffAccel, Res_a, Res_b, Res_c, Res_s, del_tau_a, del_tau_b, del_tau_c, del_tau_d, del_tau_s, tempVar
         integer(int32) :: k, u, l_boundary_up
-        logical :: usedBiSection, dirVForwardBool, dirAccelForwardBool, convergeBool
+        logical :: usedBiSection, dirVForwardBool, dirAccelForwardBool, convergeBool, hitMaxDelTau
 
         dirVForwardBool = (v_sub(1) > 0)
         tempVar = q_over_m * E_x 
@@ -565,6 +565,7 @@ contains
         if (B_mag > 0) then
             del_tau_b = MIN(0.1d0/(ABS(q_over_m)*B_mag), del_tau_b)
         end if
+        hitMaxDelTau = (del_tau_b == del_tau)
         convergeBool = .false.
         ! Go forward with secant method until have res flip over boundary
         do k = 1, maxPartIter
@@ -574,6 +575,49 @@ contains
             v_half = v_half + coeffAccel * (crossProduct(v_half, BField) + coeffAccel* SUM(v_half * BField) * BField)
             v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
             l_f = l_sub + v_half(1) * del_tau_b / dx_dl
+            if (hitMaxDelTau) then
+                ! print *, 'l_f:', l_f
+                if ((l_f < l_boundary_up) .and. (l_f > l_cell)) then
+                    FutureAtBoundaryBool = .false.
+                    convergeBool = .true.
+                    ! print *, 'CONVERGED!'
+                else if (l_f >= l_boundary_up) then
+                    ! print *, 'RIGHT BOUNDARY!'
+                    Res_b = l_f - real(l_boundary_up)
+                    convergeBool = (ABS(Res_b) < 1.0d-12)
+                    if (.not. convergeBool) then
+                        if (l_boundary /= l_boundary_up) then
+                            Res_a = Res_a + real(l_boundary)
+                            l_boundary = l_boundary_up
+                            Res_a = Res_a - real(l_boundary)
+                        end if
+                        FutureAtBoundaryBool = .true.
+                    else
+                        l_f = real(l_boundary_up) - 1.0d-12
+                        FutureAtBoundaryBool = .false.
+                    end if
+                else if (l_f <= l_cell) then
+                    ! print *, 'LEFT BOUNDARY!'
+                    Res_b = l_f - real(l_cell)
+                    convergeBool = (ABS(Res_b) < 1.0d-12)
+                    if (.not. convergeBool) then
+                        if (l_boundary /= l_cell) then
+                            Res_a = Res_a + real(l_boundary)
+                            l_boundary = l_cell
+                            Res_a = Res_a - real(l_boundary)
+                        end if
+                        FutureAtBoundaryBool = .true.
+                    else
+                        l_f = real(l_cell) + 1.0d-12
+                        FutureAtBoundaryBool = .false.
+                    end if
+                else
+                    print *, 'l_f not in possibilities!'
+                    stop
+                end if
+                numIter = k
+                exit
+            end if
             Res_b = l_f - real(l_boundary)
             ! print *, ''
             ! print *, 'del_tau_a:', del_tau_a
@@ -620,67 +664,8 @@ contains
                         end if
                 end if
                 del_tau_c = del_tau_b - Res_b * (del_tau_b - del_tau_a)/(Res_b - Res_a)
-                if (del_tau_c >= del_tau) then
-                    ! Solve for final del_tau
-                    ! print *, 'FINAL DEL_TAU!'
-                    coeffAccel = 0.5d0 * del_tau * q_over_m
-                    v_half(1) = v_sub(1) + coeffAccel * E_x
-                    v_half(2:3) = v_sub(2:3)
-                    v_half = v_half + coeffAccel * (crossProduct(v_half, BField) + coeffAccel* SUM(v_half * BField) * BField)
-                    v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
-                    l_f = l_sub + v_half(1) * del_tau / dx_dl
-                    ! print *, 'l_f:', l_f
-                    if ((l_f < l_boundary_up) .and. (l_f > l_cell)) then
-                        FutureAtBoundaryBool = .false.
-                        convergeBool = .true.
-                        ! print *, 'CONVERGED!'
-                    else if (l_f >= l_boundary_up) then
-                        ! print *, 'RIGHT BOUNDARY!'
-                        Res_c = l_f - real(l_boundary_up)
-                        convergeBool = (ABS(Res_c) < 1.0d-12)
-                        if (.not. convergeBool) then
-                            del_tau_a = del_tau_b
-                            del_tau_b = del_tau
-                            if (l_boundary == l_boundary_up) then
-                                Res_a = Res_b
-                            else
-                                Res_a = Res_a + real(l_boundary)
-                                l_boundary = l_boundary_up
-                                Res_a = Res_a - real(l_boundary)
-                            end if
-                            Res_b = Res_c
-                            FutureAtBoundaryBool = .true.
-                        else
-                            l_f = real(l_boundary_up) - 1.0d-12
-                            FutureAtBoundaryBool = .false.
-                        end if
-                    else if (l_f <= l_cell) then
-                        ! print *, 'LEFT BOUNDARY!'
-                        Res_c = l_f - real(l_cell)
-                        convergeBool = (ABS(Res_c) < 1.0d-12)
-                        if (.not. convergeBool) then
-                            del_tau_a = del_tau_b
-                            del_tau_b = del_tau
-                            if (l_boundary == l_cell) then
-                                Res_a = Res_b
-                            else
-                                Res_a = Res_a + real(l_boundary)
-                                l_boundary = l_cell
-                                Res_a = Res_a - real(l_boundary)
-                            end if
-                            Res_b = Res_c
-                            FutureAtBoundaryBool = .true.
-                        else
-                            l_f = real(l_cell) + 1.0d-12
-                            FutureAtBoundaryBool = .false.
-                        end if
-                    else
-                        print *, 'l_f not in possibilities!'
-                        stop
-                    end if
-                    numIter = k + 1
-                    exit
-                end if
+                hitMaxDelTau = (del_tau_c >= del_tau)
+                if (hitMaxDelTau) del_tau_c = del_tau
             end if
     
             
@@ -849,7 +834,7 @@ contains
                     if (ABS(del_tau_s - del_tau_b) < f_tol) then
                         del_tau = del_tau_s
                         l_f = real(l_boundary)
-                        numIter = numIter + k
+                        numIter = numIter + k -1
                         exit
                     end if
 
@@ -1143,7 +1128,7 @@ contains
                         !     funcEvalCounter = funcEvalCounter + numIter
                         ! end if
                     end if
-                    
+                    funcEvalCounter = funcEvalCounter + numIter
                     v_f = 2.0d0 * v_half - v_sub
                     
                     if (FutureAtBoundaryBool) then
