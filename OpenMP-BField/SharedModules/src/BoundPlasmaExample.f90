@@ -65,7 +65,7 @@ program BoundPlasmaExample
     do j=1, numberChargedParticles
         KE_f = KE_f + globalParticleList(j)%getTotalKE() + SUM(globalParticleList(j)%energyLoss) * globalParticleList(j)%mass * globalParticleList(j)%w_p * 0.5d0
     end do
-    print *, ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
+    print *, 'Energy error is:', ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
     print *, 'took', iterNumPicard, 'iterations'
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)

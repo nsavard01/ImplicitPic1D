@@ -152,6 +152,15 @@ contains
     !     res = SUM(x * y)
     ! end function innerProduct
 
+    ! ------------------- Boolean Functions -------------------
+
+    pure function XOR_op(A, B) result(res)
+        !exclusive or function
+        logical, intent(in) :: A, B
+        logical :: res
+        res = (A .or. B) .and. (.not. (A .and. B)) 
+    end function XOR_op
+
     !------------------------ Array Functions -------------------------------------
 
     pure function arrayDiff(x, n) result(res)

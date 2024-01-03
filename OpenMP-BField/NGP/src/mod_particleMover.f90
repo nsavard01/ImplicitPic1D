@@ -526,27 +526,43 @@ contains
 
     end subroutine subStepSolverGetTimeSelfBoundaryBrent
 
-    subroutine subStepSolverTotal(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, BField, B_mag, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter, AtBoundaryBool)
+    subroutine subStepSolverTotal(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, BField, B_mag, dx_dl, f_tol, FutureAtBoundaryBool, l_cell, l_boundary, numIter, AtBoundaryBool)
         ! Anderson Acceleration particle mover
         real(real64), intent(in) :: q_over_m, l_sub, v_sub(3), BField(3), B_mag, dx_dl, E_x, f_tol
         real(real64), intent(in out) :: l_f, v_half(3), del_tau
         integer(int32), intent(in out) :: l_boundary, numIter
+        integer(int32), intent(in) :: l_cell
         logical, intent(in) :: AtBoundaryBool
         logical, intent(in out) :: FutureAtBoundaryBool
         real(real64) :: v_prime(3), coeffAccel, Res_a, Res_b, Res_c, Res_s, del_tau_a, del_tau_b, del_tau_c, del_tau_d, del_tau_s, tempVar
-        integer(int32) :: k, u
-        logical :: usedBiSection
+        integer(int32) :: k, u, l_boundary_up, l_boundary_a
+        logical :: usedBiSection, dirVForwardBool, dirAccelForwardBool, convergeBool
 
-        if (v_sub(1) > 0) then
-            l_boundary = l_cell + 1
+        dirVForwardBool = (v_sub(1) > 0)
+        tempVar = q_over_m * E_x 
+        dirAccelForwardBool = (tempVar > 0)
+        l_boundary_up = l_cell + 1
+
+        if (dirVForwardBool) then
+            l_boundary = l_boundary_up
         else
             l_boundary = l_cell
         end if
 
         del_tau_a = 0.0d0
+        l_boundary_a = l_boundary
         Res_a = l_sub - real(l_boundary)
-        del_tau_b = 0.1d0/(ABS(q_over_m)*B_mag)
+        if (XOR_op(dirVForwardBool, dirAccelForwardBool)) then
+            ! Accel and v_i opposite, take delta_tau from time to get v_f = 0
+            del_tau_b = MIN(-v_sub(1) / tempVar, del_tau)
+        else
+            ! can take largest time step
+            del_tau_b = del_tau
+        end if
 
+        del_tau_b = MIN(0.1d0/(ABS(q_over_m)*B_mag), del_tau_b)
+        convergeBool = .false.
+        ! Go forward with secant method until have res flip over boundary
         do k = 1, maxPartIter
             coeffAccel = 0.5d0 * del_tau_b * q_over_m
             v_half(1) = v_sub(1) + coeffAccel * E_x
@@ -555,10 +571,16 @@ contains
             v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
             l_f = l_sub + v_half(1) * del_tau_b / dx_dl
             Res_b = l_f - real(l_boundary)
+            if (ABS(Res_b) < 1.0d-12) then
+                FutureAtBoundaryBool = .true.
+                numIter = k
+                del_tau = del_tau_b
+                l_f = real(l_boundary)
+                convergeBool = .true.
+            end if
 
             if (Res_a * Res_b <= 0) then
                 ! Sign flipped, cross boundary!
-                l_f = real(l_boundary)
                 FutureAtBoundaryBool = .true.
                 numIter = k
                 exit
@@ -567,16 +589,15 @@ contains
                     ! going towards other boundary!
                         Res_a = Res_a + real(l_boundary)
                         Res_b = Res_b + real(l_boundary)
-                        if (l_boundary == l_cell + 1) then
+                        if (l_boundary == l_boundary_up) then
                             l_boundary = l_cell
                         else
-                            l_boundary = l_cell + 1
+                            l_boundary = l_boundary_up
                         end if
                         Res_a = Res_a - real(l_boundary)
                         Res_b = Res_b - real(l_boundary)
                         if (Res_a * Res_b <= 0) then
                             ! Sign flipped w/respect to new boundary, cross boundary!
-                            l_f = real(l_boundary)
                             FutureAtBoundaryBool = .true.
                             numIter = k
                             exit
@@ -591,30 +612,43 @@ contains
                     v_half = v_half + coeffAccel * (crossProduct(v_half, BField) + coeffAccel* SUM(v_half * BField) * BField)
                     v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
                     l_f = l_sub + v_half(1) * del_tau / dx_dl
-                    FutureAtBoundaryBool = (ABS(l_f - l_cell - 0.5d0) >= 0.5d0)
-                    if (FutureAtBoundaryBool) then
-                        if (l_f > l_cell + 1) then
-                            l_boundary = l_cell + 1
-                            del_tau_a = del_tau_b
+                    l_boundary_a = l_boundary
+                    if ((l_f < l_boundary_up) .and. (l_f > l_cell)) then
+                        FutureAtBoundaryBool = .false.
+                        convergeBool = .true.
+                    else if (l_f > l_boundary_up) then
+                        del_tau_a = del_tau_b
+                        del_tau_b = del_tau
+                        if (l_boundary == l_boundary_up) then
                             Res_a = Res_b
-                            del_tau_b = del_tau
-                            Res_b = l_f - real(l_boundary)
-                        else if (l_f < l_cell) then
-                            l_boundary = l_cell
-                            del_tau_a = del_tau_b
-                            Res_a = Res_b
-                            del_tau_b = del_tau
-                            Res_b = l_f - real(l_boundary)
                         else
-                            FutureAtBoundaryBool = .false.
-                            if (l_f == l_cell + 1) then
-                                l_f = real(l_cell) + 1.0d0 - 1.0d-12
-                            else if (l_f == l_cell) then
-                                l_f = real(l_cell) + 1.0d-12
-                            else
-                                print *, 'issue re-assigning particle outside boundary!'
-                            end if    
+                            Res_a = Res_a + real(l_boundary)
+                            l_boundary = l_boundary_up
+                            Res_a = Res_a - real(l_boundary)
                         end if
+                        FutureAtBoundaryBool = .true.
+                        Res_b = l_f - real(l_boundary)
+                    else if (l_f < l_cell) then
+                        del_tau_a = del_tau_b
+                        del_tau_b = del_tau
+                        if (l_boundary == l_cell) then
+                            Res_a = Res_b
+                        else
+                            Res_a = Res_a + real(l_boundary)
+                            l_boundary = l_cell
+                            Res_a = Res_a - real(l_boundary)
+                        end if
+                        FutureAtBoundaryBool = .true.
+                        Res_b = l_f - real(l_boundary)
+                    else if (l_f == l_boundary_up) then
+                        FutureAtBoundaryBool = .false.   
+                        l_f = l_f - 1.0d-12
+                    else if (l_f == l_cell) then
+                        FutureAtBoundaryBool = .false.   
+                        l_f = l_f + 1.0d-12
+                    else
+                        print *, 'l_f not in possibilities!'
+                        stop
                     end if
                     numIter = k
                     exit
@@ -624,6 +658,7 @@ contains
             
             del_tau_a = del_tau_b
             del_tau_b = del_tau_c
+            l_boundary_a = l_boundary
             Res_a = Res_b
         end do
         if (k > maxPartIter) then
@@ -631,7 +666,7 @@ contains
             stop
         end if
         
-        if (FutureAtBoundaryBool) then
+        if (.not. convergeBool) then
             if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
                 ! Brent method for particle at boundary which is not at same location at initial position
                 if (Res_a * Res_b >= 0) then
@@ -639,15 +674,18 @@ contains
                     print *, 'l_sub:', l_sub
                     print *, 'l_f:', l_f
                     print *, 'del_tau:', del_tau
+                    print *, 'del_tau_a:', del_tau_a
+                    print *, 'del_tau_b:', del_tau_b
                     print *, 'v_sub:', v_sub
                     print *, 'l_boundary:', l_boundary
+                    print *, 'l_boundary_a:', l_boundary_a
                     print *, 'v_half:', v_half
                     print *, 'Res_a:', Res_a
                     print *, 'Res_b:', Res_b
                     stop
                 end if
 
-                if (abs(Res_a) < abs(Res_b) ) then
+                if (ABS(Res_a) < ABS(Res_b) ) then
                     ! if next Res higher, switch!
                     tempVar = del_tau_a
                     del_tau_a = del_tau_b
@@ -716,8 +754,119 @@ contains
                     end if       
                     
                 end do
+                if (k > maxPartIter) then
+                    print *, 'issue solving time with Brent solver'
+                    print *, 'l_sub:', l_sub
+                    print *, 'del_tau_max:', del_tau
+                    print *, 'l_boundary:', l_boundary
+                    print *, 'v_sub:', v_sub
+                    stop
+                end if
             else
-                call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                ! Brent method for particle coming back through initial boundary position
+                
+                del_tau_a = 0.0d0
+                del_tau_b = del_tau
+                Res_a = v_sub(1)
+                Res_b = v_half(1)
+
+                if (Res_a * Res_b >= 0) then
+                    print *, 'first res are not opposite self boundary!'
+                    print *, 'l_sub:', l_sub
+                    print *, 'del_tau:', del_tau
+                    print *, 'v_sub:', v_sub
+                    print *, 'l_boundary:', l_boundary
+                    print *, 'v_half:', v_half
+                    print *, 'Res_a:', Res_a
+                    print *, 'Res_b:', Res_b
+                    stop
+                end if
+
+                if (ABS(Res_a) < ABS(Res_b) ) then
+                    ! if next Res higher, switch!
+                    tempVar = del_tau_a
+                    del_tau_a = del_tau_b
+                    del_tau_b = tempVar
+                    tempVar = Res_a
+                    Res_a = Res_b
+                    Res_b = tempVar
+                end if
+
+                del_tau_c = del_tau_a
+                Res_c = Res_a
+                usedBiSection = .true.
+
+                do k = 1, maxPartIter
+                    if (Res_a /= Res_c .and. Res_b /= Res_c) then
+                        del_tau_s = del_tau_a * Res_b * Res_c/((Res_a - Res_b) * (Res_a - Res_c)) + del_tau_b * Res_a * Res_c/((Res_b - Res_a) * (Res_b - Res_c)) &
+                            + del_tau_c * Res_a * Res_b/((Res_c - Res_a) * (Res_c - Res_b))
+                    else
+                        del_tau_s = del_tau_b - Res_b * (del_tau_b - del_tau_a)/(Res_b - Res_a)
+                    end if
+
+                    if ((del_tau_s - 0.25d0 * (3.0d0 * del_tau_a + del_tau_b)) * (del_tau_s - del_tau_b) >= 0 &
+                        .or.  (usedBiSection .and. ABS(del_tau_s - del_tau_b) >= 0.5d0 * ABS(del_tau_b - del_tau_c)) &
+                        .or.  (.not. usedBiSection .and. ABS(del_tau_s - del_tau_b) >= 0.5d0 * ABS(del_tau_c - del_tau_d)) &
+                        .or.  (usedBiSection .and. ABS(del_tau_b - del_tau_c) < f_tol) &
+                        .or. (.not. usedBiSection .and. ABS(del_tau_c - del_tau_d) < f_tol)) then
+
+                        del_tau_s = 0.5d0 * (del_tau_a + del_tau_b)
+                        usedBiSection = .true.
+                    else
+                        usedBiSection = .false.
+                    end if
+
+                    if (ABS(del_tau_s - del_tau_b) < f_tol) then
+                        del_tau = del_tau_s
+                        l_f = real(l_boundary)
+                        numIter = numIter + k
+                        exit
+                    end if
+
+                    coeffAccel = 0.5d0 * del_tau_s * q_over_m
+                    v_prime(1) = v_sub(1) + coeffAccel * E_x
+                    v_half = v_prime + coeffAccel * (crossProduct(v_prime, BField) + coeffAccel* SUM(v_prime * BField) * BField)
+                    v_half = v_half / (1.0d0 + (coeffAccel*B_mag)**2)
+                    Res_s = v_half(1)
+                    ! if (ABS(del_tau_s-del_tau_b) < f_tol) then
+                    !     del_tau = del_tau_s
+                    !     print *, 'del_tau:', del_tau
+                    !     print *, 'iteration:', k
+                    !     nonLinCounter = nonLinCounter + k
+                    !     exit
+                    ! end if
+
+                    del_tau_d = del_tau_c
+                    del_tau_c = del_tau_b
+                    Res_c = Res_b
+
+                    if (Res_a * Res_s < 0) then
+                        del_tau_b = del_tau_s
+                        Res_b = Res_s
+                    else
+                        del_tau_a = del_tau_s
+                        Res_a = Res_s
+                    end if
+
+                    if (abs(Res_a) < abs(Res_b) ) then
+                        ! if next Res higher, switch!
+                        tempVar = del_tau_a
+                        del_tau_a = del_tau_b
+                        del_tau_b = tempVar
+                        tempVar = Res_a
+                        Res_a = Res_b
+                        Res_b = tempVar
+                    end if         
+                end do
+
+                if (k > maxPartIter) then
+                    print *, 'issue solving time with Brent solver'
+                    print *, 'l_sub:', l_sub
+                    print *, 'del_tau_max:', del_tau
+                    print *, 'l_boundary:', l_boundary
+                    print *, 'v_sub:', v_sub
+                    stop
+                end if
             end if
         end if
         
@@ -733,7 +882,7 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, E_x, q_times_wp
+        real(real64) :: l_f, l_sub, v_sub(3), v_f(3), timePassed, del_tau, q_over_m, f_tol, v_half(3), dx_dl, E_x, q_times_wp, min_del_tau
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: AtBoundaryBool, FutureAtBoundaryBool
         !$OMP parallel private(iThread)
@@ -745,7 +894,7 @@ contains
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             q_times_wp = particleList(j)%q * particleList(j)%w_p
-            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, numIter)
+            !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, numIter, min_del_tau)
             iThread = omp_get_thread_num() + 1 
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 v_sub = particleList(j)%phaseSpace(2:4,i,iThread)
@@ -758,28 +907,26 @@ contains
                     else
                         l_cell = l_boundary + (INT(SIGN(1.0d0, v_sub(1))) - 1)/2
                     end if
-                    if (v_sub(1) > 0) then
-                        l_boundary = l_cell + 1
-                    else
-                        l_boundary = l_cell
-                    end if
+                   
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    del_tau = MIN(del_t - timePassed, 2.0d0 * dx_dl * (real(l_boundary) - l_sub) / v_sub(1))
+                    del_tau = del_t - timePassed
 
                     if (.not. solver%BFieldBool) then
                         call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     else
                         ! Start AA
-                        call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
+                        call subStepSolverTotal(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, &
+                            FutureAtBoundaryBool, l_cell, l_boundary, numIter, AtBoundaryBool)
+                        ! call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
                         
-                        if (FutureAtBoundaryBool) then
-                            if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
-                                call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
-                            else
-                                call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
-                            end if
-                        end if
+                        ! if (FutureAtBoundaryBool) then
+                        !     if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
+                        !         call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                        !     else
+                        !         call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                        !     end if
+                        ! end if
                     end if
                     v_f = 2.0d0 * v_half - v_sub
 
@@ -863,30 +1010,28 @@ contains
                     else
                         l_cell = l_boundary + (INT(SIGN(1.0d0, v_sub(1))) - 1)/2
                     end if
-                    if (v_sub(1) > 0) then
-                        l_boundary = l_cell + 1
-                    else
-                        l_boundary = l_cell
-                    end if
+                
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    del_tau = MIN(del_t - timePassed, 2.0d0 * dx_dl * (real(l_boundary) - l_sub) / v_sub(1))
+                    del_tau = del_t - timePassed
 
                     if (.not. solver%BFieldBool) then
                         call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     else
                     
                         ! AA particle mover
-                        call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
-                        funcEvalCounter = funcEvalCounter + 1
-                        if (FutureAtBoundaryBool) then
-                            if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
-                                call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
-                            else
-                                call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
-                            end if
-                            funcEvalCounter = funcEvalCounter + numIter
-                        end if
+                        call subStepSolverTotal(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, &
+                            FutureAtBoundaryBool, l_cell, l_boundary, numIter, AtBoundaryBool)
+                        ! call subStepSolverGetPosition(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, solver%BField, solver%BFieldMag, dx_dl, FutureAtBoundaryBool, l_boundary)
+                        ! funcEvalCounter = funcEvalCounter + 1
+                        ! if (FutureAtBoundaryBool) then
+                        !     if (.not. AtBoundaryBool .or. l_boundary /= INT(l_sub)) then
+                        !         call subStepSolverGetTimeBoundaryBrent(l_sub, v_sub, l_f, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                        !     else
+                        !         call subStepSolverGetTimeSelfBoundaryBrent(l_sub, v_sub, v_half, del_tau, q_over_m, E_x, solver%BField, solver%BFieldMag, dx_dl, f_tol, l_boundary, numIter)
+                        !     end if
+                        !     funcEvalCounter = funcEvalCounter + numIter
+                        ! end if
                     end if
                     
                     v_f = 2.0d0 * v_half - v_sub
