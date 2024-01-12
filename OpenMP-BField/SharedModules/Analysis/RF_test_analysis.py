@@ -29,9 +29,6 @@ Exp_noField_fullDomain_injFlux = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic
 Exp_noField_fullDomain_heatingMax1 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax1/')
 Exp_noField_fullDomain_heatingMax100 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax100/')
 Exp_noField_fullDomain_heatingMax100_0p1delT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax100_0p1delT/')
-Exp_noField_fullDomain_heatingMax100_switchCollOrder = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax100_switchCollOrder/')
-Exp_noField_fullDomain_heatingMax100_switchCollOrder_7000PPD = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax100_switchCollOrder_7000PPD/')
-Exp_noField_fullDomain_heatingMax100_switchCollOrder_0p1delT_0p4debye = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax100_switchCollOrder_0p1delT_0p4debye/')
 
 #---------------------- NGP -------------------------------------------------
 NGP_noField_halfDomain_retest = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_halfDomain_retest/')
@@ -49,8 +46,6 @@ NGP_45deg_0p05T_2p0delT_secantMethod = dataSet('Y:/scratch/nsavard/ImplicitPic1D
 NGP_45deg_0p05T_2p0delT_secantMethod2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0delT_secantMethod2/')
 NGP_45deg_0p05T_2p0delT_secantMethod3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0delT_secantMethod3/')
 
-NGP_noField_fullDomain_heatingMax100_switchCollOrder_0p2delT_1903nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax100_switchCollOrder_0p2delT_1903nodes/')
-NGP_noField_fullDomain_heatingMax100_switchCollOrder_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax100_switchCollOrder_2p0delT/')
 NGP_noField_fullDomain_heatingMax100_0p5delT_400nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax100_0p5delT_400nodes/')
 NGP_noField_fullDomain_200nodes_heatingMax100_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_200nodes_heatingMax100_2p0delT/')
 NGP_noField_fullDomain_heatingMax100_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax100_2p0delT/')
