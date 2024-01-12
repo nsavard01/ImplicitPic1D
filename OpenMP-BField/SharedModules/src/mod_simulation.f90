@@ -372,6 +372,8 @@ contains
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
@@ -399,6 +401,8 @@ contains
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 call loadParticleDensity(particleList, world, .true.)
@@ -483,6 +487,8 @@ contains
         if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
         if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
         if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
+        if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+        if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
         call system_clock(endTime)
         collisionTime = collisionTime + (endTime-startTime)
         call loadParticleDensity(particleList, world, .true.)
@@ -582,6 +588,8 @@ contains
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
+            if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
             call loadParticleDensity(particleList, world, .false.)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i+1, heatSkipSteps) == 0) then
@@ -649,6 +657,7 @@ contains
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
+            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
             do k = 1, numThread
                 do i=1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)

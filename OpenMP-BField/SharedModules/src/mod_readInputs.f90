@@ -122,9 +122,9 @@ contains
     !     end if
     ! end subroutine readRestart
 
-    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, injectionFlux, w_p, angleRad)
-        logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool
-        real(real64), intent(in out) :: injectionFlux
+    subroutine readInjectionInputs(InjFilename, addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, w_p, angleRad, FractionFreqHeating)
+        logical, intent(in out) :: addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool
+        real(real64), intent(in out) :: injectionFlux, FractionFreqHeating
         real(real64), intent(in) :: w_p, angleRad
         character(len=*), intent(in) :: InjFilename
         integer(int32) :: tempInt, io
@@ -139,10 +139,18 @@ contains
         refluxPartBool = (tempInt == 1)
         read(10, *, IOSTAT = io) tempInt, injectionFlux
         injectionBool = (tempInt == 1)
+        if (.not. injectionBool) then
+            read(10, *, IOSTAT = io) tempInt, injectionFlux
+            uniformInjectionBool = (tempInt == 1)
+        end if
+        read(10, *, IOSTAT = io) tempInt, FractionFreqHeating
+        heatingBool = (tempInt == 1)
         close(10)
         print *, "Particle lost is reinjected:", addLostPartBool
         print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
         print *, "Particle injection on neumann boundary", injectionBool
+        print *, "Particle injection unformly with maxwellian", uniformInjectionBool
+        print *, "Electron maxwellian heating", heatingBool
         if (injectionBool) then
             injectionFlux = injectionFlux * COS(angleRad)
             print *, 'Particle injection flux:', injectionFlux
@@ -153,6 +161,17 @@ contains
             print *, 'High end of flux particles:', numFluxParticlesHigh
             injectionR = numFluxPart - real(numFluxParticlesLow)
             print *, 'Number for selection of flux particles is:', injectionR
+        else if (uniformInjectionBool) then
+            print *, 'Particle injection flux:', injectionFlux
+            numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
+            numFluxParticlesLow = floor(numFluxPart)
+            numFluxParticlesHigh = numFluxParticlesLow + 1
+            print *, 'Low end of flux particles:', numFluxParticlesLow
+            print *, 'High end of flux particles:', numFluxParticlesHigh
+            injectionR = numFluxPart - real(numFluxParticlesLow)
+            print *, 'Number for selection of flux particles is:', injectionR
+        else if (heatingBool) then
+            print *, 'FractionFreqHeating for maxwellian heating is:', FractionFreqHeating
         end if
         print *, "------------------"
         print *, ""

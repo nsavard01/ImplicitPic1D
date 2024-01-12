@@ -207,6 +207,8 @@ contains
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
@@ -225,6 +227,8 @@ contains
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 densities = 0.0d0
@@ -248,6 +252,7 @@ contains
                 chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff
                 CurrentDiagStep = CurrentDiagStep + 1
                 print *, "Number of electrons is:", SUM(particleList(1)%N_p)
+                print *, 'Number of ions is:', SUM(particleList(2)%N_p)
                 energyAddColl = 0.0d0
                 inelasticEnergyLoss = 0.0d0
                 diagStepDiff = 0
@@ -273,6 +278,8 @@ contains
         if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
         if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
         if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+        if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+        if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
         call system_clock(endTime)
         collisionTime = collisionTime + (endTime-startTime)
         densities = 0.0d0
@@ -347,6 +354,8 @@ contains
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
             call loadParticleDensity(densities, particleList, world)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i, heatSkipSteps) == 0) then
@@ -398,10 +407,11 @@ contains
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
             do k = 1, numThread
                 do j = 1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, j, k) * (binNumber) / VMax + binNumber + 1)
-                    VHist(intPartV) = VHist(intPartV) + 1
+                    if (intPartV > 0 .and. intPartV < binNumber*2+1) VHist(intPartV) = VHist(intPartV) + 1
                 end do
             end do
         end do

@@ -1,4 +1,4 @@
-1 ! number of threads
+32 ! number of threads
 22.0d-6 ! simulation time
 2.5d16 ! Initial number density (1/m^3) of particles
 5.0d0 ! T_e (eV)
@@ -6,5 +6,5 @@
 20 ! number of diagnostic data dumps    
 2.0d0 ! Fraction of initial 1/w_p for initial time step
 22.0d-6 ! amount of time to average final Diagnostics
-NGP_45deg_0p05T_2p0T_minDelTau !filename
+NGP_45deg_0p05T_reverseV_32nodes_2p0delT_0p1w_cSubSteps !filename
 END

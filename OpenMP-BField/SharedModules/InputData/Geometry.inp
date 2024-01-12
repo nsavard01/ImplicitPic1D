@@ -3,5 +3,5 @@
 2 ! (0 == even grid, 1 = sinusoidal grid. 2 = half-grid, 3= exp-grid) 0.0002572099123144409d0 for two stream
 1 2 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 = neumann absorbing)
 0. 0. ! Voltage for left and right side boundary, used for dirichlet and periodic conditions
-0.0d0 45. ! BField magnitude (T), angle theta from x axis (degrees)
+0.05d0 45. ! BField magnitude (T), angle theta from x axis (degrees)
 END

@@ -414,7 +414,7 @@ contains
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - particleList(j)%phaseSpace(1, i-delIdx, iThread)
-                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -particleList(j)%phaseSpace(2, i-delIdx, iThread)
+                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -particleList(j)%phaseSpace(2:4, i-delIdx, iThread)
                         particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
                         particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                     CASE(3)
@@ -431,7 +431,7 @@ contains
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - particleList(j)%phaseSpace(1, i-delIdx, iThread)
-                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -particleList(j)%phaseSpace(2, i-delIdx, iThread)
+                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -particleList(j)%phaseSpace(2:4, i-delIdx, iThread)
                         particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
                         particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
                     CASE(3)
