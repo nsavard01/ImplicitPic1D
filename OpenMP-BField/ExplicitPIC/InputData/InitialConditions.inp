@@ -1,13 +1,13 @@
 32 ! number of processors
-9.5d-5 ! simulation time
+9.d-5 ! simulation time
 2.5d14 ! Initial number density (1/m^3) of electrons
 2.5d0 ! Initial electron Temperature (eV) 
 0.025d0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
 0.2d0 ! Fraction of initial 1/w_p for initial time step
-2.4d-6 ! amount of time to average final Diagnostics
+9.d-5 ! amount of time to average final Diagnostics
 2.4d0 45.! BField magnitude (T), angle theta from x axis (degrees)
 10 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
-test !save file name
+test_RF !save file name
 END

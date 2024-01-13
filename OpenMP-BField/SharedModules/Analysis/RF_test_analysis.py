@@ -12,52 +12,11 @@ print('Loaded modules')
 #%%
 
 print('Loading data')
-model = np.load('BoundModels/modelNonTruncSparse_2p5e+16nave_5Te_1Ti.npy')
+
 
 #--------------------- Explicit ---------------------------------------------
-Exp_noField = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField/')
-Exp_45deg_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_45deg_0p05T/')
-Exp_noField_keepBoris = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_keepBoris/')
-Exp_45deg_0p05T_3000PPD = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_45deg_0p05T_3000PPD/')
-Exp_45deg_0p05T_3000PPD_invertV = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_45deg_0p05T_3000PPD_invertV/')
-Exp_45deg_0p05T_reverseV = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_45deg_0p05T_reverseV/')
+Exp_test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_RF/')
 
-Exp_0p05T_fullDomain = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_0p05T_fullDomain/')
-Exp_noField_fullDomain = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain/')
-Exp_noField_halfDomain = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_halfDomain/')
-Exp_noField_fullDomain_injFlux = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_injFlux/')
-Exp_noField_fullDomain_heatingMax1 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax1/')
-Exp_noField_fullDomain_heatingMax100 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax100/')
-Exp_noField_fullDomain_heatingMax100_0p1delT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_noField_fullDomain_heatingMax100_0p1delT/')
-
-#---------------------- NGP -------------------------------------------------
-NGP_noField_halfDomain_retest = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_halfDomain_retest/')
-NGP_noField = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField/')
-NGP_noFieldVStop = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noFieldVStop/')
-NGP_45deg_0p05T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T/')
-NGP_45deg_0p05T_reverseV_32nodes_0p2delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_reverseV_32nodes_0p2delT/')
-NGP_45deg_0p05T_reverseV_32nodes_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_reverseV_32nodes_2p0delT/')
-NGP_45deg_0p05T_reverseV_32nodes_2p0delT_3000PPD = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_reverseV_32nodes_2p0delT_3000PPD/')
-NGP_45deg_0p05T_reverseV_32nodes_2p0delT_step0p1w_c = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_reverseV_32nodes_2p0delT_step0p1w_c/')
-NGP_45deg_0p05T_reverseV_32nodes_2p0delT_0p1w_cSubSteps = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_reverseV_32nodes_2p0delT_0p1w_cSubSteps/')
-NGP_45deg_0p05T_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_0p2T/')
-NGP_45deg_0p05T_2p0T_minDelTau = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0T_minDelTau/')
-NGP_45deg_0p05T_2p0delT_secantMethod = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0delT_secantMethod/')
-NGP_45deg_0p05T_2p0delT_secantMethod2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0delT_secantMethod2/')
-NGP_45deg_0p05T_2p0delT_secantMethod3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0delT_secantMethod3/')
-
-NGP_noField_fullDomain_heatingMax100_0p5delT_400nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax100_0p5delT_400nodes/')
-NGP_noField_fullDomain_200nodes_heatingMax100_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_200nodes_heatingMax100_2p0delT/')
-NGP_noField_fullDomain_heatingMax100_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax100_2p0delT/')
-NGP_noField_fullDomain_heatingMax10_0p2delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax10_0p2delT/')
-NGP_noField_fullDomain_heatingMax10 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_heatingMax10/')
-NGP_noField_fullDomain_injFlux_2p0delT_VStop = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_injFlux_2p0delT_VStop/')
-NGP_noField_fullDomain_injFlux_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_injFlux_2p0delT/')
-NGP_noField_fullDomain_injFlux_0p2delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_injFlux_0p2delT/')
-NGP_noField_fullDomain_injFlux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_fullDomain_injFlux/')
-NGP_noField_halfDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_halfDomain/')
-NGP_45deg_noField_2p0delT_fullDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_noField_2p0delT_fullDomain/')
-NGP_45deg_0p05T_2p0delT_secantMethod_fullDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0delT_secantMethod_fullDomain/')
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
 
