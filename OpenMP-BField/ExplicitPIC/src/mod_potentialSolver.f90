@@ -16,9 +16,9 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), rho(:, :), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, rho_const, siedelIter, siedelEps, BFieldMag, BField(3), BFieldAngle
+        real(real64) :: energyError, rho_const, siedelIter, siedelEps, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
-        logical :: BFieldBool
+        logical :: BFieldBool, RF_bool
 
 
     contains
@@ -42,11 +42,11 @@ module mod_potentialSolver
    
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency) result(self)
         ! Construct domain object, initialize grid, dx_dl, and dx_dl.
         real(real64), intent(in) :: leftVoltage, rightVoltage
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: BFieldMag, angle
+        real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
         allocate(self % rho(NumberXNodes, numThread), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
@@ -73,6 +73,8 @@ contains
             self%phi(1) = leftVoltage
             self%phi(NumberXNodes) = leftVoltage
         end if
+        self%RF_bool = (RF_frequency > 0)
+        self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
 
     end function potentialSolver_constructor
 

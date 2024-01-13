@@ -234,7 +234,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
         integer(int32) :: io, leftBoundary, rightBoundary
-        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain, fracDebye, BFieldMag, angle
+        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain, fracDebye, BFieldMag, angle, RF_frequency
 
         print *, ""
         print *, "Reading domain inputs:"
@@ -246,6 +246,7 @@ contains
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         read(10, *, IOSTAT = io) fracDebye
         read(10, *, IOSTAT = io) BFieldMag, angle
+        read(10, *, IOSTAT = io) RF_frequency
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
         if (L_domain / (NumberXNodes-1) > debyeLength) then
@@ -259,6 +260,7 @@ contains
         print *, 'Fraction of debye length:', fracDebye
         print *, 'BField magnitude:', BFieldMag
         print *, 'BField angle:', angle
+        print *, 'RF frequency:', RF_frequency
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
@@ -266,7 +268,7 @@ contains
         end if
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(L_domain)
-        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle)
+        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
         print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""
