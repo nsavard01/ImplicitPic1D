@@ -1186,8 +1186,6 @@ contains
                     v_sub = v_f
                     AtBoundaryBool = FutureAtBoundaryBool
                     
-
-                    
                 end do
             end do loopParticles
             !$OMP end parallel
