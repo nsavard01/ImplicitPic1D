@@ -68,7 +68,7 @@ def update_plot_Phi(i, dataSet, ax):
     #ax.set_ylim([-20, 40])
 
     
-def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPlasmaPhi.gif"):
+def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPlasmaPhi.gif", pauseTime = 0.05):
 
     if boolMakeAnimation:
         numframes = dataSet.numDiag
@@ -97,7 +97,7 @@ def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPl
             plt.xlabel('Distance (m)')
             plt.ylabel('Potential (V)')
             plt.xlim([dataSet.x_min, dataSet.x_max])
-            plt.pause(0.05)  
+            plt.pause(pauseTime)
 
 def update_plot_Density(i, dataSet, ax, nameList):
 
@@ -110,7 +110,7 @@ def update_plot_Density(i, dataSet, ax, nameList):
     ax.set_xlim([dataSet.x_min, dataSet.x_max])
     plt.legend(loc = 'lower center')            
             
-def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Figures/BoundPlasmaDensity.gif"):
+def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Figures/BoundPlasmaDensity.gif", pauseTime = 0.05):
 
     if boolMakeAnimation:
         numframes = dataSet.numDiag
@@ -141,7 +141,7 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
             plt.xlabel('Distance (m)')
             plt.ylabel(r'Density (m$^{-3}$)')
             plt.xlim([dataSet.x_min, dataSet.x_max])
-            plt.pause(0.05)  
+            plt.pause(pauseTime)
             
             
 def update_plot_PhaseSpace(i, scat, dataSet, name):

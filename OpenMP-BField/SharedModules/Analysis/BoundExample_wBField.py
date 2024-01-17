@@ -63,6 +63,10 @@ NGP_noField_fullDomain_injFlux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Impli
 NGP_noField_halfDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_noField_halfDomain/')
 NGP_45deg_noField_2p0delT_fullDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_noField_2p0delT_fullDomain/')
 NGP_45deg_0p05T_2p0delT_secantMethod_fullDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_45deg_0p05T_2p0delT_secantMethod_fullDomain/')
+
+CIC_noField_halfDomain_test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_noField_halfDomain_test/')
+CIC_noField_fullDomain_heatingMax100_switchCollOrder_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_noField_fullDomain_heatingMax100_switchCollOrder_2p0delT/')
+CIC_noField_fullDomain_heatingMax100_reTest_2p0delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_noField_fullDomain_heatingMax100_reTest_2p0delT/')
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
 

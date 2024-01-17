@@ -42,20 +42,10 @@ contains
         FutureAtBoundaryBool = (b >= 0)
         if (FutureAtBoundaryBool) then
             del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub(1)) + SQRT(b))
-            if (del_tau_temp < 0) then
-                print *, 'del_tau_temp < 0 for alongV'
-                stop
-            end if
             FutureAtBoundaryBool = (del_tau_temp < del_tau)
             if (FutureAtBoundaryBool) then
                 del_tau = del_tau_temp
                 l_boundary = l_alongV
-            else
-                l_f_alongV = l_sub + v_sub(1) * del_tau / dx_dl + a * del_tau**2 / dx_dl
-                if ((goingForwardBool .and. (l_f_alongV > l_cell + 1)) .or. (.not. goingForwardBool .and. l_f_alongV < l_cell)) then
-                    print *, 'going alongV, actually have l_f outside of cell, should be at boundary!'
-                    stop
-                end if
             end if
         end if
         if (.not. FutureAtBoundaryBool) then
@@ -71,39 +61,11 @@ contains
                 else
                     del_tau_temp = ABS(v_sub(1))/ABS(a)
                 end if
-                if (del_tau_temp < 0) then
-                    print *, 'del_tau_temp < 0 for awayV'
-                    stop
-                end if
                 FutureAtBoundaryBool = (del_tau_temp < del_tau)
                 if (FutureAtBoundaryBool) then
                     del_tau = del_tau_temp
                     l_boundary = l_awayV
-                else
-                    l_f_awayV = l_sub + v_sub(1) * del_tau / dx_dl + a * del_tau**2 / dx_dl
-                    if ((goingForwardBool .and. (l_f_awayV < l_cell)) .or. (.not. goingForwardBool .and. l_f_awayV > l_cell+1)) then
-                        print *, 'going awayV not starting at boundary, actually have l_f outside of cell, should be at boundary!'
-                        print *, 'l_sub:', l_sub
-                        print *, 'v_sub:', v_sub
-                        print *, 'a:', a
-                        print *, 'l_f_awayV:', l_f_awayV
-                        stop
-                    end if
                 end if
-            end if
-        end if
-
-        if (FutureAtBoundaryBool) then
-            c = v_sub(1) * del_tau/dx_dl + a * del_tau**2 /dx_dl + l_sub
-            if (ABS(c - l_boundary) > 1.d-12) then
-                print *, 'del_tau does not actually lead to boundary!'
-                print *, 'del_tau:', del_tau
-                print *, 'l_sub:', l_sub
-                print *, 'v_sub:', v_sub
-                print *, 'l_f:', C
-                print *, 'l_boundary:', l_boundary
-                print *, 'a:', a
-                stop
             end if
         end if
         
@@ -114,7 +76,7 @@ contains
         real(real64), intent(in) :: l_sub, v_sub(3), del_tau, q_over_m, E_left, E_right, dx_dl
         real(real64), intent(in out) :: l_f, d_half
         integer(int32), intent(in) :: l_cell
-        real(real64) :: del_tau_sqr, real_l_cell, dx_sqr, coeffAccel, E_x, v_prime, l_f_PI, d_half_PI
+        real(real64) :: del_tau_sqr, real_l_cell, dx_sqr
         integer(int32) :: k
         del_tau_sqr = del_tau**2
         real_l_cell = real(l_cell, kind = real64)
@@ -124,55 +86,7 @@ contains
             /(E_left*del_tau_sqr*q_over_m - E_right*del_tau_sqr*q_over_m + 4.0d0*dx_sqr)
         d_half = (l_f + l_sub)*0.5d0 - real(l_cell)
 
-        if (INT(l_f) /= l_cell) then
-            print *, "Have final l_f outside initial cell"
-            print *, 'del_tau is:', del_tau
-            print *, "l_sub is:", l_sub
-            print *, "l_f is:", l_f
-            print *, 'l_cell is:', l_cell
-            print *, "v_sub is:", v_sub
-            stop
-        end if
-
-        coeffAccel = 0.5d0 * del_tau * q_over_m
-        l_f_PI = l_sub
-        do k = 1, 50
-            ! First try full time, see where it ends up
-            d_half_PI = (l_sub + l_f_PI) * 0.5d0 - real(l_cell)
-            E_x = (E_right * d_half_PI + E_left * (1.0d0 - d_half_PI))/dx_dl
-            v_prime = v_sub(1) + coeffAccel * E_x
-            l_f_PI = l_sub + v_prime * del_tau / dx_dl
-            if (l_f_PI > l_cell + 1) then
-                l_f_PI = real(l_cell + 1)
-            else if (l_f_PI < l_cell) then
-                l_f_PI = real(l_cell)
-            end if
-        end do
-        if (ABS(l_f - l_f_PI) > 1.d-12) then
-            print *, 'big difference between l_f and l_f_PI'
-            print *, 'del_tau is:', del_tau
-            print *, "l_sub is:", l_sub
-            print *, 'l_cell is:', l_cell
-            print *, "v_sub is:", v_sub
-            print *, "l_f is:", l_f
-            print *, 'l_f_PI is:', l_f_PI
-            coeffAccel = 0.5d0 * del_tau * q_over_m
-            l_f_PI = l_sub
-            do k = 1, 50
-                ! First try full time, see where it ends up
-                d_half_PI = (l_sub + l_f_PI) * 0.5d0 - real(l_cell)
-                E_x = (E_right * d_half_PI + E_left * (1.0d0 - d_half_PI))/dx_dl
-                v_prime = v_sub(1) + coeffAccel * E_x
-                l_f_PI = l_sub + v_prime * del_tau / dx_dl
-                if (l_f_PI > l_cell + 1) then
-                    l_f_PI = real(l_cell + 1)
-                else if (l_f_PI < l_cell) then
-                    l_f_PI = real(l_cell)
-                end if
-                print *, 'l_f_PI:', l_f_PI
-            end do
-            stop
-        end if
+    
     end subroutine analyticalParticleMoverNoBField
 
     subroutine subStepSolverPI(l_sub, v_sub, l_f, v_f, v_half, del_tau, d_half, q_over_m, l_cell, E_left, E_right, BField, B_mag, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
@@ -743,6 +657,12 @@ contains
             !Neumann to left
             rho(l_center) = rho(l_center) + 0.5d0 * (1.0d0 - d)**2
             rho(l_right) = rho(l_right) + 0.5d0 * d**2
+        else if (world%boundaryConditions(l_right) == 4) then
+            !Neumann absorbing to right
+            rho(l_left) = rho(l_left) + 0.5d0 * (1.0d0 - d)**2
+        else if (world%boundaryConditions(l_center) == 4) then
+            !Neumann absorbing to left
+            rho(l_right) = rho(l_right) + 0.5d0 * d**2
         end if
     end subroutine GetRho
 
@@ -776,15 +696,16 @@ contains
                 timePassed = 0.0d0
                 AtBoundaryBool = MOD(l_sub, 1.0d0) == 0.0d0
                 timeNotConvergedBool = .true.
+                del_tau = del_t
                 do while(timeNotConvergedBool)
                     if (.not. AtBoundaryBool) then
                         l_cell = INT(l_sub)
                     else
-                        l_cell = l_boundary + (INT(SIGN(1.0d0, v_sub(1))) - 1)/2
+                        l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub(1))) - 1)/2
                     end if
                     dx_dl = world%dx_dl(l_cell)
-                    del_tau = del_t - timePassed
                     ! Start AA
+
                     if (.not. solver%BFieldBool) then
                         call getDelTauSubStepNoBField(l_sub, v_sub, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
                         if (FutureAtBoundaryBool) then
@@ -811,12 +732,11 @@ contains
                         end if
                         v_f = 2.0d0 * v_half - v_sub
                     end if
-                    
+        
                     J_part = q_times_wp * (v_half(1))*del_tau/dx_dl/del_t
                     solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + J_part * (1.0d0 - d_half)
                     solver%J(l_cell+1, iThread) = solver%J(l_cell+1, iThread) + J_part * (d_half)
 
-                
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
@@ -844,12 +764,19 @@ contains
                             stop
                         END SELECT
                     end if
-                    if ((l_f < 1) .or. (l_f > NumberXNodes+1)) then
+                    if ((l_f < l_cell) .or. (l_f > l_cell+1)) then
                         print *, 'l_f is:', l_f
-                        stop "Have particles travelling outside the domain in depositJ!"
+                        print *, 'l_sub:', l_sub
+                        print *, 'del_tau:', del_tau
+                        print *, 'v_sub:', v_sub
+                        print *, 'l_cell:', l_cell
+                        print *, 'AtBoundaryBool:', AtBoundaryBool
+                        print *, 'FutureAtBoundaryBool:', FutureAtBoundaryBool
+                        stop "Have particles travelling outside local cell!"
                     end if
                     timePassed = timePassed + del_tau
-                    timeNotConvergedBool = (del_t - timePassed > f_tol)
+                    del_tau = del_t - timePassed
+                    timeNotConvergedBool = (del_tau > f_tol)
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
@@ -895,18 +822,17 @@ contains
                 AtBoundaryBool = MOD(l_sub, 1.0d0) == 0.0d0
                 refluxedBool = .false.
                 timeNotConvergedBool = .true.
+                del_tau = del_t
                 do while(timeNotConvergedBool)
                     numSubStepAve = numSubStepAve + 1
                     if (.not. AtBoundaryBool) then
                         l_cell = INT(l_sub)
                     else
-                        l_cell = l_boundary + (INT(SIGN(1.0d0, v_sub(1))) - 1)/2
+                        l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub(1))) - 1)/2
                     end if
                     dx_dl = world%dx_dl(l_cell)
-                    del_tau = del_t - timePassed
-                    
+            
                     ! AA particle mover
-
                     if (.not. solver%BFieldBool) then
                         call getDelTauSubStepNoBField(l_sub, v_sub, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
                         if (FutureAtBoundaryBool) then
@@ -939,7 +865,7 @@ contains
                         end if
                         v_f = 2.0d0 * v_half - v_sub
                     end if
-                    
+        
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
@@ -980,18 +906,26 @@ contains
                             stop
                         END SELECT
                     end if
-                    if ((l_f < 1) .or. (l_f > NumberXNodes+1)) then
+                    if ((l_f < l_cell) .or. (l_f > l_cell+1)) then
                         print *, 'l_f is:', l_f
-                        stop "Have particles travelling outside the domain in depositJ!"
+                        print *, 'l_sub:', l_sub
+                        print *, 'del_tau:', del_tau
+                        print *, 'v_sub:', v_sub
+                        print *, 'l_cell:', l_cell
+                        print *, 'AtBoundaryBool:', AtBoundaryBool
+                        print *, 'FutureAtBoundaryBool:', FutureAtBoundaryBool
+                        stop "Have particles travelling outside local cell!"
                     end if
                     timePassed = timePassed + del_tau
-                    timeNotConvergedBool = (del_t - timePassed > f_tol)
+                    del_tau = del_t - timePassed
+                    timeNotConvergedBool = (del_tau > f_tol) ! Substraction of bool may not have del_t == timePassed, so just use f_tol
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
                     AtBoundaryBool = FutureAtBoundaryBool
                     
                 end do
+            
                 if (.not. timeNotConvergedBool) then
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
                     particleList(j)%phaseSpace(2:4,i-delIdx, iThread) = v_f

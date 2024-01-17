@@ -15,8 +15,8 @@ INLINE REPORT: (BOUNDPLASMAEXAMPLE)
   -> (28,10) READINJECTIONINPUTS
   -> (29,10) INITIALIZESOLVER
   -> (31,10) SOLVEINITIALPOTENTIAL
-  -> (74,10) SOLVESIMULATION
-  -> (75,10) SOLVESIMULATIONFINALAVERAGE
+  -> (79,10) SOLVESIMULATION
+  -> (80,10) SOLVESIMULATIONFINALAVERAGE
 
 
     Report from: Code generation optimizations [cg]
@@ -28,19 +28,19 @@ INLINE REPORT: (BOUNDPLASMAEXAMPLE)
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   16[ rax rdx rcx rbx rsi rdi r8-r9 r12-r15 zmm0-zmm3]
+        Assigned     :   17[ rax rdx rcx rbx rsi rdi r8-r10 r12-r15 zmm0-zmm3]
         
     Routine temporaries
-        Total         :     210
+        Total         :     211
             Global    :      29
-            Local     :     181
-        Regenerable   :     101
+            Local     :     182
+        Regenerable   :     103
         Spilled       :       5
         
     Routine stack
         Variables     :     276 bytes*
-            Reads     :      12 [4.06e+00 ~ 4.1%]
-            Writes    :      25 [4.27e+00 ~ 4.3%]
+            Reads     :      12 [4.02e+00 ~ 4.0%]
+            Writes    :      25 [4.22e+00 ~ 4.2%]
         Spills        :       0 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
             Writes    :       0 [0.00e+00 ~ 0.0%]
@@ -58,35 +58,35 @@ Begin optimization report for: READGEOMETRY
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (READGEOMETRY)
-  -> INLINE: (229,23) GETDEBYELENGTH
-  -> (235,17) DOMAIN_CONSTRUCTOR
-  -> (236,14) CONSTRUCTGRID
-  -> (242,18) POTENTIALSOLVER_CONSTRUCTOR
+  -> INLINE: (248,23) GETDEBYELENGTH
+  -> (254,17) DOMAIN_CONSTRUCTOR
+  -> (255,14) CONSTRUCTGRID
+  -> (261,18) POTENTIALSOLVER_CONSTRUCTOR
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(238,34)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(257,34)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(238,34)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(257,34)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(238,34)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(257,34)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(238,34)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(257,34)
 <Remainder loop for vectorization>
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-../../SharedModules/src/mod_readInputs.f90(211,16):remark #34051: REGISTER ALLOCATION : [mod_readinputs_mp_readgeometry_] ../../SharedModules/src/mod_readInputs.f90:211
+../../SharedModules/src/mod_readInputs.f90(230,16):remark #34051: REGISTER ALLOCATION : [mod_readinputs_mp_readgeometry_] ../../SharedModules/src/mod_readInputs.f90:230
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -225,16 +225,16 @@ Begin optimization report for: CONSTRUCTGRID
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (CONSTRUCTGRID)
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.61 + 56(SI64)))))[3(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.64 + 56(SI64)))))[3(SI64)]
      -tbp-> CONSTRUCTUNIFORMGRID
       -> (57,18) CONSTRUCTUNIFORMGRID
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.61 + 56(SI64)))))[2(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.64 + 56(SI64)))))[2(SI64)]
      -tbp-> CONSTRUCTSINEGRID
       -> (59,18) CONSTRUCTSINEGRID
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.61 + 56(SI64)))))[1(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.64 + 56(SI64)))))[1(SI64)]
      -tbp-> CONSTRUCTHALFSINEGRID
       -> (61,18) CONSTRUCTHALFSINEGRID
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.61 + 56(SI64)))))[5(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$1dd.9.64 + 56(SI64)))))[5(SI64)]
      -tbp-> CONSTRUCTEXPHALFGRID
       -> (63,18) CONSTRUCTEXPHALFGRID
 
@@ -844,64 +844,64 @@ Begin optimization report for: READPARTICLEINPUTS
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (READPARTICLEINPUTS)
-  -> (310,31) PARTICLE_CONSTRUCTOR
-  -> (312,18) MOD_PARTICLE^GENERATE3DMAXWELLIAN
-  -> (313,18) INITIALIZE_RANDUNIFORM
-  -> (319,46) MOD_PARTICLE^GETKEAVE
+  -> (329,31) PARTICLE_CONSTRUCTOR
+  -> (331,18) MOD_PARTICLE^GENERATE3DMAXWELLIAN
+  -> (332,18) INITIALIZE_RANDUNIFORM
+  -> (338,46) MOD_PARTICLE^GETKEAVE
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(309,9)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(328,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(311,45)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(330,45)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(311,45)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(330,45)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(311,45)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(330,45)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(311,45)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(330,45)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(311,64)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(330,64)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(311,64)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(330,64)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(311,64)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(330,64)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(315,54)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(334,54)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(315,54)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(334,54)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(315,54)
+   LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(334,54)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-../../SharedModules/src/mod_readInputs.f90(307,9):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (64, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_readInputs.f90(249,14):remark #34051: REGISTER ALLOCATION : [mod_readinputs_mp_readparticleinputs_] ../../SharedModules/src/mod_readInputs.f90:249
+../../SharedModules/src/mod_readInputs.f90(326,9):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (64, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_readInputs.f90(268,14):remark #34051: REGISTER ALLOCATION : [mod_readinputs_mp_readparticleinputs_] ../../SharedModules/src/mod_readInputs.f90:268
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -1208,22 +1208,22 @@ INLINE REPORT: (READINJECTIONINPUTS)
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   20[ rax rdx rcx rbx rbp rsi rdi r8-r10 r12-r15 zmm0-zmm1 zmm16-zmm19]
+        Assigned     :   21[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm1 zmm16-zmm19]
         
     Routine temporaries
-        Total         :     270
-            Global    :      30
-            Local     :     240
-        Regenerable   :     191
-        Spilled       :       9
+        Total         :     410
+            Global    :      43
+            Local     :     367
+        Regenerable   :     309
+        Spilled       :      13
         
     Routine stack
-        Variables     :     476 bytes*
-            Reads     :       5 [1.94e+00 ~ 1.9%]
-            Writes    :      63 [2.01e+01 ~ 20.1%]
-        Spills        :      24 bytes*
-            Reads     :       4 [6.19e-01 ~ 0.6%]
-            Writes    :       3 [4.64e-01 ~ 0.5%]
+        Variables     :     676 bytes*
+            Reads     :       7 [1.90e+00 ~ 1.9%]
+            Writes    :      97 [1.96e+01 ~ 19.6%]
+        Spills        :      56 bytes*
+            Reads     :       8 [6.76e-01 ~ 0.7%]
+            Writes    :       7 [8.39e-01 ~ 0.8%]
     
     Notes
     
@@ -1245,79 +1245,85 @@ INLINE REPORT: (SOLVESIMULATION)
   -> (354,14) WRITEDOMAIN
   -> (356,18) MOD_PARTICLE^WRITELOCALTEMPERATURE
   -> (357,18) MOD_PARTICLE^WRITEPHASESPACE
-  -> INLINE: (367,22) SOLVEPOTENTIAL
+  -> INLINE: (368,22) SOLVEPOTENTIAL
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(259,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREANDERSON
       -> (231,14) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
       -> (244,22) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(261,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREJFNK
       -> (344,14) MOD_NONLINSOLVERS::SOLVEJFNK
       -> (356,22) MOD_NONLINSOLVERS::SOLVEJFNK
-  -> (372,38) ADDMAXWELLIANLOSTPARTICLES
-  -> (373,37) REFLUXPARTICLES
-  -> (374,36) INJECTATBOUNDARY
-  -> CP_CLONE (380,24) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> INLINE: (383,35) MOD_PARTICLE^GETTOTALKE
-  -> (385,22) DEPOSITRHO
-  -> INLINE: (387,22) SOLVEPOTENTIAL
+  -> (373,34) MAXWELLIANHEATING
+  -> (374,38) ADDMAXWELLIANLOSTPARTICLES
+  -> (375,37) REFLUXPARTICLES
+  -> (376,36) INJECTATBOUNDARY
+  -> (377,43) INJECTUNIFORMFLUX
+  -> CP_CLONE (384,24) MOD_POTENTIALSOLVER^GETTOTALPE..0
+  -> INLINE: (387,35) MOD_PARTICLE^GETTOTALKE
+  -> (389,22) DEPOSITRHO
+  -> INLINE: (391,22) SOLVEPOTENTIAL
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(259,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREANDERSON
       -> (231,14) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
       -> (244,22) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(261,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREJFNK
       -> (344,14) MOD_NONLINSOLVERS::SOLVEJFNK
       -> (356,22) MOD_NONLINSOLVERS::SOLVEJFNK
-  -> INLINE: (391,35) MOD_PARTICLE^GETTOTALKE
-  -> CP_CLONE (393,24) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> (399,38) ADDMAXWELLIANLOSTPARTICLES
-  -> (400,37) REFLUXPARTICLES
-  -> (401,36) INJECTATBOUNDARY
-  -> CP_CLONE (404,22) LOADPARTICLEDENSITY..1
-  -> CP_CLONE (405,22) WRITEPARTICLEDENSITY..1
-  -> CP_CLONE (406,22) MOD_SIMULATION::WRITEPHI..1
-  -> (407,22) DEPOSITRHO
-  -> (410,31) GETCHARGECONTINUITYERROR
-  -> (413,30) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
-  -> CP_CLONE (430,26) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> (434,26) MOD_PARTICLE^WRITELOCALTEMPERATURE
-  -> (435,26) MOD_PARTICLE^WRITEPHASESPACE
-  -> INLINE: (437,39) MOD_PARTICLE^GETTOTALKE
-  -> INLINE: (443,25) MOD_PARTICLE^GETKEAVE
-  -> CP_CLONE (464,16) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> INLINE: (467,27) MOD_PARTICLE^GETTOTALKE
-  -> (469,14) DEPOSITRHO
-  -> (471,14) SOLVEPOTENTIAL
-  -> INLINE: (475,27) MOD_PARTICLE^GETTOTALKE
-  -> CP_CLONE (477,16) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> (483,30) ADDMAXWELLIANLOSTPARTICLES
-  -> (484,29) REFLUXPARTICLES
-  -> (485,28) INJECTATBOUNDARY
-  -> CP_CLONE (488,14) LOADPARTICLEDENSITY..1
-  -> CP_CLONE (489,14) WRITEPARTICLEDENSITY..1
-  -> CP_CLONE (490,14) MOD_SIMULATION::WRITEPHI..1
-  -> (491,14) DEPOSITRHO
-  -> (493,23) GETCHARGECONTINUITYERROR
-  -> (496,22) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
-  -> CP_CLONE (513,18) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> (517,18) MOD_PARTICLE^WRITELOCALTEMPERATURE
-  -> (518,18) MOD_PARTICLE^WRITEPHASESPACE
-  -> (520,31) MOD_PARTICLE^GETTOTALKE
-  -> INLINE: (526,17) MOD_PARTICLE^GETKEAVE
+  -> INLINE: (395,35) MOD_PARTICLE^GETTOTALKE
+  -> CP_CLONE (397,24) MOD_POTENTIALSOLVER^GETTOTALPE..0
+  -> (403,34) MAXWELLIANHEATING
+  -> (404,38) ADDMAXWELLIANLOSTPARTICLES
+  -> (405,37) REFLUXPARTICLES
+  -> (406,36) INJECTATBOUNDARY
+  -> (407,43) INJECTUNIFORMFLUX
+  -> CP_CLONE (410,22) LOADPARTICLEDENSITY..1
+  -> CP_CLONE (411,22) WRITEPARTICLEDENSITY..1
+  -> CP_CLONE (412,22) MOD_SIMULATION::WRITEPHI..1
+  -> (413,22) DEPOSITRHO
+  -> (416,31) GETCHARGECONTINUITYERROR
+  -> (419,30) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
+  -> CP_CLONE (436,26) MOD_POTENTIALSOLVER^GETTOTALPE..0
+  -> (440,26) MOD_PARTICLE^WRITELOCALTEMPERATURE
+  -> (441,26) MOD_PARTICLE^WRITEPHASESPACE
+  -> INLINE: (443,39) MOD_PARTICLE^GETTOTALKE
+  -> INLINE: (449,25) MOD_PARTICLE^GETKEAVE
+  -> CP_CLONE (470,16) MOD_POTENTIALSOLVER^GETTOTALPE..0
+  -> INLINE: (473,27) MOD_PARTICLE^GETTOTALKE
+  -> (475,14) DEPOSITRHO
+  -> (477,14) SOLVEPOTENTIAL
+  -> INLINE: (481,27) MOD_PARTICLE^GETTOTALKE
+  -> CP_CLONE (483,16) MOD_POTENTIALSOLVER^GETTOTALPE..0
+  -> (489,26) MAXWELLIANHEATING
+  -> (490,30) ADDMAXWELLIANLOSTPARTICLES
+  -> (491,29) REFLUXPARTICLES
+  -> (492,28) INJECTATBOUNDARY
+  -> (493,35) INJECTUNIFORMFLUX
+  -> CP_CLONE (496,14) LOADPARTICLEDENSITY..1
+  -> CP_CLONE (497,14) WRITEPARTICLEDENSITY..1
+  -> CP_CLONE (498,14) MOD_SIMULATION::WRITEPHI..1
+  -> (499,14) DEPOSITRHO
+  -> (501,23) GETCHARGECONTINUITYERROR
+  -> (504,22) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
+  -> CP_CLONE (521,18) MOD_POTENTIALSOLVER^GETTOTALPE..0
+  -> (525,18) MOD_PARTICLE^WRITELOCALTEMPERATURE
+  -> (526,18) MOD_PARTICLE^WRITEPHASESPACE
+  -> (528,31) MOD_PARTICLE^GETTOTALKE
+  -> INLINE: (534,17) MOD_PARTICLE^GETKEAVE
 
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(383,35)
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(387,35)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(391,35)
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(395,35)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(437,39)
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(443,39)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(116,15) inlined into ../../SharedModules/src/mod_simulation.f90(443,25)
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(116,15) inlined into ../../SharedModules/src/mod_simulation.f90(449,25)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(467,27)
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(473,27)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(475,27)
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(140,15) inlined into ../../SharedModules/src/mod_simulation.f90(481,27)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(116,15) inlined into ../../SharedModules/src/mod_simulation.f90(526,17)
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(116,15) inlined into ../../SharedModules/src/mod_simulation.f90(534,17)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
@@ -1328,7 +1334,7 @@ LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(331,9)
 LOOP END
 
 LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(337,9)
-   remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
+   remark #25460: No loop optimizations reported
 
    LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(338,13)
       remark #25045: Fused Loops: ( 338 339 )
@@ -1353,275 +1359,281 @@ LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(344,9)
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(391,35)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(395,35)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(391,66)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(395,66)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(391,66)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(395,66)
       <Peeled loop for vectorization>
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(391,66)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(395,66)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(391,66)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(395,66)
       <Remainder loop for vectorization>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(391,66)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(395,66)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(433,17)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(439,17)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(442,155)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(448,155)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(442,155)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(448,155)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(442,155)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(448,155)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(443,25)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(449,25)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(443,25)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(449,25)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(443,25)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(449,25)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(444,21)
-      remark #25045: Fused Loops: ( 444 445 )
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(450,21)
+      remark #25045: Fused Loops: ( 450 451 )
 
       remark #25436: completely unrolled by 2  
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(445,21)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(451,21)
       remark #25046: Loop lost in Fusion 
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(436,49)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(442,49)
       remark #25436: completely unrolled by 2  
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(438,47)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(444,47)
       remark #25436: completely unrolled by 2  
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(452,17)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(458,17)
    remark #25408: memset generated
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(452,17)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(458,17)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(452,17)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(458,17)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(453,53)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(459,53)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(453,53)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(459,53)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(453,53)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(459,53)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(475,27)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(481,27)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(475,58)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(481,58)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(475,58)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(481,58)
       <Peeled loop for vectorization>
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(475,58)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(481,58)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(475,58)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(481,58)
       <Remainder loop for vectorization>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(475,58)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(481,58)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(516,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(524,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(525,146)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(533,146)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(525,146)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(533,146)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(525,146)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(533,146)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(526,17)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(534,17)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(526,17)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(534,17)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(526,17)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(120,47) inlined into ../../SharedModules/src/mod_simulation.f90(534,17)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(519,41)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(527,41)
       remark #25436: completely unrolled by 2  
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(521,39)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(529,39)
       remark #25436: completely unrolled by 2  
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(383,35)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(387,35)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(383,35)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(387,35)
       remark #25436: completely unrolled by 3   (pre-vector) 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(383,35)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(387,35)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(391,35)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(395,35)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(391,35)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(395,35)
       remark #25436: completely unrolled by 3   (pre-vector) 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(391,35)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(395,35)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(437,39)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(443,39)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(437,39)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(443,39)
       remark #25436: completely unrolled by 3   (pre-vector) 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(437,39)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(443,39)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(443,25)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(449,25)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(443,25)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(449,25)
       remark #25436: completely unrolled by 3   (pre-vector) 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(443,25)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(449,25)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(467,27)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(473,27)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(467,27)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(473,27)
       remark #25436: completely unrolled by 3   (pre-vector) 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(467,27)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(473,27)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(475,27)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(481,27)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(475,27)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(481,27)
       remark #25436: completely unrolled by 3   (pre-vector) 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(475,27)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(142,21) inlined into ../../SharedModules/src/mod_simulation.f90(481,27)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(526,17)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(534,17)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
 
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(526,17)
+   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(534,17)
       remark #25436: completely unrolled by 3   (pre-vector) 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(526,17)
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(118,21) inlined into ../../SharedModules/src/mod_simulation.f90(534,17)
 <Remainder>
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
 ../../SharedModules/src/mod_simulation.f90(344,9):remark #34026: call to memset implemented as a call to optimized library version
-../../SharedModules/src/mod_simulation.f90(399,38):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(399,70):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(400,37):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(400,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(401,36):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(401,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(452,17):remark #34026: call to memset implemented as a call to optimized library version
-../../SharedModules/src/mod_simulation.f90(372,38):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(372,70):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(373,37):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(373,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(374,36):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(374,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(483,30):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(483,62):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(484,29):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(484,50):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(485,28):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(485,50):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(404,38):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(404,70):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(405,37):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(405,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(406,36):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(406,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(407,43):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(407,66):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(458,17):remark #34026: call to memset implemented as a call to optimized library version
+../../SharedModules/src/mod_simulation.f90(374,38):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(374,70):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(375,37):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(375,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(376,36):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(376,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(377,43):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(377,66):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(490,30):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(490,62):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(491,29):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(491,50):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(492,28):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(492,50):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(493,35):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(493,58):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
 ../../SharedModules/src/mod_simulation.f90(296,16):remark #34051: REGISTER ALLOCATION : [mod_simulation_mp_solvesimulation_] ../../SharedModules/src/mod_simulation.f90:296
 
     Hardware registers
@@ -1631,19 +1643,19 @@ LOOP END
         Assigned     :   29[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm14 zmm16]
         
     Routine temporaries
-        Total         :    3916
-            Global    :     775
-            Local     :    3141
-        Regenerable   :    1325
-        Spilled       :     143
+        Total         :    4212
+            Global    :     826
+            Local     :    3386
+        Regenerable   :    1374
+        Spilled       :     150
         
     Routine stack
-        Variables     :    5872 bytes*
-            Reads     :     137 [5.38e-01 ~ 0.5%]
-            Writes    :     647 [6.59e+00 ~ 6.6%]
-        Spills        :    1128 bytes*
-            Reads     :     324 [2.08e+00 ~ 2.1%]
-            Writes    :     253 [2.60e+00 ~ 2.6%]
+        Variables     :    6088 bytes*
+            Reads     :     155 [5.45e-01 ~ 0.5%]
+            Writes    :     659 [6.55e+00 ~ 6.5%]
+        Spills        :    1184 bytes*
+            Reads     :     340 [2.08e+00 ~ 2.1%]
+            Writes    :     255 [2.58e+00 ~ 2.6%]
     
     Notes
     
@@ -1919,252 +1931,384 @@ Begin optimization report for: MOVEPARTICLES
 INLINE REPORT: (MOVEPARTICLES)
   -> INDIRECT: raddr(mod_potentialsolver_mp_evaluateefieldhalftime_)(P64)
      -tbp-> MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-      -> INLINE: (704,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-  -> (737,26) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION
-  -> (743,30) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION
-  -> (749,34) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBRENT
-  -> (751,34) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDARYBRENT
+      -> INLINE: (805,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
+  -> INLINE: (837,30) MOD_PARTICLEMOVER::GETDELTAUSUBSTEPNOBFIELD
+    -> INLINE: (56,36) XOR_OP
+  -> INLINE: (841,34) MOD_PARTICLEMOVER::ANALYTICALPARTICLEMOVERNOBFIELD
+  -> (848,30) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION
+  -> (854,34) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITIONBRENT
+  -> (860,38) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBRENT
+  -> (862,38) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDARYBRENT
 
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at mod_particleMover.f90(710,19)
+OpenMP Construct at mod_particleMover.f90(811,19)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(704,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(805,14)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(704,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(805,14)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(704,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(805,14)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(704,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(805,14)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(704,14)
+LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(805,14)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(704,14)
+LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(805,14)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(704,14)
+LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(805,14)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(707,42)
+LOOP BEGIN at mod_particleMover.f90(808,42)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at mod_particleMover.f90(824,73)
+   LOOP BEGIN at mod_particleMover.f90(938,73)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(824,73)
+   LOOP BEGIN at mod_particleMover.f90(938,73)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(824,73)
+   LOOP BEGIN at mod_particleMover.f90(938,73)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(824,100)
+   LOOP BEGIN at mod_particleMover.f90(938,100)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(824,100)
+   LOOP BEGIN at mod_particleMover.f90(938,100)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(824,100)
+   LOOP BEGIN at mod_particleMover.f90(938,100)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(825,75)
+   LOOP BEGIN at mod_particleMover.f90(939,75)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(825,75)
+   LOOP BEGIN at mod_particleMover.f90(939,75)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(825,75)
+   LOOP BEGIN at mod_particleMover.f90(939,75)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(825,102)
+   LOOP BEGIN at mod_particleMover.f90(939,102)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(825,102)
+   LOOP BEGIN at mod_particleMover.f90(939,102)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(825,102)
+   LOOP BEGIN at mod_particleMover.f90(939,102)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(826,81)
+   LOOP BEGIN at mod_particleMover.f90(940,81)
       remark #25408: memset generated
 
-      LOOP BEGIN at mod_particleMover.f90(826,81)
+      LOOP BEGIN at mod_particleMover.f90(940,81)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(826,81)
+      LOOP BEGIN at mod_particleMover.f90(940,81)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(826,81)
+   LOOP BEGIN at mod_particleMover.f90(940,81)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at mod_particleMover.f90(826,81)
+      LOOP BEGIN at mod_particleMover.f90(940,81)
       <Peeled loop for vectorization>
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(826,81)
+      LOOP BEGIN at mod_particleMover.f90(940,81)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(826,81)
+      LOOP BEGIN at mod_particleMover.f90(940,81)
       <Remainder loop for vectorization>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(826,81)
+      LOOP BEGIN at mod_particleMover.f90(940,81)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(826,13)
+   LOOP BEGIN at mod_particleMover.f90(940,13)
       remark #25436: completely unrolled by 2  
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(827,77)
+   LOOP BEGIN at mod_particleMover.f90(941,77)
       remark #25408: memset generated
 
-      LOOP BEGIN at mod_particleMover.f90(827,77)
+      LOOP BEGIN at mod_particleMover.f90(941,77)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(827,77)
+      LOOP BEGIN at mod_particleMover.f90(941,77)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(827,77)
+   LOOP BEGIN at mod_particleMover.f90(941,77)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at mod_particleMover.f90(827,77)
+      LOOP BEGIN at mod_particleMover.f90(941,77)
       <Peeled loop for vectorization>
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(827,77)
+      LOOP BEGIN at mod_particleMover.f90(941,77)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(827,77)
+      LOOP BEGIN at mod_particleMover.f90(941,77)
       <Remainder loop for vectorization>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(827,77)
+      LOOP BEGIN at mod_particleMover.f90(941,77)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(827,13)
+   LOOP BEGIN at mod_particleMover.f90(941,13)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(715,13)
+LOOP BEGIN at mod_particleMover.f90(816,13)
    remark #25478: While Loop Unrolled by 2  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(716,13)
+LOOP BEGIN at mod_particleMover.f90(817,13)
    remark #25478: While Loop Unrolled by 2  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(718,17)
+LOOP BEGIN at mod_particleMover.f90(819,17)
    remark #25436: completely unrolled by 3  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(755,21)
+LOOP BEGIN at mod_particleMover.f90(845,25)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(866,25)
    remark #25436: completely unrolled by 3  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(777,29)
+LOOP BEGIN at mod_particleMover.f90(886,37)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(812,21)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(812,21)
+LOOP BEGIN at mod_particleMover.f90(886,37)
 <Remainder loop for vectorization>
    remark #25436: completely unrolled by 1  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(788,116)
+LOOP BEGIN at mod_particleMover.f90(890,37)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(890,37)
+<Remainder loop for vectorization>
+   remark #25436: completely unrolled by 1  
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(924,21)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(924,21)
+<Remainder loop for vectorization>
+   remark #25436: completely unrolled by 1  
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(876,116)
    remark #25436: completely unrolled by 3  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(791,116)
+LOOP BEGIN at mod_particleMover.f90(879,116)
    remark #25436: completely unrolled by 3  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(763,116)
-   remark #25436: completely unrolled by 3  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(766,116)
-   remark #25436: completely unrolled by 3  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(807,25)
+LOOP BEGIN at mod_particleMover.f90(931,21)
    remark #25436: completely unrolled by 3  
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMover.f90(826,81):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMover.f90(827,77):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMover.f90(710,19):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (64, 0)
-mod_particleMover.f90(694,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_moveparticles_] mod_particleMover.f90:694
+mod_particleMover.f90(940,81):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(941,77):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(811,19):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (64, 0)
+mod_particleMover.f90(795,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_moveparticles_] mod_particleMover.f90:795
 
     Hardware registers
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   35[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm20]
+        Assigned     :   36[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm21]
         
     Routine temporaries
-        Total         :    1170
-            Global    :     275
-            Local     :     895
-        Regenerable   :     193
-        Spilled       :      67
+        Total         :    1310
+            Global    :     304
+            Local     :    1006
+        Regenerable   :     275
+        Spilled       :      70
         
     Routine stack
-        Variables     :     576 bytes*
-            Reads     :      44 [3.48e+00 ~ 3.5%]
-            Writes    :      62 [3.63e+00 ~ 3.6%]
-        Spills        :     568 bytes*
-            Reads     :     155 [4.08e+00 ~ 4.1%]
-            Writes    :     116 [2.48e+00 ~ 2.5%]
+        Variables     :     728 bytes*
+            Reads     :      65 [2.61e+00 ~ 2.6%]
+            Writes    :     110 [8.00e+00 ~ 8.0%]
+        Spills        :     600 bytes*
+            Reads     :     158 [5.64e+00 ~ 5.6%]
+            Writes    :     133 [2.53e+00 ~ 2.5%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITIONBRENT
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITIONBRENT)
+  -> INLINE: (271,42) CROSSPRODUCT
+  -> INLINE: (285,46) CROSSPRODUCT
+  -> INLINE: (346,50) CROSSPRODUCT
+
+
+    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
+
+
+LOOP BEGIN at mod_particleMover.f90(262,9)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(271,86)
+   remark #25436: completely unrolled by 3  
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(262,9)
+<Remainder loop for vectorization>
+   remark #25436: completely unrolled by 1  
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(271,9)
+   remark #25045: Fused Loops: ( 271 272 )
+
+   remark #15301: FUSED LOOP WAS VECTORIZED
+   remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(272,9)
+   remark #25046: Loop lost in Fusion 
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(271,9)
+<Remainder loop for vectorization>
+   remark #25436: completely unrolled by 1  
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(285,90)
+   remark #25436: completely unrolled by 3  
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(285,13)
+   remark #25045: Fused Loops: ( 285 286 )
+
+   remark #15301: FUSED LOOP WAS VECTORIZED
+   remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(286,13)
+   remark #25046: Loop lost in Fusion 
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(285,13)
+<Remainder loop for vectorization>
+   remark #25436: completely unrolled by 1  
+LOOP END
+
+LOOP BEGIN at mod_particleMover.f90(320,36)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at mod_particleMover.f90(346,17)
+      remark #25045: Fused Loops: ( 346 347 )
+
+      remark #15301: FUSED LOOP WAS VECTORIZED
+      remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
+   LOOP END
+
+   LOOP BEGIN at mod_particleMover.f90(347,17)
+      remark #25046: Loop lost in Fusion 
+   LOOP END
+
+   LOOP BEGIN at mod_particleMover.f90(346,94)
+      remark #25436: completely unrolled by 3  
+   LOOP END
+
+   LOOP BEGIN at mod_particleMover.f90(346,17)
+   <Remainder loop for vectorization>
+      remark #25436: completely unrolled by 1  
+   LOOP END
+LOOP END
+
+    Report from: Code generation optimizations [cg]
+
+mod_particleMover.f90(251,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_substepsolvergetpositionbrent_] mod_particleMover.f90:251
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   46[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm31]
+        
+    Routine temporaries
+        Total         :     304
+            Global    :      72
+            Local     :     232
+        Regenerable   :     113
+        Spilled       :      35
+        
+    Routine stack
+        Variables     :     296 bytes*
+            Reads     :       2 [6.25e-01 ~ 0.6%]
+            Writes    :      35 [4.65e+00 ~ 4.6%]
+        Spills        :     264 bytes*
+            Reads     :      40 [6.69e+00 ~ 6.7%]
+            Writes    :      38 [2.13e+00 ~ 2.1%]
     
     Notes
     
@@ -2179,120 +2323,120 @@ Begin optimization report for: MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION)
-  -> INLINE: (118,42) CROSSPRODUCT
-  -> INLINE: (140,46) CROSSPRODUCT
+  -> INLINE: (192,42) CROSSPRODUCT
+  -> INLINE: (214,46) CROSSPRODUCT
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_particleMover.f90(108,9)
+LOOP BEGIN at mod_particleMover.f90(182,9)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(109,9)
-   remark #25045: Fused Loops: ( 109 118 )
+LOOP BEGIN at mod_particleMover.f90(183,9)
+   remark #25045: Fused Loops: ( 183 192 )
 
    remark #25436: completely unrolled by 3  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(118,86)
+LOOP BEGIN at mod_particleMover.f90(192,86)
    remark #25046: Loop lost in Fusion 
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(108,9)
+LOOP BEGIN at mod_particleMover.f90(182,9)
 <Remainder loop for vectorization>
    remark #25436: completely unrolled by 1  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(118,9)
-   remark #25045: Fused Loops: ( 118 119 )
+LOOP BEGIN at mod_particleMover.f90(192,9)
+   remark #25045: Fused Loops: ( 192 193 )
 
    remark #15301: FUSED LOOP WAS VECTORIZED
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(119,9)
+LOOP BEGIN at mod_particleMover.f90(193,9)
    remark #25046: Loop lost in Fusion 
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(118,9)
+LOOP BEGIN at mod_particleMover.f90(192,9)
 <Remainder loop for vectorization>
    remark #25436: completely unrolled by 1  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(144,17)
+LOOP BEGIN at mod_particleMover.f90(218,17)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at mod_particleMover.f90(140,13)
-      remark #25045: Fused Loops: ( 140 141 )
+   LOOP BEGIN at mod_particleMover.f90(214,13)
+      remark #25045: Fused Loops: ( 214 215 )
 
       remark #15301: FUSED LOOP WAS VECTORIZED
       remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(141,13)
+   LOOP BEGIN at mod_particleMover.f90(215,13)
       remark #25046: Loop lost in Fusion 
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(162,13)
+   LOOP BEGIN at mod_particleMover.f90(236,13)
    <Distributed chunk1>
-      remark #25045: Fused Loops: ( 162 165 )
+      remark #25045: Fused Loops: ( 236 239 )
 
       remark #25426: Loop Distributed (2 way) 
 
-      LOOP BEGIN at mod_particleMover.f90(162,13)
+      LOOP BEGIN at mod_particleMover.f90(236,13)
       <Distributed chunk1>
          remark #25441: Strip-mined by 64   (pre-vector) 
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(162,13)
+      LOOP BEGIN at mod_particleMover.f90(236,13)
       <Distributed chunk2>
          remark #25441: Strip-mined by 64   (pre-vector) 
          remark #15300: LOOP WAS VECTORIZED
          remark #25456: Number of Array Refs Scalar Replaced In Loop: 8
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(162,13)
+      LOOP BEGIN at mod_particleMover.f90(236,13)
       <Remainder loop for vectorization, Distributed chunk2>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
          remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
       LOOP END
 
-      LOOP BEGIN at mod_particleMover.f90(162,13)
+      LOOP BEGIN at mod_particleMover.f90(236,13)
       <Remainder loop for vectorization, Distributed chunk2>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(165,63)
+   LOOP BEGIN at mod_particleMover.f90(239,63)
       remark #25046: Loop lost in Fusion 
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(165,13)
-      remark #25045: Fused Loops: ( 165 166 )
+   LOOP BEGIN at mod_particleMover.f90(239,13)
+      remark #25045: Fused Loops: ( 239 240 )
 
       remark #15301: FUSED LOOP WAS VECTORIZED
       remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(166,39)
+   LOOP BEGIN at mod_particleMover.f90(240,39)
       remark #25046: Loop lost in Fusion 
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(168,13)
+   LOOP BEGIN at mod_particleMover.f90(242,13)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(165,13)
+   LOOP BEGIN at mod_particleMover.f90(239,13)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(140,90)
+   LOOP BEGIN at mod_particleMover.f90(214,90)
       remark #25436: completely unrolled by 3  
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(140,13)
+   LOOP BEGIN at mod_particleMover.f90(214,13)
    <Remainder loop for vectorization>
       remark #25436: completely unrolled by 1  
    LOOP END
@@ -2300,7 +2444,7 @@ LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMover.f90(98,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_substepsolvergetposition_] mod_particleMover.f90:98
+mod_particleMover.f90(172,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_substepsolvergetposition_] mod_particleMover.f90:172
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -2336,61 +2480,61 @@ Begin optimization report for: MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBR
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBRENT)
-  -> INLINE: (337,42) CROSSPRODUCT
-  -> INLINE: (388,46) CROSSPRODUCT
+  -> INLINE: (411,42) CROSSPRODUCT
+  -> INLINE: (462,46) CROSSPRODUCT
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_particleMover.f90(323,9)
+LOOP BEGIN at mod_particleMover.f90(397,9)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(337,86)
+LOOP BEGIN at mod_particleMover.f90(411,86)
    remark #25436: completely unrolled by 3  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(323,9)
+LOOP BEGIN at mod_particleMover.f90(397,9)
 <Remainder loop for vectorization>
    remark #25436: completely unrolled by 1  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(337,9)
-   remark #25045: Fused Loops: ( 337 338 )
+LOOP BEGIN at mod_particleMover.f90(411,9)
+   remark #25045: Fused Loops: ( 411 412 )
 
    remark #15301: FUSED LOOP WAS VECTORIZED
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(338,9)
+LOOP BEGIN at mod_particleMover.f90(412,9)
    remark #25046: Loop lost in Fusion 
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(337,9)
+LOOP BEGIN at mod_particleMover.f90(411,9)
 <Remainder loop for vectorization>
    remark #25436: completely unrolled by 1  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(380,17)
+LOOP BEGIN at mod_particleMover.f90(454,17)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at mod_particleMover.f90(388,13)
-      remark #25045: Fused Loops: ( 388 389 )
+   LOOP BEGIN at mod_particleMover.f90(462,13)
+      remark #25045: Fused Loops: ( 462 463 )
 
       remark #15301: FUSED LOOP WAS VECTORIZED
       remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(389,13)
+   LOOP BEGIN at mod_particleMover.f90(463,13)
       remark #25046: Loop lost in Fusion 
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(388,90)
+   LOOP BEGIN at mod_particleMover.f90(462,90)
       remark #25436: completely unrolled by 3  
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(388,13)
+   LOOP BEGIN at mod_particleMover.f90(462,13)
    <Remainder loop for vectorization>
       remark #25436: completely unrolled by 1  
    LOOP END
@@ -2398,7 +2542,7 @@ LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMover.f90(313,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_substepsolvergettimeboundarybrent_] mod_particleMover.f90:313
+mod_particleMover.f90(387,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_substepsolvergettimeboundarybrent_] mod_particleMover.f90:387
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -2434,61 +2578,61 @@ Begin optimization report for: MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDA
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDARYBRENT)
-  -> INLINE: (452,42) CROSSPRODUCT
-  -> INLINE: (507,46) CROSSPRODUCT
+  -> INLINE: (526,42) CROSSPRODUCT
+  -> INLINE: (581,46) CROSSPRODUCT
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_particleMover.f90(439,9)
+LOOP BEGIN at mod_particleMover.f90(513,9)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(452,86)
+LOOP BEGIN at mod_particleMover.f90(526,86)
    remark #25436: completely unrolled by 3  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(439,9)
+LOOP BEGIN at mod_particleMover.f90(513,9)
 <Remainder loop for vectorization>
    remark #25436: completely unrolled by 1  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(452,9)
-   remark #25045: Fused Loops: ( 452 453 )
+LOOP BEGIN at mod_particleMover.f90(526,9)
+   remark #25045: Fused Loops: ( 526 527 )
 
    remark #15301: FUSED LOOP WAS VECTORIZED
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(453,9)
+LOOP BEGIN at mod_particleMover.f90(527,9)
    remark #25046: Loop lost in Fusion 
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(452,9)
+LOOP BEGIN at mod_particleMover.f90(526,9)
 <Remainder loop for vectorization>
    remark #25436: completely unrolled by 1  
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(499,17)
+LOOP BEGIN at mod_particleMover.f90(573,17)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at mod_particleMover.f90(507,13)
-      remark #25045: Fused Loops: ( 507 508 )
+   LOOP BEGIN at mod_particleMover.f90(581,13)
+      remark #25045: Fused Loops: ( 581 582 )
 
       remark #15301: FUSED LOOP WAS VECTORIZED
       remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(508,13)
+   LOOP BEGIN at mod_particleMover.f90(582,13)
       remark #25046: Loop lost in Fusion 
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(507,90)
+   LOOP BEGIN at mod_particleMover.f90(581,90)
       remark #25436: completely unrolled by 3  
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(507,13)
+   LOOP BEGIN at mod_particleMover.f90(581,13)
    <Remainder loop for vectorization>
       remark #25436: completely unrolled by 1  
    LOOP END
@@ -2496,7 +2640,7 @@ LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMover.f90(429,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_substepsolvergettimeselfboundarybrent_] mod_particleMover.f90:429
+mod_particleMover.f90(503,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_substepsolvergettimeselfboundarybrent_] mod_particleMover.f90:503
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -3095,18 +3239,83 @@ INLINE REPORT: (SOLVEPOTENTIAL)
 
 ===========================================================================
 
+Begin optimization report for: MAXWELLIANHEATING
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (MAXWELLIANHEATING)
+  -> INLINE: (186,17) RAN2
+  -> INLINE: (188,22) GETMAXWELLIANSAMPLE
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(85,20) RAN2
+
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at ../../SharedModules/src/mod_particleInjection.f90(183,15)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
+
+
+LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(185,9)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(188,22)
+      remark #25436: completely unrolled by 3  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(48,9) inlined into ../../SharedModules/src/mod_particleInjection.f90(188,22)
+      remark #25436: completely unrolled by 4  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(188,42)
+      remark #25436: completely unrolled by 3  
+   LOOP END
+LOOP END
+
+    Report from: Code generation optimizations [cg]
+
+../../SharedModules/src/mod_particleInjection.f90(175,16):remark #34051: REGISTER ALLOCATION : [mod_particleinjection_mp_maxwellianheating_] ../../SharedModules/src/mod_particleInjection.f90:175
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   27[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm10 zmm16]
+        
+    Routine temporaries
+        Total         :     268
+            Global    :      44
+            Local     :     224
+        Regenerable   :      45
+        Spilled       :      12
+        
+    Routine stack
+        Variables     :     128 bytes*
+            Reads     :       5 [5.91e-01 ~ 0.6%]
+            Writes    :      16 [2.24e+00 ~ 2.2%]
+        Spills        :     144 bytes*
+            Reads     :      24 [5.71e+00 ~ 5.7%]
+            Writes    :      27 [5.19e+00 ~ 5.2%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
 Begin optimization report for: ADDMAXWELLIANLOSTPARTICLES
 
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (ADDMAXWELLIANLOSTPARTICLES)
   -> INLINE: (28,18) GETMAXWELLIANSAMPLE
-    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(83,14) MOD_BASICFUNCTIONS::GETRANDOM
-      -> INLINE: (61,20) RAN2
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(85,20) RAN2
   -> INLINE: (29,18) GETMAXWELLIANFLUXSAMPLE
-    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(96,14) MOD_BASICFUNCTIONS::GETRANDOM
-      -> INLINE: (61,20) RAN2
-  -> INLINE: (33,100) RAN2
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(101,20) RAN2
+  -> INLINE: (33,89) RAN2
   -> INLINE: (35,171) RAN2
   -> INLINE: (37,88) GETLFROMX
 
@@ -3172,19 +3381,19 @@ LOOP END
         Assigned     :   36[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm13 zmm16-zmm22]
         
     Routine temporaries
-        Total         :     660
-            Global    :     116
-            Local     :     544
-        Regenerable   :     100
-        Spilled       :      55
+        Total         :     654
+            Global    :     113
+            Local     :     541
+        Regenerable   :      89
+        Spilled       :      51
         
     Routine stack
-        Variables     :     328 bytes*
-            Reads     :       8 [3.79e-01 ~ 0.4%]
-            Writes    :      43 [1.98e+00 ~ 2.0%]
-        Spills        :     488 bytes*
-            Reads     :     120 [1.07e+01 ~ 10.7%]
-            Writes    :      91 [7.54e+00 ~ 7.5%]
+        Variables     :     264 bytes*
+            Reads     :       8 [4.18e-01 ~ 0.4%]
+            Writes    :      27 [1.34e+00 ~ 1.3%]
+        Spills        :     456 bytes*
+            Reads     :     107 [1.03e+01 ~ 10.3%]
+            Writes    :      87 [7.45e+00 ~ 7.5%]
     
     Notes
     
@@ -3200,11 +3409,9 @@ Begin optimization report for: REFLUXPARTICLES
 
 INLINE REPORT: (REFLUXPARTICLES)
   -> INLINE: (57,26) GETMAXWELLIANFLUXSAMPLE
-    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(96,14) MOD_BASICFUNCTIONS::GETRANDOM
-      -> INLINE: (61,20) RAN2
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(101,20) RAN2
   -> INLINE: (59,26) GETMAXWELLIANFLUXSAMPLE
-    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(96,14) MOD_BASICFUNCTIONS::GETRANDOM
-      -> INLINE: (61,20) RAN2
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(101,20) RAN2
 
 
     Report from: OpenMP optimizations [openmp]
@@ -3270,64 +3477,11 @@ LOOP END
         
     Routine stack
         Variables     :     164 bytes*
-            Reads     :       9 [5.90e-01 ~ 0.6%]
-            Writes    :      25 [9.27e-01 ~ 0.9%]
+            Reads     :       9 [6.57e-01 ~ 0.7%]
+            Writes    :      25 [1.03e+00 ~ 1.0%]
         Spills        :     280 bytes*
-            Reads     :      54 [7.21e+00 ~ 7.2%]
-            Writes    :      50 [4.54e+00 ~ 4.5%]
-    
-    Notes
-    
-        *Non-overlapping variables and spills may share stack space,
-         so the total stack size might be less than this.
-    
-
-===========================================================================
-
-Begin optimization report for: LOADPARTICLEDENSITY..1
-
-    Report from: Interprocedural optimizations [ipo]
-
-INLINE REPORT: (LOADPARTICLEDENSITY..1)
-  -> INLINE: (92,18) MOD_SCHEME::INTERPOLATEPARTICLETONODES
-
-
-    Report from: OpenMP optimizations [openmp]
-
-OpenMP Construct at mod_Scheme.f90(87,19)
-remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-
-    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
-
-
-LOOP BEGIN at mod_Scheme.f90(90,17)
-   remark #25478: While Loop Unrolled by 2  
-LOOP END
-
-    Report from: Code generation optimizations [cg]
-
-mod_Scheme.f90(81,16):remark #34051: REGISTER ALLOCATION : [mod_scheme_mp_loadparticledensity_..1] mod_Scheme.f90:81
-
-    Hardware registers
-        Reserved     :    2[ rsp rip]
-        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
-        Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   22[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm5 zmm16]
-        
-    Routine temporaries
-        Total         :     185
-            Global    :      42
-            Local     :     143
-        Regenerable   :      32
-        Spilled       :       0
-        
-    Routine stack
-        Variables     :      32 bytes*
-            Reads     :       3 [3.56e-01 ~ 0.4%]
-            Writes    :       6 [6.17e-01 ~ 0.6%]
-        Spills        :      48 bytes*
-            Reads     :      12 [3.93e-01 ~ 0.4%]
-            Writes    :      12 [2.53e+00 ~ 2.5%]
+            Reads     :      54 [7.75e+00 ~ 7.8%]
+            Writes    :      50 [5.05e+00 ~ 5.1%]
     
     Notes
     
@@ -3343,13 +3497,11 @@ Begin optimization report for: INJECTATBOUNDARY
 
 INLINE REPORT: (INJECTATBOUNDARY)
   -> INLINE: (88,26) GETMAXWELLIANFLUXSAMPLE
-    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(96,14) MOD_BASICFUNCTIONS::GETRANDOM
-      -> INLINE: (61,20) RAN2
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(101,20) RAN2
   -> INLINE: (107,13) RAN2
   -> INLINE: (113,34) RAN2
   -> INLINE: (114,18) GETMAXWELLIANFLUXSAMPLE
-    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(96,14) MOD_BASICFUNCTIONS::GETRANDOM
-      -> INLINE: (61,20) RAN2
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(101,20) RAN2
   -> INLINE: (122,96) GETLFROMX
   -> INLINE: (124,96) GETLFROMX
   -> INLINE: (131,96) GETLFROMX
@@ -3425,19 +3577,160 @@ LOOP END
         Assigned     :   30[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm7 zmm16-zmm22]
         
     Routine temporaries
-        Total         :    1153
-            Global    :     188
-            Local     :     965
-        Regenerable   :     237
-        Spilled       :      85
+        Total         :    1128
+            Global    :     187
+            Local     :     941
+        Regenerable   :     213
+        Spilled       :      83
         
     Routine stack
-        Variables     :     636 bytes*
-            Reads     :      12 [3.26e-01 ~ 0.3%]
-            Writes    :      87 [1.74e+00 ~ 1.7%]
-        Spills        :     728 bytes*
-            Reads     :     275 [1.20e+01 ~ 12.0%]
-            Writes    :     163 [7.76e+00 ~ 7.8%]
+        Variables     :     604 bytes*
+            Reads     :      12 [3.49e-01 ~ 0.3%]
+            Writes    :      55 [1.44e+00 ~ 1.4%]
+        Spills        :     712 bytes*
+            Reads     :     241 [1.19e+01 ~ 11.9%]
+            Writes    :     161 [7.85e+00 ~ 7.9%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: LOADPARTICLEDENSITY..1
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (LOADPARTICLEDENSITY..1)
+  -> INLINE: (92,18) MOD_SCHEME::INTERPOLATEPARTICLETONODES
+
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at mod_Scheme.f90(87,19)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
+
+
+LOOP BEGIN at mod_Scheme.f90(90,17)
+   remark #25478: While Loop Unrolled by 2  
+LOOP END
+
+    Report from: Code generation optimizations [cg]
+
+mod_Scheme.f90(81,16):remark #34051: REGISTER ALLOCATION : [mod_scheme_mp_loadparticledensity_..1] mod_Scheme.f90:81
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   22[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm5 zmm16]
+        
+    Routine temporaries
+        Total         :     185
+            Global    :      42
+            Local     :     143
+        Regenerable   :      32
+        Spilled       :       0
+        
+    Routine stack
+        Variables     :      32 bytes*
+            Reads     :       3 [3.56e-01 ~ 0.4%]
+            Writes    :       6 [6.17e-01 ~ 0.6%]
+        Spills        :      48 bytes*
+            Reads     :      12 [3.93e-01 ~ 0.4%]
+            Writes    :      12 [2.53e+00 ~ 2.5%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: INJECTUNIFORMFLUX
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (INJECTUNIFORMFLUX)
+  -> INLINE: (154,13) RAN2
+  -> INLINE: (160,18) GETMAXWELLIANSAMPLE
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(85,20) RAN2
+  -> INLINE: (161,18) GETMAXWELLIANSAMPLE
+    -> INLINE: ../../SharedModules/src/mod_BasicFunctions.f90:(85,20) RAN2
+  -> INLINE: (163,89) RAN2
+  -> INLINE: (165,171) RAN2
+  -> INLINE: (167,88) GETLFROMX
+
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at ../../SharedModules/src/mod_particleInjection.f90(152,15)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
+
+
+LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(159,9)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at mod_domain.f90(183,9) inlined into ../../SharedModules/src/mod_particleInjection.f90(167,88)
+      remark #25478: While Loop Unrolled by 2  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(160,18)
+      remark #25436: completely unrolled by 3  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(48,9) inlined into ../../SharedModules/src/mod_particleInjection.f90(160,18)
+      remark #25436: completely unrolled by 4  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(160,38)
+      remark #25436: completely unrolled by 3  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(161,18)
+      remark #25436: completely unrolled by 3  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(48,9) inlined into ../../SharedModules/src/mod_particleInjection.f90(161,18)
+      remark #25436: completely unrolled by 4  
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_particleInjection.f90(161,38)
+      remark #25436: completely unrolled by 3  
+   LOOP END
+LOOP END
+
+    Report from: Code generation optimizations [cg]
+
+../../SharedModules/src/mod_particleInjection.f90(143,16):remark #34051: REGISTER ALLOCATION : [mod_particleinjection_mp_injectuniformflux_] ../../SharedModules/src/mod_particleInjection.f90:143
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   32[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm11 zmm16-zmm20]
+        
+    Routine temporaries
+        Total         :     633
+            Global    :     106
+            Local     :     527
+        Regenerable   :      90
+        Spilled       :      29
+        
+    Routine stack
+        Variables     :     264 bytes*
+            Reads     :       8 [4.98e-01 ~ 0.5%]
+            Writes    :      27 [1.60e+00 ~ 1.6%]
+        Spills        :     280 bytes*
+            Reads     :      66 [6.98e+00 ~ 7.0%]
+            Writes    :      42 [3.08e+00 ~ 3.1%]
     
     Notes
     
@@ -3740,20 +4033,20 @@ INLINE REPORT: (MOD_POTENTIALSOLVER^GETTOTALPE..0)
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
 <Remainder loop for vectorization>
 LOOP END
 
@@ -3785,20 +4078,20 @@ LOOP BEGIN at mod_potentialSolver.f90(336,13)
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
 <Remainder loop for vectorization>
 LOOP END
 
@@ -3868,462 +4161,475 @@ Begin optimization report for: SOLVESIMULATIONFINALAVERAGE
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (SOLVESIMULATIONFINALAVERAGE)
-  -> INLINE: (580,18) SOLVEPOTENTIAL
+  -> INLINE: (588,18) SOLVEPOTENTIAL
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(259,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREANDERSON
       -> (231,14) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
       -> (244,22) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(261,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREJFNK
       -> (344,14) MOD_NONLINSOLVERS::SOLVEJFNK
       -> (356,22) MOD_NONLINSOLVERS::SOLVEJFNK
-  -> (582,34) ADDMAXWELLIANLOSTPARTICLES
-  -> (583,33) REFLUXPARTICLES
-  -> (584,32) INJECTATBOUNDARY
-  -> CP_CLONE (585,18) LOADPARTICLEDENSITY..0
-  -> CP_CLONE (615,14) MOD_SIMULATION::WRITEPHI..0
-  -> CP_CLONE (627,14) WRITEPARTICLEDENSITY..0
-  -> (628,22) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
-  -> INLINE: (647,18) SOLVEPOTENTIAL
+  -> (590,30) MAXWELLIANHEATING
+  -> (591,34) ADDMAXWELLIANLOSTPARTICLES
+  -> (592,33) REFLUXPARTICLES
+  -> (593,32) INJECTATBOUNDARY
+  -> (594,39) INJECTUNIFORMFLUX
+  -> CP_CLONE (595,18) LOADPARTICLEDENSITY..0
+  -> CP_CLONE (625,14) MOD_SIMULATION::WRITEPHI..0
+  -> CP_CLONE (637,14) WRITEPARTICLEDENSITY..0
+  -> (638,22) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
+  -> INLINE: (657,18) SOLVEPOTENTIAL
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(259,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREANDERSON
       -> (231,14) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
       -> (244,22) MOD_NONLINSOLVERS::SOLVEDIVAMPEREANDERSON
     -> INLINE: ../../SharedModules/src/mod_nonLinSolvers.f90:(261,18) MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREJFNK
       -> (344,14) MOD_NONLINSOLVERS::SOLVEJFNK
       -> (356,22) MOD_NONLINSOLVERS::SOLVEJFNK
-  -> (649,34) ADDMAXWELLIANLOSTPARTICLES
-  -> (650,33) REFLUXPARTICLES
-  -> (651,32) INJECTATBOUNDARY
+  -> (659,30) MAXWELLIANHEATING
+  -> (660,34) ADDMAXWELLIANLOSTPARTICLES
+  -> (661,33) REFLUXPARTICLES
+  -> (662,32) INJECTATBOUNDARY
 
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at ../../SharedModules/src/mod_simulation.f90(609,19)
+OpenMP Construct at ../../SharedModules/src/mod_simulation.f90(619,19)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(563,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(571,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(566,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(574,13)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(566,13)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(574,13)
          remark #25478: While Loop Unrolled by 8  
       LOOP END
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(564,13)
-      remark #25045: Fused Loops: ( 564 565 )
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(572,13)
+      remark #25045: Fused Loops: ( 572 573 )
 
       remark #25436: completely unrolled by 2  
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(565,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(573,13)
       remark #25046: Loop lost in Fusion 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(569,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(577,9)
    remark #25408: memset generated
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(569,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(577,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(569,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(577,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(572,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(580,9)
    remark #25408: memset generated
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(572,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(580,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(572,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(580,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(579,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(587,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(238,13) inlined into ../../SharedModules/src/mod_simulation.f90(580,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(238,13) inlined into ../../SharedModules/src/mod_simulation.f90(588,18)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(350,13) inlined into ../../SharedModules/src/mod_simulation.f90(580,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(350,13) inlined into ../../SharedModules/src/mod_simulation.f90(588,18)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(582,34)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(591,34)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(582,66)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(591,66)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(583,33)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(592,33)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(583,54)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(592,54)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(584,32)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(593,32)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(584,54)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(593,54)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(586,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(594,39)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(594,62)
+      remark #25460: No loop optimizations reported
+   LOOP END
+
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(596,13)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(586,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(596,13)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(586,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(596,13)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(586,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(596,13)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(594,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(604,13)
    <Distributed chunk1>
       remark #25426: Loop Distributed (2 way) 
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(595,61)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(605,61)
          remark #25460: No loop optimizations reported
 
-         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(595,61)
+         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(605,61)
          <Peeled loop for vectorization>
          LOOP END
 
-         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(595,61)
+         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(605,61)
             remark #15300: LOOP WAS VECTORIZED
          LOOP END
 
-         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(595,61)
+         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(605,61)
          <Remainder loop for vectorization>
             remark #15301: REMAINDER LOOP WAS VECTORIZED
          LOOP END
 
-         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(595,61)
+         LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(605,61)
          <Remainder loop for vectorization>
          LOOP END
       LOOP END
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(599,28)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(609,28)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(599,28)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(609,28)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(599,28)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(609,28)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(599,28)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(609,28)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(600,32)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(610,32)
    <Peeled loop for vectorization>
       remark #15301: PEEL LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(600,32)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(610,32)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(600,32)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(610,32)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(614,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(624,9)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(614,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(624,9)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(614,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(624,9)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(614,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(624,9)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(618,9)
-   remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(621,9) ]
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(628,9)
+   remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(631,9) ]
    remark #15300: LOOP WAS VECTORIZED
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(619,49)
-      remark #25045: Fused Loops: ( 619 620 )
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(629,49)
+      remark #25045: Fused Loops: ( 629 630 )
 
       remark #25436: completely unrolled by 2   (pre-vector) 
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(620,39)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(630,39)
       remark #25046: Loop lost in Fusion 
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(618,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(628,9)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(622,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(632,9)
    remark #25399: memcopy generated
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(622,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(632,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(622,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(632,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(623,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(633,9)
    remark #25408: memset generated
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(623,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(633,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(623,9)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(633,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(624,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(634,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
       remark #25408: memset generated
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
       <Peeled loop for vectorization>
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
       <Remainder loop for vectorization>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,39)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,39)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,13)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,13)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(625,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,13)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,46)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(645,46)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,46)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(645,46)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,46)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(645,46)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(635,46)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(645,46)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(636,54)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(646,54)
    remark #25436: completely unrolled by 2  
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(637,49)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(647,49)
    remark #25436: completely unrolled by 2  
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,26)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,26)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,26)
-   remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(639,26) ]
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,26)
+   remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(649,26) ]
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,26)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,26)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,26)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,26)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,48)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,48)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,48)
-   remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(639,48) ]
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,48)
+   remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(649,48) ]
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,48)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,48)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(639,48)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,48)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(645,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(655,9)
    remark #25408: memset generated
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(646,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(656,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(238,13) inlined into ../../SharedModules/src/mod_simulation.f90(647,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(238,13) inlined into ../../SharedModules/src/mod_simulation.f90(657,18)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(350,13) inlined into ../../SharedModules/src/mod_simulation.f90(647,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(350,13) inlined into ../../SharedModules/src/mod_simulation.f90(657,18)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,34)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(660,34)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(649,66)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(660,66)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(650,33)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(661,33)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(650,54)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(661,54)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(651,32)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(662,32)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(651,54)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(662,54)
       remark #25460: No loop optimizations reported
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(652,13)
+   LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(663,13)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(653,17)
-         remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(656,17) ]
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(664,17)
+         remark #25084: Preprocess Loopnests: Moving Out Store    [ ../../SharedModules/src/mod_simulation.f90(667,17) ]
          remark #25439: unrolled with remainder by 2  
       LOOP END
 
-      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(653,17)
+      LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(664,17)
       <Remainder>
       LOOP END
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(661,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(672,9)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(661,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(672,9)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(661,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(672,9)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(661,9)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(672,9)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(611,13)
+LOOP BEGIN at ../../SharedModules/src/mod_simulation.f90(621,13)
    remark #25478: While Loop Unrolled by 2  
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-../../SharedModules/src/mod_simulation.f90(560,38):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (64, 0), and destination (alignment, offset): (64, 0)
-../../SharedModules/src/mod_simulation.f90(569,9):remark #34026: call to memset implemented as a call to optimized library version
-../../SharedModules/src/mod_simulation.f90(572,9):remark #34026: call to memset implemented as a call to optimized library version
-../../SharedModules/src/mod_simulation.f90(582,34):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(582,66):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(583,33):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(583,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(584,32):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(584,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(622,9):remark #34026: call to memcpy implemented as a call to optimized library version
-../../SharedModules/src/mod_simulation.f90(623,9):remark #34026: call to memset implemented as a call to optimized library version
-../../SharedModules/src/mod_simulation.f90(625,39):remark #34026: call to memset implemented as a call to optimized library version
-../../SharedModules/src/mod_simulation.f90(645,9):remark #34000: call to memset implemented inline with stores with proven (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(649,34):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(649,66):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(650,33):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(650,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(651,32):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(651,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/mod_simulation.f90(547,16):remark #34051: REGISTER ALLOCATION : [mod_simulation_mp_solvesimulationfinalaverage_] ../../SharedModules/src/mod_simulation.f90:547
+../../SharedModules/src/mod_simulation.f90(568,38):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (64, 0), and destination (alignment, offset): (64, 0)
+../../SharedModules/src/mod_simulation.f90(577,9):remark #34026: call to memset implemented as a call to optimized library version
+../../SharedModules/src/mod_simulation.f90(580,9):remark #34026: call to memset implemented as a call to optimized library version
+../../SharedModules/src/mod_simulation.f90(591,34):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(591,66):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(592,33):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(592,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(593,32):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(593,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(594,39):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(594,62):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(632,9):remark #34026: call to memcpy implemented as a call to optimized library version
+../../SharedModules/src/mod_simulation.f90(633,9):remark #34026: call to memset implemented as a call to optimized library version
+../../SharedModules/src/mod_simulation.f90(635,39):remark #34026: call to memset implemented as a call to optimized library version
+../../SharedModules/src/mod_simulation.f90(655,9):remark #34000: call to memset implemented inline with stores with proven (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(660,34):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(660,66):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(661,33):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(661,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(662,32):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(662,54):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+../../SharedModules/src/mod_simulation.f90(555,16):remark #34051: REGISTER ALLOCATION : [mod_simulation_mp_solvesimulationfinalaverage_] ../../SharedModules/src/mod_simulation.f90:555
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -4332,19 +4638,19 @@ LOOP END
         Assigned     :   39[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm24 k1]
         
     Routine temporaries
-        Total         :    2292
-            Global    :     486
-            Local     :    1806
-        Regenerable   :     484
-        Spilled       :      69
+        Total         :    2406
+            Global    :     502
+            Local     :    1904
+        Regenerable   :     508
+        Spilled       :      71
         
     Routine stack
-        Variables     :    2044 bytes*
-            Reads     :     119 [5.13e-01 ~ 0.5%]
-            Writes    :     216 [9.02e-01 ~ 0.9%]
-        Spills        :     576 bytes*
-            Reads     :     149 [1.55e+00 ~ 1.6%]
-            Writes    :     120 [8.00e-01 ~ 0.8%]
+        Variables     :    2116 bytes*
+            Reads     :     133 [5.41e-01 ~ 0.5%]
+            Writes    :     220 [9.04e-01 ~ 0.9%]
+        Spills        :     592 bytes*
+            Reads     :     154 [1.55e+00 ~ 1.5%]
+            Writes    :     120 [7.94e-01 ~ 0.8%]
     
     Notes
     
@@ -4663,20 +4969,20 @@ INLINE REPORT: (MOD_POTENTIALSOLVER^GETTOTALPE)
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(335,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(335,37)
 <Remainder loop for vectorization>
 LOOP END
 
@@ -4708,20 +5014,20 @@ LOOP BEGIN at mod_potentialSolver.f90(336,13)
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(161,9) inlined into mod_potentialSolver.f90(340,37)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(176,9) inlined into mod_potentialSolver.f90(340,37)
 <Remainder loop for vectorization>
 LOOP END
 
@@ -4974,20 +5280,20 @@ LOOP BEGIN at mod_potentialSolver.f90(236,9)
    LOOP END
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(250,21)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(250,21)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(250,21)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(250,21)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(250,21)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(250,21)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(250,21)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(250,21)
 <Remainder loop for vectorization>
 LOOP END
 
@@ -5037,20 +5343,20 @@ LOOP END
 LOOP BEGIN at mod_potentialSolver.f90(265,13)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(254,42)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(254,42)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(254,42)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(254,42)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(254,42)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(254,42)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(254,42)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(254,42)
    <Remainder loop for vectorization>
    LOOP END
 
@@ -5083,20 +5389,20 @@ LOOP BEGIN at mod_potentialSolver.f90(265,13)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(256,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(256,18)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(256,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(256,18)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(256,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(256,18)
    <Remainder loop for vectorization>
       remark #15301: REMAINDER LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(256,18)
+   LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(256,18)
    <Remainder loop for vectorization>
    LOOP END
 
@@ -5395,7 +5701,7 @@ Begin optimization report for: MOD_POTENTIALSOLVER^SOLVE_TRIDIAG_AMPERE
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (MOD_POTENTIALSOLVER^SOLVE_TRIDIAG_AMPERE)
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_potentialsolver_mp_solve_tridiag_ampere_$SELF_V$6fd.6.32 + 56(SI64)))))[5(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_potentialsolver_mp_solve_tridiag_ampere_$SELF_V$6fd.6.34 + 56(SI64)))))[5(SI64)]
      -tbp-> MOD_POTENTIALSOLVER^EVALUATEEFIELDCURRTIME
       -> INLINE: (183,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDCURRTIME
 
@@ -5577,211 +5883,140 @@ Begin optimization report for: DEPOSITJ
 INLINE REPORT: (DEPOSITJ)
   -> INDIRECT: raddr(mod_potentialsolver_mp_evaluateefieldhalftime_)(P64)
      -tbp-> MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-      -> INLINE: (605,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-  -> (630,26) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION
-  -> INLINE: (633,49) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITIONBRENT
-    -> INLINE: (197,42) CROSSPRODUCT
-    -> INLINE: (211,46) CROSSPRODUCT
-    -> INLINE: (272,50) CROSSPRODUCT
-  -> (638,34) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBRENT
-  -> (640,34) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDARYBRENT
+      -> INLINE: (685,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
+  -> INLINE: (710,30) MOD_PARTICLEMOVER::GETDELTAUSUBSTEPNOBFIELD
+    -> INLINE: (56,36) XOR_OP
+  -> INLINE: (714,34) MOD_PARTICLEMOVER::ANALYTICALPARTICLEMOVERNOBFIELD
+  -> (720,30) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION
+  -> (723,53) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITIONBRENT
+  -> (728,38) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBRENT
+  -> (730,38) MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDARYBRENT
 
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at mod_particleMover.f90(601,15)
+OpenMP Construct at mod_particleMover.f90(681,15)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at mod_particleMover.f90(610,19)
+OpenMP Construct at mod_particleMover.f90(690,19)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(605,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(685,14)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(605,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(685,14)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(605,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(685,14)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(605,14)
+LOOP BEGIN at mod_potentialSolver.f90(303,9) inlined into mod_particleMover.f90(685,14)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(605,14)
+LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(685,14)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(605,14)
+LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(685,14)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(605,14)
+LOOP BEGIN at mod_potentialSolver.f90(305,9) inlined into mod_particleMover.f90(685,14)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(603,9)
+LOOP BEGIN at mod_particleMover.f90(683,9)
    remark #25408: memset generated
 
-   LOOP BEGIN at mod_particleMover.f90(603,9)
+   LOOP BEGIN at mod_particleMover.f90(683,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(603,9)
+   LOOP BEGIN at mod_particleMover.f90(683,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at mod_particleMover.f90(613,13)
-   remark #25408: memset generated
-
-   LOOP BEGIN at mod_particleMover.f90(613,13)
-      remark #15300: LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at mod_particleMover.f90(613,13)
-   <Remainder loop for vectorization>
-   LOOP END
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(615,17)
-   remark #25436: completely unrolled by 3  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(188,9) inlined into mod_particleMover.f90(633,49)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(188,9) inlined into mod_particleMover.f90(633,49)
-<Remainder loop for vectorization>
-   remark #25436: completely unrolled by 1  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(197,86) inlined into mod_particleMover.f90(633,49)
-   remark #25436: completely unrolled by 3  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(197,9) inlined into mod_particleMover.f90(633,49)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(198,9) inlined into mod_particleMover.f90(633,49)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(198,9) inlined into mod_particleMover.f90(633,49)
-<Remainder loop for vectorization>
-   remark #25436: completely unrolled by 1  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(211,90) inlined into mod_particleMover.f90(633,49)
-   remark #25436: completely unrolled by 3  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(211,13) inlined into mod_particleMover.f90(633,49)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(212,13) inlined into mod_particleMover.f90(633,49)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(212,13) inlined into mod_particleMover.f90(633,49)
-<Remainder loop for vectorization>
-   remark #25436: completely unrolled by 1  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(246,36) inlined into mod_particleMover.f90(633,49)
+LOOP BEGIN at mod_particleMover.f90(693,13)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at mod_particleMover.f90(272,17) inlined into mod_particleMover.f90(633,49)
-      remark #25045: Fused Loops: ( 272 273 )
+   LOOP BEGIN at mod_particleMover.f90(700,17)
+      remark #25460: No loop optimizations reported
 
-      remark #15301: FUSED LOOP WAS VECTORIZED
-      remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
+      LOOP BEGIN at mod_particleMover.f90(749,37)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at mod_particleMover.f90(753,37)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at mod_particleMover.f90(782,21)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at mod_particleMover.f90(718,25)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at mod_particleMover.f90(733,25)
+         remark #25436: completely unrolled by 3  
+      LOOP END
+
+      LOOP BEGIN at mod_particleMover.f90(749,37)
+      <Remainder loop for vectorization>
+         remark #25436: completely unrolled by 1  
+      LOOP END
+
+      LOOP BEGIN at mod_particleMover.f90(753,37)
+      <Remainder loop for vectorization>
+         remark #25436: completely unrolled by 1  
+      LOOP END
+
+      LOOP BEGIN at mod_particleMover.f90(782,21)
+      <Remainder loop for vectorization>
+         remark #25436: completely unrolled by 1  
+      LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMover.f90(273,17) inlined into mod_particleMover.f90(633,49)
-      remark #25046: Loop lost in Fusion 
-   LOOP END
-
-   LOOP BEGIN at mod_particleMover.f90(272,94) inlined into mod_particleMover.f90(633,49)
+   LOOP BEGIN at mod_particleMover.f90(694,17)
       remark #25436: completely unrolled by 3  
    LOOP END
-
-   LOOP BEGIN at mod_particleMover.f90(272,17) inlined into mod_particleMover.f90(633,49)
-   <Remainder loop for vectorization>
-      remark #25436: completely unrolled by 1  
-   LOOP END
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(643,21)
-   remark #25436: completely unrolled by 3  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(660,29)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(677,21)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(677,21)
-<Remainder loop for vectorization>
-   remark #25436: completely unrolled by 1  
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(685,13)
-<Peeled loop for vectorization>
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(685,13)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(685,13)
-<Remainder loop for vectorization>
-   remark #15301: REMAINDER LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at mod_particleMover.f90(685,13)
-<Remainder loop for vectorization>
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMover.f90(610,19):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (64, 0)
-mod_particleMover.f90(613,13):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMover.f90(603,9):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMover.f90(589,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_depositj_] mod_particleMover.f90:589
+mod_particleMover.f90(690,19):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (64, 0)
+mod_particleMover.f90(683,9):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(669,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_depositj_] mod_particleMover.f90:669
 
     Hardware registers
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   46[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm31 k1]
+        Assigned     :   41[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm26]
         
     Routine temporaries
-        Total         :    1037
-            Global    :     260
-            Local     :     777
-        Regenerable   :     291
-        Spilled       :      79
+        Total         :     829
+            Global    :     186
+            Local     :     643
+        Regenerable   :     262
+        Spilled       :      43
         
     Routine stack
-        Variables     :     940 bytes*
-            Reads     :      48 [5.24e+00 ~ 5.2%]
-            Writes    :     122 [7.20e+00 ~ 7.2%]
-        Spills        :     656 bytes*
-            Reads     :     222 [1.09e+01 ~ 10.9%]
-            Writes    :     176 [4.57e+00 ~ 4.6%]
+        Variables     :     576 bytes*
+            Reads     :      44 [3.07e+00 ~ 3.1%]
+            Writes    :      92 [1.16e+01 ~ 11.6%]
+        Spills        :     384 bytes*
+            Reads     :     112 [8.65e+00 ~ 8.7%]
+            Writes    :     101 [3.35e+00 ~ 3.4%]
     
     Notes
     
@@ -5973,16 +6208,16 @@ INLINE REPORT: (MOD_NONLINSOLVERS::JACNITSOL)
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(118,9) inlined into ../../SharedModules/src/mod_nonLinSolvers.f90(303,18)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(124,9) inlined into ../../SharedModules/src/mod_nonLinSolvers.f90(303,18)
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 3
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(125,9) inlined into ../../SharedModules/src/mod_nonLinSolvers.f90(303,18)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(131,9) inlined into ../../SharedModules/src/mod_nonLinSolvers.f90(303,18)
    remark #25439: unrolled with remainder by 2  
    remark #25456: Number of Array Refs Scalar Replaced In Loop: 2
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(125,9) inlined into ../../SharedModules/src/mod_nonLinSolvers.f90(303,18)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(131,9) inlined into ../../SharedModules/src/mod_nonLinSolvers.f90(303,18)
 <Remainder>
 LOOP END
 
@@ -7070,29 +7305,29 @@ Begin optimization report for: READINITIALINPUTS
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (READINITIALINPUTS)
-  -> INLINE: (196,40) GETPLASMAFREQ
+  -> INLINE: (215,40) GETPLASMAFREQ
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(193,9)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(212,9)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(193,9)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(212,9)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(193,9)
+LOOP BEGIN at ../../SharedModules/src/mod_readInputs.f90(212,9)
 <Remainder loop for vectorization>
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-../../SharedModules/src/mod_readInputs.f90(182,9):remark #34026: call to memcpy implemented as a call to optimized library version
-../../SharedModules/src/mod_readInputs.f90(186,9):remark #34026: call to memmove implemented as a call to optimized library version
-../../SharedModules/src/mod_readInputs.f90(161,16):remark #34051: REGISTER ALLOCATION : [mod_readinputs_mp_readinitialinputs_] ../../SharedModules/src/mod_readInputs.f90:161
+../../SharedModules/src/mod_readInputs.f90(201,9):remark #34026: call to memcpy implemented as a call to optimized library version
+../../SharedModules/src/mod_readInputs.f90(205,9):remark #34026: call to memmove implemented as a call to optimized library version
+../../SharedModules/src/mod_readInputs.f90(180,16):remark #34051: REGISTER ALLOCATION : [mod_readinputs_mp_readinitialinputs_] ../../SharedModules/src/mod_readInputs.f90:180
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -7230,20 +7465,20 @@ INLINE REPORT: (MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON)
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(163,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(163,14)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(163,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(163,14)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(163,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(163,14)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(163,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(163,14)
 <Remainder loop for vectorization>
 LOOP END
 
@@ -7334,20 +7569,20 @@ INLINE REPORT: (MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_AMPERE)
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(279,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(279,14)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(279,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(279,14)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(279,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(279,14)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(137,9) inlined into mod_potentialSolver.f90(279,14)
+LOOP BEGIN at ../../SharedModules/src/mod_BasicFunctions.f90(143,9) inlined into mod_potentialSolver.f90(279,14)
 <Remainder loop for vectorization>
 LOOP END
 
@@ -7580,19 +7815,21 @@ Profile feedback used a statically estimated profile for the following routines:
         ADDMAXWELLIANLOSTPARTICLES                              [Line    17]
         REFLUXPARTICLES                                         [Line    45]
         INJECTATBOUNDARY                                        [Line    72]
+        INJECTUNIFORMFLUX                                       [Line   143]
+        MAXWELLIANHEATING                                       [Line   175]
 
   File: ../../SharedModules/src/mod_readInputs.f90
         READINJECTIONINPUTS                                     [Line   125]
-        READINITIALINPUTS                                       [Line   161]
-        READGEOMETRY                                            [Line   211]
-        READPARTICLEINPUTS                                      [Line   249]
+        READINITIALINPUTS                                       [Line   180]
+        READGEOMETRY                                            [Line   230]
+        READPARTICLEINPUTS                                      [Line   268]
 
   File: ../../SharedModules/src/mod_simulation.f90
         MOD_SIMULATION::WRITEPHI..0                             [Line    25]
         MOD_SIMULATION::WRITEPHI..1                             [Line    25]
         MOD_SIMULATION::GENERATESAVEDIRECTORY                   [Line   261]
         SOLVESIMULATION                                         [Line   296]
-        SOLVESIMULATIONFINALAVERAGE                             [Line   547]
+        SOLVESIMULATIONFINALAVERAGE                             [Line   555]
 
   File: mod_Scheme.f90
         INITIALIZESCHEME                                        [Line    12]
@@ -7615,11 +7852,12 @@ Profile feedback used a statically estimated profile for the following routines:
         WRITEDOMAIN                                             [Line   199]
 
   File: mod_particleMover.f90
-        MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION             [Line    98]
-        MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBRENT    [Line   313]
-        MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDARYBRENT[Line   429]
-        DEPOSITJ                                                [Line   589]
-        MOVEPARTICLES                                           [Line   694]
+        MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITION             [Line   172]
+        MOD_PARTICLEMOVER::SUBSTEPSOLVERGETPOSITIONBRENT        [Line   251]
+        MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMEBOUNDARYBRENT    [Line   387]
+        MOD_PARTICLEMOVER::SUBSTEPSOLVERGETTIMESELFBOUNDARYBRENT[Line   503]
+        DEPOSITJ                                                [Line   669]
+        MOVEPARTICLES                                           [Line   795]
 
   File: mod_potentialSolver.f90
         POTENTIALSOLVER_CONSTRUCTOR                             [Line    43]
@@ -7654,10 +7892,10 @@ Profile feedback used a statically estimated profile for the following routines:
         NITTFQ                                                  [Line     1]
 
 
-  0 out of 68 routine(s) used training profile data for PGO feedback
-  0 out of 68 routine(s) were unable to use training profile data for PGO feedback
-  0 out of 68 routine(s) were unable to find training profile data for PGO feedback
-  68 out of 68 routine(s) used a static estimate profile for PGO feedback
+  0 out of 71 routine(s) used training profile data for PGO feedback
+  0 out of 71 routine(s) were unable to use training profile data for PGO feedback
+  0 out of 71 routine(s) were unable to find training profile data for PGO feedback
+  71 out of 71 routine(s) used a static estimate profile for PGO feedback
 
 
 

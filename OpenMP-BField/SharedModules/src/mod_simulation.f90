@@ -360,6 +360,7 @@ contains
         pastDiagTime = 0.0d0
         currDel_t = del_t
         remainDel_t = del_t
+        i = 0
         call system_clock(startTotal)
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
@@ -376,6 +377,7 @@ contains
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
+                
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"

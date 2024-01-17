@@ -80,10 +80,13 @@ contains
         real(real64), intent(in) :: T_gas, M
         integer(int32), intent(in out) :: irand
         real(real64) :: U(4)
-        call getRandom(U, irand)
-        v(1) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
-        v(2) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
-        v(3) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
+        integer(int32) :: i
+        do i = 1, 4
+            U(i) = ran2(irand)
+        end do
+        v(1) = SQRT(T_gas*e/ M) * SQRT(-2.0d0 * LOG(U(1))) * COS(2.0d0 * pi * U(2))
+        v(2) = SQRT(T_gas*e/ M) * SQRT(-2.0d0 * LOG(U(1))) * SIN(2.0d0 * pi * U(2))
+        v(3) = SQRT(T_gas*e/ M) * SQRT(-2.0d0 * LOG(U(3))) * SIN(2.0d0 * pi * U(4))
 
     end subroutine getMaxwellianSample
 
@@ -93,7 +96,10 @@ contains
         real(real64), intent(in) :: T_gas, M
         integer(int32), intent(in out) :: irand
         real(real64) :: U(4)
-        call getRandom(U, irand)
+        integer(int32) :: i
+        do i = 1, 4
+            U(i) = ran2(irand)
+        end do
         v(1) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * SIGN(1.0d0, U(2)-0.5d0)
         v(2) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * COS(2 * pi * U(4))
         v(3) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
