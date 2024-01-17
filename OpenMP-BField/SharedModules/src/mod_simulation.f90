@@ -582,11 +582,11 @@ contains
         startTime = currentTime
         currDel_t = del_t
         remainDel_t = del_t
-        lastCheckTime = 0.0d0
+        lastCheckTime = startTime
         checkTimeDivision = 200.0d0 * del_t/fractionFreq
         windowNum = 0
         allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
-        do while(currentTime < averagingTime)
+        do while((currentTime - startTime) < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
