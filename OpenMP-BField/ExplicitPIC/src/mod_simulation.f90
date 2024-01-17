@@ -369,7 +369,7 @@ contains
             do j = 1, numberChargedParticles
                 wallLoss(windowNum) = wallLoss(windowNum) + SUM(particleList(j)%accumEnergyLoss)
             end do
-            wallLoss(windowNum) = wallLoss(windowNum)/currentTime
+            wallLoss(windowNum) = wallLoss(windowNum)/(currentTime - startTime)
             if (windowNum > windowDivision) then
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
@@ -377,7 +377,7 @@ contains
                 windowNum = 0
             end if
         end do
-        print *, "Averaging finished over", currentTime, 'simulation time (s)'
+        print *, "Averaging finished over", (currentTime - startTime), 'simulation time (s)'
         stepsAverage = i
         densities = densities/i
         call writeParticleDensity(densities, particleList, world, 0, .true., directoryName) 

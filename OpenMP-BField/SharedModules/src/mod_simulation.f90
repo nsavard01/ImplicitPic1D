@@ -16,6 +16,7 @@ module mod_simulation
 
     integer(int32) :: numTimeSteps, heatSkipSteps
     real(real64), private :: energyError, chargeError, gaussError, Power, nu_h, inelasticEnergyLoss
+    real(real64) :: currentTime
 
 
 contains
@@ -304,7 +305,7 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep
         integer(int64) :: startTime, endTime, startTotal, endTotal, timingRate
-        real(real64) :: currentTime, diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime, energyLoss
+        real(real64) :: diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime, energyLoss
         real(real64) :: currDel_t, remainDel_t
         real(real64) :: KE_i, KE_f, PE_i, PE_f
         integer(int64) :: potentialTime, collisionTime, unitPart1
@@ -365,7 +366,7 @@ contains
         do while(currentTime < simulationTime)
             if (currentTime < diagTime) then
                 call system_clock(startTime)
-                call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+                call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
@@ -388,7 +389,7 @@ contains
                 end do
                 call depositRho(rho_i, particleList, world)
                 call system_clock(startTime)
-                call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+                call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
                 call system_clock(endTime)
                 KE_f = 0.0d0
                 do j=1, numberChargedParticles
@@ -474,7 +475,7 @@ contains
         end do
         call depositRho(rho_i, particleList, world)
         call system_clock(startTime)
-        call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+        call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
         call system_clock(endTime)
         KE_f = 0.0d0
         do j=1, numberChargedParticles
@@ -539,6 +540,7 @@ contains
         Etotal, gaussError, chargeError, energyError, iterNumPicard
         close(22)
         call system_clock(endTotal)
+        currentTime = currentTime + currDel_t
         elapsed_time = real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
         print *, "Percentage of steps adaptive is:", 100.0d0 * real(amountTimeSplits)/real(i + 1)
@@ -562,7 +564,7 @@ contains
         integer(int32), intent(in) :: maxIter, binNumber
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, windowNum, VHist(2*binNumber), intPartV, k, iThread
-        real(real64) :: phi_average(NumberXNodes), currentTime, currDel_t, remainDel_t
+        real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
         real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss
         real(real64) :: E_max, VMax
         real(real64), allocatable :: wallLoss(:)
@@ -576,8 +578,8 @@ contains
         inelasticEnergyLoss = 0.0d0
         phi_average = 0.0d0
         i = 0
-        currentTime = 0.0d0
         energyAddColl = 0.0d0
+        startTime = currentTime
         currDel_t = del_t
         remainDel_t = del_t
         lastCheckTime = 0.0d0
@@ -585,7 +587,7 @@ contains
         windowNum = 0
         allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
         do while(currentTime < averagingTime)
-            call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+            call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
@@ -604,7 +606,7 @@ contains
             do j = 1, numberChargedParticles
                 wallLoss(windowNum) = wallLoss(windowNum) + SUM(particleList(j)%energyLoss)
             end do
-            wallLoss(windowNum) = wallLoss(windowNum)/currentTime
+            wallLoss(windowNum) = wallLoss(windowNum)/(currentTime - startTime)
             if ((currentTime - lastCheckTime) > checkTimeDivision) then
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
@@ -614,7 +616,7 @@ contains
             end if
         end do
         deallocate(wallLoss)
-        print *, "Averaging finished over", currentTime, 'simulation time (s)'
+        print *, "Averaging finished over", (currentTime - startTime), 'simulation time (s)'
         do j=1, numberChargedParticles
             !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1
@@ -641,20 +643,20 @@ contains
         write(22,'("Steps Averaged, Averaging Time, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), gaussError")')
         write(22,"((I6, 1x), 5(es16.8,1x))") i, currentTime, inelasticEnergyLoss/currentTime, chargeLossTotal/currentTime, ELossTotal/currentTime, gaussError
         close(22)
-        print *, 'Power loss to walls is:', ELossTotal/currentTime
-        print *, 'Power gain in plasma is:', SUM(energyAddColl)/currentTime
-        print *, "Electron average wall loss flux:", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p/currentTime
-        print *, "Ion average wall loss flux:", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p/currentTime
+        print *, 'Power loss to walls is:', ELossTotal/(currentTime - startTime)
+        print *, 'Power gain in plasma is:', SUM(energyAddColl)/(currentTime - startTime)
+        print *, "Electron average wall loss flux:", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p/(currentTime - startTime)
+        print *, "Ion average wall loss flux:", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p/(currentTime - startTime)
         print *, "Performing average for EEDF over 50/omega_p"
         E_max = 3.0d0 * (MAXVAL(phi_average) - minval(phi_average))
         print *, 'E_max is:', E_max
         VMax = SQRT(2.0d0 * E_max *e/ m_e)
         print *, "V_max is:", VMax
         checkTimeDivision = 50.0d0 * del_t/fractionFreq
-        currentTime = 0.0d0
+        startTime = currentTime
         VHist = 0.0d0
-        do while(currentTime < checkTimeDivision)
-            call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+        do while((currentTime - startTime) < checkTimeDivision)
+            call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)

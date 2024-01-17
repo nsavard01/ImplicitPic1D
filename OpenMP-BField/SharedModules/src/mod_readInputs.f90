@@ -232,7 +232,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
         integer(int32) :: io, leftBoundary, rightBoundary, gridType
-        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain, BFieldMag, angle
+        real(real64) :: leftVoltage, rightVoltage, debyeLength, L_domain, BFieldMag, angle, RF_frequency
 
         print *, ""
         print *, "Reading domain inputs:"
@@ -244,6 +244,7 @@ contains
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         read(10, *, IOSTAT = io) BFieldMag, angle
+        read(10, *, IOSTAT = io) RF_frequency
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
@@ -258,7 +259,8 @@ contains
         print *, "Left boundary type:", leftBoundary
         print *, "Right boundary type:", rightBoundary
         print *, 'Grid type is:', gridType
-        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle)
+        print *, 'RF frequency:', RF_frequency
+        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
         print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""

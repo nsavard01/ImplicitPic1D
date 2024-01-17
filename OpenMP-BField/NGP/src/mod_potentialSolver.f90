@@ -15,7 +15,7 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle
+        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
         logical :: BFieldBool
 
@@ -36,11 +36,11 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
-        real(real64), intent(in) :: BFieldMag, angle
+        real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
         allocate(self % J(NumberXNodes-1, numThread), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes-1))
@@ -49,22 +49,23 @@ contains
         self % J = 0.0d0
         self % phi = 0.0d0
         self % rho_const = 0.0d0
-        SELECT CASE (world%boundaryConditions(1))
-        CASE(1)
-            self%phi(1) = leftVoltage
-        CASE(2)
-            self%phi(1) = 0.0d0
-        CASE(3)
+        self%RF_half_amplitude = 0.0d0
+        if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
+        if (world%boundaryConditions(1) == 4) self%RF_half_amplitude = leftVoltage
+        if (world%boundaryConditions(NumberXNodes) == 1) self%phi(NumberXNodes) = rightVoltage
+        if (world%boundaryConditions(NumberXNodes) == 4) then
+            if (self%RF_half_amplitude /= 0) then
+                print *, 'Half amplitude voltage for RF already set, have two RF boundaries!'
+                stop
+            else
+                self%RF_half_amplitude = rightVoltage
+            end if
+        end if
+        if (world%boundaryConditions(1) == 3) then
             self%phi(1) = leftVoltage
             self%phi(NumberXNodes) = leftVoltage
-        END SELECT
-
-        SELECT CASE (world%boundaryConditions(NumberXNodes))
-        CASE(1,3)
-            self%phi(NumberXNodes) = rightVoltage
-        CASE(2)
-            self%phi(NumberXNodes) = 0.0d0
-        END SELECT
+        end if
+        self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
         self%phi_f = self%phi 
         self%BFieldMag = BFieldMag
         self%BFieldBool = (BFieldMag /= 0.0d0)
@@ -91,7 +92,7 @@ contains
                     self%a_tri(i-1) = 1.0d0/ world%dx_dl(i-1)
                 end if
                 self%b_tri(i) = - (1.0d0/world%dx_dl(i-1)  + 1.0d0/world%dx_dl(i))
-            CASE(1)
+            CASE(1,4)
                 self%b_tri(i) = 1.0d0
             CASE(2)
                 if (i == 1) then
@@ -108,19 +109,6 @@ contains
                 end if
             CASE(3)
                 self%b_tri(i) = 1.0d0
-            CASE(4)
-                if (i == 1) then
-                    self % c_tri(i) = 1.0d0
-                    !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
-                    self%b_tri(i) = -1.0d0
-                else if (i == NumberXNodes) then
-                    self % a_tri(i-1) = 1.0d0
-                    !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
-                    self%b_tri(i) = -1.0d0
-                else
-                    print *, "Neumann boundary not on left or right most index!"
-                    stop
-                end if
             CASE default
                 print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
             END SELECT
@@ -128,10 +116,11 @@ contains
 
     end subroutine construct_diagMatrix
 
-    subroutine solve_tridiag_Poisson(self, world)
+    subroutine solve_tridiag_Poisson(self, world, timeCurrent)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeCurrent
         integer(int32) :: i
         real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
 
@@ -142,7 +131,7 @@ contains
             CASE(1,3)
                 d(i) = self%phi(i)
             CASE(4)
-                d(i) = 0.0d0
+                d(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeCurrent)
             END SELECT
         end do
     ! initialize c-prime and d-prime
@@ -178,11 +167,9 @@ contains
             CASE(0,2)
                 res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + 1d-15) - 1.0d0)**2
                 !d(i) = -self%rho(i) - self%rho_const
-            CASE(1,3)
+            CASE(1,3,4)
                 res = res + ((Ax(i) + 1d-15)/(self.phi_f(i) + 1d-15) - 1.0d0)**2
                 !d(i) = self%phi_f(i)*eps_0
-            CASE(4)
-                res = res + (Ax(i))**2
             END SELECT
         end do
         !res = Ax*eps_0 - 
@@ -190,11 +177,11 @@ contains
 
     end function getError_tridiag_Poisson
 
-    subroutine solve_tridiag_Ampere(self, world, del_t)
+    subroutine solve_tridiag_Ampere(self, world, del_t, timeFuture)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: del_t
+        real(real64), intent(in) :: del_t, timeFuture
         integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
 
@@ -211,7 +198,7 @@ contains
                     d(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
             CASE(4)
-                d(i) = 0.0d0
+                d(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeFuture)
             END SELECT
         end do
     ! initialize c-prime and d-prime

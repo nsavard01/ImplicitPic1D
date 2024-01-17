@@ -28,7 +28,8 @@ program BoundPlasmaExample
     call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, globalParticleList(1)%w_p, globalSolver%BFieldAngle, FractionFreqHeating)
     call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
-    call solveInitialPotential(globalSolver, globalParticleList, globalWorld)
+    call solveInitialPotential(globalSolver, globalParticleList, globalWorld, 0.0d0)
+    print *, 'phi_i is:', globalSolver%phi
     
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
@@ -45,37 +46,38 @@ program BoundPlasmaExample
     ! end do
     ! print *, ABS((E_i - E_f)/(E_i))
     ! stop
-    ! allocate(rho_i(NumberXNodes))
-    ! rho_i = globalSolver%rho
-    ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
-    ! KE_i = 0.0d0
-    ! do j=1, numberChargedParticles
-    !     KE_i = KE_i + globalParticleList(j)%getTotalKE()
-    ! end do
-    ! remainDel_t = del_t
-    ! currDel_t = del_t
-    ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
-    ! print *, 'J is:', SUM(globalSolver%J, DIM=2)
-    ! KE_f = 0.0d0
-    ! do i = 1, numberChargedParticles
-    !     print *, 'Particle:', globalParticleList(i)%name
-    !     print *, 'Remaining number of particles:', SUM(globalParticleList(i)%N_p)
-    !     print *, 'Ave. num substeps:', globalParticleList(i)%numSubStepsAve
-    !     print *, 'Ave. num func evals:', globalParticleList(i)%numFuncEvalAve
-    !     print *, 'Kept KE:', globalParticleList(i)%getTotalKE()
-    !     print *, 'Lost KE', SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
-    !     KE_f = KE_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
-    ! end do
-    ! PE_f = globalSolver%getTotalPE(globalWorld, .false.)
-    ! print *, 'PE_f:', PE_f
+    allocate(rho_i(NumberXNodes))
+    rho_i = globalSolver%rho
+    PE_i = globalSolver%getTotalPE(globalWorld, .false.)
+    KE_i = 0.0d0
+    do j=1, numberChargedParticles
+        KE_i = KE_i + globalParticleList(j)%getTotalKE()
+    end do
+    remainDel_t = del_t
+    currDel_t = del_t
+    call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r, 0.0d0)
+    print *, 'J is:', SUM(globalSolver%J, DIM=2)
+    KE_f = 0.0d0
+    do i = 1, numberChargedParticles
+        print *, 'Particle:', globalParticleList(i)%name
+        print *, 'Remaining number of particles:', SUM(globalParticleList(i)%N_p)
+        print *, 'Ave. num substeps:', globalParticleList(i)%numSubStepsAve
+        print *, 'Ave. num func evals:', globalParticleList(i)%numFuncEvalAve
+        print *, 'Kept KE:', globalParticleList(i)%getTotalKE()
+        print *, 'Lost KE', SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
+        KE_f = KE_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
+    end do
+    PE_f = globalSolver%getTotalPE(globalWorld, .false.)
+    print *, 'PE_f:', PE_f
     
-    ! print *, 'Time step:', currDel_t
-    ! print *, 'Energy error is:', ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
-    ! print *, 'took', iterNumPicard, 'iterations'
-    ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
-    ! print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
-    ! print *, 'charge error is:', getChargeContinuityError(rho_i, globalSolver%rho, globalSolver%J, globalWorld, currDel_t)
-    ! stop
+    print *, 'Time step:', currDel_t
+    print *, 'Energy error is:', ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
+    print *, 'took', iterNumPicard, 'iterations'
+    call depositRho(globalSolver%rho, globalParticleList, globalWorld)
+    print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
+    print *, 'charge error is:', getChargeContinuityError(rho_i, globalSolver%rho, globalSolver%J, globalWorld, currDel_t)
+    print *, 'phi_f is:', globalSolver%phi
+    stop
     call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime)
     call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
 end program BoundPlasmaExample
