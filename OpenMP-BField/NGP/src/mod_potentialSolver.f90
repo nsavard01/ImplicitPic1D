@@ -24,6 +24,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: solve_CG_Ampere
         procedure, public, pass(self) :: getError_tridiag_Poisson
@@ -160,7 +161,7 @@ contains
         type(Domain), intent(in) :: world
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), res
-        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         res = 0.0d0
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
@@ -306,6 +307,18 @@ contains
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%dx_dl)
         end if
     end function getTotalPE
+
+    function getEnergyFromBoundary(self, world, del_t) result(res)
+        ! Get energy input into domain from dirichlet boundary
+        ! In 1D is J/m^2
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t
+        real(real64) :: res
+        res = del_t * SUM(self%J(1,:))
+        res = res + eps_0 * ((self%phi_f(1) - self%phi_f(2)) -(self%phi(1) - self%phi(2))) /world%dx_dl(1)
+        res = res * (self%phi_f(1) + self%phi(1) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes)) * 0.5d0
+    end function getEnergyFromBoundary
 
 
 end module mod_potentialSolver

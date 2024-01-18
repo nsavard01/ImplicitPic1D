@@ -47,7 +47,6 @@ program BoundPlasmaExample
     ! stop
     ! allocate(rho_i(NumberXNodes))
     ! rho_i = globalSolver%rho
-    ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_i = 0.0d0
     ! do j=1, numberChargedParticles
     !     KE_i = KE_i + globalParticleList(j)%getTotalKE()
@@ -56,6 +55,7 @@ program BoundPlasmaExample
     ! currDel_t = del_t
     ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r, 0.0d0)
     ! print *, 'J is:', SUM(globalSolver%J, DIM=2)
+    ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0
     ! do i = 1, numberChargedParticles
     !     print *, 'Particle:', globalParticleList(i)%name
@@ -66,7 +66,7 @@ program BoundPlasmaExample
     !     print *, 'Lost KE', SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
     !     KE_f = KE_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
     ! end do
-    ! PE_f = globalSolver%getTotalPE(globalWorld, .false.)
+    ! PE_f = globalSolver%getTotalPE(globalWorld, .true.) - globalSolver%getEnergyFromBoundary(globalWorld, currDel_t) 
     ! print *, 'PE_f:', PE_f
     
     ! print *, 'Time step:', currDel_t

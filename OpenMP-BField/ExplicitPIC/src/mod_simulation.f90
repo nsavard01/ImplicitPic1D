@@ -242,10 +242,10 @@ contains
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
                     call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
-                    energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss)
+                    energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
                     write(unitPart1+j,"(5(es16.8,1x), (I6,1x))") currentTime, &
                         particleList(j)%accumWallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%accumWallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
-                        particleList(j)%accumEnergyLoss(1)/del_t/diagStepDiff, particleList(j)%accumEnergyLoss(2)/del_t/diagStepDiff, SUM(particleList(j)%N_p)
+                        particleList(j)%accumEnergyLoss(1)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/del_t/diagStepDiff, particleList(j)%accumEnergyLoss(2)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/del_t/diagStepDiff, SUM(particleList(j)%N_p)
                     particleList(j)%accumEnergyLoss = 0.0d0
                     particleList(j)%accumWallLoss = 0
                 end do
@@ -387,7 +387,7 @@ contains
         energyLoss = 0.0d0
         do i=1, numberChargedParticles
             chargeTotal = chargeTotal + SUM(particleList(i)%accumWallLoss) * particleList(i)%q * particleList(i)%w_p
-            energyLoss = energyLoss + SUM(particleList(i)%accumEnergyLoss)
+            energyLoss = energyLoss + SUM(particleList(i)%accumEnergyLoss) * particleList(i)%mass * particleList(i)%w_p * 0.5d0
         end do
         open(22,file=directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')

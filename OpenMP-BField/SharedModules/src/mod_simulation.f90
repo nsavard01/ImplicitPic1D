@@ -382,7 +382,6 @@ contains
             else  
                 ! Data dump with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
-                PE_i = solver%getTotalPE(world, .false.)
                 KE_i = 0.0d0
                 do j=1, numberChargedParticles
                     KE_i = KE_i + particleList(j)%getTotalKE()
@@ -391,11 +390,12 @@ contains
                 call system_clock(startTime)
                 call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
                 call system_clock(endTime)
+                PE_i = solver%getTotalPE(world, .false.)
                 KE_f = 0.0d0
                 do j=1, numberChargedParticles
                     KE_f = KE_f + particleList(j)%getTotalKE() + SUM(particleList(j)%energyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
                 end do
-                PE_f = solver%getTotalPE(world, .false.)
+                PE_f = solver%getTotalPE(world, .true.) - solver%getEnergyFromBoundary(world, currDel_t) 
                 energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
                 potentialTime = potentialTime + (endTime - startTime)
                 
@@ -468,7 +468,6 @@ contains
             i = i + 1
         end do
         
-        PE_i = solver%getTotalPE(world, .false.)
         KE_i = 0.0d0
         do j=1, numberChargedParticles
             KE_i = KE_i + particleList(j)%getTotalKE()
@@ -477,11 +476,12 @@ contains
         call system_clock(startTime)
         call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
         call system_clock(endTime)
+        PE_i = solver%getTotalPE(world, .false.)
         KE_f = 0.0d0
         do j=1, numberChargedParticles
             KE_f = KE_f + particleList(j)%getTotalKE() + SUM(particleList(j)%energyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
         end do
-        PE_f = solver%getTotalPE(world, .false.)
+        PE_f = solver%getTotalPE(world, .true.) - solver%getEnergyFromBoundary(world, currDel_t) 
         energyError = ABS((KE_i + PE_i - KE_f - PE_f)/(KE_i + PE_i))
         potentialTime = potentialTime + (endTime - startTime)
 
@@ -631,7 +631,7 @@ contains
             chargeLossTotal = chargeLossTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
             ELossTotal = ELossTotal + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
         end do
-        solver%phi = phi_average
+        solver%phi_f = phi_average
         solver%rho = 0.0d0
         do j=1, numberChargedParticles
             solver%rho = solver%rho + SUM(particleList(j)%densities, DIM = 2) * particleList(j)%q * particleList(j)%w_p
@@ -641,7 +641,7 @@ contains
         print *, 'gaussError average is:', gaussError
         open(22,file=directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Steps Averaged, Averaging Time, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), gaussError")')
-        write(22,"((I6, 1x), 5(es16.8,1x))") i, currentTime, inelasticEnergyLoss/currentTime, chargeLossTotal/currentTime, ELossTotal/currentTime, gaussError
+        write(22,"((I6, 1x), 5(es16.8,1x))") i, (currentTime - startTime), inelasticEnergyLoss/(currentTime-startTime), chargeLossTotal/(currentTime-startTime), ELossTotal/(currentTime-startTime), gaussError
         close(22)
         print *, 'Power loss to walls is:', ELossTotal/(currentTime - startTime)
         print *, 'Power gain in plasma is:', SUM(energyAddColl)/(currentTime - startTime)

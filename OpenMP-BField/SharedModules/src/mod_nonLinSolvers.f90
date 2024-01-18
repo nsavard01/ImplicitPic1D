@@ -185,7 +185,6 @@ contains
             !print *, normResidual(index)
             if (normResidual(index) < eps_r*(initialR)) then
                 call moveParticles(solver,particleList, world, del_t)
-                solver%phi = solver%phi_f
                 iterNumPicard = i
                 exit
             end if
@@ -256,6 +255,7 @@ contains
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
+        solver%phi = solver%phi_f
         SELECT CASE (solverType)
         CASE(0)
             call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
@@ -328,7 +328,6 @@ contains
         CASE(0)
             iterNumPicard = info(4)
             call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
-            globalSolver%phi = globalSolver%phi_f
         CASE(1)
             iterNumPicard = maxIter
         CASE default
