@@ -261,6 +261,7 @@ contains
         print *, 'Grid type is:', gridType
         print *, 'RF frequency:', RF_frequency
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        print *, 'RF_half_amplitude:', solver%RF_half_amplitude
         print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""

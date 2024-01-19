@@ -28,6 +28,8 @@ class dataSetExplicit:
         self.numDiag = int(initialCond[8]) + 1
         self.numChargedParticles = int(initialCond[9])
         self.numThreads = int(initialCond[10])
+        self.RF_rad_frequency = initialCond[11]
+        self.RF_half_amplitude = initialCond[12]
         ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
         self.particles = {}
         partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p']
@@ -39,7 +41,29 @@ class dataSetExplicit:
             self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
             self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
             self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, delim_whitespace=True, names = partDiag)
-            
+
+        boundConditions = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype = np.int32, offset = 4)[0:-1]
+        if (boundConditions[0] == 1):
+            self.leftBoundary = 'Dirichlet'
+        elif (boundConditions[0] == 2):
+            self.leftBoundary = 'Neumann'
+        elif (boundConditions[0] == 3):
+            self.leftBoundary = 'Periodic'
+        elif (boundConditions[0] == 4):
+            self.leftBoundary = 'RF-Dirichlet'
+        else:
+            raise Warning("Left boundary not defined!")
+
+        if (boundConditions[-1] == 1):
+            self.rightBoundary = 'Dirichlet'
+        elif (boundConditions[-1] == 2):
+            self.rightBoundary = 'Neumann'
+        elif (boundConditions[-1] == 3):
+            self.rightBoundary = 'Periodic'
+        elif (boundConditions[-1] == 4):
+            self.rightBoundary = 'RF-Dirichlet'
+        else:
+            raise Warning("Right boundary not defined!")
         self.grid = np.fromfile(self.path + 'domainGrid.dat', offset = 4)
         self.x_min = self.grid[0]
         self.x_max = self.grid[-1]

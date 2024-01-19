@@ -17,7 +17,7 @@ module mod_potentialSolver
         real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
-        logical :: BFieldBool
+        logical :: BFieldBool, RF_bool
 
 
     contains
@@ -67,6 +67,7 @@ contains
             self%phi(NumberXNodes) = leftVoltage
         end if
         self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
+        self%RF_bool = self%RF_rad_frequency > 0 .and. self%RF_half_amplitude > 0 .and. (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes) == 4)
         self%phi_f = self%phi 
         self%BFieldMag = BFieldMag
         self%BFieldBool = (BFieldMag /= 0.0d0)
@@ -178,11 +179,11 @@ contains
 
     end function getError_tridiag_Poisson
 
-    subroutine solve_tridiag_Ampere(self, world, del_t, timeFuture)
+    subroutine solve_tridiag_Ampere(self, world, del_t)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: del_t, timeFuture
+        real(real64), intent(in) :: del_t
         integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
 
@@ -190,7 +191,7 @@ contains
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
                 d(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
-            CASE(1,3)
+            CASE(1,3,4)
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
@@ -198,8 +199,6 @@ contains
                 else if (i == NumberXNodes) then
                     d(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
-            CASE(4)
-                d(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeFuture)
             END SELECT
         end do
     ! initialize c-prime and d-prime
