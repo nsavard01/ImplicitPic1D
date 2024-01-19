@@ -458,6 +458,7 @@ contains
                 inelasticEnergyLoss = 0.0d0
                 energyAddColl = 0.0d0
                 print *, "Number of electrons is:", SUM(particleList(1)%N_p)
+                print *, "Number of ions is:", SUM(particleList(2)%N_p)
                 pastDiagTime = currentTime + currDel_t
                 diagTime = diagTime + diagTimeDivision
             end if
