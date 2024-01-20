@@ -6,5 +6,5 @@
 20 ! number of diagnostic data dumps    
 2.0d0 ! Fraction of initial 1/w_p for initial time step
 9.d-5 ! amount of time to average final Diagnostics
-NGP_test_RF !filename
+CIC_test_RF !filename
 END
