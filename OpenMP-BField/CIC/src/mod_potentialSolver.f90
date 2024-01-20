@@ -15,19 +15,24 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle
+        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude, RF_voltage
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:), dirichletVals(:), sourceTermVals(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
         integer(int32), allocatable :: dirichletIndx(:)
+        logical, allocatable :: dirichletIsRFBool(:)
         integer(int32) :: numDirichletNodes
-        logical :: BFieldBool
+        logical :: BFieldBool, RF_bool
 
 
     contains
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: setRFVoltage
+        procedure, public, pass(self) :: resetVoltage
+        procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: evaluateEFieldHalfTime
         procedure, public, pass(self) :: evaluateEFieldCurrTime
+        procedure, public, pass(self) :: evaluateEFieldFutureTime
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: solve_CG_Ampere
         procedure, public, pass(self) :: getError_tridiag_Poisson
@@ -40,11 +45,11 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
-        real(real64), intent(in) :: BFieldMag, angle
+        real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
         integer(int32) :: i
         allocate(self % J(NumberXNodes+1, numThread), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
@@ -64,26 +69,49 @@ contains
         self%BField(3) = 0.0d0 
         self%EField = 0.0d0
         self%numDirichletNodes = 0
-        if (ABS(world%boundaryConditions(1)) == 1) then
+        self%RF_half_amplitude = 0.0d0
+        if (world%boundaryConditions(1)== 1 .or. world%boundaryConditions(1)== 4) then
             self%numDirichletNodes = self%numDirichletNodes + 1
         end if
-        if (ABS(world%boundaryConditions(NumberXNodes+1)) == 1) then
+        if (world%boundaryConditions(NumberXNodes+1)== 1 .or. world%boundaryConditions(NumberXNodes+1)== 4) then
             self%numDirichletNodes = self%numDirichletNodes + 1
         end if
 
-        allocate(self%dirichletIndx(self%numDirichletNodes), self%dirichletVals(self%numDirichletNodes), self%sourceTermVals(self%numDirichletNodes))
+        allocate(self%dirichletIndx(self%numDirichletNodes), self%dirichletVals(self%numDirichletNodes), self%sourceTermVals(self%numDirichletNodes), self%dirichletIsRFBool(self%numDirichletNodes))
         i = 0
         if (world%boundaryConditions(1) == 1) then
             i = i + 1
             self%dirichletIndx(i) = 1
             self%dirichletVals(i) = leftVoltage
+            self%dirichletIsRFBool(i) = .false.
+        else if (world%boundaryConditions(1) == 4) then
+            i = i + 1
+            self%dirichletIndx(i) = 1
+            self%RF_half_amplitude = leftVoltage
+            self%dirichletVals(i) = 0.0d0
+            self%dirichletIsRFBool(i) = .true.
+            self%RF_voltage = 0.0d0
         end if
         if (world%boundaryConditions(NumberXNodes+1) == 1) then
             i = i + 1
             self%dirichletIndx(i) = NumberXNodes
             self%dirichletVals(i) = rightVoltage
+            self%dirichletIsRFBool(i) = .false.
+        else if (world%boundaryConditions(NumberXNodes+1) == 4) then
+            if (self%RF_half_amplitude /= 0) then
+                print *, 'Half amplitude voltage for RF already set, have two RF boundaries!'
+                stop
+            else
+                i = i + 1
+                self%dirichletIndx(i) = NumberXNodes
+                self%RF_half_amplitude = rightVoltage
+                self%dirichletVals(i) = 0.0d0
+                self%dirichletIsRFBool(i) = .true.
+                self%RF_voltage = 0.0d0
+            end if
         end if
-
+        self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
+        self%RF_bool = self%RF_rad_frequency > 0 .and. self%RF_half_amplitude > 0 .and. (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes+1) == 4)
         call self%construct_diagMatrix(world)
     end function potentialSolver_constructor
 
@@ -98,16 +126,16 @@ contains
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i-1) + world%dx_dl(i)) + 1.0d0/(world%dx_dl(i+1) + world%dx_dl(i)))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i) + world%dx_dl(i+1))
-            else if (world%boundaryConditions(i+1) == 1) then
+            else if (world%boundaryConditions(i+1) == 1 .or. world%boundaryConditions(i+1) == 4) then
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i-1) + world%dx_dl(i)) + 1.0d0/world%dx_dl(i))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
-            else if (world%boundaryConditions(i) == 1) then
+            else if (world%boundaryConditions(i) == 1 .or. world%boundaryConditions(i) == 4) then
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i+1) + world%dx_dl(i)) + 1.0d0/world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i+1) + world%dx_dl(i))
-            else if (world%boundaryConditions(i+1) == 2 .or. world%boundaryConditions(i+1) == 4) then
+            else if (world%boundaryConditions(i+1) == 2) then
                 self%b_tri(i) = -2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
-            else if (world%boundaryConditions(i) == 2 .or. world%boundaryConditions(i) == 4) then
+            else if (world%boundaryConditions(i) == 2) then
                 self%b_tri(i) = -2.0d0 / (world%dx_dl(i+1) + world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i+1) + world%dx_dl(i))
             end if
@@ -123,15 +151,20 @@ contains
 
     end subroutine construct_diagMatrix
 
-    subroutine solve_tridiag_Poisson(self, world)
+    subroutine solve_tridiag_Poisson(self, world, timeCurrent)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeCurrent
         integer(int32) :: i
         real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
 
         d = (-self%rho - self%rho_const) / eps_0
         do i=1, self%numDirichletNodes
+            if (self%dirichletIsRFBool(i)) then
+                self%dirichletVals(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeCurrent)
+                self%sourceTermVals(i) = -self%dirichletVals(i) * 2.0d0 / world%dx_dl(self%dirichletIndx(i))
+            end if
             d(self%dirichletIndx(i)) = d(self%dirichletIndx(i)) + self%sourceTermVals(i)
         end do
     ! initialize c-prime and d-prime
@@ -160,7 +193,7 @@ contains
         type(Domain), intent(in) :: world
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
-        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         d = (-self%rho - self%rho_const) / eps_0
         do i=1, self%numDirichletNodes
             d(self%dirichletIndx(i)) = d(self%dirichletIndx(i)) + self%sourceTermVals(i)
@@ -185,18 +218,14 @@ contains
             SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
             CASE(0)
                 d(i) = (SUM(self%J(i+1, :)) - SUM(self%J(i, :))) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
-            CASE(-1)
+            CASE(-1,-4)
                 d(i) = (SUM(self%J(i+1, :)) - 2.0d0 * SUM(self%J(i, :))) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
-            CASE(1)
+            CASE(1,4)
                 d(i) = (2.0d0 * SUM(self%J(i+1, :)) - SUM(self%J(i, :))) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
             CASE(-2)
                 d(i) = SUM(self%J(i+1, :)) * del_t / eps_0 - self%EField(i+1)
             CASE(2)
                 d(i) = -SUM(self%J(i, :)) * del_t / eps_0 + self%EField(i)
-            CASE(-4)
-                d(i) = (SUM(self%J(i+1, :)) - SUM(self%J(i, :))) * del_t / eps_0 - self%EField(i+1)
-            CASE(4)
-                d(i) = (SUM(self%J(i, :)) - SUM(self%J(i+1, :))) * del_t / eps_0 + self%EField(i)
             END SELECT
         end do
 
@@ -299,13 +328,23 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i, sign, Eindx
-        ! 'logical' field, dphi_dl
+        ! 'logical' field, dphi_dl, used in particle mover
         self%EField(2:NumberXNodes) = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes))
 
         do i = 1, self%numDirichletNodes
-            sign = world%boundaryConditions(self%dirichletIndx(i)+1) - world%boundaryConditions(self%dirichletIndx(i))
-            Eindx = self%dirichletIndx(i) + world%boundaryConditions(self%dirichletIndx(i)+1)
-            self%EField(Eindx) = real(sign) * (self%phi(self%dirichletIndx(i)) +self%phi_f(self%dirichletIndx(i))  - 2.0d0 * self%dirichletVals(i))
+            if (self%dirichletIndx(i) == 1) then
+                if (self%dirichletIsRFBool(i)) then
+                    self%EField(1) = (self%dirichletVals(i) + self%RF_voltage - self%phi(1) - self%phi_f(1))
+                else
+                    self%EField(1) = (2.0d0 * self%dirichletVals(i) - self%phi(1) - self%phi_f(1))
+                end if
+            else
+                if (self%dirichletIsRFBool(i)) then
+                    self%EField(NumberXNodes+1) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - self%dirichletVals(i) - self%RF_voltage 
+                else
+                    self%EField(NumberXNodes+1) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%dirichletVals(i)
+                end if
+            end if
         end do
     end subroutine evaluateEFieldHalfTime
 
@@ -313,15 +352,43 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i, sign, Eindx
+        ! used as source term in divergence ampere solver
         self%EField(2:NumberXNodes) = (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) &
             /world%centerDiff
 
         do i = 1, self%numDirichletNodes
-            sign = world%boundaryConditions(self%dirichletIndx(i)+1) - world%boundaryConditions(self%dirichletIndx(i))
-            Eindx = self%dirichletIndx(i) + world%boundaryConditions(self%dirichletIndx(i)+1)
-            self%EField(Eindx) = real(sign) * 2.0d0 * (self%phi(self%dirichletIndx(i)) - self%dirichletVals(i))/world%dx_dl(self%dirichletIndx(i))
+            if (self%dirichletIndx(i) == 1) then
+                self%EField(1) = 2.0d0 * (self%dirichletVals(i) - self%phi(1))/world%dx_dl(1)
+            else
+                self%EField(NumberXNodes+1) = 2.0d0 * (self%phi(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
+            end if
         end do
     end subroutine evaluateEFieldCurrTime
+
+    subroutine evaluateEFieldFutureTime(self, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        integer(int32) :: i, sign, Eindx
+        ! used as source term in divergence ampere solver
+        self%EField(2:NumberXNodes) = (self%phi_f(1:NumberXNodes-1) - self%phi_f(2:NumberXNodes)) &
+            /world%centerDiff
+
+        do i = 1, self%numDirichletNodes
+            if (self%dirichletIndx(i) == 1) then
+                if (self%dirichletIsRFBool(i)) then
+                    self%EField(1) = 2.0d0 * (self%RF_voltage - self%phi_f(1))/world%dx_dl(1)
+                else
+                    self%EField(1) = 2.0d0 * (self%dirichletVals(i) - self%phi_f(1))/world%dx_dl(1)
+                end if
+            else
+                if (self%dirichletIsRFBool(i)) then
+                    self%EField(NumberXNodes+1) = 2.0d0 * (self%phi_f(NumberXNodes) - self%RF_voltage)/world%dx_dl(NumberXNodes) 
+                else
+                    self%EField(NumberXNodes+1) = 2.0d0 * (self%phi_f(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
+                end if
+            end if
+        end do
+    end subroutine evaluateEFieldFutureTime
 
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
@@ -334,7 +401,11 @@ contains
         if (future) then
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi_f, NumberXNodes)**2 / world%centerDiff)
             do i = 1, self%numDirichletNodes
-                res = res + eps_0 * (self%dirichletVals(i) - self%phi_f(self%dirichletIndx(i)))**2 / world%dx_dl(self%dirichletIndx(i))
+                if (self%dirichletIsRFBool(i)) then
+                    res = res + eps_0 * (self%RF_voltage - self%phi_f(self%dirichletIndx(i)))**2 / world%dx_dl(self%dirichletIndx(i))
+                else
+                    res = res + eps_0 * (self%dirichletVals(i) - self%phi_f(self%dirichletIndx(i)))**2 / world%dx_dl(self%dirichletIndx(i))
+                end if
             end do
         else
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%centerDiff)
@@ -344,5 +415,57 @@ contains
         end if
     end function getTotalPE
 
+    function getEnergyFromBoundary(self, world, del_t) result(res)
+        ! Get energy input into domain from dirichlet boundary
+        ! In 1D is J/m^2
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t
+        real(real64) :: res, leftPhiAve, rightPhiAve
+        integer(int32) :: i
+        res = 0.0d0
+        if (self%numDirichletNodes > 1) then
+            res = del_t * SUM(self%J(2,:))
+            res = res + eps_0 * ((self%phi_f(1) - self%phi_f(2)) -(self%phi(1) - self%phi(2))) /world%centerDiff(1)
+            if (self%dirichletIsRFBool(1)) then
+                leftPhiAve = 0.5d0 * (self%RF_voltage + self%dirichletVals(1))
+            else
+                leftPhiAve = self%dirichletVals(1)
+            end if
+
+            if (self%dirichletIsRFBool(2)) then
+                rightPhiAve = 0.5d0 * (self%RF_voltage + self%dirichletVals(2))
+            else
+                rightPhiAve = self%dirichletVals(2)
+            end if
+            res = res * (leftPhiAve - rightPhiAve)
+        end if
+    end function getEnergyFromBoundary
+
+    subroutine setRFVoltage(self, world, timeFuture)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeFuture 
+        integer(int32) :: i
+
+        do i = 1, self%numDirichletNodes
+            if (self%dirichletIsRFBool(i)) then
+                self%RF_voltage = self%RF_half_amplitude * SIN(self%RF_rad_frequency * (timeFuture))
+                self%sourceTermVals(i) = -self%RF_voltage * 2.0d0 / world%dx_dl(self%dirichletIndx(i))
+            end if
+        end do
+
+    end subroutine setRFVoltage
+
+    subroutine resetVoltage(self)
+        class(potentialSolver), intent(in out) :: self
+        integer(int32) :: i
+        self%phi = self%phi_f
+        do i = 1, self%numDirichletNodes
+            if (self%dirichletIsRFBool(i)) then
+                self%dirichletVals(i) = self%RF_voltage
+            end if
+        end do
+    end subroutine resetVoltage
 
 end module mod_potentialSolver

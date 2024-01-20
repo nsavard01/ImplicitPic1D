@@ -24,9 +24,11 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: setRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: solve_CG_Ampere
+        procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
     end type
@@ -318,6 +320,23 @@ contains
         res = res + eps_0 * ((self%phi_f(1) - self%phi_f(2)) -(self%phi(1) - self%phi(2))) /world%dx_dl(1)
         res = res * (self%phi_f(1) + self%phi(1) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes)) * 0.5d0
     end function getEnergyFromBoundary
+
+    subroutine setRFVoltage(self, world, timeFuture)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeFuture 
+        if (world%boundaryConditions(1) == 4) then
+            self%phi_f(1) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * (timeFuture))
+        else
+            self%phi_f(NumberXNodes) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * (timeFuture))
+        end if
+    end subroutine setRFVoltage
+
+    subroutine resetVoltage(self)
+        class(potentialSolver), intent(in out) :: self
+        ! reset current phi value to be future phi value in last time step
+        self%phi = self%phi_f
+    end subroutine resetVoltage
 
 
 end module mod_potentialSolver

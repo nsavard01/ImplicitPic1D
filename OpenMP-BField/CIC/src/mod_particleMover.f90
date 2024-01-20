@@ -741,7 +741,7 @@ contains
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
                             l_f = real(l_boundary)
-                        CASE(1)
+                        CASE(1,4)
                             exit
                         CASE(2)
                             if (l_boundary == NumberXNodes+1) then
@@ -870,7 +870,7 @@ contains
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
                             l_f = real(l_boundary)
-                        CASE(1)
+                        CASE(1,4)
                             delIdx = delIdx + 1
                             if (l_boundary == 1) then
                                 particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + (SUM(v_f**2))!J/m^2 in 1D

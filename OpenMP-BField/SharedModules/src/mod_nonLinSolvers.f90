@@ -230,11 +230,7 @@ contains
         currDel_t = remainDel_t
         if (solver%RF_bool) then
             ! if RF, change value of future phi values at RF boundary
-            if (world%boundaryConditions(1) == 4) then
-                solver%phi_f(1) = solver%RF_half_amplitude * SIN(solver%RF_rad_frequency * (timeCurrent + remainDel_t))
-            else
-                solver%phi_f(NumberXNodes) = solver%RF_half_amplitude * SIN(solver%RF_rad_frequency * (timeCurrent + remainDel_t))
-            end if
+            call globalSolver%setRFVoltage(world, timeCurrent + remainDel_t)
         end if
         call solveDivAmpereAnderson(solver, particleList, world, remainDel_t, maxIter, eps_r) 
         if (iterNumPicard < maxIter) then
@@ -251,11 +247,7 @@ contains
                 end if
                 if (solver%RF_bool) then
                     ! if RF, change value of future phi values at RF boundary
-                    if (world%boundaryConditions(1) == 4) then
-                        solver%phi_f(1) = solver%RF_half_amplitude * SIN(solver%RF_rad_frequency * (timeCurrent + currDel_t))
-                    else
-                        solver%phi_f(NumberXNodes) = solver%RF_half_amplitude * SIN(solver%RF_rad_frequency * (timeCurrent + currDel_t))
-                    end if
+                    call globalSolver%setRFVoltage(world, timeCurrent + currDel_t)
                 end if 
                 call solveDivAmpereAnderson(solver, particleList, world, currDel_t, maxIter, eps_r)  
             end do 
@@ -271,7 +263,7 @@ contains
         real(real64), intent(in) :: del_t, eps_r, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
         ! make future phi now current phi
-        solver%phi = solver%phi_f
+        call solver%resetVoltage()
         SELECT CASE (solverType)
         CASE(0)
             call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
@@ -360,11 +352,7 @@ contains
         currDel_t = remainDel_t
         if (globalSolver%RF_bool) then
             ! if RF, change value of future phi values at RF boundary
-            if (globalWorld%boundaryConditions(1) == 4) then
-                globalSolver%phi_f(1) = globalSolver%RF_half_amplitude * SIN(globalSolver%RF_rad_frequency * (timeCurrent + remainDel_t))
-            else
-                globalSolver%phi_f(NumberXNodes) = globalSolver%RF_half_amplitude * SIN(globalSolver%RF_rad_frequency * (timeCurrent + remainDel_t))
-            end if
+            call globalSolver%setRFVoltage(globalWorld, timeCurrent + remainDel_t)
         end if
         call solveJFNK(remainDel_t, maxIter, eps_r)
         if (iterNumPicard < maxIter) then
@@ -380,11 +368,7 @@ contains
                 end if
                 if (globalSolver%RF_bool) then
                     ! if RF, change value of future phi values at RF boundary
-                    if (globalWorld%boundaryConditions(1) == 4) then
-                        globalSolver%phi_f(1) = globalSolver%RF_half_amplitude * SIN(globalSolver%RF_rad_frequency * (timeCurrent + currDel_t))
-                    else
-                        globalSolver%phi_f(NumberXNodes) = globalSolver%RF_half_amplitude * SIN(globalSolver%RF_rad_frequency * (timeCurrent + currDel_t))
-                    end if
+                    call globalSolver%setRFVoltage(globalWorld, timeCurrent + currDel_t)
                 end if
                 call solveJFNK(currDel_t, maxIter, eps_r)
             end do
