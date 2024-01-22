@@ -566,7 +566,7 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, windowNum, VHist(2*binNumber), intPartV, k, iThread
         real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
-        real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss
+        real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss, RF_ave
         real(real64) :: E_max, VMax
         real(real64), allocatable :: wallLoss(:)
         
@@ -586,6 +586,7 @@ contains
         lastCheckTime = startTime
         checkTimeDivision = 200.0d0 * del_t/fractionFreq
         windowNum = 0
+        RF_ave = 0
         allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
         do while((currentTime - startTime) < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
@@ -596,7 +597,7 @@ contains
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
             if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
             call loadParticleDensity(particleList, world, .false.)
-            phi_average = phi_average + solver%phi
+            call solver%aveRFVoltage(.true., phi_average, RF_ave, i, world)
             ! if (MODULO(i+1, heatSkipSteps) == 0) then
             !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSkipSteps*del_t)
             ! end if
@@ -624,7 +625,7 @@ contains
             particleList(j)%densities(:, iThread) = particleList(j)%densities(:, iThread) /real(i)
             !$OMP end parallel
         end do
-        phi_average = phi_average/i
+        call solver%aveRFVoltage(.false., phi_average, RF_ave, i, world)
         call writePhi(phi_average, 0, .true., directoryName)
         chargeLossTotal = 0.0d0
         ELossTotal = 0.0d0
@@ -632,7 +633,6 @@ contains
             chargeLossTotal = chargeLossTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
             ELossTotal = ELossTotal + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
         end do
-        solver%phi_f = phi_average
         solver%rho = 0.0d0
         do j=1, numberChargedParticles
             solver%rho = solver%rho + SUM(particleList(j)%densities, DIM = 2) * particleList(j)%q * particleList(j)%w_p
@@ -646,6 +646,8 @@ contains
         close(22)
         print *, 'Power loss to walls is:', ELossTotal/(currentTime - startTime)
         print *, 'Power gain in plasma is:', SUM(energyAddColl)/(currentTime - startTime)
+        print *, 'Electron total power loss in W/m^2:', SUM(particleList(1)%accumEnergyLoss) * particleList(1)%mass * particleList(1)%w_p * 0.5d0 / (currentTime - startTime)
+        print *, 'Ion total power loss in W/m^2:', SUM(particleList(2)%accumEnergyLoss) * particleList(2)%mass * particleList(2)%w_p * 0.5d0 / (currentTime - startTime)
         print *, "Electron average wall loss flux:", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p/(currentTime - startTime)
         print *, "Ion average wall loss flux:", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p/(currentTime - startTime)
         print *, "Performing average for EEDF over 50/omega_p"

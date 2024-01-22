@@ -29,6 +29,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: setRFVoltage
         procedure, public, pass(self) :: resetVoltage
+        procedure, public, pass(self) :: aveRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: evaluateEFieldHalfTime
         procedure, public, pass(self) :: evaluateEFieldCurrTime
@@ -467,5 +468,35 @@ contains
             end if
         end do
     end subroutine resetVoltage
+
+    subroutine aveRFVoltage(self, accumBool, phi_average, RF_ave, numSteps, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        logical, intent(in) :: accumBool
+        real(real64), intent(in out) :: phi_average(NumberXNodes)
+        real(real64), intent(in out) :: RF_ave
+        integer(int32), intent(in) :: numSteps
+        integer(int32) :: j
+
+        if (accumBool) then
+            phi_average = phi_average + self%phi_f
+            ! average RF voltage
+            do j = 1, self%numDirichletNodes
+                if (self%dirichletIsRFBool(j)) then
+                    RF_ave = RF_ave + self%RF_voltage
+                end if
+            end do
+        else
+            phi_average = phi_average/numSteps
+            self%phi_f = phi_average
+            do j = 1, self%numDirichletNodes
+                if (self%dirichletIsRFBool(j)) then
+                    RF_ave = RF_ave/numSteps
+                    self%sourceTermVals(j) = -RF_ave * 2.0d0 / world%dx_dl(self%dirichletIndx(j))
+                end if
+            end do
+        end if
+
+    end subroutine aveRFVoltage
 
 end module mod_potentialSolver

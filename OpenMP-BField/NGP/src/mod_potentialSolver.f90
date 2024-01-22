@@ -25,6 +25,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: setRFVoltage
+        procedure, public, pass(self) :: aveRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: solve_CG_Ampere
@@ -337,6 +338,31 @@ contains
         ! reset current phi value to be future phi value in last time step
         self%phi = self%phi_f
     end subroutine resetVoltage
+
+    subroutine aveRFVoltage(self, accumBool, phi_average, RF_ave, numSteps, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        logical, intent(in) :: accumBool
+        real(real64), intent(in out) :: phi_average(NumberXNodes)
+        real(real64), intent(in out) :: RF_ave
+        integer(int32), intent(in) :: numSteps
+
+        if (accumBool) then
+            phi_average = phi_average + self%phi_f  
+            if (world%boundaryConditions(1) == 4) then
+                RF_ave = RF_ave + self%phi_f(1)
+            else if (world%boundaryConditions(NumberXNodes) == 4) then
+                RF_ave = RF_ave + self%phi_f(NumberXNodes)
+            end if
+        else
+            phi_average = phi_average/numSteps
+            self%phi_f = phi_average
+            if (self%RF_bool) then
+                RF_ave = RF_ave/numSteps
+            end if
+        end if
+
+    end subroutine aveRFVoltage
 
 
 end module mod_potentialSolver
