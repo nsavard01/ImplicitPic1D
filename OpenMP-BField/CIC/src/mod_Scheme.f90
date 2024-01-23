@@ -52,11 +52,11 @@ contains
                 ! No Boundary either side
                 part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
-            else if (world%boundaryConditions(l_right) == 1) then
+            else if (world%boundaryConditions(l_right) == 1 .or. world%boundaryConditions(l_right) == 4) then
                 ! Dirichlet to right
                 part%densities(l_center, iThread) = part%densities(l_center, iThread) - 0.5d0 * d**2
                 part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-            else if (world%boundaryConditions(l_center) == 1) then
+            else if (world%boundaryConditions(l_center) == 1 .or. world%boundaryConditions(l_center) == 4) then
                 !Dirichlet to left
                 part%densities(l_center, iThread) = part%densities(l_center, iThread) - 0.5d0 * (1.0d0 - d)**2
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
@@ -67,12 +67,6 @@ contains
             else if (world%boundaryConditions(l_center) == 2) then
                 !Neumann to left
                 part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
-                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
-            else if (world%boundaryConditions(l_right) == 4) then
-                !Neumann absorbing to right
-                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-            else if (world%boundaryConditions(l_center) == 4) then
-                !Neumann absorbing to left
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
             end if
         end do
@@ -121,11 +115,11 @@ contains
             del_Rho = rho_f(i) - rho_i(i)
             if (del_Rho /= 0) then
                 SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
-                CASE(0, 4, -4)
+                CASE(0)
                     chargeError = chargeError + (1.0d0 + del_t * (J(i+1) - J(i))/(del_Rho))**2
-                CASE(-1)
+                CASE(-1,-4)
                     chargeError = chargeError + (1.0d0 + del_t * (J(i+1) - 2.0d0 * J(i))/(del_Rho))**2
-                CASE(1)
+                CASE(1,4)
                     chargeError = chargeError + (1.0d0 + del_t * (2.0d0 * J(i+1) - J(i))/del_Rho)**2
                 CASE(2)
                     chargeError = chargeError + (1.0d0 + del_t * (-J(i))/del_Rho)**2 

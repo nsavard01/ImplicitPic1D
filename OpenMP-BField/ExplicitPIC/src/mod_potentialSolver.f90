@@ -444,7 +444,7 @@ contains
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             !$OMP end parallel
-            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2) * particleList(j)%mass * 0.5d0 * particleList(j)%w_p
+            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
         end do loopSpecies
     end subroutine moveParticles

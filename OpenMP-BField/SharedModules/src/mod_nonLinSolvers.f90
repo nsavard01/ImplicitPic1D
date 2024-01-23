@@ -84,13 +84,14 @@ contains
 
     ! ---------------- Initial Poisson Solver -------------------------------------------------
 
-    subroutine solveInitialPotential(solver, particleList, world)
+    subroutine solveInitialPotential(solver, particleList, world, timeCurrent)
         ! Solve for initial potential
         class(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeCurrent
         call depositRho(solver%rho, particleList, world)
-        call solver%solve_tridiag_Poisson(world)
+        call solver%solve_tridiag_Poisson(world, timeCurrent)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
 
     end subroutine solveInitialPotential
@@ -163,7 +164,7 @@ contains
         integer(int32) :: i, j, index, m_k, info, ldb
         ldb = MAX(m_Anderson, (NumberXNodes))
         lwork= MIN((NumberXNodes),m_Anderson) + ldb
-        phi_k(:,1) = solver%phi
+        phi_k(:,1) = solver%phi_f
         call depositJ(solver, particleList, world, del_t)
         initialNorm = SQRT(SUM(solver%phi**2))
         call solver%solve_tridiag_Ampere(world, del_t)
@@ -183,7 +184,6 @@ contains
             !print *, normResidual(index)
             if (normResidual(index) < eps_r*(initialR)) then
                 call moveParticles(solver,particleList, world, del_t)
-                solver%phi = solver%phi_f
                 iterNumPicard = i
                 exit
             end if
@@ -218,16 +218,20 @@ contains
         end do
     end subroutine solveDivAmpereAnderson
 
-    subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+    subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
         ! Solve for divergence of ampere's law with picard
         ! cut del_t in two if non-convergence after maxIter, repeat until convergence
         type(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
+        real(real64), intent(in) :: del_t, eps_r, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
         currDel_t = remainDel_t
+        if (solver%RF_bool) then
+            ! if RF, change value of future phi values at RF boundary
+            call globalSolver%setRFVoltage(world, timeCurrent + remainDel_t)
+        end if
         call solveDivAmpereAnderson(solver, particleList, world, remainDel_t, maxIter, eps_r) 
         if (iterNumPicard < maxIter) then
             remainDel_t = del_t  
@@ -241,24 +245,30 @@ contains
                 if (iterNumAdaptiveSteps > 4) then
                     stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
                 end if
-                call solveDivAmpereAnderson(solver, particleList, world, currDel_t, maxIter, eps_r)   
+                if (solver%RF_bool) then
+                    ! if RF, change value of future phi values at RF boundary
+                    call globalSolver%setRFVoltage(world, timeCurrent + currDel_t)
+                end if 
+                call solveDivAmpereAnderson(solver, particleList, world, currDel_t, maxIter, eps_r)  
             end do 
             remainDel_t = remainDel_t - currDel_t 
         end if
     end subroutine adaptiveSolveDivAmpereAnderson
 
-    subroutine solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+    subroutine solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
         type(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
+        real(real64), intent(in) :: del_t, eps_r, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
+        ! make future phi now current phi
+        call solver%resetVoltage()
         SELECT CASE (solverType)
         CASE(0)
-            call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r)
+            call adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
         CASE(1)
-            call adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r)
+            call adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
         CASE default
             print *, "Solver type doesn't exit!"
             stop
@@ -315,7 +325,7 @@ contains
 
         ! Set Nitsol parameters
         iterm = 0
-        xcurSolver = globalSolver%phi
+        xcurSolver = globalSolver%phi_f
         call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, del_t, ipar, itrmf)
         initialNorm = dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
@@ -324,7 +334,6 @@ contains
         CASE(0)
             iterNumPicard = info(4)
             call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
-            globalSolver%phi = globalSolver%phi_f
         CASE(1)
             iterNumPicard = maxIter
         CASE default
@@ -334,13 +343,17 @@ contains
         print *, 'iterNumPicard is:', iterNumPicard
     end subroutine solveJFNK
 
-    subroutine adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r)
+    subroutine adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
         ! Solve for divergence of ampere's law with picard
         ! cut del_t in two if non-convergence after maxIter, repeat until convergence
         integer(int32), intent(in) :: maxIter
-        real(real64), intent(in) :: del_t, eps_r
+        real(real64), intent(in) :: del_t, eps_r, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
         currDel_t = remainDel_t
+        if (globalSolver%RF_bool) then
+            ! if RF, change value of future phi values at RF boundary
+            call globalSolver%setRFVoltage(globalWorld, timeCurrent + remainDel_t)
+        end if
         call solveJFNK(remainDel_t, maxIter, eps_r)
         if (iterNumPicard < maxIter) then
             remainDel_t = del_t
@@ -352,6 +365,10 @@ contains
                 iterNumAdaptiveSteps = iterNumAdaptiveSteps + 1
                 if (iterNumAdaptiveSteps > 4) then
                     stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
+                end if
+                if (globalSolver%RF_bool) then
+                    ! if RF, change value of future phi values at RF boundary
+                    call globalSolver%setRFVoltage(globalWorld, timeCurrent + currDel_t)
                 end if
                 call solveJFNK(currDel_t, maxIter, eps_r)
             end do

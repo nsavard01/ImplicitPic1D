@@ -206,6 +206,9 @@ contains
         open(41,file=dirName//'/domainDxDl.dat', form='UNFORMATTED')
         write(41) self%dx_dl
         close(41)
+        open(41,file=dirName//"/domainBoundaryConditions.dat", form='UNFORMATTED')
+        write(41) self%boundaryConditions
+        close(41)
     end subroutine writeDomain
 
 

@@ -148,8 +148,8 @@ contains
         call generateSaveDirectory(directoryName)
         !Wrtie Initial conditions
         open(15,file=directoryName//'/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, n_ave, T_e, T_i, numDiag, NumChargedPart, numThread")')
-        write(15,"((I6, 1x), 7(es16.8,1x), 3(I6, 1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps, numberChargedParticles, numThread
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, n_ave, T_e, T_i, numDiag, NumChargedPart, numThread, RF_frequency, RF_half_amplitude")')
+        write(15,"((I6, 1x), 7(es16.8,1x), 3(I6, 1x), 2(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps, numberChargedParticles, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude
         close(15)
         call system_clock(count_rate = timingRate)
         ! Write Particle properties
@@ -242,10 +242,10 @@ contains
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
                     call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
-                    energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss)
+                    energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
                     write(unitPart1+j,"(5(es16.8,1x), (I6,1x))") currentTime, &
                         particleList(j)%accumWallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%accumWallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
-                        particleList(j)%accumEnergyLoss(1)/del_t/diagStepDiff, particleList(j)%accumEnergyLoss(2)/del_t/diagStepDiff, SUM(particleList(j)%N_p)
+                        particleList(j)%accumEnergyLoss(1)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/del_t/diagStepDiff, particleList(j)%accumEnergyLoss(2)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/del_t/diagStepDiff, SUM(particleList(j)%N_p)
                     particleList(j)%accumEnergyLoss = 0.0d0
                     particleList(j)%accumWallLoss = 0
                 end do
@@ -369,7 +369,7 @@ contains
             do j = 1, numberChargedParticles
                 wallLoss(windowNum) = wallLoss(windowNum) + SUM(particleList(j)%accumEnergyLoss)
             end do
-            wallLoss(windowNum) = wallLoss(windowNum)/currentTime
+            wallLoss(windowNum) = wallLoss(windowNum)/(currentTime - startTime)
             if (windowNum > windowDivision) then
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
@@ -377,7 +377,7 @@ contains
                 windowNum = 0
             end if
         end do
-        print *, "Averaging finished over", currentTime, 'simulation time (s)'
+        print *, "Averaging finished over", (currentTime - startTime), 'simulation time (s)'
         stepsAverage = i
         densities = densities/i
         call writeParticleDensity(densities, particleList, world, 0, .true., directoryName) 
@@ -387,7 +387,7 @@ contains
         energyLoss = 0.0d0
         do i=1, numberChargedParticles
             chargeTotal = chargeTotal + SUM(particleList(i)%accumWallLoss) * particleList(i)%q * particleList(i)%w_p
-            energyLoss = energyLoss + SUM(particleList(i)%accumEnergyLoss)
+            energyLoss = energyLoss + SUM(particleList(i)%accumEnergyLoss) * particleList(i)%mass * particleList(i)%w_p * 0.5d0
         end do
         open(22,file=directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')

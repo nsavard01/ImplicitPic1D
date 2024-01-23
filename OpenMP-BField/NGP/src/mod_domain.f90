@@ -213,6 +213,9 @@ contains
         open(41,file=dirName//'/domainNodeVol.dat', form='UNFORMATTED')
         write(41) self%nodeVol
         close(41)
+        open(41,file=dirName//"/domainBoundaryConditions.dat", form='UNFORMATTED')
+        write(41) self%boundaryConditions
+        close(41)
     end subroutine writeDomain
 
 

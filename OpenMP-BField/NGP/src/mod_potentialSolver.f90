@@ -15,17 +15,21 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle
+        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
-        logical :: BFieldBool
+        logical :: BFieldBool, RF_bool
 
 
     contains
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: setRFVoltage
+        procedure, public, pass(self) :: aveRFVoltage
+        procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: solve_CG_Ampere
+        procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
     end type
@@ -36,11 +40,11 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
-        real(real64), intent(in) :: BFieldMag, angle
+        real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
         allocate(self % J(NumberXNodes-1, numThread), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes-1))
@@ -49,22 +53,24 @@ contains
         self % J = 0.0d0
         self % phi = 0.0d0
         self % rho_const = 0.0d0
-        SELECT CASE (world%boundaryConditions(1))
-        CASE(1)
-            self%phi(1) = leftVoltage
-        CASE(2)
-            self%phi(1) = 0.0d0
-        CASE(3)
+        self%RF_half_amplitude = 0.0d0
+        if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
+        if (world%boundaryConditions(1) == 4) self%RF_half_amplitude = leftVoltage
+        if (world%boundaryConditions(NumberXNodes) == 1) self%phi(NumberXNodes) = rightVoltage
+        if (world%boundaryConditions(NumberXNodes) == 4) then
+            if (self%RF_half_amplitude /= 0) then
+                print *, 'Half amplitude voltage for RF already set, have two RF boundaries!'
+                stop
+            else
+                self%RF_half_amplitude = rightVoltage
+            end if
+        end if
+        if (world%boundaryConditions(1) == 3) then
             self%phi(1) = leftVoltage
             self%phi(NumberXNodes) = leftVoltage
-        END SELECT
-
-        SELECT CASE (world%boundaryConditions(NumberXNodes))
-        CASE(1,3)
-            self%phi(NumberXNodes) = rightVoltage
-        CASE(2)
-            self%phi(NumberXNodes) = 0.0d0
-        END SELECT
+        end if
+        self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
+        self%RF_bool = self%RF_rad_frequency > 0 .and. self%RF_half_amplitude > 0 .and. (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes) == 4)
         self%phi_f = self%phi 
         self%BFieldMag = BFieldMag
         self%BFieldBool = (BFieldMag /= 0.0d0)
@@ -91,7 +97,7 @@ contains
                     self%a_tri(i-1) = 1.0d0/ world%dx_dl(i-1)
                 end if
                 self%b_tri(i) = - (1.0d0/world%dx_dl(i-1)  + 1.0d0/world%dx_dl(i))
-            CASE(1)
+            CASE(1,4)
                 self%b_tri(i) = 1.0d0
             CASE(2)
                 if (i == 1) then
@@ -108,19 +114,6 @@ contains
                 end if
             CASE(3)
                 self%b_tri(i) = 1.0d0
-            CASE(4)
-                if (i == 1) then
-                    self % c_tri(i) = 1.0d0
-                    !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
-                    self%b_tri(i) = -1.0d0
-                else if (i == NumberXNodes) then
-                    self % a_tri(i-1) = 1.0d0
-                    !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
-                    self%b_tri(i) = -1.0d0
-                else
-                    print *, "Neumann boundary not on left or right most index!"
-                    stop
-                end if
             CASE default
                 print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
             END SELECT
@@ -128,10 +121,11 @@ contains
 
     end subroutine construct_diagMatrix
 
-    subroutine solve_tridiag_Poisson(self, world)
+    subroutine solve_tridiag_Poisson(self, world, timeCurrent)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeCurrent
         integer(int32) :: i
         real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
 
@@ -142,7 +136,7 @@ contains
             CASE(1,3)
                 d(i) = self%phi(i)
             CASE(4)
-                d(i) = 0.0d0
+                d(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeCurrent)
             END SELECT
         end do
     ! initialize c-prime and d-prime
@@ -171,18 +165,16 @@ contains
         type(Domain), intent(in) :: world
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), res
-        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+        Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         res = 0.0d0
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
                 res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + 1d-15) - 1.0d0)**2
                 !d(i) = -self%rho(i) - self%rho_const
-            CASE(1,3)
+            CASE(1,3,4)
                 res = res + ((Ax(i) + 1d-15)/(self.phi_f(i) + 1d-15) - 1.0d0)**2
                 !d(i) = self%phi_f(i)*eps_0
-            CASE(4)
-                res = res + (Ax(i))**2
             END SELECT
         end do
         !res = Ax*eps_0 - 
@@ -202,7 +194,7 @@ contains
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
                 d(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
-            CASE(1,3)
+            CASE(1,3,4)
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
@@ -210,8 +202,6 @@ contains
                 else if (i == NumberXNodes) then
                     d(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
-            CASE(4)
-                d(i) = 0.0d0
             END SELECT
         end do
     ! initialize c-prime and d-prime
@@ -319,6 +309,60 @@ contains
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%dx_dl)
         end if
     end function getTotalPE
+
+    function getEnergyFromBoundary(self, world, del_t) result(res)
+        ! Get energy input into domain from dirichlet boundary
+        ! In 1D is J/m^2
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t
+        real(real64) :: res
+        res = del_t * SUM(self%J(1,:))
+        res = res + eps_0 * ((self%phi_f(1) - self%phi_f(2)) -(self%phi(1) - self%phi(2))) /world%dx_dl(1)
+        res = res * (self%phi_f(1) + self%phi(1) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes)) * 0.5d0
+    end function getEnergyFromBoundary
+
+    subroutine setRFVoltage(self, world, timeFuture)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeFuture 
+        if (world%boundaryConditions(1) == 4) then
+            self%phi_f(1) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * (timeFuture))
+        else
+            self%phi_f(NumberXNodes) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * (timeFuture))
+        end if
+    end subroutine setRFVoltage
+
+    subroutine resetVoltage(self)
+        class(potentialSolver), intent(in out) :: self
+        ! reset current phi value to be future phi value in last time step
+        self%phi = self%phi_f
+    end subroutine resetVoltage
+
+    subroutine aveRFVoltage(self, accumBool, phi_average, RF_ave, numSteps, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        logical, intent(in) :: accumBool
+        real(real64), intent(in out) :: phi_average(NumberXNodes)
+        real(real64), intent(in out) :: RF_ave
+        integer(int32), intent(in) :: numSteps
+
+        if (accumBool) then
+            phi_average = phi_average + self%phi_f  
+            if (world%boundaryConditions(1) == 4) then
+                RF_ave = RF_ave + self%phi_f(1)
+            else if (world%boundaryConditions(NumberXNodes) == 4) then
+                RF_ave = RF_ave + self%phi_f(NumberXNodes)
+            end if
+        else
+            phi_average = phi_average/numSteps
+            self%phi_f = phi_average
+            if (self%RF_bool) then
+                RF_ave = RF_ave/numSteps
+            end if
+        end if
+
+    end subroutine aveRFVoltage
 
 
 end module mod_potentialSolver

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
         !COMPILER-GENERATED INTERFACE MODULE: Wed Jan 17 21:00:37 2024
+=======
+        !COMPILER-GENERATED INTERFACE MODULE: Sat Jan 20 00:25:37 2024
+>>>>>>> RF_test
         ! This source file is for reference only and may not completely
         ! represent the generated interface used by the compiler.
         MODULE NITSOL__genmod
