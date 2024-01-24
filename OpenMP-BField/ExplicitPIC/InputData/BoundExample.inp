@@ -6,9 +6,17 @@ e	  2000		2
 
 
 IONS
-name   mass  charge 	NumParticles/thread   ArraySizeMultiplication
+name   massAtom(AMU)  charge 	NumParticles/thread   ArraySizeMultiplication
 --------------------------------------------------
-H+     1.     1. 		2000    2
+H+    1.00784d0     1. 		2000    2
 --------------------------------------------------
+
+
+NEUTRALS
+name   mass(AMU)  temp(K)  density
+-------------------------------------
+H     1.00784    300.0d0     9.64d20
+-------------------------------------
+
 
 ENDFILE

@@ -15,13 +15,15 @@ program BoundPlasmaExample
     integer(int32) :: i,j, iThread!, tclock1, tclock2, clock_rate
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
+    type(targetParticle), allocatable :: targetParticleList(:)
     type(potentialSolver) :: solver
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(world, solver, 'Geometry.inp')
-    particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world)
+    call readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world, particleList, targetParticleList)
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
     ! end do
+    stop
     call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, particleList(1)%w_p, solver%BFieldAngle, FractionFreqHeating)
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
     call solver%depositRho(particleList)

@@ -4,10 +4,12 @@ module mod_readInputs
     use mod_BasicFunctions
     use mod_domain
     use mod_particle
+    use mod_targetParticle
     use mod_potentialSolver
     use mod_particleInjection
     use omp_lib
     implicit none
+
 
 
 contains
@@ -276,83 +278,110 @@ contains
 
     end subroutine readGeometry
 
-    function readParticleInputs(filename, numberChargedParticles, irand, T_e, T_i, numThread, world) result(particleList)
-        type(Particle), allocatable :: particleList(:)
+    subroutine readParticleInputs(filename, numberChargedParticles, irand, T_e, T_i, numThread, world, particleList, targetParticleList)
+        type(Particle), allocatable, intent(out) :: particleList(:)
+        type(targetParticle), allocatable, intent(out) :: targetParticleList(:)
         type(Domain) :: world
         character(len=*), intent(in) :: filename
         integer(int32), intent(in) :: numThread
         integer(int32), intent(in out) :: numberChargedParticles, irand(numThread)
         real(real64), intent(in) :: T_e, T_i
-        integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
+        integer(int32) :: j, numSpecies = 0, numNeutral = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name
-        character(len=8) :: particleNames(100)
-        real(real64) :: mass(100), charge(100), Ti(100)
+        character(len=8) :: particleNames(100), neutralName
+        real(real64) :: mass(100), charge(100), Ti(100), mass_neutral, Temp_neutral, density_neutral
 
         print *, "Reading particle inputs:"
         open(10,file='../InputData/'//filename, action = 'read')
         do j=1, 10000
-            read(10,*,END=101,ERR=100) name
+            read(10,*) name
 
             if( name(1:9).eq.'ELECTRONS') then
-                read(10,*,END=101,ERR=100) name
-                read(10,*,END=101,ERR=100) name
-                read(10,'(A4)',END=101,ERR=100, ADVANCE = 'NO') name(1:2)
+                read(10,*) name
+                read(10,*) name
+                read(10,'(A4)', ADVANCE = 'NO') name(1:2)
                 numSpecies = numSpecies + 1
-                read(10,*,END=101,ERR=100) numParticles(numSpecies), particleIdxFactor(numSpecies)
+                read(10,*) numParticles(numSpecies), particleIdxFactor(numSpecies)
                 Ti(numSpecies) = T_e
                 mass(numSpecies) = m_e
                 charge(numSpecies) = -1.0
                 particleNames(numSpecies) = 'e'
-                read(10,*,END=101,ERR=100) name
-                read(10,*,END=101,ERR=100) name
+                read(10,*) name
+                read(10,*) name
             endif
 
 
             if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
                 do while(name(1:4).ne.'----')
-                    read(10,*,END=101,ERR=100) name
+                    read(10,*) name
                 end do
-200             read(10,'(A6)',END=101,ERR=100, ADVANCE = 'NO') name
-                if (name(1:4).eq.'----') then
-                    close(10)
-                else
+                read(10,'(A6)', ADVANCE = 'NO') name
+                do while (name(1:4).ne.'----')
                     numSpecies = numSpecies + 1
-                    read(10,*,END=101,ERR=100) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                    read(10,*) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
                     Ti(numSpecies) = T_i
-                    mass(numSpecies) = mass(numSpecies) * m_p
+                    mass(numSpecies) = mass(numSpecies) * m_amu - charge(numSpecies) * m_e
                     particleNames(numSpecies) = trim(name)
-                    goto 200
-                end if
+                    read(10,'(A6)', ADVANCE = 'NO') name
+                end do
             endif
-            ! Take care of extra text I guess        
+
+            if( name(1:4).eq.'NEUT' .or. name(1:4).eq.'Neut' .or. name(1:4).eq.'neut' ) then
+                do while(name(1:4).ne.'----')
+                    read(10,*) name
+                end do
+                read(10,'(A6)', ADVANCE = 'NO') name
+                do while (name(1:4).ne.'----')
+                    numNeutral = numNeutral + 1
+                    read(10,*) mass_neutral, Temp_neutral, density_neutral
+                    mass_neutral = mass_neutral * m_amu
+                    neutralName = trim(name)
+                    read(10,'(A6)', ADVANCE = 'NO') name
+                end do
+            endif       
 
             if (name(1:7) == 'ENDFILE') then
                 close(10)
+                exit
             end if
 
         end do
-100     continue
-101     continue
+
         numberChargedParticles = numSpecies
-        allocate(particleList(numberChargedParticles))
-        do j=1, numberChargedParticles
-            particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
-            call particleList(j) % initialize_n_ave(n_ave, (world%grid(NumberXNodes) - world%grid(1)))
-            call particleList(j) % generate3DMaxwellian(Ti(j), irand)
-            call particleList(j)% initializeRandUniform(irand)
-            print *, 'Initializing ', particleList(j) % name
-            print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
-            print *, "Particle mass is:", particleList(j)%mass
-            print *, "Particle charge is:", particleList(j)%q
-            print *, "Particle weight is:", particleList(j)%w_p
-            print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
-        end do
+        if (numberChargedParticles > 0) then
+            allocate(particleList(numberChargedParticles))
+            do j=1, numberChargedParticles
+                particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
+                call particleList(j) % initialize_n_ave(n_ave, (world%grid(NumberXNodes) - world%grid(1)))
+                call particleList(j) % generate3DMaxwellian(Ti(j), irand)
+                call particleList(j)% initializeRandUniform(irand)
+                print *, 'Initializing ', particleList(j) % name
+                print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
+                print *, "Particle mass is:", particleList(j)%mass
+                print *, "Particle charge is:", particleList(j)%q
+                print *, "Particle weight is:", particleList(j)%w_p
+                print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
+            end do
+        end if
+
+        numberNeutralParticles = numNeutral
+        if (numberNeutralParticles > 0) then
+            allocate(targetParticleList(numberNeutralParticles))
+            do j = 1, numberNeutralParticles
+                targetParticleList(j) = targetParticle(neutralName, mass_neutral, density_neutral, Temp_neutral)
+                print *, 'Initializing target particle:', targetParticleList(j)%name
+                print *, 'Particle mass is:', targetParticleList(j)%mass
+                print *, 'Particle temperature(K) is:', targetParticleList(j)%temperature
+                print *, 'Particle density is:', targetParticleList(j)%density
+            end do
+        end if
+
         
         print *, "---------------"
         print *, ""
 
 
 
-    end function readParticleInputs
+    end subroutine readParticleInputs
 
 end module mod_readInputs
