@@ -20,6 +20,7 @@ program BoundPlasmaExample
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(world, solver, 'Geometry.inp')
     call readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world, particleList, targetParticleList)
+    call readCollisionInputs('collision.inp', particleList, targetParticleList, numberBinaryCollisions)
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
     ! end do

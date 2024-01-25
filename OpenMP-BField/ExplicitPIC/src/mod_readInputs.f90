@@ -373,7 +373,6 @@ contains
                 print *, 'Particle mass is:', targetParticleList(j)%mass
                 print *, 'Particle temperature(K) is:', targetParticleList(j)%temperature
                 print *, 'Particle density is:', targetParticleList(j)%density
-                !test comment change
             end do
         end if
 
@@ -384,5 +383,117 @@ contains
 
 
     end subroutine readParticleInputs
+
+
+    subroutine readCollisionInputs(filename, particleList, targetParticleList, numberBinaryCollisions)
+        ! Reaction is any unique set of particle on target. For each reaction, you may have several different collision types
+        character(len=*), intent(in) :: filename
+        type(Particle), intent(in) :: particleList(numberChargedParticles)
+        type(targetParticle), intent(in) :: targetParticleList(numberNeutralParticles)
+        integer(int32), intent(in out) :: numberBinaryCollisions
+        integer(int32), parameter :: maxNumberPoints = 1500, maxNumberColls = 65
+        logical :: fileExists, foundParticleBool, reactantBool
+        character(len=100) :: string
+        character(:), allocatable :: collFileName
+        real(real64) :: tempVar1, tempVar2, E_scaling, sigma_scaling, E_threshold(maxNumberColls), E_temp(maxNumberPoints, maxNumberColls), sigma_temp(maxNumberPoints, maxNumberColls)
+        integer(int32) :: numberReactions, numberCollisions, i, lowerIndx, higherIndx, numberReactants, j, collisionReactantsIndx(2, maxNumberColls)
+        
+
+        print *, "Reading collision inputs:"
+        open(10,file='../InputData/'//filename, action = 'read')
+        read(10,*) string
+        do while (.not. (string(1:3) == 'END' .or. string(1:3) == 'end'))
+            collFileName = trim(string)
+            inquire(file = '../../CollisionData/'//collFileName, exist = fileExists)
+            if (fileExists) then
+                print *, 'Taking reactions from ', collFileName
+                open(20,file='../../CollisionData/'//collFileName, action = 'read')
+                numberCollisions = 0
+                read(20,*) string
+                do while (.not. (string(1:3) == 'END' .or. string(1:3) == 'end'))
+                    if( string(1:4).eq.'REAC' .or. string(1:4).eq.'Reac' .or. string(1:4).eq.'reac' ) then
+                        numberReactants = 0
+                        numberCollisions = numberCollisions + 1
+                        read(20,*) string
+                        print *, 'Interaction is:', trim(string)
+                        if (string(1:1) .ne. '[') then
+                            print *, 'Do not have chemical reaction after REACTION label'
+                            stop
+                        end if
+                        lowerIndx = 0
+                        higherIndx = 0
+                        reactantBool = .true.
+                        ! Get reactants and byproducts
+                        do i = 1, 100
+                            if (string(i:i) == '[') lowerIndx = i
+                            if (string(i:i) == ']') higherIndx = i
+                            if (string(i:i) == '>') then
+                                print *, 'number of reactants is:', numberReactants
+                                numberReactants = 0
+                                reactantBool = .false.
+                            end if
+                
+                            if (higherIndx > lowerIndx) then
+                                foundParticleBool = .false.
+                                lowerIndx = lowerIndx + 1
+                                higherIndx = higherIndx-1
+                                do j = 1, numberChargedParticles
+                                    if (particleList(j)%name == string(lowerIndx:higherIndx)) then
+                                        print *, 'particle found:', particleList(j)%name
+                                        foundParticleBool = .true.
+                                    end if
+                                end do
+                                do j = 1, numberNeutralParticles
+                                    if (targetParticleList(j)%name == string(lowerIndx:higherIndx)) then
+                                        print *, 'particle found:', targetParticleList(j)%name
+                                        foundParticleBool = .true.
+                                    end if
+                                end do
+                                if (foundParticleBool) then
+                                    numberReactants = numberReactants + 1
+                                else
+                                    print *, 'Could not find particle for collision:', string(lowerIndx:higherIndx)
+                                    stop
+                                end if
+                                lowerIndx = 0
+                                higherIndx = 0
+                            end if
+                        end do
+                        print *, 'number of byproducts:', numberReactants
+                        read(20,*) tempVar1, tempVar2
+                        print *, tempVar1, tempVar2
+                        read(20,*) E_scaling, sigma_scaling
+                        print *, E_scaling, sigma_scaling
+                        read(20,*) string
+                        print *, 'reaction type:', trim(string)
+                        do while(string(1:4).ne.'----')
+                            read(20,*) string
+                        end do
+
+                        do i = 1, maxNumberPoints
+                            read(20, '(4A)', ADVANCE = 'NO') string(1:4)
+                            if (string(1:4) == '----') then
+                                read(20, *) string
+                                exit
+                            else
+                                backspace(20)
+                            end if
+                            read(20, *) tempVar1, tempVar2
+                            print *, tempVar1, tempVar2
+                        end do
+                        print *, ''
+                    end if
+                    read(20,*) string
+                end do
+                close(20)
+            end if
+            read(10,*) string
+        end do
+        close(10)
+
+        print *, 'Number of collisions is:', numberCollisions
+        
+
+    end subroutine readCollisionInputs
 
 end module mod_readInputs
