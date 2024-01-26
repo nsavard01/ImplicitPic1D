@@ -188,7 +188,7 @@ contains
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
             call particleList(j)%writeLocalTemperature(0, directoryName)
-            call particleList(j)%writePhaseSpace(0, directoryName)
+            !call particleList(j)%writePhaseSpace(0, directoryName)
         end do
         currentTime = 0.0d0
         call system_clock(startTotal)
@@ -240,7 +240,7 @@ contains
                 energyLoss = 0.0d0
                 do j=1, numberChargedParticles
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
-                    call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
+                    !call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
                     energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
                     write(unitPart1+j,"(5(es16.8,1x), (I6,1x))") currentTime, &
@@ -265,43 +265,7 @@ contains
             i = i + 1
             diagStepDiff = diagStepDiff + 1
         end do
-        ! currentTime = currentTime + del_t
-        ! call system_clock(startTime)
-        ! call solver%moveParticles(particleList, world, del_t)
-        ! call system_clock(endTime)
-        ! moverTime = moverTime + (endTime - startTime)
-        ! call system_clock(startTime)
-        ! call solver%solvePotential(particleList, world, currentTime)
-        ! call system_clock(endTime)
-        ! potentialTime = potentialTime + (endTime - startTime)
-        ! !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-        ! call system_clock(startTime)
-        ! if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
-        ! if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-        ! if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-        ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
-        ! if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
-        ! call system_clock(endTime)
-        ! collisionTime = collisionTime + (endTime-startTime)
-        ! densities = 0.0d0
-        ! call loadParticleDensity(densities, particleList, world)
-        ! call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false., directoryName) 
-        ! call writePhi(solver%phi, CurrentDiagStep, .false., directoryName)
-        ! chargeTotal = 0.0d0
-        ! energyLoss = 0.0d0
-        ! do j=1, numberChargedParticles
-        !     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
-        !     call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
-        !     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
-        !     energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss)
-        !     write(unitPart1+j,"(5(es16.8,1x), (I6,1x))") currentTime, &
-        !         particleList(j)%accumWallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%accumWallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
-        !         particleList(j)%accumEnergyLoss(1)/del_t/diagStepDiff, particleList(j)%accumEnergyLoss(2)/del_t/diagStepDiff, SUM(particleList(j)%N_p)
-        !     particleList(j)%accumEnergyLoss = 0.0d0
-        !     particleList(j)%accumWallLoss = 0
-        ! end do
-        ! write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
-        ! chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff
+        
         close(22)
         call system_clock(endTotal)
         elapsed_time = real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)

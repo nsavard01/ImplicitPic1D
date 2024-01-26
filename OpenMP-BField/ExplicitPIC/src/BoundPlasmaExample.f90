@@ -7,7 +7,7 @@ program BoundPlasmaExample
     use mod_particle
     use mod_particleInjection
     use mod_potentialSolver
-    ! use mod_collisions
+    use mod_NullCollision
     use mod_readInputs
     use mod_simulation
     implicit none
@@ -16,11 +16,12 @@ program BoundPlasmaExample
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(targetParticle), allocatable :: targetParticleList(:)
+    type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
     call readGeometry(world, solver, 'Geometry.inp')
     call readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world, particleList, targetParticleList)
-    call readNullCollisionInputs('collision.inp', particleList, targetParticleList, numberBinaryCollisions)
+    call readNullCollisionInputs('collision.inp', nullCollisionList, particleList, targetParticleList, numberBinaryCollisions)
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
     ! end do
