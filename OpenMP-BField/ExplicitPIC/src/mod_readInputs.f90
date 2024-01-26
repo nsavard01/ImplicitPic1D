@@ -385,21 +385,26 @@ contains
     end subroutine readParticleInputs
 
 
-    subroutine readCollisionInputs(filename, particleList, targetParticleList, numberBinaryCollisions)
+    subroutine readNullCollisionInputs(filename, particleList, targetParticleList, numberBinaryCollisions)
         ! Reaction is any unique set of particle on target. For each reaction, you may have several different collision types
         character(len=*), intent(in) :: filename
         type(Particle), intent(in) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberNeutralParticles)
         integer(int32), intent(in out) :: numberBinaryCollisions
         integer(int32), parameter :: maxNumberPoints = 1500, maxNumberColls = 65
-        logical :: fileExists, foundParticleBool, reactantBool
+        logical :: fileExists, foundParticleBool, reactantBool, chargedParticleBool, oldSetBool
         character(len=100) :: string
         character(:), allocatable :: collFileName
-        real(real64) :: tempVar1, tempVar2, E_scaling, sigma_scaling, E_threshold(maxNumberColls), E_temp(maxNumberPoints, maxNumberColls), sigma_temp(maxNumberPoints, maxNumberColls)
-        integer(int32) :: numberReactions, numberCollisions, i, lowerIndx, higherIndx, numberReactants, j, collisionReactantsIndx(2, maxNumberColls)
+        real(real64) :: tempVar1, tempVar2, E_scaling, sigma_scaling, E_threshold(maxNumberColls), E_temp(maxNumberPoints, maxNumberColls), sigma_temp(maxNumberPoints, maxNumberColls), sig_v_max, v_r, red_mass
+        integer(int32) :: i, j, k, numberCollisions, reactionIndx(maxNumberColls), lowerIndx, higherIndx, numberReactants(maxNumberColls), numberProducts(maxNumberColls), collisionReactantsIndx(2, maxNumberColls), &
+            collisionProductsIndx(3, maxNumberColls), numberSigmaPoints(maxNumberColls), length_concatenate, collisionType(maxNumberColls), h, numberCollisionsPerReaction
+        real(real64), allocatable :: E_concatenate_temp(:), E_concatenate(:), sigma_concatenate(:, :), E_threshold_array(:)
+        integer(int32), allocatable :: indxSort(:), collisionTypeArray(:), numberProductsArray(:), productsIndxArray(:,:)
         
 
         print *, "Reading collision inputs:"
+        numberBinaryCollisions = 0
+        numberCollisions = 0
         open(10,file='../InputData/'//filename, action = 'read')
         read(10,*) string
         do while (.not. (string(1:3) == 'END' .or. string(1:3) == 'end'))
@@ -408,12 +413,12 @@ contains
             if (fileExists) then
                 print *, 'Taking reactions from ', collFileName
                 open(20,file='../../CollisionData/'//collFileName, action = 'read')
-                numberCollisions = 0
                 read(20,*) string
                 do while (.not. (string(1:3) == 'END' .or. string(1:3) == 'end'))
                     if( string(1:4).eq.'REAC' .or. string(1:4).eq.'Reac' .or. string(1:4).eq.'reac' ) then
-                        numberReactants = 0
                         numberCollisions = numberCollisions + 1
+                        numberReactants(numberCollisions) = 0
+                        numberProducts(numberCollisions) = 0
                         read(20,*) string
                         print *, 'Interaction is:', trim(string)
                         if (string(1:1) .ne. '[') then
@@ -428,8 +433,6 @@ contains
                             if (string(i:i) == '[') lowerIndx = i
                             if (string(i:i) == ']') higherIndx = i
                             if (string(i:i) == '>') then
-                                print *, 'number of reactants is:', numberReactants
-                                numberReactants = 0
                                 reactantBool = .false.
                             end if
                 
@@ -441,16 +444,34 @@ contains
                                     if (particleList(j)%name == string(lowerIndx:higherIndx)) then
                                         print *, 'particle found:', particleList(j)%name
                                         foundParticleBool = .true.
+                                        chargedParticleBool = .true.
+                                        exit
                                     end if
                                 end do
-                                do j = 1, numberNeutralParticles
-                                    if (targetParticleList(j)%name == string(lowerIndx:higherIndx)) then
-                                        print *, 'particle found:', targetParticleList(j)%name
+                                do k = 1, numberNeutralParticles
+                                    if (targetParticleList(k)%name == string(lowerIndx:higherIndx)) then
+                                        print *, 'particle found:', targetParticleList(k)%name
                                         foundParticleBool = .true.
+                                        chargedParticleBool = .false.
+                                        exit
                                     end if
                                 end do
                                 if (foundParticleBool) then
-                                    numberReactants = numberReactants + 1
+                                    if (reactantBool) then
+                                        numberReactants(numberCollisions) = numberReactants(numberCollisions) + 1
+                                        if (chargedParticleBool) then
+                                            collisionReactantsIndx(numberReactants(numberCollisions), numberCollisions) = j
+                                        else
+                                            collisionReactantsIndx(numberReactants(numberCollisions), numberCollisions) = k
+                                        end if
+                                    else
+                                        numberProducts(numberCollisions) = numberProducts(numberCollisions) + 1
+                                        if (chargedParticleBool) then
+                                            collisionProductsIndx(numberProducts(numberCollisions), numberCollisions) = j
+                                        else
+                                            collisionProductsIndx(numberProducts(numberCollisions), numberCollisions) = k
+                                        end if
+                                    end if
                                 else
                                     print *, 'Could not find particle for collision:', string(lowerIndx:higherIndx)
                                     stop
@@ -459,17 +480,52 @@ contains
                                 higherIndx = 0
                             end if
                         end do
-                        print *, 'number of byproducts:', numberReactants
-                        read(20,*) tempVar1, tempVar2
-                        print *, tempVar1, tempVar2
+                       
+                        ! If reactant pair belongs to set already brought up, add that to number of times set pops up, otherwise add another set for reactionIndx
+                        oldSetBool = .false.
+                        do i = 1, numberBinaryCollisions
+                            oldSetBool = (collisionReactantsIndx(1, numberCollisions) == collisionReactantsIndx(1, i) .and. collisionReactantsIndx(2, numberCollisions) == collisionReactantsIndx(2, i))
+                            if (oldSetBool) then
+                                reactionIndx(numberCollisions) = i
+                                exit
+                            end if
+                        end do
+                        if (.not. oldSetBool) then
+                            numberBinaryCollisions = numberBinaryCollisions + 1
+                            collisionReactantsIndx(:, numberBinaryCollisions) = collisionReactantsIndx(:, numberCollisions)
+                            reactionIndx(numberCollisions) = numberBinaryCollisions
+                        end if
+
+
+                        print *, 'number of reactants:', numberReactants(numberCollisions)
+                        print *, 'number of byproducts:', numberProducts(numberCollisions)
+                        read(20,*) E_threshold(numberCollisions), tempVar2
                         read(20,*) E_scaling, sigma_scaling
-                        print *, E_scaling, sigma_scaling
                         read(20,*) string
                         print *, 'reaction type:', trim(string)
+                        if( trim(string).eq.'ELASTIC' .or. trim(string).eq.'elastic' ) &
+                            collisionType(numberCollisions)=1
+                        if( trim(string).eq.'IONIZATION' .or. trim(string).eq.'ionization' ) &
+                            collisionType(numberCollisions)=2
+                        if( trim(string).eq.'EXCITATION' .or. trim(string).eq.'excitation' ) &
+                            collisionType(numberCollisions)=3
+                        if( trim(string).eq.'CHARGEEXCHANGE' .or. trim(string).eq.'chargeexchange' ) &
+                            collisionType(numberCollisions)=4
+                        if( trim(string).eq.'DISSOCIATION' .or. trim(string).eq.'dissociation' ) &
+                            collisionType(numberCollisions)=5
+                        print *, 'reaction type number:', collisionType(numberCollisions)
+                        print *, 'reactionIndx:', reactionIndx(numberCollisions)
+                        print *, 'Threshold energy:', E_threshold(numberCollisions)
+                        do i = 1, numberReactants(numberCollisions)
+                            print *, 'reactant index:', collisionReactantsIndx(i, reactionIndx(numberCollisions))
+                        end do
+                        do i = 1, numberProducts(numberCollisions)
+                            print *, 'product index:', collisionProductsIndx(i, numberCollisions)
+                        end do
                         do while(string(1:4).ne.'----')
                             read(20,*) string
                         end do
-
+                        numberSigmaPoints(numberCollisions) = 0
                         do i = 1, maxNumberPoints
                             read(20, '(4A)', ADVANCE = 'NO') string(1:4)
                             if (string(1:4) == '----') then
@@ -477,10 +533,14 @@ contains
                                 exit
                             else
                                 backspace(20)
+                                numberSigmaPoints(numberCollisions) = numberSigmaPoints(numberCollisions) + 1
                             end if
                             read(20, *) tempVar1, tempVar2
-                            print *, tempVar1, tempVar2
+                            E_temp(numberSigmaPoints(numberCollisions), numberCollisions) = tempVar1 * E_scaling
+                            sigma_temp(numberSigmaPoints(numberCollisions), numberCollisions) = tempVar2 * sigma_scaling
                         end do
+                        print *, 'Number of points is:', numberSigmaPoints(numberCollisions)
+                        print *, 'Total number of points for this collision is now:', numberSigmaPoints(reactionIndx(numberCollisions))
                         print *, ''
                     end if
                     read(20,*) string
@@ -492,8 +552,104 @@ contains
         close(10)
 
         print *, 'Number of collisions is:', numberCollisions
+        print *, 'Number of binaryCollisions is:', numberBinaryCollisions
+        do j = 1, numberBinaryCollisions
+            print *, 'reaction type:', collisionReactantsIndx(:, j)
+            red_mass = particleList(collisionReactantsIndx(1, j))%mass * targetParticleList(collisionReactantsIndx(2, j))%mass / (particleList(collisionReactantsIndx(1, j))%mass + targetParticleList(collisionReactantsIndx(2, j))%mass)
+            print *, 'red_mass:', red_mass
+            numberCollisionsPerReaction = 0
+            length_concatenate = 0
+            do i = 1, numberCollisions
+                if (reactionIndx(i) == j) then
+                    length_concatenate = length_concatenate + numberSigmaPoints(i)
+                    numberCollisionsPerReaction = numberCollisionsPerReaction + 1
+                end if
+            end do
+            print *, 'Number of collisions in reaction:', numberCollisionsPerReaction
+            print *, 'Number of total sigma points:', length_concatenate
+            allocate(E_concatenate_temp(length_concatenate), indxSort(length_concatenate))
+            k = 0
+            do i = 1, numberCollisions
+                if (reactionIndx(i)==j) then
+                    E_concatenate_temp(k+1:k+numberSigmaPoints(i)) = E_temp(1:numberSigmaPoints(i), i)
+                    k = k + numberSigmaPoints(i)
+                end if
+            end do
+
+            ! Sort new concatenated array
+            call indexSortArray(length_concatenate,E_concatenate_temp,indxSort)
+            ! count amount of repeats to k
+            k = 0
+            do i = 1, length_concatenate-1
+                if (E_concatenate_temp(indxSort(i)) == E_concatenate_temp(indxSort(i+1))) then
+                    k = k + 1
+                end if
+            end do
+            print *, 'amount of repeats:', k
+            ! allocate proper size E_array
+            allocate(E_concatenate(length_concatenate-k))
+            ! place non-repeats in new array
+            k = 0
+            tempVar1 = 1.d10
+            do i = 1, length_concatenate
+                if (E_concatenate_temp(indxSort(i)) /= tempVar1) then
+                    k = k + 1
+                    E_concatenate(k) = E_concatenate_temp(indxSort(i))
+                    tempVar1 = E_concatenate(k)
+                end if
+            end do
+            length_concatenate = k
+            ! Now interpolate each collision in set to new E_array
+            allocate(sigma_concatenate(length_concatenate, numberCollisionsPerReaction), collisionTypeArray(numberCollisionsPerReaction), E_threshold_array(numberCollisionsPerReaction), &
+                numberProductsArray(numberCollisionsPerReaction), productsIndxArray(3, numberCollisionsPerReaction))
+            h = 0
+            do i = 1, numberCollisions
+                if (reactionIndx(i)==j) then
+                    h = h + 1
+                    collisionTypeArray(h) = collisionType(i)
+                    E_threshold_array(h) = E_threshold(i)
+                    numberProductsArray(h) = numberProducts(i)
+                    productsIndxArray(:, h) = collisionProductsIndx(:, i)
+                    lowerIndx = 1
+                    do k = 1, length_concatenate
+                        if (E_threshold(i) > E_concatenate(k)) then
+                            ! If Energy below threshold, then sigma is 0
+                            sigma_concatenate(k, h) = 0.0d0
+                        else if (E_concatenate(k) < E_temp(numberSigmaPoints(i), i)) then
+                            ! Go up index in OG energy array until get to energy greater than current energy on concatenated array
+                            do while (E_temp(lowerIndx, i) <= E_concatenate(k))
+                                lowerIndx = lowerIndx + 1
+                            end do
+                            lowerIndx = lowerIndx - 1
+                            if (E_temp(lowerIndx, i) == E_concatenate(k)) then
+                                sigma_concatenate(k, h) = sigma_temp(lowerIndx, i)
+                            else
+                                ! interpolate
+                                tempVar1 = E_concatenate(k) - E_temp(lowerIndx, i)
+                                tempVar2 = tempVar1/ (E_temp(lowerIndx+1,i) - E_temp(lowerIndx, i))
+                                sigma_concatenate(k, h) = sigma_temp(lowerIndx, i) * (1 - tempVar2) + sigma_temp(lowerIndx+1, i) * (tempVar2)
+                            end if
+                        else
+                            ! Energy outside range, use constant extrapolation to outer array
+                            sigma_concatenate(k, h) = sigma_temp(numberSigmaPoints(i), i)
+
+                        end if
+                    end do
+                    print *, 'For collision set:', collisionReactantsIndx(:, j)
+                    print *, 'Collision Type:', collisionTypeArray(h)
+                    print *, 'E_threshold:', E_threshold_array(h)
+                    print *, 'number products:', numberProductsArray(h)
+                    print *, 'products Indx:', productsIndxArray(:, h)
+                    print *, ''
+                end if
+                
+            end do
+            deallocate(sigma_concatenate, collisionTypeArray, E_threshold_array, numberProductsArray, productsIndxArray)
+            deallocate(E_concatenate)
+            deallocate(E_concatenate_temp, indxSort)
+        end do
         
 
-    end subroutine readCollisionInputs
+    end subroutine readNullCollisionInputs
 
 end module mod_readInputs
