@@ -11,7 +11,7 @@ module mod_targetParticle
     ! target particle contains basic properties of basic neutral particle for target null collision
     type :: targetParticle
         character(:), allocatable :: name !name of the particle
-        real(real64) :: mass, density, temperature
+        real(real64) :: mass, density, temperature, v_therm
     contains
         procedure, public, pass(self) :: generate3DMaxwellianVelocity
     end type targetParticle
@@ -32,6 +32,7 @@ contains
         self % mass = mass
         self % density = density ! #N/m^3
         self % temperature = temperature !temperature
+        self % v_therm = SQRT(self%temperature*k_B/ self%mass)
     end function targetParticle_constructor
 
 
@@ -43,15 +44,14 @@ contains
         ! Use box-muller method for random guassian variable, same as gwenael but doesn't have factor 2? Maybe factored into v_th
         class(targetParticle), intent(in) :: self
         integer(int32), intent(in out) :: irand
-        real(real64) :: U1, U2, U3, U4, res(3), v_therm
+        real(real64) :: U1, U2, U3, U4, res(3)
         U1 = ran2(irand)
         U2 = ran2(irand)
         U3 = ran2(irand)
         U4 = ran2(irand)
-        v_therm = SQRT(self.temperature*k_B/ self%mass)
-        res(1) = v_therm * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
-        res(2) = v_therm * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
-        res(3) = v_therm * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
+        res(1) = self%v_therm * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
+        res(2) = self%v_therm * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
+        res(3) = self%v_therm * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
     end function generate3DMaxwellianVelocity
 
 

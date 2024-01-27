@@ -1,4 +1,4 @@
-1 ! Have lost particles on boundary re-injected uniformly (0 = no, 1 = yes)
+0 ! Have lost particles on boundary re-injected uniformly (0 = no, 1 = yes)
 0 ! Have particles reflected on Neuman-boundary refluxed with initial temperature
 0, 5.6d24 ! Have sonic injection at boundary + refluxing. If 1 first number, then second number is amount m^-2 s^-1, and third is amount macroparticles per injection (after time step completed)
 0, 3.d20 ! Have maxwellian injection uniformly in volume. If 1 first number, then second number is amount m^-2 s^-1
