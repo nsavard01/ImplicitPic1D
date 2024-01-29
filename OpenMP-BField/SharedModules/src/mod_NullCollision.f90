@@ -85,7 +85,7 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: del_t
         logical :: collisionBool
-        real(real64) :: P_null, numberSelectedReal, Rand, particleEnergy, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM
+        real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM
         integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addAmount
 
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
@@ -146,6 +146,8 @@ contains
                             print *, 'elastic'
                         CASE(2)
                             print *, 'ionization'
+                            call ionizationCollisionIsotropic(particleList(self%reactantsIndx(1)), particleList(self%productsIndx(2, collIdx)), targetParticleList(self%reactantsIndx(2)), &
+                                irand(iThread), energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity, velocity_CM)
                         CASE(3)
                             print *, 'excitation'
                         CASE(4)
@@ -168,29 +170,27 @@ contains
 
     end subroutine generateCollision
 
-    subroutine ionizationCollisionIsotropic(self, electron, ion, targetParticle, del_t, irand, energyCM, E_thres, speedCM, incidentVelocity, targetVelocity, velocityCM)
-        ! Temporary subroutine for artificial ionization, using MCC, energy units in eV
-        ! T in eV
-        ! divide energy among electrons, isotropic scatter
-        ! For moment assume null collision with gas temperature = 0
-        class(nullCollision), intent(in) :: self
+    subroutine ionizationCollisionIsotropic(electron, ion, targetPart, irand, energyCM, E_thres, incidentVelocity, targetVelocity, velocityCM)
+        ! Ionization subroutine with momentum/energy conservation
+        ! Replace incidentVelocity, velocityCM, and targetVelocity with primary electron, secondary electron, and ion velocity
         type(Particle), intent(in out) :: electron, ion
-        type(targetParticle), intent(in) :: targetParticle
-        real(real64), intent(in) :: del_t, energyCM, E_thres, speedCM
+        type(targetParticle), intent(in) :: targetPart
+        real(real64), intent(in) :: energyCM, E_thres
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
-        integer(int32), intent(in) :: partIndx, iThread
-        integer(int32), intent(in out) :: irand, addAmount
-        real(real64) :: speedPerParticle, phi, theta, e_vector(3), V_cm(3), delE, V_neutral(3), sumMassInverse, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, thirdTheta
-        integer(int32) :: i, addIdx
-        
-        sumMassInverse = (2.0d0/m_e + 1.0d0/ion%mass)
-        delE = energyCM - E_thres
-        
-        V_cm = (m_e * incidentVelocity + targetVelocity * targetParticle%mass) / (targetParticle%mass + m_e)
+        integer(int32), intent(in out) :: irand
+        real(real64) :: speedPerParticle, phi, theta, e_vector(3), V_cm(3), delE, sumMassInverse, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, thirdTheta, E_beginning, E_end, P_beginning(3), P_end(3)
+        integer(int32) :: i
 
+        sumMassInverse = (2.0d0/m_e + 1.0d0/ion%mass)
+        delE = (energyCM - E_thres)*e
+        E_beginning = m_e * 0.5d0 * SUM(incidentVelocity**2) + 0.5d0 * targetPart%mass * SUM(targetVelocity**2)
+        P_beginning = m_e * incidentVelocity + targetPart%mass * targetVelocity
+        
+        V_cm = (m_e * incidentVelocity + targetVelocity * targetPart%mass) / (targetPart%mass + m_e)
+    
         ! first add to electron
         theta = ACOS(1.0d0 - 2.0d0*ran2(irand))
-        phi = ran2(irand) * 2 * pi
+        phi = ran2(irand) * 2.0d0 * pi
         cos_theta = COS(theta)
         sin_theta = SIN(theta)
         cos_phi = COS(phi)
@@ -215,7 +215,26 @@ contains
         e_vector(3) = cos_phi * SIN(thirdTheta)
         speedPerParticle = SQRT(2.0d0 * delE / sumMassInverse / ion%mass**2)
         targetVelocity = e_vector * speedPerParticle + V_cm
-           
+        E_end = m_e * 0.5d0 * SUM(incidentVelocity**2) + m_e * 0.5d0 * SUM(velocityCM**2) + 0.5d0 * ion%mass * SUM(targetVelocity**2)
+        P_end = m_e * incidentVelocity + m_e * velocityCM + ion%mass * targetVelocity
+        do i = 1, 3
+            if (ABS((P_beginning(i) - P_end(i))/P_beginning(i)) > 1.d-8) then
+                print *, 'issue momentum conservation:'
+                stop
+            end if
+        end do
+
+        ! print *, 'beginning energy:', E_beginning
+        ! print *, 'end energy:', E_end + E_thres*e
+        if (ABS((E_beginning - E_end - E_thres*e)/E_beginning) > 1.d-8) then
+            print *, 'issue energy conservation:'
+            print *, 'E_beginning:', E_beginning
+            print *, 'E_end:', E_end + E_thres*e
+            stop
+        end if
+        ! print *, 'beginning momentum:', P_beginning
+        ! print *, 'end momentum:', P_end
+        ! stop
     end subroutine ionizationCollisionIsotropic
 
 
