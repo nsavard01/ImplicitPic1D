@@ -397,7 +397,7 @@ contains
         logical :: fileExists, foundParticleBool, reactantBool, incidentParticleBool, oldSetBool
         character(len=100) :: string
         character(:), allocatable :: collFileName
-        real(real64) :: tempVar1, tempVar2, E_scaling, sigma_scaling, E_threshold(maxNumberColls), E_temp(maxNumberPoints, maxNumberColls), sigma_temp(maxNumberPoints, maxNumberColls), v_r, red_mass
+        real(real64) :: tempVar1, tempVar2, E_scaling, sigma_scaling, E_threshold(maxNumberColls), E_temp(maxNumberPoints, maxNumberColls), sigma_temp(maxNumberPoints, maxNumberColls), v_r, red_mass, sumMass, redMassTripleProducts
         integer(int32) :: i, j, k, numberCollisions, reactionIndx(maxNumberColls), lowerIndx, higherIndx, numberReactants(maxNumberColls), numberProducts(maxNumberColls), collisionReactantsIndx(2, maxNumberColls), &
             collisionProductsIndx(3, maxNumberColls), numberSigmaPoints(maxNumberColls), length_concatenate, collisionType(maxNumberColls), h, numberCollisionsPerReaction
         real(real64), allocatable :: E_concatenate_temp(:), E_concatenate(:), sigma_v_concatenate(:, :), E_threshold_array(:)
@@ -541,6 +541,8 @@ contains
             allocate(nullCollisionList(numberBinaryCollisions))
             do j = 1, numberBinaryCollisions
                 red_mass = particleList(collisionReactantsIndx(1, j))%mass * targetParticleList(collisionReactantsIndx(2, j))%mass / (particleList(collisionReactantsIndx(1, j))%mass + targetParticleList(collisionReactantsIndx(2, j))%mass)
+                sumMass = (particleList(collisionReactantsIndx(1, j))%mass + targetParticleList(collisionReactantsIndx(2, j))%mass)
+                redMassTripleProducts = 0
                 numberCollisionsPerReaction = 0
                 length_concatenate = 0
                 do i = 1, numberCollisions
@@ -591,6 +593,7 @@ contains
                         E_threshold_array(h) = E_threshold(i)
                         numberProductsArray(h) = numberProducts(i)
                         productsIndxArray(:, h) = collisionProductsIndx(:, i)
+                        if (collisionType(i) == 2) redMassTripleProducts = 1.0d0 / (1.0d0/particleList(collisionProductsIndx(1,i))%mass + 1.0d0/particleList(collisionProductsIndx(2,i))%mass + 1.0d0/particleList(collisionProductsIndx(3,i))%mass)
                         lowerIndx = 1
                         do k = 1, length_concatenate
                             v_r = SQRT(2.0d0 * E_concatenate(k) * e / red_mass)
@@ -618,7 +621,7 @@ contains
                         end do
                     end if   
                 end do
-                nullCollisionList(j) = nullCollision(2, h, length_concatenate, red_mass, E_concatenate, sigma_v_concatenate, E_threshold_array, collisionTypeArray, &
+                nullCollisionList(j) = nullCollision(2, h, length_concatenate, red_mass, sumMass, redMassTripleProducts, E_concatenate, sigma_v_concatenate, E_threshold_array, collisionTypeArray, &
                     collisionReactantsIndx(:,j), numberProductsArray, productsIndxArray)
                 deallocate(sigma_v_concatenate, collisionTypeArray, E_threshold_array, numberProductsArray, productsIndxArray)
                 deallocate(E_concatenate)
@@ -630,6 +633,8 @@ contains
                 print *, 'Reduced mass:', nullCollisionList(j)%reducedMass
                 print *, 'length of arrays:', nullCollisionList(j)%lengthArrays
                 print *, 'Max sigma_v:', nullCollisionList(j)%sigmaVMax
+                print *, 'reducedMass:', nullCollisionList(j)%reducedMass
+                print *, 'reducedMassIonization:', nullCollisionList(j)%reducedMassIonization
                 do i = 1, nullCollisionList(j)%numberCollisions
                     print *, 'For collision #:', i
                     print *, 'Energy threshold:', nullCollisionList(j)%energyThreshold(i)
