@@ -14,9 +14,9 @@ module mod_NullCollision
 
     ! Particle contains particle properties and stored values in phase space df
     type :: nullCollision
-        integer(int32) :: numberCollisions, numberReactants, lengthArrays
+        integer(int32) :: numberCollisions, numberReactants, lengthArrays, totalAmountCollisions
         real(real64), allocatable :: energyArray(:), sigmaVArray(:, :), energyThreshold(:)
-        real(real64) :: sigmaVMax, reducedMass, minEnergy, maxEnergy, sumMass, reducedMassIonization
+        real(real64) :: sigmaVMax, reducedMass, minEnergy, maxEnergy, sumMass, reducedMassIonization, totalEnergyLoss
         integer(int32), allocatable :: collisionType(:), reactantsIndx(:), numberProducts(:), productsIndx(:,:)
     contains
         procedure, public, pass(self) :: generateCollision
@@ -46,6 +46,8 @@ contains
         self%sumMass = sumMass
         self%reducedMass = red_mass
         self%reducedMassIonization = redMassTripleProducts
+        self%totalEnergyLoss = 0.0d0
+        self%totalAmountCollisions = 0
 
         ! order collisions by maximum sigma_v in arrays
         do i = 1, numberCollisions
@@ -90,17 +92,19 @@ contains
         real(real64), intent(in) :: del_t
         logical :: collisionBool
         real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM, particleLocation, energyLoss
-        integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx
+        integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx, totalCollisions
 
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
+    
         if (P_null > 0.5d0) then
             print *, 'P_null greater than 50%'
             stop
         end if
 
         energyLoss = 0
+        totalCollisions = 0
         !$OMP parallel private(iThread, i,numberSelected, numberSelectedReal, Rand, particleIndx, numberTotalParticles, targetVelocity, incidentVelocity, &
-            velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation) reduction(+:energyLoss)
+            velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation) reduction(+:energyLoss,totalCollisions)
         iThread = omp_get_thread_num() + 1
         numberTotalParticles = particleList(self%reactantsIndx(1))%N_p(iThread)
         numberSelectedReal = P_null * real(numberTotalParticles)
@@ -147,6 +151,7 @@ contains
                     sigma_v = self%sigmaVArray(indxLow, collIdx) * (1.0d0 - d_value) + self%sigmaVArray(indxHigh, collIdx) * d_value + sigma_v_low
                     collisionBool = (Rand <= sigma_v/self%sigmaVMax)
                     if (collisionBool) then
+                        totalCollisions = totalCollisions + 1
                         SELECT CASE (self%collisionType(collIdx))
                         CASE(1)
                             call self%elasticExcitCollisionIsotropic(particleList(self%reactantsIndx(1)), targetParticleList(self%reactantsIndx(2)), &
@@ -184,6 +189,9 @@ contains
             end do
         end do
         !$OMP end parallel
+        self%totalEnergyLoss = self%totalEnergyLoss + energyLoss * e * particleList(self%reactantsIndx(1))%w_p
+        self%totalAmountCollisions = self%totalAmountCollisions + totalCollisions
+
         
 
 
