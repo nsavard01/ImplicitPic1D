@@ -206,20 +206,19 @@ contains
         real(real64), intent(in) :: energyCM, E_thres
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
         integer(int32), intent(in out) :: irand
-        real(real64) :: speedPerParticle, phi, theta, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3) !, E_beginning, E_end, P_end(3)
+        real(real64) :: speedPerParticle, phi, e_vector(3), u_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3), E_beginning, E_end, P_end(3)
         integer(int32) :: i
 
         delE = (energyCM - E_thres)*e
-        !E_beginning = m_e * 0.5d0 * SUM(incidentVelocity**2) + 0.5d0 * targetPart%mass * SUM(targetVelocity**2)
+        E_beginning = m_e * 0.5d0 * SUM(incidentVelocity**2) + 0.5d0 * targetPart%mass * SUM(targetVelocity**2)
         P_beginning = m_e * incidentVelocity + targetPart%mass * targetVelocity
         
         V_cm = (P_beginning) / (self%sumMass)
     
         ! first add to electron
-        theta = ACOS(1.0d0 - 2.0d0*ran2(irand))
+        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
         phi = ran2(irand) * 2.0d0 * pi
-        cos_theta = COS(theta)
-        sin_theta = SIN(theta)
+        sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
         e_vector(1) = cos_theta
@@ -229,35 +228,61 @@ contains
         incidentVelocity = e_vector * speedPerParticle + V_cm
 
         ! second electron
-        secTheta = theta + 2.0d0 * pi/3.0d0
-        e_vector(1) = COS(secTheta)
-        e_vector(2) = sin_phi * SIN(secTheta)
-        e_vector(3) = cos_phi * SIN(secTheta)
-        velocityCM = e_vector * speedPerParticle + V_cm
+        cos_theta = COS(2.0d0 * pi/3.0d0)
+        phi = ran2(irand) * 2.0d0 * pi
+
+        call scatterVector(u_vector, e_vector, cos_theta, phi)
+
+        ! Keep in case scatter Vector doesn't work properly
+        ! cos_theta = 1.0d0 - 2.0d0*ran2(irand)
+        ! phi = ran2(irand) * 2.0d0 * pi
+        ! sin_theta = SQRT(1.0d0 - cos_theta**2)
+        ! cos_phi = COS(phi)
+        ! sin_phi = SIN(phi)
+        ! y_vector(1) = cos_theta
+        ! y_vector(2) = sin_phi * sin_theta
+        ! y_vector(3) = cos_phi * sin_theta
+
+        ! x_vector = crossProduct(e_vector, y_vector)
+        ! x_vector = crossProduct(x_vector, e_vector)/SQRT(SUM(x_vector**2))
+       
+        ! cos_theta = COS(2.0d0 * pi/3.0d0)
+        ! sin_theta = SIN(2.0d0 * pi / 3.0d0)
+        ! u_vector = e_vector * cos_theta + x_vector * sin_theta
+        ! print *, 'u vector total:', SUM(u_vector**2)
+        ! print *, 'dot product u_vector and e_vector:', SUM(u_vector * e_vector)
+        ! print *, 'should be:', cos_theta
+        ! print *, 'u_vector is:', u_vector
+
+
+        ! secTheta = ACOS(cos_theta) + 2.0d0 * pi/3.0d0
+        ! e_vector(1) = COS(secTheta)
+        ! e_vector(2) = sin_phi * SIN(secTheta)
+        ! e_vector(3) = cos_phi * SIN(secTheta)
+        velocityCM = u_vector * speedPerParticle + V_cm
 
         ! ion
         targetVelocity = (P_beginning - m_e * (incidentVelocity + velocityCM))/ion%mass
-        ! E_end = m_e * 0.5d0 * SUM(incidentVelocity**2) + m_e * 0.5d0 * SUM(velocityCM**2) + 0.5d0 * ion%mass * SUM(targetVelocity**2)
-        ! P_end = m_e * incidentVelocity + m_e * velocityCM + ion%mass * targetVelocity
+        E_end = m_e * 0.5d0 * SUM(incidentVelocity**2) + m_e * 0.5d0 * SUM(velocityCM**2) + 0.5d0 * ion%mass * SUM(targetVelocity**2)
+        P_end = m_e * incidentVelocity + m_e * velocityCM + ion%mass * targetVelocity
         
         
-        ! if (ABS((E_beginning - E_end - E_thres*e)/E_beginning) > 1.d-8) then
-        !     print *, 'issue energy conservation:'
-        !     print *, 'E_beginning:', E_beginning
-        !     print *, 'E_end:', E_end + E_thres*e
-        !     stop
-        ! end if
-        ! do i = 1, 3
-        !     if (ABS((P_beginning(i) - P_end(i))/P_beginning(i)) > 1.d-8) then
-        !         print *, 'issue momentum conservation:'
-        !         print *, 'momentum before:', P_beginning
-        !         print *, 'momentum after:', P_end
-        !         stop
-        !     end if
-        ! end do
+        if (ABS((E_beginning - E_end - E_thres*e)/E_beginning) > 1.d-8) then
+            print *, 'issue energy conservation:'
+            print *, 'E_beginning:', E_beginning
+            print *, 'E_end:', E_end + E_thres*e
+            stop
+        end if
+        do i = 1, 3
+            if (ABS((P_beginning(i) - P_end(i))/P_beginning(i)) > 1.d-8) then
+                print *, 'issue momentum conservation:'
+                print *, 'momentum before:', P_beginning
+                print *, 'momentum after:', P_end
+                stop
+            end if
+        end do
 
         
-        ! stop
     end subroutine ionizationCollisionIsotropic
 
     subroutine elasticExcitCollisionIsotropic(self, primary, targetPart, irand, energyCM, E_thres, incidentVelocity, targetVelocity)
@@ -268,20 +293,19 @@ contains
         real(real64), intent(in) :: energyCM, E_thres
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3)
         integer(int32), intent(in out) :: irand
-        real(real64) :: speedPerParticle, phi, theta, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3)!, E_beginning, E_end, P_end(3)
+        real(real64) :: speedPerParticle, phi, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3), E_beginning, E_end, P_end(3)
         integer(int32) :: i
 
         delE = (energyCM - E_thres)*e
-        ! E_beginning = primary%mass * 0.5d0 * SUM(incidentVelocity**2) + 0.5d0 * targetPart%mass * SUM(targetVelocity**2)
+        E_beginning = primary%mass * 0.5d0 * SUM(incidentVelocity**2) + 0.5d0 * targetPart%mass * SUM(targetVelocity**2)
         P_beginning = primary%mass * incidentVelocity + targetPart%mass * targetVelocity
         
         V_cm = (P_beginning) / self%sumMass
     
         ! first add to primary
-        theta = ACOS(1.0d0 - 2.0d0*ran2(irand))
+        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
         phi = ran2(irand) * 2.0d0 * pi
-        cos_theta = COS(theta)
-        sin_theta = SIN(theta)
+        sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
         e_vector(1) = cos_theta
@@ -294,27 +318,56 @@ contains
     
         targetVelocity = (P_beginning - primary%mass * incidentVelocity)/targetPart%mass
 
-        ! E_end = primary%mass * 0.5d0 * SUM(incidentVelocity**2) + targetPart%mass * 0.5d0 * SUM(targetVelocity**2)
-        ! P_end = primary%mass * incidentVelocity + targetPart%mass * targetVelocity
+        E_end = primary%mass * 0.5d0 * SUM(incidentVelocity**2) + targetPart%mass * 0.5d0 * SUM(targetVelocity**2)
+        P_end = primary%mass * incidentVelocity + targetPart%mass * targetVelocity
 
-        ! if (ABS((E_beginning - E_end - E_thres*e)/E_beginning) > 1.d-8) then
-        !     print *, 'issue energy conservation:'
-        !     print *, 'E_beginning:', E_beginning
-        !     print *, 'E_end:', E_end + E_thres*e
-        !     stop
-        ! end if
+        if (ABS((E_beginning - E_end - E_thres*e)/E_beginning) > 1.d-8) then
+            print *, 'issue energy conservation:'
+            print *, 'E_beginning:', E_beginning
+            print *, 'E_end:', E_end + E_thres*e
+            stop
+        end if
         
-        ! do i = 1, 3
-        !     if (ABS((P_beginning(i) - P_end(i))/P_beginning(i)) > 1.d-8) then
-        !         print *, 'issue momentum conservation:'
-        !         print *, 'momentum before:', P_beginning
-        !         print *, 'momentum after:', P_end
-        !         stop
-        !     end if
-        ! end do
+        do i = 1, 3
+            if (ABS((P_beginning(i) - P_end(i))/P_beginning(i)) > 1.d-8) then
+                print *, 'issue momentum conservation:'
+                print *, 'momentum before:', P_beginning
+                print *, 'momentum after:', P_end
+                stop
+            end if
+        end do
 
     
     end subroutine elasticExcitCollisionIsotropic
+
+    subroutine scatterVector(u,e,costheta,phi)
+        !     ===================================================================
+        !     VERSION:         0.1
+        !     LAST MOD:      April/19
+        !     MOD AUTHOR:    G. Hagelaar
+        !     COMMENTS:     
+        !     NOTES:   Turn vector vx,vy,vz over a scattering angle theta and azimuthal angle phi
+        !     -------------------------------------------------------------------
+        real(real64), intent(in) :: costheta, phi
+        real(real64), intent(in) :: e(3)
+        real(real64), intent(in out) :: u(3)
+        real(real64) :: sintheta,cosphi,sinphi, vv
+        
+        sintheta=SQRT(1d0-costheta**2)
+        sinphi=dsin(phi)
+        cosphi=dcos(phi)
+        IF (dabs(e(2))>dabs(e(3))) THEN
+            vv=dsqrt(e(1)**2+e(2)**2)
+            u(1)=e(1)*costheta+(e(2)*sinphi+e(1)*e(3)*cosphi)/vv*sintheta
+            u(2)=e(2)*costheta+(-e(1)*sinphi+e(2)*e(3)*cosphi)/vv*sintheta
+            u(3)=e(3)*costheta-vv*cosphi*sintheta
+        ELSE
+            vv=dsqrt(e(1)**2+e(3)**2)
+            u(1)=e(1)*costheta+(e(3)*sinphi-e(2)*e(1)*cosphi)/vv*sintheta
+            u(2)=e(2)*costheta+vv*cosphi*sintheta
+            u(3)=e(3)*costheta-(e(1)*sinphi+e(2)*e(3)*cosphi)/vv*sintheta
+        ENDIF
+    end subroutine scatterVector
 
 
 end module mod_NullCollision
