@@ -196,7 +196,7 @@ contains
         read(10, *, IOSTAT = io) T_e
         read(10, *, IOSTAT = io) T_i
         read(10, *, IOSTAT = io) numDiagnosticSteps
-        read(10, *, IOSTAT = io) fractionFreq
+        read(10, *, IOSTAT = io) fractionFreq, del_t
         read(10, *, IOSTAT = io) averagingTime
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) 
@@ -217,7 +217,7 @@ contains
         do i = 1, numThread
             irand(i) = 123456*i*11
         end do
-        del_t = fractionFreq * 1.0d0 / getPlasmaFreq(n_ave)
+        del_t = MIN(fractionFreq * 1.0d0 / getPlasmaFreq(n_ave), del_t)
         print *, "Save data folder: ", directoryName
         print *, "Number of threads is:", numThread
         print *, "Average initial electron density:", n_ave
@@ -272,6 +272,7 @@ contains
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(L_domain)
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        print *, 'delX is:', world%delX
         print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""
@@ -636,9 +637,10 @@ contains
                 print *, 'reducedMass:', nullCollisionList(j)%reducedMass
                 print *, 'reducedMassIonization:', nullCollisionList(j)%reducedMassIonization
                 do i = 1, nullCollisionList(j)%numberCollisions
+                    print *, ''
                     print *, 'For collision #:', i
                     print *, 'Energy threshold:', nullCollisionList(j)%energyThreshold(i)
-                    print *, 'Collision types:', nullCollisionList(j)%collisionType(i)
+                    print *, 'Collision type:', nullCollisionList(j)%collisionType(i)
                     print *, 'number Products are:', nullCollisionList(j)%numberProducts(i)
                     print *, 'products are:'
                     if (nullCollisionList(j)%collisionType(i) == 2) then

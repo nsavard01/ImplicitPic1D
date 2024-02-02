@@ -13,11 +13,36 @@ print('Loaded modules')
 
 print('Loading data')
 
+def readBenchmarkResults():
+    firstIndx = 0
+    data = np.loadtxt('TurnerBenchmark/turner_benchmark_results.dat')
+    case1 = data[0:129,:]
+    firstIndx = firstIndx + 129
+    case2 = data[firstIndx:firstIndx+257,:]
+    firstIndx = firstIndx + 257
+    case3 = data[firstIndx:firstIndx+513, :]
+    firstIndx = firstIndx+513
+    case4 = data[firstIndx:firstIndx+513]
+    return case1,case2,case3,case4
+
+def readBenchmarkResultsRefined():
+    data = np.loadtxt('TurnerBenchmark/turner_benchmark_refined_results.dat')
+    indx = np.where(data[:,0] == 0)[0]
+    case1 = data[indx[0]:indx[1], :]
+    case2 = data[indx[1]:indx[2], :]
+    case3 = data[indx[2]:indx[3], :]
+    case4 = data[indx[3]:,:]
+    return case1, case2, case3, case4
+
+case1, case2, case3, case4 = readBenchmarkResults()
+case1_refined, case2_refined, case3_refined, case4_refined = readBenchmarkResultsRefined()
 
 #--------------------- Explicit ---------------------------------------------
 Exp_test_RF = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_test_RF/')
 Exp_test_typical = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_test_typical/')
 Exp_RF_Helium_Animation = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RF_Helium_Animation/')
+Exp_RFBenchmark_test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test/')
+Exp_RFBenchmark_test2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2/')
 
 NGP_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_RF/')
 NGP_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_typical/')

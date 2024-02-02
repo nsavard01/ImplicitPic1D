@@ -284,28 +284,24 @@ contains
         type(Domain), intent(in) :: world
         self%EField(2:NumberXNodes-1) = (self%phi(1:NumberXNodes-2) - self%phi(3:NumberXNodes))/2.0d0/world%delX
         SELECT CASE (world%boundaryConditions(1))
-        CASE(1)
+        CASE(1,4)
             self%EField(1) = 0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
         CASE(2)
             self%EField(1) = 0.0d0
         CASE(3)
             self%EField(1) = (self%phi(NumberXNodes-1) - self%phi(2))/2.0d0/world%delX
-        CASE(4)
-            self%EField(1) = 0.0d0
         CASE default
             print *, "No case makeEField"
             stop
         END SELECT
 
         SELECT CASE (world%boundaryConditions(NumberXNodes))
-        CASE(1)
+        CASE(1,4)
             self%EField(NumberXNodes) = 0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
         CASE(2)
             self%EField(NumberXNodes) = 0.0d0
         CASE(3)
             self%EField(NumberXNodes) = (self%phi(NumberXNodes-1) - self%phi(2))/2.0d0/world%delX
-        CASE(4)
-            self%EField(NumberXNodes) = 0.0d0
         CASE default
             print *, "No case makeEField"
             stop

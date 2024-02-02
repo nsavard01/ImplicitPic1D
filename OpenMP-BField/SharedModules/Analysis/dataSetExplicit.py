@@ -32,7 +32,7 @@ class dataSetExplicit:
         self.RF_half_amplitude = initialCond[12]
         ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
         self.particles = {}
-        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p']
+        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p', 'Temp']
         for i in range(len(ParticleProperties)):
             name = ParticleProperties.iloc[i]['name']
             self.particles[name] = {}

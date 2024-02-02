@@ -25,10 +25,6 @@ program BoundPlasmaExample
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
     ! end do
-    do i = 1, numberBinaryCollisions
-        call nullCollisionList(i)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
-    end do
-    stop
     call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, particleList(1)%w_p, solver%BFieldAngle, FractionFreqHeating)
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
     call solver%depositRho(particleList)
@@ -50,10 +46,10 @@ program BoundPlasmaExample
     call solver%makeEField(world)
     call solver%initialVRewind(particleList, del_t)
     
-    call solveSimulation(solver, particleList, world, del_t, irand, simulationTime)
+    call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, irand, simulationTime)
     if (averagingTime /= 0.0d0) then
         print *, "Averaging over", averagingTime, "seconds"
-        call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, 100)
+        call solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, irand, averagingTime, 100)
     end if
 
 

@@ -1,13 +1,13 @@
 32 ! number of processors
-10.d-7 ! simulation time
-2.5d14 ! Initial number density (1/m^3) of electrons
-50.0d0 ! Initial electron Temperature (eV) 
-0.1d0 ! Initial ion Temperature (eV)
-200 ! number of diagnostic data dumps    
-0.2d0 ! Fraction of initial 1/w_p for initial time step
-1.d-8 ! amount of time to average final Diagnostics
+9.43952802359882e-05 ! simulation time
+2.56d14 ! Initial number density (1/m^3) of electrons
+2.59d0 ! Initial electron Temperature (eV) 
+0.025d0 ! Initial ion Temperature (eV)
+20 ! number of diagnostic data dumps    
+0.5d0 1.84365782d-10 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+2.359882005899705e-06 ! amount of time to average final Diagnostics
 2.4d0 45.! BField magnitude (T), angle theta from x axis (degrees)
 10 ! heatSkipSteps
 1.0d8 ! heating frequency Hz
-Exp_RF_Helium_Animation !save file name
+Exp_RFBenchmark_test !save file name
 END
