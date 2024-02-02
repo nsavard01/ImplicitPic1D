@@ -647,7 +647,7 @@ contains
                         print *, particleList(nullCollisionList(j)%productsIndx(1, i))%name, ' and ', particleList(nullCollisionList(j)%productsIndx(2,i))%name, 'and ', particleList(nullCollisionList(j)%productsIndx(3,i))%name
                     else
                         print *, particleList(nullCollisionList(j)%productsIndx(1,i))%name, ' and ', targetParticleList(nullCollisionList(j)%productsIndx(2,i))%name
-                    end if
+                    end if 
                 end do
                 print *, ''
             end do
