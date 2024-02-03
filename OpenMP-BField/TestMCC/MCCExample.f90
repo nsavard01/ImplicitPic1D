@@ -10,7 +10,7 @@ program MCCExample
     implicit none
 
     integer(int32), parameter :: sizeArray = 800, numSteps = 100000, numStepsAveraged = 100000
-    real(real64), parameter :: E_max = 40.0d0, E_over_N = 100.d0, bolsigCollFreq = 0.1128d-12
+    real(real64), parameter :: E_max = 80.0d0, E_over_N = 25.0d0, bolsigCollFreq = 0.7733d-13
     integer(int32) :: i,j, iThread, energyIndx
     integer(int64) :: E_hist(sizeArray)!, tclock1, tclock2, clock_rate, 
     real(real64) :: EField, velocity_old, accelAdd, delE, E_array(sizeArray), partEnergy
@@ -90,7 +90,7 @@ program MCCExample
     print *, 'collision frequency is:', real(nullCollisionList(1)%totalAmountCollisions)/real(numSteps)/del_t/SUM(particleList(1)%N_p)
     print *, 'should be about:', bolsigCollFreq * targetParticleList(1)%density
 
-    open(10,file='Hist_100Td_N2.dat')
+    open(10,file='Hist_25Td_He.dat')
     do i = 1, sizeArray
         write(10, "((es16.8,1x), (I14, 1x))") E_array(i), E_hist(i)
     end do
@@ -105,12 +105,6 @@ program MCCExample
         E_hist(energyIndx) = E_hist(energyIndx) + 1
     end do
     !$OMP end parallel
-
-    open(10,file='singleTimeHist_100Td_N2.dat')
-    do i = 1, sizeArray
-        write(10, "((es16.8,1x), (I10, 1x))") E_array(i), E_hist(i)
-    end do
-    close(10)
 
     
 end program MCCExample

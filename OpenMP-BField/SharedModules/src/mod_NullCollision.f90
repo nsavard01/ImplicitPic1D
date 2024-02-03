@@ -15,7 +15,7 @@ module mod_NullCollision
     ! Particle contains particle properties and stored values in phase space df
     type :: nullCollision
         integer(int32) :: numberCollisions, numberReactants, lengthArrays, totalAmountCollisions
-        real(real64), allocatable :: energyArray(:), sigmaVArray(:, :), energyThreshold(:)
+        real(real64), allocatable :: energyArray(:), sigmaArray(:, :), energyThreshold(:)
         real(real64) :: sigmaVMax, reducedMass, minEnergy, maxEnergy, sumMass, reducedMassIonization, totalEnergyLoss
         integer(int32), allocatable :: collisionType(:), reactantsIndx(:), numberProducts(:), productsIndx(:,:)
     contains
@@ -33,14 +33,14 @@ module mod_NullCollision
 
 contains
 
-    type(nullCollision) function nullCollision_constructor(numberReactants, numberCollisions, lengthArrays, red_mass, sumMass, redMassTripleProducts, energyArray, sigmaVArray, energyThreshold, collisionType, reactantsIndx, numberProducts, productsIndx) result(self)
+    type(nullCollision) function nullCollision_constructor(numberReactants, numberCollisions, lengthArrays, red_mass, sumMass, redMassTripleProducts, energyArray, sigmaArray, energyThreshold, collisionType, reactantsIndx, numberProducts, productsIndx) result(self)
         ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
         ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
         integer(int32), intent(in) :: numberCollisions, numberReactants, lengthArrays
-        real(real64), intent(in) :: energyArray(lengthArrays), sigmaVArray(lengthArrays, numberCollisions), energyThreshold(numberCollisions), red_mass, sumMass, redMassTripleProducts
+        real(real64), intent(in) :: energyArray(lengthArrays), sigmaArray(lengthArrays, numberCollisions), energyThreshold(numberCollisions), red_mass, sumMass, redMassTripleProducts
         integer(int32), intent(in) :: collisionType(numberCollisions), reactantsIndx(numberReactants), numberProducts(numberCollisions), productsIndx(3,numberCollisions)
         integer(int32) :: i, j, indxOrder(numberCollisions), k
-        real(real64) :: sigma_v_max(numberCollisions)
+        real(real64) :: sigma_v_max(numberCollisions), v_r, sum_sigma
         self%numberCollisions = numberCollisions
         self%numberReactants = numberReactants
         self%lengthArrays = lengthArrays
@@ -50,11 +50,12 @@ contains
         self%totalEnergyLoss = 0.0d0
         self%totalAmountCollisions = 0
 
-        ! order collisions by maximum sigma_v in arrays
+        ! order collisions by maximum sigma_v in each collision
         do i = 1, numberCollisions
             sigma_v_max(i) = 0
             do j = 1, lengthArrays
-                sigma_v_max(i) = MAX(sigma_v_max(i), sigmaVArray(j, i))
+                v_r = SQRT(2.0d0 * energyArray(j) * e / self%reducedMass)
+                sigma_v_max(i) = MAX(sigma_v_max(i), sigmaArray(j, i) * v_r)
             end do
         end do
         call indexSortArray(self%numberCollisions, sigma_v_max, indxOrder)
@@ -64,21 +65,33 @@ contains
             indxOrder(i) = indxOrder(numberCollisions-i + 1)
             indxOrder(numberCollisions-i + 1) = k
         end do
-        allocate(self%energyArray(lengthArrays), self%sigmaVArray(lengthArrays, numberCollisions), self%energyThreshold(numberCollisions), self%collisionType(numberCollisions), &
+
+        
+        allocate(self%energyArray(lengthArrays), self%sigmaArray(lengthArrays, numberCollisions), self%energyThreshold(numberCollisions), self%collisionType(numberCollisions), &
             self%reactantsIndx(numberReactants), self%numberProducts(numberCollisions), self%productsIndx(3, numberCollisions))
         self%energyArray = energyArray
         self%reactantsIndx = reactantsIndx
         do i = 1, numberCollisions
             ! Go top down in order, assign arrays. This is just to put more 'likely' colliison first when looking at collision probabilities
             j = indxOrder(i)
-            self%sigmaVArray(:, i) = sigmaVArray(:, j)
+            self%sigmaArray(:, i) = sigmaArray(:, j)
             self%energyThreshold(i) = energyThreshold(j)
             self%collisionType(i) = collisionType(j)
             self%numberProducts(i) = numberProducts(j)
             self%productsIndx(:,i) = productsIndx(:,j)
         end do
+
+        ! get sigma_v_max total along energy array
+        self%sigmaVMax = 0.0d0
+        do i = 1, lengthArrays
+            sum_sigma = 0
+            v_r = SQRT(2.0d0 * energyArray(i) * e / self%reducedMass)
+            do j = 1, numberCollisions
+                sum_sigma = sum_sigma + sigmaArray(i, j)
+            end do
+            self%sigmaVMax = MAX(self%sigmaVMax, sum_sigma * v_r)
+        end do
         
-        self%sigmaVMax = MAXVAL(SUM(self%sigmaVArray, DIM=2))
         self%minEnergy = MINVAL(self%energyArray)
         self%maxEnergy = MAXVAL(self%energyArray)
     
@@ -149,7 +162,7 @@ contains
             sigma_v_low = 0.0d0
             do collIdx = 1, self%numberCollisions
                 if (energyCM > self%energyThreshold(collIdx)) then
-                    sigma_v = self%sigmaVArray(indxLow, collIdx) * (1.0d0 - d_value) + self%sigmaVArray(indxHigh, collIdx) * d_value + sigma_v_low
+                    sigma_v = (self%sigmaArray(indxLow, collIdx) * (1.0d0 - d_value) + self%sigmaArray(indxHigh, collIdx) * d_value) * speedCM + sigma_v_low
                     collisionBool = (Rand <= sigma_v/self%sigmaVMax)
                     if (collisionBool) then
                         totalCollisions = totalCollisions + 1

@@ -398,10 +398,10 @@ contains
         logical :: fileExists, foundParticleBool, reactantBool, incidentParticleBool, oldSetBool
         character(len=100) :: string
         character(:), allocatable :: collFileName
-        real(real64) :: tempVar1, tempVar2, E_scaling, sigma_scaling, E_threshold(maxNumberColls), E_temp(maxNumberPoints, maxNumberColls), sigma_temp(maxNumberPoints, maxNumberColls), v_r, red_mass, sumMass, redMassTripleProducts
+        real(real64) :: tempVar1, tempVar2, E_scaling, sigma_scaling, E_threshold(maxNumberColls), E_temp(maxNumberPoints, maxNumberColls), sigma_temp(maxNumberPoints, maxNumberColls), red_mass, sumMass, redMassTripleProducts
         integer(int32) :: i, j, k, numberCollisions, reactionIndx(maxNumberColls), lowerIndx, higherIndx, numberReactants(maxNumberColls), numberProducts(maxNumberColls), collisionReactantsIndx(2, maxNumberColls), &
             collisionProductsIndx(3, maxNumberColls), numberSigmaPoints(maxNumberColls), length_concatenate, collisionType(maxNumberColls), h, numberCollisionsPerReaction
-        real(real64), allocatable :: E_concatenate_temp(:), E_concatenate(:), sigma_v_concatenate(:, :), E_threshold_array(:)
+        real(real64), allocatable :: E_concatenate_temp(:), E_concatenate(:), sigma_concatenate(:, :), E_threshold_array(:)
         integer(int32), allocatable :: indxSort(:), collisionTypeArray(:), numberProductsArray(:), productsIndxArray(:,:)
         
 
@@ -584,7 +584,7 @@ contains
                 end do
                 length_concatenate = k
                 ! Now interpolate each collision in set to new E_array
-                allocate(sigma_v_concatenate(length_concatenate, numberCollisionsPerReaction), collisionTypeArray(numberCollisionsPerReaction), E_threshold_array(numberCollisionsPerReaction), &
+                allocate(sigma_concatenate(length_concatenate, numberCollisionsPerReaction), collisionTypeArray(numberCollisionsPerReaction), E_threshold_array(numberCollisionsPerReaction), &
                     numberProductsArray(numberCollisionsPerReaction), productsIndxArray(3, numberCollisionsPerReaction))
                 h = 0
                 do i = 1, numberCollisions
@@ -597,10 +597,9 @@ contains
                         if (collisionType(i) == 2) redMassTripleProducts = 1.0d0 / (1.0d0/particleList(collisionProductsIndx(1,i))%mass + 1.0d0/particleList(collisionProductsIndx(2,i))%mass + 1.0d0/particleList(collisionProductsIndx(3,i))%mass)
                         lowerIndx = 1
                         do k = 1, length_concatenate
-                            v_r = SQRT(2.0d0 * E_concatenate(k) * e / red_mass)
                             if (E_threshold(i) > E_concatenate(k)) then
                                 ! If Energy below threshold, then sigma is 0
-                                sigma_v_concatenate(k, h) = 0.0d0
+                                sigma_concatenate(k, h) = 0.0d0
                             else if (E_concatenate(k) < E_temp(numberSigmaPoints(i), i)) then
                                 ! Go up index in OG energy array until get to energy greater than current energy on concatenated array
                                 do while (E_temp(lowerIndx, i) <= E_concatenate(k))
@@ -608,23 +607,23 @@ contains
                                 end do
                                 lowerIndx = lowerIndx - 1
                                 if (E_temp(lowerIndx, i) == E_concatenate(k)) then
-                                    sigma_v_concatenate(k, h) = sigma_temp(lowerIndx, i) * v_r
+                                    sigma_concatenate(k, h) = sigma_temp(lowerIndx, i)
                                 else
                                     ! interpolate
                                     tempVar1 = E_concatenate(k) - E_temp(lowerIndx, i)
                                     tempVar2 = tempVar1/ (E_temp(lowerIndx+1,i) - E_temp(lowerIndx, i))
-                                    sigma_v_concatenate(k, h) = (sigma_temp(lowerIndx, i) * (1 - tempVar2) + sigma_temp(lowerIndx+1, i) * (tempVar2)) * v_r
+                                    sigma_concatenate(k, h) = (sigma_temp(lowerIndx, i) * (1 - tempVar2) + sigma_temp(lowerIndx+1, i) * (tempVar2))
                                 end if
                             else
                                 ! Energy outside range, use constant extrapolation to outer array
-                                sigma_v_concatenate(k, h) = sigma_temp(numberSigmaPoints(i), i) * v_r
+                                sigma_concatenate(k, h) = sigma_temp(numberSigmaPoints(i), i)
                             end if
                         end do
                     end if   
                 end do
-                nullCollisionList(j) = nullCollision(2, h, length_concatenate, red_mass, sumMass, redMassTripleProducts, E_concatenate, sigma_v_concatenate, E_threshold_array, collisionTypeArray, &
+                nullCollisionList(j) = nullCollision(2, h, length_concatenate, red_mass, sumMass, redMassTripleProducts, E_concatenate, sigma_concatenate, E_threshold_array, collisionTypeArray, &
                     collisionReactantsIndx(:,j), numberProductsArray, productsIndxArray)
-                deallocate(sigma_v_concatenate, collisionTypeArray, E_threshold_array, numberProductsArray, productsIndxArray)
+                deallocate(sigma_concatenate, collisionTypeArray, E_threshold_array, numberProductsArray, productsIndxArray)
                 deallocate(E_concatenate)
                 deallocate(E_concatenate_temp, indxSort)
                 print *, ''
