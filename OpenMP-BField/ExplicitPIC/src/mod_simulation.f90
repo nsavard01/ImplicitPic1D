@@ -130,6 +130,10 @@ contains
             if (.not. bool) then
                 stop "Save directory not successfully created!"
             end if
+            bool = makedirqq(dirName//'/CrossSections')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
         end if
     end subroutine generateSaveDirectory
 
@@ -168,6 +172,9 @@ contains
             particleList(i)%accumWallLoss = 0
             open(unitPart1+i,file=directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat')
             write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p, Temp")')
+        end do
+        do i = 1, numberBinaryCollisions
+            call nullCollisionList(i)%writeCollisionCrossSection(particleList(nullCollisionList(i)%reactantsIndx(1)), directoryName)
         end do
         collisionTime = 0
         potentialTime = 0
@@ -295,6 +302,7 @@ contains
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
         print *, 'moverTime is:', real(moverTime, kind = real64)/real(timingRate, kind = real64)
         print *, 'potentialTime is:', real(potentialTime, kind = real64)/real(timingRate, kind = real64)
+        print *, 'collision time is:', real(collisionTime, kind=real64)/real(timingRate, kind = real64)
 
     end subroutine solveSimulation
 

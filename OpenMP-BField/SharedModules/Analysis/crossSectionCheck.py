@@ -5,50 +5,69 @@ Created on Tue Jun 27 14:32:42 2023
 @author: Nicolas
 """
 
-from plotProduction import *
-from generateBoundExample import *
-print('Loaded modules')
-    
-#%%
+from import_libraries_constants import *
 
-print('Loading data')
+path = 'Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test/CrossSections/'
+E_array = np.fromfile(path + 'IncidentPart_e_energy.dat')
+sizeEarray = len(E_array)
+sigmaArray = np.fromfile(path + 'IncidentPart_e_sigma.dat')
+amountXC = len(sigmaArray)//sizeEarray
+sigmaArray = sigmaArray.reshape(amountXC, sizeEarray)
 
-def readBenchmarkResults():
-    firstIndx = 0
-    data = np.loadtxt('TurnerBenchmark/turner_benchmark_results.dat')
-    case1 = data[0:129,:]
-    firstIndx = firstIndx + 129
-    case2 = data[firstIndx:firstIndx+257,:]
-    firstIndx = firstIndx + 257
-    case3 = data[firstIndx:firstIndx+513, :]
-    firstIndx = firstIndx+513
-    case4 = data[firstIndx:firstIndx+513]
-    return case1,case2,case3,case4
+pathOG = 'Y:/scratch/nsavard/ImplicitPic1D/ImplicitPic1D/OpenMP-BField/CollisionData/turner_benchmark_he_electron_table.dat'
 
-def readBenchmarkResultsRefined():
-    data = np.loadtxt('TurnerBenchmark/turner_benchmark_refined_results.dat')
-    indx = np.where(data[:,0] == 0)[0]
-    case1 = data[indx[0]:indx[1], :]
-    case2 = data[indx[1]:indx[2], :]
-    case3 = data[indx[2]:indx[3], :]
-    case4 = data[indx[3]:,:]
-    return case1, case2, case3, case4
+elasticData = np.loadtxt(pathOG, skiprows = 11, max_rows = 182-12+1)
 
-case1, case2, case3, case4 = readBenchmarkResults()
-case1_refined, case2_refined, case3_refined, case4_refined = readBenchmarkResultsRefined()
+#elastic
+for i in range(sizeEarray):
+    testPoint = np.interp(E_array[i], elasticData[:,0], elasticData[:,1])
+    otherPoint = sigmaArray[0,i]
+    if (abs((testPoint - otherPoint)/testPoint) > 1e-8):
+        print('Issue with testpoint!')
 
-#--------------------- Explicit ---------------------------------------------
-Exp_test_RF = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_test_RF/')
-Exp_test_typical = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_test_typical/')
-Exp_RF_Helium_Animation = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RF_Helium_Animation/')
-Exp_RFBenchmark_test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test/')
-Exp_RFBenchmark_test2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2/')
+#ionization
+ionizData = np.loadtxt(pathOG, skiprows = 627, max_rows = 828-627)
+for i in range(sizeEarray):
+    testPoint = np.interp(E_array[i], ionizData[:,0], ionizData[:,1])
+    otherPoint = sigmaArray[1,i]
+    if (abs((testPoint - otherPoint)/testPoint) > 1e-8):
+        print('Issue with testpoint ionization!')
 
-NGP_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_RF/')
-NGP_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_typical/')
+#excit 1
+excitSingletData = np.loadtxt(pathOG, skiprows = 413, max_rows = 614-413)
+for i in range(sizeEarray):
+    testPoint = np.interp(E_array[i], excitSingletData[:,0], excitSingletData[:,1])
+    otherPoint = sigmaArray[2,i]
+    if (abs((testPoint - otherPoint)/testPoint) > 1e-8):
+        print('Issue with testpoint excit singlet!')
 
-CIC_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_test_RF/')
-CIC_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_test_typical/')
+# excit 2
+excitTripletData = np.loadtxt(pathOG, skiprows=197, max_rows=398-197)
+for i in range(sizeEarray):
+    testPoint = np.interp(E_array[i], excitTripletData[:, 0], excitTripletData[:, 1])
+    otherPoint = sigmaArray[3, i]
+    if (abs((testPoint - otherPoint) / testPoint) > 1e-8):
+        print('Issue with testpoint excit singlet!')
+
+E_array_ion = np.fromfile(path + 'IncidentPart_He+_energy.dat')
+sizeEarray_ion = len(E_array_ion)
+sigmaArray_ion = np.fromfile(path + 'IncidentPart_He+_sigma.dat')
+amountXC_ion = len(sigmaArray_ion)//sizeEarray_ion
+sigmaArray_ion = sigmaArray_ion.reshape(amountXC_ion, sizeEarray_ion)
+
+cexgData = np.loadtxt(pathOG, skiprows = 845, max_rows = 946-845)
+for i in range(sizeEarray_ion):
+    testPoint = np.interp(E_array_ion[i], cexgData[:, 0], cexgData[:, 1])
+    otherPoint = sigmaArray_ion[0, i] * 1e20
+    if (abs((testPoint - otherPoint) / testPoint) > 1e-8):
+        print('Issue with testpoint ion Charge Exchange!')
+
+ionElastData = np.loadtxt(pathOG, skiprows=960, max_rows=1061-960)
+for i in range(sizeEarray_ion):
+    testPoint = np.interp(E_array_ion[i], ionElastData[:, 0], ionElastData[:, 1])
+    otherPoint = sigmaArray_ion[1, i] * 1e20
+    if (abs((testPoint - otherPoint) / testPoint) > 1e-8):
+        print('Issue with testpoint ion Charge Exchange!')
 
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']

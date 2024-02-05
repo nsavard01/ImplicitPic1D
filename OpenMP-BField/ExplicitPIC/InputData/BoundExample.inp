@@ -1,14 +1,14 @@
 ELECTRONS
 name	 NumParticles/thread   ArraySizeMultiplication
 -------------------------------------------
-e	  2048		2
+e	  2048	 2
 -------------------------------------------
 
 
 IONS
 name   massAtom(AMU)  charge 	NumParticles/thread   ArraySizeMultiplication
 --------------------------------------------------
-He+   4.0173     1. 		2048    2
+He+   4.0173     1. 		2048   2
 --------------------------------------------------
 
 

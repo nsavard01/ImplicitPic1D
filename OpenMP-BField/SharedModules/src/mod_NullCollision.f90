@@ -23,6 +23,7 @@ module mod_NullCollision
         procedure, public, pass(self) :: elasticExcitCollisionIsotropic
         procedure, public, pass(self) :: ionizationCollisionIsotropic
         procedure, public, pass(self) :: ionizationCollisionIsotropicNanbul
+        procedure, public, pass(self) :: writeCollisionCrossSection
 
     end type nullCollision
 
@@ -108,7 +109,7 @@ contains
         real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM, particleLocation, energyLoss
         integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx, totalCollisions
 
-        P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
+        P_null = self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t !1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
     
         if (P_null > 0.5d0) then
             print *, 'P_null greater than 50%'
@@ -424,6 +425,21 @@ contains
 
     
     end subroutine elasticExcitCollisionIsotropic
+
+    subroutine writeCollisionCrossSection(self, part, dirName)
+        class(nullCollision), intent(in) :: self
+        type(Particle), intent(in) :: part
+        character(*), intent(in) :: dirName
+        integer(int32) :: i
+        open(10,file=dirName//'/CrossSections/IncidentPart_'//part%name//"_energy.dat", form='UNFORMATTED', access = 'STREAM')
+        write(10) self%energyArray
+        close(10)
+
+        open(10,file=dirName//'/CrossSections/IncidentPart_'//part%name//"_sigma.dat", form='UNFORMATTED', access = 'STREAM')
+        write(10) self%sigmaArray
+        close(10)
+
+    end subroutine writeCollisionCrossSection
 
     subroutine scatterVector(u,e,costheta,phi)
         !     ===================================================================
