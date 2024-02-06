@@ -6,6 +6,7 @@ module mod_NullCollision
     use mod_particle
     use mod_targetParticle
     use omp_lib
+    use mod_mt19937
     implicit none
 
     private
@@ -98,16 +99,16 @@ contains
     
     end function nullCollision_constructor
 
-    subroutine generateCollision(self, particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+    subroutine generateCollision(self, particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, randGen, del_t)
         class(nullCollision), intent(in out) :: self
         integer(int32), intent(in) :: numberChargedParticles, numberBinaryCollisions
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
-        integer(int32), intent(in out) :: irand(numThread)
+        type(mt19937), intent(in out) :: randGen(numThread)
         real(real64), intent(in) :: del_t
         logical :: collisionBool
         real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM, particleLocation, energyLoss
-        integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx, totalCollisions, irand_thread
+        integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx, totalCollisions
 
         P_null = self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t !1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
     
@@ -119,20 +120,19 @@ contains
         energyLoss = 0
         totalCollisions = 0
         !$OMP parallel private(iThread, i,numberSelected, numberSelectedReal, Rand, particleIndx, numberTotalParticles, targetVelocity, incidentVelocity, &
-            velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation, irand_thread) reduction(+:energyLoss,totalCollisions)
+            velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation) reduction(+:energyLoss,totalCollisions)
         iThread = omp_get_thread_num() + 1
-        irand_thread = irand(iThread)
         numberTotalParticles = particleList(self%reactantsIndx(1))%N_p(iThread)
         numberSelectedReal = P_null * real(numberTotalParticles)
         numberSelected = INT(numberSelectedReal)
-        Rand = ran2(irand_thread)
+        Rand = randGen(iThread)%genrand64_real1()
         if (Rand < (numberSelectedReal - numberSelected)) numberSelected = numberSelected + 1   
         addIonizationIndx = 0
         do i = 1, numberSelected
-            Rand = ran2(irand_thread)
+            Rand = randGen(iThread)%genrand64_real1()
             particleIndx = INT((numberTotalParticles) * Rand) + 1
             incidentVelocity = particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleIndx, iThread)
-            targetVelocity = targetParticleList(self%reactantsIndx(2))%generate3DMaxwellianVelocity(irand_thread)
+            targetVelocity = targetParticleList(self%reactantsIndx(2))%generate3DMaxwellianVelocity(randGen(iThread))
             velocity_CM = incidentVelocity - targetVelocity
             speedCM = SQRT(SUM(velocity_CM**2))
             energyCM = SUM(velocity_CM**2) * 0.5d0 * self%reducedMass / e !in eV
@@ -160,7 +160,7 @@ contains
                 end do
                 d_value = (energyCM - self%energyArray(indxLow))/(self%energyArray(indxHigh) - self%energyArray(indxLow))
             end if
-            Rand = ran2(irand_thread)
+            Rand = randGen(iThread)%genrand64_real1()
             sigma_v_low = 0.0d0
             do collIdx = 1, self%numberCollisions
                 if (energyCM > self%energyThreshold(collIdx)) then
@@ -172,12 +172,12 @@ contains
                         CASE(1)
                             velocity_CM = incidentVelocity
                             call self%elasticExcitCollisionIsotropic(particleList(self%reactantsIndx(1)), targetParticleList(self%reactantsIndx(2)), &
-                                irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
+                                randGen(iThread), energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
                             particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleIndx, iThread) = incidentVelocity
                             energyLoss = energyLoss + particleList(self%reactantsIndx(1))%mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
                         CASE(2)
                             call self%ionizationCollisionIsotropic(particleList(self%reactantsIndx(1)), particleList(self%productsIndx(2, collIdx)), targetParticleList(self%reactantsIndx(2)), &
-                                irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity, velocity_CM)
+                                randGen(iThread), energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity, velocity_CM)
                             particleLocation = particleList(self%reactantsIndx(1))%phaseSpace(1, particleIndx, iThread)
                             particleList(self%reactantsIndx(1))%N_p(iThread) = particleList(self%reactantsIndx(1))%N_p(iThread) + 1
                             particleList(self%productsIndx(2, collIdx))%N_p(iThread) = particleList(self%productsIndx(2, collIdx))%N_p(iThread) + 1
@@ -193,7 +193,7 @@ contains
                         CASE(3)
                             velocity_CM = incidentVelocity
                             call self%elasticExcitCollisionIsotropic(particleList(self%reactantsIndx(1)), targetParticleList(self%reactantsIndx(2)), &
-                                irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
+                                randGen(iThread), energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
                             particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleIndx, iThread) = incidentVelocity
                             energyLoss = energyLoss + particleList(self%reactantsIndx(1))%mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
                             !energyLoss = energyLoss + self%energyThreshold(collIdx)
@@ -217,7 +217,6 @@ contains
             ! particleList(self%reactantsIndx(1))%phaseSpace(1, numberTotalParticles, iThread) = particleLocation
             ! numberTotalParticles = numberTotalParticles - 1
         end do
-        irand(iThread) = irand_thread
         !$OMP end parallel
         self%totalEnergyLoss = self%totalEnergyLoss + energyLoss
         self%totalAmountCollisions = self%totalAmountCollisions + totalCollisions
@@ -227,7 +226,7 @@ contains
 
     end subroutine generateCollision
 
-    subroutine ionizationCollisionIsotropic(self, electron, ion, targetPart, irand, energyCM, E_thres, incidentVelocity, targetVelocity, velocityCM)
+    subroutine ionizationCollisionIsotropic(self, electron, ion, targetPart, randGen, energyCM, E_thres, incidentVelocity, targetVelocity, velocityCM)
         ! Ionization subroutine with momentum/energy conservation
         ! Replace incidentVelocity, velocityCM, and targetVelocity with primary electron, secondary electron, and ion velocity
         class(nullCollision), intent(in) :: self
@@ -235,7 +234,7 @@ contains
         type(targetParticle), intent(in) :: targetPart
         real(real64), intent(in) :: energyCM, E_thres
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
-        integer(int32), intent(in out) :: irand
+        type(mt19937), intent(in out) :: randGen
         real(real64) :: speedPerParticle, phi, e_vector(3), u_vector(3), V_cm(3), delE, secTheta, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -246,8 +245,8 @@ contains
         V_cm = (P_beginning) / (self%sumMass)
     
         ! first add to electron
-        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
-        phi = ran2(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*randGen%genrand64_real1()
+        phi = randGen%genrand64_real1() * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
@@ -259,7 +258,7 @@ contains
 
         ! second electron
         cos_theta = COS(2.0d0 * pi/3.0d0)
-        phi = ran2(irand) * 2.0d0 * pi
+        phi = randGen%genrand64_real1() * 2.0d0 * pi
 
         call scatterVector(u_vector, e_vector, cos_theta, phi)
 
@@ -315,7 +314,7 @@ contains
         
     end subroutine ionizationCollisionIsotropic
 
-    subroutine ionizationCollisionIsotropicNanbul(self, electron, ion, targetPart, irand, energyCM, E_thres, incidentVelocity, targetVelocity, velocityCM)
+    subroutine ionizationCollisionIsotropicNanbul(self, electron, ion, targetPart, randGen, energyCM, E_thres, incidentVelocity, targetVelocity, velocityCM)
         ! Ionization subroutine with only approximate energy/momentum conservation
         ! Replace incidentVelocity, velocityCM, and targetVelocity with primary electron, secondary electron, and ion velocity
         class(nullCollision), intent(in) :: self
@@ -323,7 +322,7 @@ contains
         type(targetParticle), intent(in) :: targetPart
         real(real64), intent(in) :: energyCM, E_thres
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
-        integer(int32), intent(in out) :: irand
+        type(mt19937), intent(in out) :: randGen
         real(real64) :: speedPerParticle, phi, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -334,8 +333,8 @@ contains
         V_cm = (P_beginning) / (self%sumMass)
     
         ! first add to electron
-        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
-        phi = ran2(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*randGen%genrand64_real1()
+        phi = randGen%genrand64_real1() * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
@@ -346,8 +345,8 @@ contains
         incidentVelocity = e_vector * speedPerParticle + V_cm
 
         ! second electron
-        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
-        phi = ran2(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*randGen%genrand64_real1()
+        phi = randGen%genrand64_real1() * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
@@ -381,14 +380,14 @@ contains
         
     end subroutine ionizationCollisionIsotropicNanbul
 
-    subroutine elasticExcitCollisionIsotropic(self, primary, targetPart, irand, energyCM, E_thres, incidentVelocity, targetVelocity)
+    subroutine elasticExcitCollisionIsotropic(self, primary, targetPart, randGen, energyCM, E_thres, incidentVelocity, targetVelocity)
         ! elastic collision routine with momentum/energy conservation
         class(nullCollision), intent(in) :: self
         type(Particle), intent(in out) :: primary
         type(targetParticle), intent(in) :: targetPart
         real(real64), intent(in) :: energyCM, E_thres
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3)
-        integer(int32), intent(in out) :: irand
+        type(mt19937), intent(in out) :: randGen
         real(real64) :: speedPerParticle, phi, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -399,8 +398,8 @@ contains
         V_cm = (P_beginning) / self%sumMass
     
         ! first add to primary
-        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
-        phi = ran2(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*randGen%genrand64_real1()
+        phi = randGen%genrand64_real1() * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)

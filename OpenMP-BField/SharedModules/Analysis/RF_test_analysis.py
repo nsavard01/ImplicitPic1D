@@ -43,6 +43,9 @@ Exp_test_typical = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitDat
 Exp_RF_Helium_Animation = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RF_Helium_Animation/')
 Exp_RFBenchmark_test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test/')
 Exp_RFBenchmark_test2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2/')
+Exp_RFBenchmark_test2_MT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2_MT/')
+Exp_RFBenchmark_test3 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3/')
+Exp_RFBenchmark_test_MT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_MT/')
 
 NGP_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_RF/')
 NGP_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_typical/')

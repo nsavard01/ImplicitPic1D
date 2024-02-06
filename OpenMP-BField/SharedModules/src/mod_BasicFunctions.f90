@@ -5,6 +5,8 @@ module mod_BasicFunctions
     use constants
     implicit none
 
+    integer,parameter, private :: ia_ran2=16807,im_ran2=2147483647,iq_ran2=127773,ir_ran2=2836
+    real(real64),parameter, private :: am_ran2=1.0d0/im_ran2
 
 contains
 
@@ -37,19 +39,18 @@ contains
         res = 2 * SQRT(E_p / pi) * (1/T)**(1.5) * EXP(- E_p/ T)
     end function getMaxwellDistE
 
-    function ran2(irand)
+    function ran2(irand) result(res)
         ! Function from Gwenael for making random number
-        integer,parameter :: ia=16807,im=2147483647,iq=127773,ir=2836
-        real(real64),parameter :: am=1.0d0/im
-        real(real64):: ran2
-        integer(int32) :: k
+        
         integer(int32), intent(in out) :: irand
+        real(real64):: res
+        integer(int32) :: k
+        
       
-        k=irand/iq
-        irand=ia*(irand-k*iq)-ir*k
-        if (irand < 0) irand=irand+im
-        ran2=am*irand
-        return
+        k=irand/iq_ran2
+        irand=ia_ran2*(irand-k*iq_ran2)-ir_ran2*k
+        if (irand < 0) irand=irand+im_ran2
+        res=am_ran2*irand
       end function ran2
 
     subroutine getRandom(x, irand)
