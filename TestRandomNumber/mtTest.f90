@@ -2,26 +2,28 @@ program mtTest
 
     use mt19937_64
     use omp_lib
+    use mod_Random
     use iso_fortran_env, only: output_unit, wp => real64, i4 => int32, i8 => int64
     
     implicit none
     
 
     type(mt19937), allocatable :: randGen(:)
+    type(randType), allocatable :: randOther(:)
     real(wp) :: r
     integer(i4) :: i, j, startTime, endTime, timingRate, iThread
     integer, parameter :: n = 10**6, numThread = 16
     integer(i4), allocatable :: irand(:)
     real(wp), allocatable :: x(:,:)
     call omp_set_num_threads(numThread)
-    allocate(irand(numThread), randGen(numThread), x(n, numThread))
+    allocate(irand(numThread), randGen(numThread), x(n, numThread), randOther(numThread))
     call system_clock(count_rate = timingRate)
     do i = 1, numThread
-        irand(i) = 12345*11 + i * 7
-        call randGen(i)%initialize(12345*11 + i * 7)
+        irand(i) = 12345*11*i + i * 7
+        call randGen(i)%initialize(12345*11*i + i * 7)
+        call randOther(i)%initialize(12345*11*i + i * 7)
     end do
-    
-
+   
     ! call random%initialize(42)
 
 
@@ -53,7 +55,20 @@ program mtTest
     call system_clock(startTime)
     !$OMP parallel private(iThread, j,i) 
     iThread = omp_get_thread_num() + 1
-    do j = 1, 10
+    do j = 1, 100
+        do i = 1, n
+            x(i, iThread) = randGen(iThread)%genrand64_real1()
+        end do
+    end do
+    !$OMP end parallel
+    call system_clock(endTime)
+    call print_results('mt19937')
+    print *, 'Time:', real(endTime - startTime)/real(timingRate)
+    
+    call system_clock(startTime)
+    !$OMP parallel private(iThread, j,i) 
+    iThread = omp_get_thread_num() + 1
+    do j = 1, 100
         do i = 1, n
             x(i, iThread) = ran2(irand(iThread))
         end do
@@ -62,18 +77,19 @@ program mtTest
     call system_clock(endTime)
     call print_results('ran2')
     print *, 'Time:', real(endTime - startTime)/real(timingRate)
-    
+
+
     call system_clock(startTime)
     !$OMP parallel private(iThread, j,i) 
     iThread = omp_get_thread_num() + 1
-    do j = 1, 10
+    do j = 1, 100
         do i = 1, n
-            x(i, iThread) = randGen(iThread)%genrand64_real1()
+            x(i, iThread) = randOther(iThread)%getRand()
         end do
     end do
     !$OMP end parallel
     call system_clock(endTime)
-    call print_results('genrand64_real1')
+    call print_results('ranOther')
     print *, 'Time:', real(endTime - startTime)/real(timingRate)
 
     
@@ -115,5 +131,6 @@ program mtTest
             ran2=am*irand
             return
         end function ran2
+
 
 end program mtTest
