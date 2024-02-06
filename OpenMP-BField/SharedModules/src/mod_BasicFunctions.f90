@@ -5,8 +5,7 @@ module mod_BasicFunctions
     use constants
     implicit none
 
-    integer,parameter, private :: ia_ran2=16807,im_ran2=2147483647,iq_ran2=127773,ir_ran2=2836
-    real(real64),parameter, private :: am_ran2=1.0d0/im_ran2
+    
 
 contains
 
@@ -39,36 +38,21 @@ contains
         res = 2 * SQRT(E_p / pi) * (1/T)**(1.5) * EXP(- E_p/ T)
     end function getMaxwellDistE
 
-    ! function ran2(irand) result(res)
-    !     ! Function from Gwenael for making random number
-        
-    !     integer(int32), intent(in out) :: irand
-    !     real(real64):: res
-    !     integer(int32) :: k
-        
-      
-    !     k=irand/iq_ran2
-    !     irand=ia_ran2*(irand-k*iq_ran2)-ir_ran2*k
-    !     if (irand < 0) irand=irand+im_ran2
-    !     res=am_ran2*irand
-    !   end function ran2
-
-
     function ran2(irand) result(res)
-    ! Function from Gwenael for making random number
-        integer(int32), parameter :: iq1 = 53668, iq2 = 52774, im1 = 2147483563, IA1 = 40014, IA2 = 40692, &
-            IR1 = 12211
+        ! Function from Gwenael for making random number
+        integer(int32),parameter :: ia_ran2=16807,im_ran2=2147483647,iq_ran2=127773,ir_ran2=2836
+        real(real64),parameter :: am_ran2=1.0d0/im_ran2
         integer(int32), intent(in out) :: irand
         real(real64):: res
-        integer(int32) :: k, 
+        integer(int32) :: k
         
-        
-        k=irand/iq1
-        irand = IA1 * (irand - k*iq1) - k * IR1
+      
+        k=irand/iq_ran2
         irand=ia_ran2*(irand-k*iq_ran2)-ir_ran2*k
         if (irand < 0) irand=irand+im_ran2
         res=am_ran2*irand
-    end function ran2
+      end function ran2
+
 
     subroutine getRandom(x, irand)
         !use Gwenael's function to generate array of random number
