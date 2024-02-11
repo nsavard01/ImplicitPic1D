@@ -1,5 +1,5 @@
 module mod_readInputs
-    use iso_fortran_env, only: int32, real64
+    use iso_fortran_env
     use constants
     use mod_BasicFunctions
     use mod_domain
@@ -179,13 +179,15 @@ contains
         print *, ""
     end subroutine readInjectionInputs
 
-    subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
+    subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand, statePCG)
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, averagingTime, T_e, T_i
         integer(int32), intent(in out) :: numDiagnosticSteps, numThread
         integer(int32), allocatable, intent(out) :: irand(:)
+        integer(int64), allocatable, intent(out) :: statePCG(:)
         character(len=*), intent(in) :: InitFilename
         integer(int32) :: io, i
         character(len=100) :: tempName
+        real(real64) :: rando
         print *, ""
         print *, "Reading initial inputs:"
         print *, "------------------"
@@ -213,9 +215,12 @@ contains
             stop
         end if
         call omp_set_num_threads(numThread)
-        allocate(irand(numThread))
+        allocate(irand(numThread), statePCG(numThread))
         do i = 1, numThread
-            irand(i) = 123456*i*11
+            call random_number(rando)
+            irand(i) = INT(rando * (huge(i)) + 1)
+            call random_number(rando)
+            statePCG(i) = INT((rando-0.5d0) * (huge(statePCG(i))), kind = int64)
         end do
         del_t = MIN(fractionFreq * 1.0d0 / getPlasmaFreq(n_ave), del_t)
         print *, "Save data folder: ", directoryName
@@ -286,7 +291,8 @@ contains
         type(Domain) :: world
         character(len=*), intent(in) :: filename
         integer(int32), intent(in) :: numThread
-        integer(int32), intent(in out) :: numberChargedParticles, irand(numThread)
+        integer(int32), intent(in out) :: numberChargedParticles
+        integer(int64), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
         integer(int32) :: j, numSpecies = 0, numNeutral = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name

@@ -72,12 +72,12 @@ contains
 
     subroutine initializeRandUniform(self, irand)
         class(Particle), intent(in out) :: self
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(int64), intent(in out) :: irand(numThread)
         integer(int32) :: iThread, i
         !$OMP parallel private(iThread, i)
         iThread = omp_get_thread_num() + 1
         do i = 1, self%N_p(iThread)
-            self%phaseSpace(1, i, iThread) = ran2(irand(iThread)) * real(NumberXNodes-1) + 1.0d0
+            self%phaseSpace(1, i, iThread) = randPCG(irand(iThread)) * real(NumberXNodes-1) + 1.0d0
         end do
         !$OMP end parallel
     end subroutine initializeRandUniform
@@ -90,20 +90,24 @@ contains
         ! Use box-muller method for random guassian variable, same as gwenael but doesn't have factor 2? Maybe factored into v_th
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: T
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(int64), intent(in out) :: irand(numThread)
         integer(int32) :: iThread, i
-        real(real64) :: U1, U2, U3, U4
-        !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4)
+        integer(int64) :: irand_thread
+        real(real64) :: U1, U2, U3, U4, v_therm
+        v_therm = SQRT(T*e/self%mass)
+        !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4, irand_thread)
         iThread = omp_get_thread_num() + 1
+        irand_thread = irand(iThread)
         do i = 1, self%N_p(iThread)
-            U1 = ran2(irand(iThread))
-            U2 = ran2(irand(iThread))
-            U3 = ran2(irand(iThread))
-            U4 = ran2(irand(iThread))
-            self%phaseSpace(2, i, iThread) = SQRT(T*e/ self%mass) * SQRT(-2.0d0 * LOG(U1)) * COS(2.0d0 * pi * U2)
-            self%phaseSpace(3, i, iThread) = SQRT(T*e/ self%mass) * SQRT(-2.0d0 * LOG(U1)) * SIN(2.0d0 * pi * U2)
-            self%phaseSpace(4, i, iThread) = SQRT(T*e/ self%mass) * SQRT(-2.0d0 * LOG(U3)) * SIN(2.0d0 * pi * U4)
+            U1 = randPCG(irand_thread)
+            U2 = randPCG(irand_thread)
+            U3 = randPCG(irand_thread)
+            U4 = randPCG(irand_thread)
+            self%phaseSpace(2, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * COS(2.0d0 * pi * U2)
+            self%phaseSpace(3, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * SIN(2.0d0 * pi * U2)
+            self%phaseSpace(4, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U3)) * SIN(2.0d0 * pi * U4)
         end do
+        irand(iThread) = irand_thread
         !$OMP END PARALLEL
     end subroutine generate3DMaxwellian
 

@@ -18,9 +18,10 @@ program BoundPlasmaExample
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
-    call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
+   
+    call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, stateRan0, statePCG)
     call readGeometry(world, solver, 'Geometry.inp')
-    call readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world, particleList, targetParticleList)
+    call readParticleInputs('BoundExample.inp', numberChargedParticles, statePCG, T_e, T_i, numThread, world, particleList, targetParticleList)
     call readNullCollisionInputs('collision.inp', nullCollisionList, particleList, targetParticleList, numberBinaryCollisions)
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
@@ -46,10 +47,10 @@ program BoundPlasmaExample
     call solver%makeEField(world)
     call solver%initialVRewind(particleList, del_t)
     
-    call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, irand, simulationTime)
+    call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, statePCG, simulationTime)
     if (averagingTime /= 0.0d0) then
         print *, "Averaging over", averagingTime, "seconds"
-        call solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, irand, averagingTime, 100)
+        call solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, statePCG, averagingTime, 100)
     end if
 
 

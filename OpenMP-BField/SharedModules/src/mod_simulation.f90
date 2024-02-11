@@ -302,7 +302,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r, simulationTime
         integer(int32), intent(in) :: maxIter
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(int64), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep
         integer(int64) :: startTime, endTime, startTotal, endTotal, timingRate
         real(real64) :: diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime, energyLoss
@@ -563,7 +563,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r, averagingTime
         integer(int32), intent(in) :: maxIter, binNumber
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(int64), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, windowNum, VHist(2*binNumber), intPartV, k, iThread
         real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
         real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss, RF_ave

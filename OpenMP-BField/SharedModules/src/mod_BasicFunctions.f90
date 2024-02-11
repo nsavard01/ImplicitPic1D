@@ -1,11 +1,12 @@
 module mod_BasicFunctions
 
     ! Module containing basic functions and subroutines on arrays, etc sdf
-    use iso_fortran_env, only: int32, real64, output_unit
+    use iso_fortran_env, only: int32, real64, int64, output_unit
     use constants
     implicit none
 
-    
+    integer(int32), allocatable :: stateRan0(:) !Global variable that will need to be changed in-out
+    integer(int64), allocatable :: statePCG(:)
 
 contains
 
@@ -38,6 +39,8 @@ contains
         res = 2 * SQRT(E_p / pi) * (1/T)**(1.5) * EXP(- E_p/ T)
     end function getMaxwellDistE
 
+
+    ! --------------- uniform Random Generators -----------------------------
     function ran2(irand) result(res)
         ! Function from Gwenael for making random number
         integer(int32),parameter :: ia_ran2=16807,im_ran2=2147483647,iq_ran2=127773,ir_ran2=2836
@@ -53,6 +56,32 @@ contains
         res=am_ran2*irand
       end function ran2
 
+    function randPCG(state) result(res)
+        ! random number generator PCG
+        integer(int64), parameter :: multiplier = 6364136223846793005
+        integer(int64), parameter :: increment = 1442695040888963407
+        real(real64), parameter :: max_int32 = 2147483648.0d0
+        real(real64), parameter :: norm_PCG = 4294967296.0d0
+        integer(int64), intent(in out) :: state
+        integer(int64) :: x
+        integer(int32) :: count, x_shifted, random_number
+        real(real64) :: res
+
+        x = state
+        count = int(shiftR(x,59), kind = int32)
+        state = x * multiplier + increment
+        x = ieor(x, shiftR(x, 18))
+        x_shifted = int(shiftR(x, 27), kind = int32)
+        random_number = ior(shiftR(x_shifted, count), shiftL(x_shifted, iand(-count, 31)))
+        res = real(random_number, kind = real64) + max_int32
+        res = res / norm_PCG
+        ! if (res >= 1 .or. res <0) then
+        !     print *, 'randPCG producing number outside range'
+        !     print *, 'res is:', res
+        !     stop
+        ! end if
+
+    end function randPCG
 
     subroutine getRandom(x, irand)
         !use Gwenael's function to generate array of random number
@@ -63,6 +92,8 @@ contains
             x(i) = ran2(irand)
         end do
     end subroutine getRandom
+
+    ! ------------------------------------------------
 
     subroutine get3DMaxwellianVelocity(V, mass, T, irand)
         ! T in eV

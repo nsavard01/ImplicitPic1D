@@ -146,7 +146,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, simulationTime
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(int64), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
         real(real64) :: densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
@@ -216,11 +216,11 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
-                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
-                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                ! if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
+                ! if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                ! if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                ! if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
                 do j = 1, numberBinaryCollisions
                     call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
                 end do
@@ -239,11 +239,11 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
-                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
-                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                ! if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
+                ! if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                ! if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                ! if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
                 do j = 1, numberBinaryCollisions
                     call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
                 end do
@@ -317,7 +317,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(int64), intent(in out) :: irand(numThread)
         integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber), k
         real(real64) :: startTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles), chargeTotal, energyLoss, meanLoss, stdLoss
         real(real64) :: E_max, VMax
@@ -349,11 +349,11 @@ contains
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
-            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
-            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
-            if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            ! if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
+            ! if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            ! if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+            ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            ! if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do
@@ -408,10 +408,10 @@ contains
             currentTime = currentTime + del_t
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
-            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
-            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            ! if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e)
+            ! if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+            ! if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+            ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do
