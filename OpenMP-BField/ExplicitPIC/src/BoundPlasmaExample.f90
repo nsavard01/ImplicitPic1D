@@ -8,7 +8,6 @@ program BoundPlasmaExample
     use mod_particleInjection
     use mod_potentialSolver
     use mod_NullCollision
-    use mod_readInputs
     use mod_simulation
     implicit none
 
@@ -18,8 +17,12 @@ program BoundPlasmaExample
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
+    character(:), allocatable :: saveFolderName !name of the particle
+    
    
-    call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, stateRan0, stateRanNew)
+    saveFolderName = '../../../../ExplicitData-BField/'
+    call readInitialInputs('InitialConditions.inp', saveFolderName)
+    call initializeRandomGenerators(numThread, stateRan0, stateRanNew)
     call readWorld('Geometry.inp', world, T_e, n_ave)
     call readSolver('Geometry.inp', solver, world)
     call readChargedParticleInputs('BoundExample.inp', stateRan0, T_e, T_i, numThread, world, particleList)

@@ -3,6 +3,7 @@ module mod_BasicFunctions
     ! Module containing basic functions and subroutines on arrays, etc sdf
     use iso_fortran_env, only: int32, real64, int64, output_unit
     use constants
+    use omp_lib
     implicit none
 
     integer(int32), allocatable :: stateRan0(:) !Global variable that will need to be changed in-out
@@ -103,6 +104,23 @@ contains
             x(i) = ran2(irand)
         end do
     end subroutine getRandom
+
+    subroutine initializeRandomGenerators(numThread, stateRan0, stateRanNew)
+        integer(int32), allocatable, intent(out) :: stateRan0(:), stateRanNew(:,:)
+        integer(int32), intent(in) :: numThread
+        real(real64) :: rando
+        integer(int32) :: i
+        
+        allocate(stateRan0(numThread), stateRanNew(2,numThread))
+        call random_seed()
+        do i = 1, numThread
+            call random_number(rando)
+            stateRan0(i) = INT(rando * (huge(i)))
+            call random_number(rando)
+            stateRanNew(1, i) = INT(2.0d0 * (rando-0.5d0) * (huge(stateRanNew(1, i))))
+            stateRanNew(2, i) = INT(rando * (huge(stateRanNew(2, i))))
+        end do
+    end subroutine initializeRandomGenerators
 
     ! ------------------------------------------------
 

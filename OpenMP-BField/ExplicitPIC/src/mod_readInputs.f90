@@ -179,12 +179,12 @@ contains
     !     print *, ""
     ! end subroutine readInjectionInputs
 
-    subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand, stateRanNew)
+    subroutine readInitialInputs(InitFilename, saveFolderName, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand, stateRanNew)
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, averagingTime, T_e, T_i
         integer(int32), intent(in out) :: numDiagnosticSteps, numThread
         integer(int32), allocatable, intent(out) :: irand(:)
         integer(int32), allocatable, intent(out) :: stateRanNew(:,:)
-        character(len=*), intent(in) :: InitFilename
+        character(len=*), intent(in) :: InitFilename, saveFolderName
         integer(int32) :: io, i
         character(len=100) :: tempName
         real(real64) :: rando
@@ -200,9 +200,6 @@ contains
         read(10, *, IOSTAT = io) numDiagnosticSteps
         read(10, *, IOSTAT = io) fractionFreq, del_t
         read(10, *, IOSTAT = io) averagingTime
-        read(10, *, IOSTAT = io) 
-        read(10, *, IOSTAT = io) 
-        read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) tempName
         close(10)
         directoryName = trim(tempName)
