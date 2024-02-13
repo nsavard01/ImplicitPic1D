@@ -13,7 +13,7 @@ module constants
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
     ! Essential parameters set that is important for entire simulation
-    integer(int32) :: NumberXNodes = 10, numberChargedParticles = 0, numberNeutralParticles = 0, numberBinaryCollisions = 0, maxIter, numDiagnosticSteps, schemeNum, numThread
+    integer(int32) :: maxIter, numDiagnosticSteps, schemeNum, numThread
     real(real64) :: eps_r, fractionFreq, n_ave, T_e, T_i
     real(real64) :: del_t, simulationTime, averagingTime
     character(len=:), allocatable :: directoryName ! Name of save directory

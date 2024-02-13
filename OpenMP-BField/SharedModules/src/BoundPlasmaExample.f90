@@ -19,7 +19,7 @@ program BoundPlasmaExample
     real(real64) :: remainDel_t, currDel_t, PE_i, KE_i, PE_f, KE_f
     real(real64), allocatable :: rho_i(:)
     call initializeScheme(schemeNum)
-    call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
+    call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, stateRan0)
     call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
     globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
     ! do i = 1, numberChargedParticles
@@ -78,6 +78,6 @@ program BoundPlasmaExample
     ! print *, 'phi_f is:', globalSolver%phi_f
     ! print *, 'RF_voltage:', globalSolver%RF_voltage
     ! stop
-    call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime)
-    call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
+    call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, stateRan0, simulationTime)
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, stateRan0, averagingTime, 100)
 end program BoundPlasmaExample

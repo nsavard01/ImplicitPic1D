@@ -18,22 +18,22 @@ contains
         print *, '----------'
     end subroutine initializeScheme
 
-    subroutine initialize_randUniform(part, world, irand)
-        ! place particles randomly in each dx_dl based on portion of volume it take up
-        type(Particle), intent(in out) :: part
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, iThread
-        real(real64) :: L_domain
-        L_domain = world%grid(NumberXNodes) - world%grid(1)
-        !$OMP parallel private(iThread, i)
-        iThread = omp_get_thread_num() + 1
-        do i=1, part%N_p(iThread)
-            part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1)
-            part%phaseSpace(1,i, iThread) = world%getLFromX(part%phaseSpace(1,i, iThread))
-        end do
-        !$OMP end parallel    
-    end subroutine initialize_randUniform
+    ! subroutine initialize_randUniform(part, world, irand)
+    !     ! place particles randomly in each dx_dl based on portion of volume it take up
+    !     type(Particle), intent(in out) :: part
+    !     type(Domain), intent(in) :: world
+    !     integer(int32), intent(in out) :: irand(numThread)
+    !     integer(int32) :: i, iThread
+    !     real(real64) :: L_domain
+    !     L_domain = world%grid(NumberXNodes) - world%grid(1)
+    !     !$OMP parallel private(iThread, i)
+    !     iThread = omp_get_thread_num() + 1
+    !     do i=1, part%N_p(iThread)
+    !         part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1)
+    !         part%phaseSpace(1,i, iThread) = world%getLFromX(part%phaseSpace(1,i, iThread))
+    !     end do
+    !     !$OMP end parallel    
+    ! end subroutine initialize_randUniform
 
     subroutine initialize_QuasiNeutral(ions, electrons)
         type(Particle), intent(in) :: electrons

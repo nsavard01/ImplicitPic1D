@@ -111,11 +111,15 @@ contains
         real(real64), intent(in out) :: V(3)
         real(real64), intent(in) :: mass, t
         integer(int32), intent(in out) :: irand
-        real(real64) :: U(4)
-        call getRandom(U, irand)
-        V(1) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
-        V(2) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
-        V(3) = SQRT(T*e/ mass) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
+        real(real64) :: U(4), v_therm
+        integer(int32) :: i
+        v_therm = SQRT(T*e/ mass)
+        do i = 1, 4
+            U(i) = ran2(irand)
+        end do
+        V(1) = v_therm * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
+        V(2) = v_therm * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
+        V(3) = v_therm * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
     end subroutine
 
     subroutine getMaxwellianSample(v, M, T_gas, irand)
@@ -123,14 +127,15 @@ contains
         real(real64), intent(in out) :: v(3)
         real(real64), intent(in) :: T_gas, M
         integer(int32), intent(in out) :: irand
-        real(real64) :: U(4)
+        real(real64) :: U(4), v_therm
         integer(int32) :: i
+        v_therm = SQRT(T_gas*e/ M)
         do i = 1, 4
             U(i) = ran2(irand)
         end do
-        v(1) = SQRT(T_gas*e/ M) * SQRT(-2.0d0 * LOG(U(1))) * COS(2.0d0 * pi * U(2))
-        v(2) = SQRT(T_gas*e/ M) * SQRT(-2.0d0 * LOG(U(1))) * SIN(2.0d0 * pi * U(2))
-        v(3) = SQRT(T_gas*e/ M) * SQRT(-2.0d0 * LOG(U(3))) * SIN(2.0d0 * pi * U(4))
+        v(1) = v_therm * SQRT(-2.0d0 * LOG(U(1))) * COS(2.0d0 * pi * U(2))
+        v(2) = v_therm * SQRT(-2.0d0 * LOG(U(1))) * SIN(2.0d0 * pi * U(2))
+        v(3) = v_therm * SQRT(-2.0d0 * LOG(U(3))) * SIN(2.0d0 * pi * U(4))
 
     end subroutine getMaxwellianSample
 
@@ -139,14 +144,15 @@ contains
         real(real64), intent(in out) :: v(3)
         real(real64), intent(in) :: T_gas, M
         integer(int32), intent(in out) :: irand
-        real(real64) :: U(4)
+        real(real64) :: U(4), v_therm
         integer(int32) :: i
+        v_therm = SQRT(T_gas*e/ M)
         do i = 1, 4
             U(i) = ran2(irand)
         end do
-        v(1) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(1))) * SIGN(1.0d0, U(2)-0.5d0)
-        v(2) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * COS(2 * pi * U(4))
-        v(3) = SQRT(T_gas*e/ M) * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
+        v(1) = v_therm * SQRT(-2 * LOG(U(1))) * SIGN(1.0d0, U(2)-0.5d0)
+        v(2) = v_therm * SQRT(-2 * LOG(U(3))) * COS(2 * pi * U(4))
+        v(3) = v_therm * SQRT(-2 * LOG(U(3))) * SIN(2 * pi * U(4))
 
     end subroutine getMaxwellianFluxSample
 

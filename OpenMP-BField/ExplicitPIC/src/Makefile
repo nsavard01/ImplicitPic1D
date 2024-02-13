@@ -29,7 +29,7 @@ mod_readInputs.o: mod_readInputs.f90 constants.o mod_BasicFunctions.o mod_partic
 mod_potentialSolver.o: mod_potentialSolver.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_particleInjection.o: mod_particleInjection.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o
+mod_particleInjection.o: ../../SharedModules/src/mod_particleInjection.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_NullCollision.o: ../../SharedModules/src/mod_NullCollision.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_targetParticle.o
@@ -38,7 +38,7 @@ mod_NullCollision.o: ../../SharedModules/src/mod_NullCollision.f90 constants.o m
 mod_targetParticle.o: ../../SharedModules/src/mod_targetParticle.f90 constants.o mod_BasicFunctions.o
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_particle.o: ../../SharedModules/src/mod_particle.f90 constants.o mod_BasicFunctions.o
+mod_particle.o: ../../SharedModules/src/mod_particle.f90 constants.o mod_BasicFunctions.o mod_domain.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_domain.o: mod_domain.f90 constants.o mod_BasicFunctions.o

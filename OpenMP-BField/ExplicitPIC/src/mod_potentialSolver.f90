@@ -12,7 +12,7 @@ module mod_potentialSolver
     ! Will contain particle to mesh gathers (J, rho) and potential which comes from them (phi)
     ! Will also contain particle mover, since needed to store to J, and cannot be separate
     ! Assume dirichlet boundaries at ends for now, so matrix solver can go down by two dimensions
-    public :: potentialSolver
+    public :: potentialSolver, readSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), rho(:, :), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
@@ -462,6 +462,41 @@ contains
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)
     end subroutine solvePotential
+
+
+    ! ---------------- read Solver parameters --------------------------------------
+
+    subroutine readSolver(GeomFilename,solver,world)
+        type(Domain), intent(in) :: world
+        type(potentialSolver), intent(in out) :: solver
+        character(len=*), intent(in) :: GeomFilename
+        integer(int32) :: io
+        real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency
+
+        print *, ""
+        print *, "Reading solver inputs:"
+        print *, "------------------"
+        open(10,file='../InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) BFieldMag, angle
+        read(10, *, IOSTAT = io) RF_frequency
+        close(10)
+        print *, "Left voltage:", leftVoltage
+        print *, "Right  voltage:", rightVoltage
+        print *, 'BField magnitude:', BFieldMag
+        print *, 'BField angle:', angle
+        print *, 'RF frequency:', RF_frequency
+        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        print *, "BField vector:", solver%BField
+        print *, "------------------"
+        print *, ""
+        call solver%construct_diagMatrix(world)
+
+    end subroutine readSolver
 
 
 end module mod_potentialSolver

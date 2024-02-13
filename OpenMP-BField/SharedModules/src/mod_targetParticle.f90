@@ -6,7 +6,8 @@ module mod_targetParticle
     implicit none
 
     private
-    public :: targetParticle
+    public :: targetParticle, readNeutralParticleInputs
+    integer(int32), public, protected :: numberNeutralParticles = 0
 
     ! target particle contains basic properties of basic neutral particle for target null collision
     type :: targetParticle
@@ -53,6 +54,64 @@ contains
         res(2) = self%v_therm * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
         res(3) = self%v_therm * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
     end function generate3DMaxwellianVelocity
+
+    ! ------------------------ read in neutrals ------------------------------------------
+
+    subroutine readNeutralParticleInputs(filename, targetParticleList)
+        type(targetParticle), allocatable, intent(out) :: targetParticleList(:)
+        character(len=*), intent(in) :: filename
+        integer(int32) :: j, numNeutral = 0
+        character(len=15) :: name
+        character(len=8) :: neutralName
+        real(real64) :: mass_neutral, Temp_neutral, density_neutral
+
+        print *, "Reading particle inputs:"
+        open(10,file='../InputData/'//filename, action = 'read')
+        do j=1, 10000
+            read(10,*) name
+
+
+            if( name(1:4).eq.'NEUT' .or. name(1:4).eq.'Neut' .or. name(1:4).eq.'neut' ) then
+                do while(name(1:4).ne.'----')
+                    read(10,*) name
+                end do
+                read(10,'(A6)', ADVANCE = 'NO') name
+                do while (name(1:4).ne.'----')
+                    numNeutral = numNeutral + 1
+                    read(10,*) mass_neutral, Temp_neutral, density_neutral
+                    mass_neutral = mass_neutral * m_amu
+                    neutralName = trim(name)
+                    read(10,'(A6)', ADVANCE = 'NO') name
+                end do
+            endif       
+
+            if (name(1:7) == 'ENDFILE') then
+                close(10)
+                exit
+            end if
+
+        end do
+
+
+        numberNeutralParticles = numNeutral
+        if (numberNeutralParticles > 0) then
+            allocate(targetParticleList(numberNeutralParticles))
+            do j = 1, numberNeutralParticles
+                targetParticleList(j) = targetParticle(neutralName, mass_neutral, density_neutral, Temp_neutral)
+                print *, 'Initializing target particle:', targetParticleList(j)%name
+                print *, 'Particle mass is:', targetParticleList(j)%mass
+                print *, 'Particle temperature(K) is:', targetParticleList(j)%temperature
+                print *, 'Particle density is:', targetParticleList(j)%density
+            end do
+        end if
+
+        
+        print *, "---------------"
+        print *, ""
+
+
+
+    end subroutine readNeutralParticleInputs
 
 
 end module mod_targetParticle

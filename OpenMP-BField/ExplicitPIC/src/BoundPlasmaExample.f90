@@ -20,13 +20,15 @@ program BoundPlasmaExample
     type(potentialSolver) :: solver
    
     call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, stateRan0, stateRanNew)
-    call readGeometry(world, solver, 'Geometry.inp')
-    call readParticleInputs('BoundExample.inp', numberChargedParticles, stateRan0, T_e, T_i, numThread, world, particleList, targetParticleList)
-    call readNullCollisionInputs('collision.inp', nullCollisionList, particleList, targetParticleList, numberBinaryCollisions)
+    call readWorld('Geometry.inp', world, T_e, n_ave)
+    call readSolver('Geometry.inp', solver, world)
+    call readChargedParticleInputs('BoundExample.inp', stateRan0, T_e, T_i, numThread, world, particleList)
+    call readNeutralParticleInputs('BoundExample.inp', targetParticleList)
+    call readNullCollisionInputs('collision.inp', nullCollisionList, particleList, targetParticleList)
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
     ! end do
-    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, particleList(1)%w_p, solver%BFieldAngle, FractionFreqHeating)
+    call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p, solver%BFieldAngle)
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
     call solver%depositRho(particleList)
     call solver%solve_tridiag_Poisson(world, 0.0d0)
