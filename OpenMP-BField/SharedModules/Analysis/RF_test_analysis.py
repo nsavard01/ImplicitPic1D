@@ -46,6 +46,8 @@ Exp_RF_Helium_Animation = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/Expl
 Exp_RFBenchmark_test = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test/')
 Exp_RFBenchmark_test_PnullExp = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp/')
 Exp_RFBenchmark_test_PnullExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats/')
+Exp_RFBenchmark_test_PnullNoExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullNoExp_noRepeats/')
+Exp_RFBenchmark_test_PnullExp_noRepeats_randNew = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats_randNew/')
 Exp_RFBenchmark_test_PnullExp_noRepeats_PCG = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats_PCG/')
 Exp_RFBenchmark_test_totalColl = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_totalColl/')
 Exp_RFBenchmark_test_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_noRepeats/')
@@ -65,6 +67,7 @@ Exp_RFBenchmark_test3 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/Explic
 Exp_RFBenchmark_test_MT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_MT/')
 
 Exp_RFBenchmark_test3_PnullExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3_PnullExp_noRepeats/')
+Exp_RFBenchmark_test3_PnullExp_noRepeats_randNew = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3_PnullExp_noRepeats_randNew/')
 
 NGP_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_RF/')
 NGP_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_typical/')

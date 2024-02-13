@@ -43,12 +43,12 @@ contains
         ! random velocity generator for the particle for temperature T (eV)
         ! Use box-muller method for random guassian variable, same as gwenael but doesn't have factor 2? Maybe factored into v_th
         class(targetParticle), intent(in) :: self
-        integer(int64), intent(in out) :: irand
+        integer(int32), intent(in out) :: irand(2)
         real(real64) :: U1, U2, U3, U4, res(3)
-        U1 = randPCG(irand)
-        U2 = randPCG(irand)
-        U3 = randPCG(irand)
-        U4 = randPCG(irand)
+        U1 = randNew(irand)
+        U2 = randNew(irand)
+        U3 = randNew(irand)
+        U4 = randNew(irand)
         res(1) = self%v_therm * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
         res(2) = self%v_therm * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
         res(3) = self%v_therm * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)

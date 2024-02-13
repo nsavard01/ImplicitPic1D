@@ -179,11 +179,11 @@ contains
         print *, ""
     end subroutine readInjectionInputs
 
-    subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand, statePCG)
+    subroutine readInitialInputs(InitFilename, simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand, stateRanNew)
         real(real64), intent(in out) :: fractionFreq, n_ave, simulationTime, averagingTime, T_e, T_i
         integer(int32), intent(in out) :: numDiagnosticSteps, numThread
         integer(int32), allocatable, intent(out) :: irand(:)
-        integer(int64), allocatable, intent(out) :: statePCG(:)
+        integer(int32), allocatable, intent(out) :: stateRanNew(:,:)
         character(len=*), intent(in) :: InitFilename
         integer(int32) :: io, i
         character(len=100) :: tempName
@@ -215,12 +215,13 @@ contains
             stop
         end if
         call omp_set_num_threads(numThread)
-        allocate(irand(numThread), statePCG(numThread))
+        allocate(irand(numThread), stateRanNew(2,numThread))
         do i = 1, numThread
             call random_number(rando)
-            irand(i) = INT(rando * (huge(i)) + 1)
+            irand(i) = INT(rando * (huge(i)))
             call random_number(rando)
-            statePCG(i) = INT((rando-0.5d0) * (huge(statePCG(i))), kind = int64)
+            stateRanNew(1, i) = INT(2.0d0 * (rando-0.5d0) * (huge(stateRanNew(1, i))))
+            stateRanNew(2, i) = INT(rando * (huge(stateRanNew(2, i))))
         end do
         del_t = MIN(fractionFreq * 1.0d0 / getPlasmaFreq(n_ave), del_t)
         print *, "Save data folder: ", directoryName
@@ -292,7 +293,7 @@ contains
         character(len=*), intent(in) :: filename
         integer(int32), intent(in) :: numThread
         integer(int32), intent(in out) :: numberChargedParticles
-        integer(int64), intent(in out) :: irand(numThread)
+        integer(int32), intent(in out) :: irand(2,numThread)
         real(real64), intent(in) :: T_e, T_i
         integer(int32) :: j, numSpecies = 0, numNeutral = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name

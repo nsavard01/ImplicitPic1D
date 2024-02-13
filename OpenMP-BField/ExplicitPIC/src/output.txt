@@ -1,0 +1,201 @@
+ 
+ Reading initial inputs:
+ ------------------
+ Save data folder: 
+ ../../../../ExplicitData-BField/Exp_RFBenchmark_test4_PnullExp_noRepeats_randNe
+ w
+ Number of threads is:          32
+ Average initial electron density:   384000000000000.     
+ Initial electron temperature:   2.59000000000000     
+ Initial ion temperature:  2.500000000000000E-002
+ Number of diagnostic steps is:          20
+ Fraction of 1/w_p for time step:  0.500000000000000     
+ del_t will be:  2.304572271386431E-011
+ Simulation time is:  1.132743362831858E-003
+ Final averaging time is:  9.439528023598820E-005
+ ------------------
+ 
+ 
+ Reading domain inputs:
+ ------------------
+ Number of nodes:         513
+ Grid length:  6.700000000000000E-002
+ Left boundary type:           1
+ Right boundary type:           4
+ Fraction of debye length:   5.00000000000000     
+ BField magnitude:  0.000000000000000E+000
+ BField angle:  0.000000000000000E+000
+ RF frequency:   13560000.0000000     
+ delX is:  1.308593750000000E-004
+ BField vector:  0.000000000000000E+000  0.000000000000000E+000
+  0.000000000000000E+000
+ ------------------
+ 
+ Reading particle inputs:
+ Initializing e
+ Amount of macroparticles is:       32768
+ Particle mass is:  9.109383701500001E-031
+ Particle charge is: -1.602176634000000E-019
+ Particle weight is:   785156250.000000     
+ Particle mean KE is:   3.89019332571667      , should be
+   3.88500000000000     
+ Initializing He+
+ Amount of macroparticles is:       32768
+ Particle mass is:  6.669972653882029E-027
+ Particle charge is:  1.602176634000000E-019
+ Particle weight is:   785156250.000000     
+ Particle mean KE is:  3.751237739529632E-002 , should be
+  3.750000000000001E-002
+ Initializing target particle:He      
+ Particle mass is:  6.670883592252179E-027
+ Particle temperature(K) is:   300.000000000000     
+ Particle density is:  3.210000000000000E+022
+ ---------------
+ 
+ Reading collision inputs:
+ ---------------------------
+ Taking reactions from turner_benchmark_he_electron_table.dat
+ 
+ Null Collision generated
+ Reactants are:e and He      
+ Amount of collisions:           4
+ Reduced mass:  9.108139945100725E-031
+ length of arrays:         773
+ Max sigma_v:  8.977578532126161E-014
+ reducedMass:  9.108139945100725E-031
+ reducedMassIonization:  4.554380847955689E-031
+ 
+ For collision #:           1
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           1
+ number Products are:           2
+ products are:
+ e and He      
+ 
+ For collision #:           2
+ Energy threshold:   24.5870000000000     
+ Collision type:           2
+ number Products are:           3
+ products are:
+ e and He+and e
+ 
+ For collision #:           3
+ Energy threshold:   20.6100000000000     
+ Collision type:           3
+ number Products are:           2
+ products are:
+ e and He      
+ 
+ For collision #:           4
+ Energy threshold:   19.8200000000000     
+ Collision type:           3
+ number Products are:           2
+ products are:
+ e and He      
+ 
+ 
+ Null Collision generated
+ Reactants are:He+ and He      
+ Amount of collisions:           2
+ Reduced mass:  3.335214045983413E-027
+ length of arrays:         101
+ Max sigma_v:  3.884769777922527E-014
+ reducedMass:  3.335214045983413E-027
+ reducedMassIonization:  0.000000000000000E+000
+ 
+ For collision #:           1
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           4
+ number Products are:           2
+ products are:
+ He+ and He      
+ 
+ For collision #:           2
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           1
+ number Products are:           2
+ products are:
+ He+ and He      
+ 
+ ---------------------------
+ 
+ Reading initial inputs for particle injection:
+ ------------------
+ Particle lost is reinjected: F
+ Particle refluxing activated on neumann boundary: F
+ Particle injection on neumann boundary F
+ Particle injection unformly with maxwellian F
+ Electron maxwellian heating F
+ ------------------
+ 
+ Simulation is   5.00000203433363      percent done
+ Number of electrons is:      123220
+ Number of ions is:      126019
+ Simulation is   10.0000000009336      percent done
+ Number of electrons is:      142432
+ Number of ions is:      145308
+ Simulation is   15.0000000021529      percent done
+ Number of electrons is:      151133
+ Number of ions is:      153976
+ Simulation is   20.0000000033722      percent done
+ Number of electrons is:      155758
+ Number of ions is:      158626
+ Simulation is   25.0000000045915      percent done
+ Number of electrons is:      158270
+ Number of ions is:      161130
+ Simulation is   30.0000000058108      percent done
+ Number of electrons is:      159729
+ Number of ions is:      162594
+ Simulation is   35.0000000070301      percent done
+ Number of electrons is:      160303
+ Number of ions is:      163165
+ Simulation is   40.0000000082494      percent done
+ Number of electrons is:      160931
+ Number of ions is:      163819
+ Simulation is   45.0000000050137      percent done
+ Number of electrons is:      160967
+ Number of ions is:      163835
+ Simulation is   50.0000020289768      percent done
+ Number of electrons is:      161312
+ Number of ions is:      164185
+ Simulation is   55.0000020184346      percent done
+ Number of electrons is:      161122
+ Number of ions is:      163985
+ Simulation is   60.0000020078925      percent done
+ Number of electrons is:      161195
+ Number of ions is:      164054
+ Simulation is   65.0000019973504      percent done
+ Number of electrons is:      161411
+ Number of ions is:      164248
+ Simulation is   70.0000019868083      percent done
+ Number of electrons is:      161384
+ Number of ions is:      164253
+ Simulation is   75.0000019762662      percent done
+ Number of electrons is:      161264
+ Number of ions is:      164152
+ Simulation is   80.0000019657240      percent done
+ Number of electrons is:      161238
+ Number of ions is:      164082
+ Simulation is   85.0000019551819      percent done
+ Number of electrons is:      161281
+ Number of ions is:      164163
+ Simulation is   90.0000019446398      percent done
+ Number of electrons is:      161273
+ Number of ions is:      164157
+ Simulation is   95.0000019340977      percent done
+ Number of electrons is:      161328
+ Number of ions is:      164198
+ Simulation is   100.000001923556      percent done
+ Number of electrons is:      161214
+ Number of ions is:      164100
+ Elapsed time for simulation is:   12724.1566030000      seconds
+ moverTime is:   5696.47550500000     
+ potentialTime is:   2566.98271300000     
+ collision time is:   4455.09070200000     
+ Averaging over  9.439528023598820E-005 seconds
+ Averaging finished over  9.439530308268562E-005 simulation time (s)
+ Power loss to wall is:   3.22718628619170     
+ Power loss to inelastic collisions:   206.917999471794     
+ Electron average wall loss (A/m^2): -0.362916574027865     
+ Ion average wall loss (A/m^2):  0.362924569927809     
+ Performing average for EEDF over 50/omega_p

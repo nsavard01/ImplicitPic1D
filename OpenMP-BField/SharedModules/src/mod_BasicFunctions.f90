@@ -6,7 +6,7 @@ module mod_BasicFunctions
     implicit none
 
     integer(int32), allocatable :: stateRan0(:) !Global variable that will need to be changed in-out
-    integer(int64), allocatable :: statePCG(:)
+    integer(int32), allocatable :: stateRanNew(:,:)
 
 contains
 
@@ -56,6 +56,22 @@ contains
         res=am_ran2*irand
       end function ran2
 
+    function randNew(irand) result(res)
+        ! Based on new numerical reciped in fortran 90, about as fast as ran0 (ran2 in our case)
+        integer(int32), parameter :: IA=16807,IM=2147483647,IQ=127773,IR=2836
+        real(real64), parameter :: am = 1.0d0/IM
+        integer(int32), intent(in out) :: irand(2)
+        integer(int32) :: k
+        real(real64) :: res
+        irand(1)=ieor(irand(1),ishft(irand(1),13))
+        irand(1)=ieor(irand(1),ishft(irand(1),-17))
+        irand(1)=ieor(irand(1),ishft(irand(1),5))
+        k=irand(2)/IQ 
+        irand(2)=IA*(irand(2)-k*IQ)-IR*k
+        if (irand(2) < 0) irand(2)=irand(2)+IM
+        res=am*ior(iand(IM,ieor(irand(1),irand(2))),1)
+    end function randNew
+
     function randPCG(state) result(res)
         ! random number generator PCG
         integer(int64), parameter :: multiplier = 6364136223846793005
@@ -68,18 +84,13 @@ contains
         real(real64) :: res
 
         x = state
-        count = int(shiftR(x,59), kind = int32)
         state = x * multiplier + increment
         x = ieor(x, shiftR(x, 18))
         x_shifted = int(shiftR(x, 27), kind = int32)
-        random_number = ior(shiftR(x_shifted, count), shiftL(x_shifted, iand(-count, 31)))
+        count = int(shiftR(x,59), kind = int32)
+        random_number = ior(shiftR(x_shifted, count), shiftL(x_shifted, iand(-count, 31_int32)))
         res = real(random_number, kind = real64) + max_int32
         res = res / norm_PCG
-        ! if (res >= 1 .or. res <0) then
-        !     print *, 'randPCG producing number outside range'
-        !     print *, 'res is:', res
-        !     stop
-        ! end if
 
     end function randPCG
 

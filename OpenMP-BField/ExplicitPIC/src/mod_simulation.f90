@@ -146,7 +146,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, simulationTime
-        integer(int64), intent(in out) :: irand(numThread)
+        integer(int32), intent(in out) :: irand(2,numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
         real(real64) :: densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
@@ -317,7 +317,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
-        integer(int64), intent(in out) :: irand(numThread)
+        integer(int32), intent(in out) :: irand(2,numThread)
         integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber), k
         real(real64) :: startTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles), chargeTotal, energyLoss, meanLoss, stdLoss
         real(real64) :: E_max, VMax

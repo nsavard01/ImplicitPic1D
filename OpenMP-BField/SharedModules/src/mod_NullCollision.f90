@@ -104,12 +104,12 @@ contains
         integer(int32), intent(in) :: numberChargedParticles, numberBinaryCollisions
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
-        integer(int64), intent(in out) :: irand(numThread)
+        integer(int32), intent(in out) :: irand(2,numThread)
         real(real64), intent(in) :: del_t
         logical :: collisionBool
         real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM, particleLocation, energyLoss, primary_mass, target_mass
         integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx, totalCollisions
-        integer(int64) :: irand_thread
+        integer(int32) :: irand_thread(2)
 
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
     
@@ -117,7 +117,6 @@ contains
             print *, 'P_null greater than 50%'
             stop
         end if
-        
         energyLoss = 0
         totalCollisions = 0
         primary_mass = particleList(self%reactantsIndx(1))%mass
@@ -125,15 +124,15 @@ contains
         !$OMP parallel private(iThread, i,numberSelected, numberSelectedReal, Rand, particleIndx, numberTotalParticles, targetVelocity, incidentVelocity, &
             velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation, irand_thread) reduction(+:energyLoss,totalCollisions)
         iThread = omp_get_thread_num() + 1
-        irand_thread = irand(iThread)
+        irand_thread = irand(:,iThread)
         numberTotalParticles = particleList(self%reactantsIndx(1))%N_p(iThread)
         numberSelectedReal = P_null * real(numberTotalParticles)
         numberSelected = INT(numberSelectedReal)
-        Rand = randPCG(irand_thread)
+        Rand = randNew(irand_thread)
         if (Rand < (numberSelectedReal - numberSelected)) numberSelected = numberSelected + 1   
         addIonizationIndx = 0
         do i = 1, numberSelected
-            Rand = randPCG(irand_thread)
+            Rand = randNew(irand_thread)
             particleIndx = INT((numberTotalParticles) * Rand) + 1
             particleLocation = particleList(self%reactantsIndx(1))%phaseSpace(1, particleIndx, iThread)
             incidentVelocity = particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleIndx, iThread)
@@ -165,7 +164,7 @@ contains
                 end do
                 d_value = (energyCM - self%energyArray(indxLow))/(self%energyArray(indxHigh) - self%energyArray(indxLow))
             end if
-            Rand = randPCG(irand_thread)
+            Rand = randNew(irand_thread)
             sigma_v_low = 0.0d0
             do collIdx = 1, self%numberCollisions
                 if (energyCM > self%energyThreshold(collIdx)) then
@@ -178,14 +177,15 @@ contains
                             velocity_CM = incidentVelocity
                             call self%elasticExcitCollisionIsotropic(primary_mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
-                            energyLoss = energyLoss + particleList(self%reactantsIndx(1))%mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
+                            energyLoss = energyLoss + primary_mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
                         CASE(2)
+                            energyLoss = energyLoss - SUM(targetVelocity**2) * target_mass * 0.5d0 / e
                             call self%ionizationCollisionIsotropic(primary_mass, particleList(self%productsIndx(2, collIdx))%mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity, velocity_CM)
                             !Update total particle count
                             particleList(self%reactantsIndx(1))%N_p(iThread) = particleList(self%reactantsIndx(1))%N_p(iThread) + 1
                             particleList(self%productsIndx(2, collIdx))%N_p(iThread) = particleList(self%productsIndx(2, collIdx))%N_p(iThread) + 1
-                            ! set new secondary particle velocity and position
+                            ! set new secondary particle (should be electron) velocity and position
                             particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleList(self%reactantsIndx(1))%N_p(iThread), iThread) = velocity_CM
                             particleList(self%reactantsIndx(1))%phaseSpace(1, particleList(self%reactantsIndx(1))%N_p(iThread), iThread) = particleLocation
                             ! set new ion velocity and position
@@ -196,10 +196,10 @@ contains
                             velocity_CM = incidentVelocity
                             call self%elasticExcitCollisionIsotropic(primary_mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
-                            energyLoss = energyLoss + particleList(self%reactantsIndx(1))%mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
+                            energyLoss = energyLoss + primary_mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
                             !energyLoss = energyLoss + self%energyThreshold(collIdx)
                         CASE(4)
-                            energyLoss = energyLoss + particleList(self%reactantsIndx(1))%mass * 0.5d0 * (SUM(incidentVelocity**2) - SUM(targetVelocity**2)) / e
+                            energyLoss = energyLoss + primary_mass * 0.5d0 * (SUM(incidentVelocity**2) - SUM(targetVelocity**2)) / e
                             incidentVelocity = targetVelocity
                         CASE(5)
                             print *, 'dissociation'
@@ -216,12 +216,11 @@ contains
             particleList(self%reactantsIndx(1))%phaseSpace(1, numberTotalParticles, iThread) = particleLocation
             numberTotalParticles = numberTotalParticles - 1
         end do
-        irand(iThread) = irand_thread
+        irand(:,iThread) = irand_thread
         !$OMP end parallel
         self%totalEnergyLoss = self%totalEnergyLoss + energyLoss
         self%totalAmountCollisions = self%totalAmountCollisions + totalCollisions
         
-
 
     end subroutine generateCollision
 
@@ -351,7 +350,7 @@ contains
         class(nullCollision), intent(in) :: self
         real(real64), intent(in) :: energyCM, E_thres, primary_mass, ion_mass, target_mass
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
-        integer(int64), intent(in out) :: irand
+        integer(int32), intent(in out) :: irand(2)
         real(real64) :: speedPerParticle, phi, e_vector(3), u_vector(3), V_cm(3), delE, secTheta, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -362,8 +361,8 @@ contains
         V_cm = (P_beginning) / (self%sumMass)
     
         ! first add to primary
-        cos_theta = 1.0d0 - 2.0d0*randPCG(irand)
-        phi = randPCG(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*randNew(irand)
+        phi = randNew(irand) * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
@@ -375,7 +374,7 @@ contains
 
         ! second electron
         cos_theta = COS(2.0d0 * pi/3.0d0)
-        phi = randPCG(irand) * 2.0d0 * pi
+        phi = randNew(irand) * 2.0d0 * pi
 
         call scatterVector(u_vector, e_vector, cos_theta, phi)
 
@@ -502,7 +501,7 @@ contains
         class(nullCollision), intent(in) :: self
         real(real64), intent(in) :: energyCM, E_thres, primary_mass, target_mass
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3)
-        integer(int64), intent(in out) :: irand
+        integer(int32), intent(in out) :: irand(2)
         real(real64) :: speedPerParticle, phi, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -513,8 +512,8 @@ contains
         V_cm = (P_beginning) / self%sumMass
     
         ! first add to primary
-        cos_theta = 1.0d0 - 2.0d0*randPCG(irand)
-        phi = randPCG(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*randNew(irand)
+        phi = randNew(irand) * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
