@@ -216,6 +216,7 @@ contains
         end if
         call omp_set_num_threads(numThread)
         allocate(irand(numThread), stateRanNew(2,numThread))
+        call random_seed()
         do i = 1, numThread
             call random_number(rando)
             irand(i) = INT(rando * (huge(i)))
@@ -293,7 +294,7 @@ contains
         character(len=*), intent(in) :: filename
         integer(int32), intent(in) :: numThread
         integer(int32), intent(in out) :: numberChargedParticles
-        integer(int32), intent(in out) :: irand(2,numThread)
+        integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
         integer(int32) :: j, numSpecies = 0, numNeutral = 0, numParticles(100), particleIdxFactor(100)
         character(len=15) :: name

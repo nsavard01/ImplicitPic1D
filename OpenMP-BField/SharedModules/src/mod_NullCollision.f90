@@ -104,12 +104,12 @@ contains
         integer(int32), intent(in) :: numberChargedParticles, numberBinaryCollisions
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
-        integer(int32), intent(in out) :: irand(2,numThread)
+        integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: del_t
         logical :: collisionBool
         real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM, particleLocation, energyLoss, primary_mass, target_mass
         integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx, totalCollisions
-        integer(int32) :: irand_thread(2)
+        integer(int32) :: irand_thread
 
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
     
@@ -124,15 +124,15 @@ contains
         !$OMP parallel private(iThread, i,numberSelected, numberSelectedReal, Rand, particleIndx, numberTotalParticles, targetVelocity, incidentVelocity, &
             velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation, irand_thread) reduction(+:energyLoss,totalCollisions)
         iThread = omp_get_thread_num() + 1
-        irand_thread = irand(:,iThread)
+        irand_thread = irand(iThread)
         numberTotalParticles = particleList(self%reactantsIndx(1))%N_p(iThread)
         numberSelectedReal = P_null * real(numberTotalParticles)
         numberSelected = INT(numberSelectedReal)
-        Rand = randNew(irand_thread)
+        Rand = ran2(irand_thread)
         if (Rand < (numberSelectedReal - numberSelected)) numberSelected = numberSelected + 1   
         addIonizationIndx = 0
         do i = 1, numberSelected
-            Rand = randNew(irand_thread)
+            Rand = ran2(irand_thread)
             particleIndx = INT((numberTotalParticles) * Rand) + 1
             particleLocation = particleList(self%reactantsIndx(1))%phaseSpace(1, particleIndx, iThread)
             incidentVelocity = particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleIndx, iThread)
@@ -164,7 +164,7 @@ contains
                 end do
                 d_value = (energyCM - self%energyArray(indxLow))/(self%energyArray(indxHigh) - self%energyArray(indxLow))
             end if
-            Rand = randNew(irand_thread)
+            Rand = ran2(irand_thread)
             sigma_v_low = 0.0d0
             do collIdx = 1, self%numberCollisions
                 if (energyCM > self%energyThreshold(collIdx)) then
@@ -216,7 +216,7 @@ contains
             particleList(self%reactantsIndx(1))%phaseSpace(1, numberTotalParticles, iThread) = particleLocation
             numberTotalParticles = numberTotalParticles - 1
         end do
-        irand(:,iThread) = irand_thread
+        irand(iThread) = irand_thread
         !$OMP end parallel
         self%totalEnergyLoss = self%totalEnergyLoss + energyLoss
         self%totalAmountCollisions = self%totalAmountCollisions + totalCollisions
@@ -350,7 +350,7 @@ contains
         class(nullCollision), intent(in) :: self
         real(real64), intent(in) :: energyCM, E_thres, primary_mass, ion_mass, target_mass
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
-        integer(int32), intent(in out) :: irand(2)
+        integer(int32), intent(in out) :: irand
         real(real64) :: speedPerParticle, phi, e_vector(3), u_vector(3), V_cm(3), delE, secTheta, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -361,8 +361,8 @@ contains
         V_cm = (P_beginning) / (self%sumMass)
     
         ! first add to primary
-        cos_theta = 1.0d0 - 2.0d0*randNew(irand)
-        phi = randNew(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
+        phi = ran2(irand) * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
@@ -374,7 +374,7 @@ contains
 
         ! second electron
         cos_theta = COS(2.0d0 * pi/3.0d0)
-        phi = randNew(irand) * 2.0d0 * pi
+        phi = ran2(irand) * 2.0d0 * pi
 
         call scatterVector(u_vector, e_vector, cos_theta, phi)
 
@@ -501,7 +501,7 @@ contains
         class(nullCollision), intent(in) :: self
         real(real64), intent(in) :: energyCM, E_thres, primary_mass, target_mass
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3)
-        integer(int32), intent(in out) :: irand(2)
+        integer(int32), intent(in out) :: irand
         real(real64) :: speedPerParticle, phi, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -512,8 +512,8 @@ contains
         V_cm = (P_beginning) / self%sumMass
     
         ! first add to primary
-        cos_theta = 1.0d0 - 2.0d0*randNew(irand)
-        phi = randNew(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
+        phi = ran2(irand) * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
