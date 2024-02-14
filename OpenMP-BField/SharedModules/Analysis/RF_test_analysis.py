@@ -69,6 +69,8 @@ Exp_RFBenchmark_test2_MT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/Exp
 Exp_RFBenchmark_test3 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3/')
 Exp_RFBenchmark_test_MT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_MT/')
 
+NGP_RFBenchmark_test2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test2/')
+
 Exp_RFBenchmark_test3_PnullExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3_PnullExp_noRepeats/')
 Exp_RFBenchmark_test3_PnullExp_noRepeats_randNew = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3_PnullExp_noRepeats_randNew/')
 

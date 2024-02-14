@@ -13,7 +13,7 @@ program mtTest
     type(randType), allocatable :: randOther(:)
     real(wp) :: r, temp
     integer(i4) :: i, j, startTime, endTime, timingRate, iThread
-    integer, parameter :: n = 10**6, numThread = 16, numBins = 200, outer_n = 10000
+    integer, parameter :: n = 10**6, numThread = 16, numBins = 200, outer_n = 1000
     integer(int32) :: hist(numBins)
     real(real64) :: var, mean
     integer(i4), allocatable :: irand(:)
@@ -59,6 +59,26 @@ program mtTest
     ! write(output_unit, '(E30.16)') r
 
     ! ! randomness tests:
+
+    var = 0
+    mean = 0
+    call system_clock(startTime)
+    !$OMP parallel private(iThread, j,i) reduction(+:var, mean) 
+    iThread = omp_get_thread_num() + 1
+    do j = 1, outer_n
+        do i = 1, n
+            x(i, iThread) = ran2(irand(iThread))
+        end do
+        var = var + SUM((x(:, iThread) - 0.5d0)**2)
+        mean = mean + SUM(x(:,iThread))
+    end do
+    !$OMP end parallel
+    call system_clock(endTime)
+    print *, 'results ran0'
+    print *, 'mean:', mean/(real(numThread) * n * outer_n)
+    print *, 'var:', var/(real(numThread) * n * outer_n)
+    print *, 'Time:', real(endTime - startTime)/real(timingRate)
+
     var = 0
     mean = 0
     call system_clock(startTime)
@@ -78,24 +98,6 @@ program mtTest
     print *, 'var:', var/(real(numThread) * n * outer_n)
     print *, 'Time:', real(endTime - startTime)/real(timingRate)
     
-    var = 0
-    mean = 0
-    call system_clock(startTime)
-    !$OMP parallel private(iThread, j,i) reduction(+:var, mean) 
-    iThread = omp_get_thread_num() + 1
-    do j = 1, outer_n
-        do i = 1, n
-            x(i, iThread) = ran2(irand(iThread))
-        end do
-        var = var + SUM((x(:, iThread) - 0.5d0)**2)
-        mean = mean + SUM(x(:,iThread))
-    end do
-    !$OMP end parallel
-    call system_clock(endTime)
-    print *, 'results ran0'
-    print *, 'mean:', mean/(real(numThread) * n * outer_n)
-    print *, 'var:', var/(real(numThread) * n * outer_n)
-    print *, 'Time:', real(endTime - startTime)/real(timingRate)
 
     var = 0
     mean = 0

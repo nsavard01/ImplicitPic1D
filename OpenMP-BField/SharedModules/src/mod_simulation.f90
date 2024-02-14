@@ -570,7 +570,6 @@ contains
         elapsed_time = real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
         print *, "Percentage of steps adaptive is:", 100.0d0 * real(amountTimeSplits)/real(i + 1)
-        print *, 'Final phi_f:', solver%phi_f(NumberXNodes), 'at time:', currentTime
 
         ! Write Particle properties
         open(9,file=directoryName//'/SimulationFinalData.dat')
@@ -619,7 +618,6 @@ contains
         checkTimeDivision = 200.0d0 * del_t/fractionFreq
         windowNum = 0
         RF_ave = 0
-        print *, 'beginning phi_f:', solver%phi_f(NumberXNodes), 'at time:', currentTime
         allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
         do while((currentTime - startTime) < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
