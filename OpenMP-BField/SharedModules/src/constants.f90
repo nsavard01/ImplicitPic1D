@@ -12,9 +12,7 @@ module constants
     real(real64), parameter :: e = 1.602176634d-19 ! C
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
-    ! Essential parameters set that is important for entire simulation
-    integer(int32) :: maxIter, schemeNum
-    real(real64) :: eps_r
+    ! Essential parameters set that is important for entire simulation state
     integer(int32), protected :: numDiagnosticSteps, numThread
     real(real64), protected :: fractionFreq, n_ave, T_e, T_i
     real(real64), protected :: del_t, simulationTime, averagingTime

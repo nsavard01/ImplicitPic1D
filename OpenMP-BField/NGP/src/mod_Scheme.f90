@@ -7,11 +7,11 @@ module mod_Scheme
     use mod_domain
     use omp_lib
     implicit none
+    integer(int32), protected ::schemeNum
 
 contains
 
-    subroutine initializeScheme(schemeNum)
-        integer(int32), intent(in out) :: schemeNum
+    subroutine initializeScheme()
         schemeNum = 0
         print *, "--Scheme---"
         print *, "NGP constant grid size between phi/rho nodes"

@@ -60,8 +60,9 @@ module mod_nonLinSolvers
     type(Domain) :: globalWorld
     type(Particle), allocatable :: globalParticleList(:)
     type(potentialSolver) :: globalSolver
-    integer(int32) :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, m_Anderson, amountTimeSplits, solverType
-    real(real64) :: Beta_k
+    integer(int32), protected :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, amountTimeSplits
+    integer(int32), protected :: maxIter, solverType, m_Anderson
+    real(real64), protected :: Beta_k, eps_r
 
     !allocatable arrays for JFNK or Anderson
     integer(int32), private, allocatable :: inputJFNK(:)
@@ -98,12 +99,10 @@ contains
 
     ! Non-linear solver stuff -------------------------------------------------------------
 
-    subroutine initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
-        real(real64), intent(in out) :: eps_r, Beta_k
-        integer(int32), intent(in out) :: m_Anderson, solverType, maxIter
+    subroutine initializeSolver()
         integer(int32) :: io
         print *, "Reading non-linear solver inputs:"
-        open(10,file='../../SharedModules/InputData/SolverState.inp', IOSTAT=io)
+        open(10,file='../InputData/SolverState.inp', IOSTAT=io)
         read(10, *, IOSTAT = io) eps_r
         read(10, *, IOSTAT = io) solverType
         read(10, *, IOSTAT = io) m_Anderson
@@ -230,7 +229,7 @@ contains
         currDel_t = remainDel_t
         if (solver%RF_bool) then
             ! if RF, change value of future phi values at RF boundary
-            call globalSolver%setRFVoltage(world, timeCurrent + remainDel_t)
+            call solver%setRFVoltage(world, timeCurrent + remainDel_t)
         end if
         call solveDivAmpereAnderson(solver, particleList, world, remainDel_t, maxIter, eps_r) 
         if (iterNumPicard < maxIter) then
@@ -247,7 +246,7 @@ contains
                 end if
                 if (solver%RF_bool) then
                     ! if RF, change value of future phi values at RF boundary
-                    call globalSolver%setRFVoltage(world, timeCurrent + currDel_t)
+                    call solver%setRFVoltage(world, timeCurrent + currDel_t)
                 end if 
                 call solveDivAmpereAnderson(solver, particleList, world, currDel_t, maxIter, eps_r)  
             end do 

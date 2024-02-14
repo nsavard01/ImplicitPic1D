@@ -5,6 +5,8 @@ module mod_simulation
     use constants
     use mod_BasicFunctions
     use mod_particle
+    use mod_targetParticle
+    use mod_NullCollision
     use mod_domain
     use mod_potentialSolver
     use mod_particleMover
@@ -294,15 +296,17 @@ contains
         end if
     end subroutine generateSaveDirectory
 
-    subroutine solveSimulation(solver, particleList, world, del_t, maxIter, eps_r, irand, simulationTime)
+    subroutine solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, maxIter, eps_r, irand, simulationTime)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(potentialSolver), intent(in out) :: solver
+        type(targetParticle), intent(in) :: targetParticleList(numberNeutralParticles)
+        type(nullCollision), intent(in out) :: nullCollisionList(numberBinaryCollisions)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r, simulationTime
         integer(int32), intent(in) :: maxIter
-        integer(int64), intent(in out) :: irand(numThread)
+        integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep
         integer(int64) :: startTime, endTime, startTotal, endTotal, timingRate
         real(real64) :: diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime, energyLoss
@@ -355,7 +359,7 @@ contains
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
             call particleList(j)%writeLocalTemperature(0, directoryName)
-            call particleList(j)%writePhaseSpace(0, directoryName)
+            ! call particleList(j)%writePhaseSpace(0, directoryName)
         end do
         currentTime = 0.0d0
         pastDiagTime = 0.0d0
@@ -371,11 +375,14 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
+                if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                do j = 1, numberBinaryCollisions
+                    call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
+                end do
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 
@@ -401,11 +408,14 @@ contains
                 
                 !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
-                if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
+                if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                do j = 1, numberBinaryCollisions
+                    call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
+                end do
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
                 call loadParticleDensity(particleList, world, .true.)
@@ -439,7 +449,7 @@ contains
                 energyLoss = 0.0d0
                 do j=1, numberChargedParticles
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
-                    call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
+                    ! call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
                     Etotal = Etotal + particleList(j)%getTotalKE()
                     energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%w_p * particleList(j)%mass * 0.5d0
@@ -447,13 +457,22 @@ contains
                         particleList(j)%accumWallLoss(1) * particleList(j)%q * particleList(j)%w_p/(currentTime + currDel_t - pastDiagTime), particleList(j)%accumWallLoss(2) * particleList(j)%q * particleList(j)%w_p/(currentTime + currDel_t - pastDiagTime), &
                         particleList(j)%accumEnergyLoss(1)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime + currDel_t - pastDiagTime), &
                         particleList(j)%accumEnergyLoss(2) * particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime + currDel_t - pastDiagTime), SUM(particleList(j)%N_p), &
-                        particleList(j)%getKEAve(), particleList(j)%numSubStepsAve, particleList(j)%numFuncEvalAve
+                        particleList(j)%getKEAve()*2.0d0/3.0d0, particleList(j)%numSubStepsAve, particleList(j)%numFuncEvalAve
                     particleList(j)%accumEnergyLoss = 0.0d0
                     particleList(j)%accumWallLoss = 0.0d0
+                end do
+                do j = 1, numberBinaryCollisions
+                    inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
                 end do
                 write(22,"(8(es16.8,1x), 1(I4, 1x))") currentTime + currDel_t, inelasticEnergyLoss/(currentTime + currDel_t - pastDiagTime), &
                 chargeTotal/(currentTime + currDel_t - pastDiagTime), energyLoss/(currentTime + currDel_t - pastDiagTime), Etotal, &
                 gaussError, chargeError, energyError, iterNumPicard
+                do j = 1, numberBinaryCollisions
+                    nullCollisionList(j)%totalEnergyLoss = 0
+                    nullCollisionList(j)%totalAmountCollisions = 0
+                end do
+                print *, 'Total wall power loss:', energyLoss/(currentTime + currDel_t - pastDiagTime)
+                print *, 'Total collision energy loss:', inelasticEnergyLoss/(currentTime + currDel_t - pastDiagTime)
                 CurrentDiagStep = CurrentDiagStep + 1
                 inelasticEnergyLoss = 0.0d0
                 energyAddColl = 0.0d0
@@ -488,11 +507,14 @@ contains
 
         !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
         call system_clock(startTime)
-        if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
+        if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
         if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
         if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
         if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
         if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+        do j = 1, numberBinaryCollisions
+            call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
+        end do
         call system_clock(endTime)
         collisionTime = collisionTime + (endTime-startTime)
         call loadParticleDensity(particleList, world, .true.)
@@ -533,8 +555,11 @@ contains
                 particleList(j)%accumWallLoss(1) * particleList(j)%q * particleList(j)%w_p/(currentTime + currDel_t - pastDiagTime), particleList(j)%accumWallLoss(2) * particleList(j)%q * particleList(j)%w_p/(currentTime + currDel_t - pastDiagTime), &
                 particleList(j)%accumEnergyLoss(1)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime + currDel_t - pastDiagTime), &
                 particleList(j)%accumEnergyLoss(2)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime + currDel_t - pastDiagTime), SUM(particleList(j)%N_p), &
-                particleList(j)%getKEAve(), particleList(j)%numSubStepsAve, particleList(j)%numFuncEvalAve
+                particleList(j)%getKEAve()*2.0d0/3.0d0, particleList(j)%numSubStepsAve, particleList(j)%numFuncEvalAve
             close(unitPart1+j)
+        end do
+        do j = 1, numberBinaryCollisions
+            inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
         end do
         write(22,"(8(es16.8,1x), 1(I4, 1x))") currentTime + currDel_t, inelasticEnergyLoss/(currentTime + currDel_t - pastDiagTime), &
         chargeTotal/(currentTime + currDel_t - pastDiagTime), energyLoss/(currentTime + currDel_t - pastDiagTime), &
@@ -545,6 +570,7 @@ contains
         elapsed_time = real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
         print *, "Percentage of steps adaptive is:", 100.0d0 * real(amountTimeSplits)/real(i + 1)
+        print *, 'Final phi_f:', solver%phi_f(NumberXNodes), 'at time:', currentTime
 
         ! Write Particle properties
         open(9,file=directoryName//'/SimulationFinalData.dat')
@@ -555,15 +581,17 @@ contains
     end subroutine solveSimulation
 
 
-    subroutine solveSimulationFinalAverage(solver, particleList, world, del_t, maxIter, eps_r, irand, averagingTime, binNumber)
+    subroutine solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, maxIter, eps_r, irand, averagingTime, binNumber)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(potentialSolver), intent(in out) :: solver
+        type(targetParticle), intent(in) :: targetParticleList(numberNeutralParticles)
+        type(nullCollision), intent(in out) :: nullCollisionList(numberBinaryCollisions)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, eps_r, averagingTime
         integer(int32), intent(in) :: maxIter, binNumber
-        integer(int64), intent(in out) :: irand(numThread)
+        integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, windowNum, VHist(2*binNumber), intPartV, k, iThread
         real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
         real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss, RF_ave
@@ -577,6 +605,10 @@ contains
             particleList(i)%densities = 0
         end do
         inelasticEnergyLoss = 0.0d0
+        do j = 1, numberBinaryCollisions
+            nullCollisionList(j)%totalEnergyLoss = 0
+            nullCollisionList(j)%totalAmountCollisions = 0
+        end do
         phi_average = 0.0d0
         i = 0
         energyAddColl = 0.0d0
@@ -587,15 +619,19 @@ contains
         checkTimeDivision = 200.0d0 * del_t/fractionFreq
         windowNum = 0
         RF_ave = 0
+        print *, 'beginning phi_f:', solver%phi_f(NumberXNodes), 'at time:', currentTime
         allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
         do while((currentTime - startTime) < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
-            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
+            if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
             if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            do j = 1, numberBinaryCollisions
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
+            end do
             call loadParticleDensity(particleList, world, .false.)
             call solver%aveRFVoltage(.true., phi_average, RF_ave, i, world)
             ! if (MODULO(i+1, heatSkipSteps) == 0) then
@@ -633,6 +669,9 @@ contains
             chargeLossTotal = chargeLossTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
             ELossTotal = ELossTotal + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
         end do
+        do j = 1, numberBinaryCollisions
+            inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+        end do
         solver%rho = 0.0d0
         do j=1, numberChargedParticles
             solver%rho = solver%rho + SUM(particleList(j)%densities, DIM = 2) * particleList(j)%q * particleList(j)%w_p
@@ -661,10 +700,14 @@ contains
         do while((currentTime - startTime) < checkTimeDivision)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
-            if (heatingBool) call maxwellianHeating(particleList(1), FractionFreqHeating, irand, fractionFreq, T_e, currDel_t, del_t)
+            if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t, solver%BFieldAngle)
+            if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            do j = 1, numberBinaryCollisions
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
+            end do
             do k = 1, numThread
                 do i=1, particleList(1)%N_p(k)
                     intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)

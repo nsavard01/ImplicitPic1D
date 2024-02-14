@@ -58,6 +58,8 @@ Exp_RFBenchmark_test_serial_doublenumax = dataSetExplicit('Y:/scratch/nsavard/Im
 Exp_RFBenchmark_test_PnullChange_doublenumax = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullChange/')
 Exp_RFBenchmark_test_PnullChange = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullChange_Regnumax/')
 
+NGP_RFBenchmark_test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test/')
+
 # case 2
 Exp_RFBenchmark_test2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2/')
 Exp_RFBenchmark_test2_PnullExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2_PnullExp_noRepeats/')

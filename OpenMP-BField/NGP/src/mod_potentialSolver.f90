@@ -11,7 +11,7 @@ module mod_potentialSolver
     ! Will also contain particle mover, since needed to store to J, and cannot be separate
     ! Assume dirichlet boundaries at ends for now, so matrix solver can go down by two dimensions
     private
-    public :: potentialSolver
+    public :: potentialSolver, readSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
@@ -28,7 +28,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: aveRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
-        procedure, public, pass(self) :: solve_CG_Ampere
+        ! procedure, public, pass(self) :: solve_CG_Ampere
         procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
@@ -87,6 +87,9 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
+        self%a_tri = 0.0d0
+        self%b_tri = 0.0d0
+        self%c_tri = 0.0d0
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
@@ -189,7 +192,6 @@ contains
         real(real64), intent(in) :: del_t
         integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
-
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
@@ -218,6 +220,7 @@ contains
     ! initialize phi_f
         !d = self%phi_f
         self%phi_f(NumberXNodes) = dp(NumberXNodes)
+
     ! solve for x from the vectors c-prime and d-prime
         do i = NumberXNodes-1, 1, -1
             self%phi_f(i) = dp(i)-cp(i)*self%phi_f(i+1)
@@ -225,51 +228,51 @@ contains
         !self%EField = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
 
-    subroutine solve_CG_Ampere(self, world, del_t)
-        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-        class(potentialSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
-        real(real64), intent(in) :: del_t
-        integer(int32) :: i
-        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
-        logical :: converge
-        converge = .false.
-        do i =1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
-            CASE(0)
-                b(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
-            CASE(1,3)
-                b(i) = self%phi_f(i)
-            CASE(2)
-                if (i == 1) then
-                    b(i) = (del_t * SUM(self%J(i, :))/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
-                else if (i == NumberXNodes) then
-                    b(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
-                end if
-            END SELECT
-        end do
-        RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
-        resPast = SQRT(SUM(RPast**2))
-        D = RPast
-        do i = 1, 1000
-            alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
-            self%phi_f = self%phi_f + alpha * D
-            Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
-            RFuture = b - Ax
-            resFuture = SQRT(SUM(RFuture**2))
-            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < eps_r * 1.d-2) then
-                converge = .true.
-                exit
-            end if
-            beta = (resFuture**2)/(resPast**2)
-            D = RFuture + beta * D
-            RPast = RFuture
-            resPast = resFuture
-        end do
-        if (.not. converge) then
-            stop 'Max iterations reached CG solver!'
-        end if
-    end subroutine solve_CG_Ampere
+    ! subroutine solve_CG_Ampere(self, world, del_t)
+    !     ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+    !     class(potentialSolver), intent(in out) :: self
+    !     type(Domain), intent(in) :: world
+    !     real(real64), intent(in) :: del_t
+    !     integer(int32) :: i
+    !     real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
+    !     logical :: converge
+    !     converge = .false.
+    !     do i =1, NumberXNodes
+    !         SELECT CASE (world%boundaryConditions(i))
+    !         CASE(0)
+    !             b(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+    !         CASE(1,3)
+    !             b(i) = self%phi_f(i)
+    !         CASE(2)
+    !             if (i == 1) then
+    !                 b(i) = (del_t * SUM(self%J(i, :))/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+    !             else if (i == NumberXNodes) then
+    !                 b(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+    !             end if
+    !         END SELECT
+    !     end do
+    !     RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
+    !     resPast = SQRT(SUM(RPast**2))
+    !     D = RPast
+    !     do i = 1, 1000
+    !         alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
+    !         self%phi_f = self%phi_f + alpha * D
+    !         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
+    !         RFuture = b - Ax
+    !         resFuture = SQRT(SUM(RFuture**2))
+    !         if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < eps_r * 1.d-2) then
+    !             converge = .true.
+    !             exit
+    !         end if
+    !         beta = (resFuture**2)/(resPast**2)
+    !         D = RFuture + beta * D
+    !         RPast = RFuture
+    !         resPast = resFuture
+    !     end do
+    !     if (.not. converge) then
+    !         stop 'Max iterations reached CG solver!'
+    !     end if
+    ! end subroutine solve_CG_Ampere
 
     function getError_tridiag_Ampere(self, world, del_t) result(res)
         class(potentialSolver), intent(in) :: self
@@ -363,6 +366,40 @@ contains
         end if
 
     end subroutine aveRFVoltage
+
+    ! ---------------------- read solver input ----------------------------
+
+    subroutine readSolver(GeomFilename, solver, world)
+        type(Domain), intent(in) :: world
+        type(potentialSolver), intent(in out) :: solver
+        character(len=*), intent(in) :: GeomFilename
+        integer(int32) :: io
+        real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency
+
+        print *, ""
+        print *, "Reading solver inputs:"
+        print *, "------------------"
+        open(10,file='../InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+        read(10, *, IOSTAT = io) BFieldMag, angle
+        read(10, *, IOSTAT = io) RF_frequency
+        close(10)
+
+        print *, 'Left voltage:', leftVoltage
+        print *, 'Right voltage:', rightVoltage
+        print *, 'RF frequency:', RF_frequency
+        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        print *, 'RF_half_amplitude:', solver%RF_half_amplitude
+        print *, 'RF_rad_frequency:', solver%RF_rad_frequency
+        print *, "BField vector:", solver%BField
+        print *, "------------------"
+        print *, ""
+
+    end subroutine readSolver
 
 
 end module mod_potentialSolver
