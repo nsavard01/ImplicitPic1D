@@ -175,7 +175,7 @@ contains
     end subroutine getMaxwellianFluxSample
 
 
-    ! General solver using arrays 
+    ! -------------------------General solver using arrays --------------------------------------
 
     subroutine solve_tridiag(n, diagLower, diagUpper, diag, b, x)
         ! General tridiagonal solver
@@ -213,6 +213,56 @@ contains
         end do
         res(n) = x(n) * diag(n) + x(n-1) * diagLower(n-1)
     end function triMul
+
+    subroutine solveGaussElimination(A, b, n)
+        ! solve system of equations using gaussian elimination
+        integer(int32), intent(in) :: n
+        real(real64), intent(in out) :: A(n,n)
+        real(real64), intent(in out) :: b(n)
+        integer(int32) :: i, k, j
+        real(real64) :: k1, k2
+        do k = 1, n-1
+            k1 = A(k,k)
+            do i = k+1, n
+                A(i,k) = A(i,k)/k1
+            end do
+            
+            do j = k+1, n
+                k2 = A(k,j)
+                do i = k+1, n
+                    A(i,j) = A(i,j) - A(i,k) * k2
+                end do
+            end do
+        end do
+
+        do i = 1, n
+            do j = 1, i-1
+                b(i) = b(i) - a(i,j) * b(j)
+            end do
+        end do
+
+        do i = n, 1, -1
+            do j = i+1, n
+                b(i) = b(i) - a(i, j) * b(j)
+            end do
+    
+            b(i) = b(i) / a(i, i)
+        end do
+
+
+    end subroutine
+
+    function solveNormalEquation(A, b, m, n) result(b_new)
+        ! normal equations for minimized A*x - b for matrix A(m,n), b(m)
+        integer(int32), intent(in) :: m, n
+        real(real64), intent(in) :: A(m,n), b(m)
+        integer(int32) :: i
+        real(real64) :: A_new(n, n), b_new(n)
+        b_new = MATMUL(TRANSPOSE(A), b)
+        A_new = MATMUL(TRANSPOSE(A), A)
+        call solveGaussElimination(A_new, b_new, n)
+
+    end function solveNormalEquation
 
     ! double precision function normFunc(n, x, incx) result(res)
     !     integer(int32), intent(in) :: n, incx

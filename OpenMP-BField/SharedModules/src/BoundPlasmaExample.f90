@@ -22,6 +22,7 @@ program BoundPlasmaExample
     character(:), allocatable :: saveFolderName !name of the particle
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
+
     saveFolderName = '../../../../ImplicitData-BField/'
     call initializeScheme()
     call readInitialInputs('InitialConditions.inp', saveFolderName)
@@ -57,8 +58,6 @@ program BoundPlasmaExample
   
     ! allocate(rho_i(NumberXNodes))
     ! rho_i = globalSolver%rho
-    ! print *, 'rho_i:'
-    ! print *, rho_i
     ! KE_i = 0.0d0
     ! do j=1, numberChargedParticles
     !     KE_i = KE_i + globalParticleList(j)%getTotalKE()
@@ -66,7 +65,6 @@ program BoundPlasmaExample
     ! remainDel_t = del_t
     ! currDel_t = del_t
     ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r, 0.0d0)
-    ! print *, 'J is:', SUM(globalSolver%J, DIM=2)
     ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0
     ! do i = 1, numberChargedParticles
@@ -96,8 +94,6 @@ program BoundPlasmaExample
     ! call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     ! print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
     ! print *, 'charge error is:', getChargeContinuityError(rho_i, globalSolver%rho, globalSolver%J, globalWorld, currDel_t)
-    ! print *, 'phi_f is:', globalSolver%phi_f
-    ! print *, 'RF_voltage:', globalSolver%RF_half_amplitude
     ! stop
     call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, simulationTime)
     call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, averagingTime, 100)

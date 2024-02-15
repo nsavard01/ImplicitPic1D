@@ -13,12 +13,14 @@ program mtTest
     type(randType), allocatable :: randOther(:)
     real(wp) :: r, temp
     integer(i4) :: i, j, startTime, endTime, timingRate, iThread
-    integer, parameter :: n = 10**6, numThread = 16, numBins = 200, outer_n = 1000
-    integer(int32) :: hist(numBins)
+    integer, parameter :: n = 10**6, numThread = 16, numBins = 200, outer_n = 10000
+    integer(int32) :: hist(numBins), thread_irand
     real(real64) :: var, mean
-    integer(i4), allocatable :: irand(:)
+    integer(int32), pointer :: point_irand
+    real(real64), pointer :: point_x(:)
+    integer(i4), allocatable, target:: irand(:)
     integer(int64), allocatable :: iStatePCG(:) 
-    real(wp), allocatable :: x(:,:)
+    real(wp), allocatable, target :: x(:,:)
     call omp_set_num_threads(numThread)
     allocate(irand(numThread), randGen(numThread), x(n, numThread), randOther(numThread), iStatePCG(numThread))
     call system_clock(count_rate = timingRate)
@@ -62,22 +64,31 @@ program mtTest
 
     var = 0
     mean = 0
+    print *, 'starting irand:'
+    print *, irand
     call system_clock(startTime)
-    !$OMP parallel private(iThread, j,i) reduction(+:var, mean) 
+    !$OMP parallel private(iThread, j,i, thread_irand)
     iThread = omp_get_thread_num() + 1
+    thread_irand = irand(iThread)
+    !$OMP barrier
     do j = 1, outer_n
         do i = 1, n
-            x(i, iThread) = ran2(irand(iThread))
+            x(i, iThread) = ran2(thread_irand)
         end do
-        var = var + SUM((x(:, iThread) - 0.5d0)**2)
-        mean = mean + SUM(x(:,iThread))
+        ! var = var + SUM((x(:,iThread) - 0.5d0)**2)
+        ! mean = mean + SUM(x(:,iThread))
     end do
+    !$OMP barrier
+    irand(iThread) = thread_irand
     !$OMP end parallel
     call system_clock(endTime)
     print *, 'results ran0'
     print *, 'mean:', mean/(real(numThread) * n * outer_n)
     print *, 'var:', var/(real(numThread) * n * outer_n)
     print *, 'Time:', real(endTime - startTime)/real(timingRate)
+    print *, 'end irand:'
+    print *, irand
+    stop
 
     var = 0
     mean = 0

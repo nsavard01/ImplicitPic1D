@@ -66,7 +66,7 @@ module mod_nonLinSolvers
 
     !allocatable arrays for JFNK or Anderson
     integer(int32), private, allocatable :: inputJFNK(:)
-    real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :), work(:), alpha(:)
+    real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :)
 
     ! Common blocks for nitsol
     integer iplvl, ipunit
@@ -125,8 +125,7 @@ contains
         print *, ""
         SELECT CASE (solverType)
         CASE(0)
-            allocate(Residual_k(NumberXNodes, m_Anderson+1), phi_k(NumberXNodes, m_Anderson+1), fitMat(NumberXNodes, m_Anderson), &
-            work(MAX(m_Anderson, (NumberXNodes)) + MIN((NumberXNodes),m_Anderson)), alpha(MAX(m_Anderson, (NumberXNodes))))
+            allocate(Residual_k(NumberXNodes, m_Anderson+1), phi_k(NumberXNodes, m_Anderson+1), fitMat(NumberXNodes, m_Anderson) )
         CASE(1)
             allocate(inputJFNK(10))
             iplvl = 4 ! print level
@@ -158,11 +157,9 @@ contains
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
         real(real64) :: initialR, sumPastResiduals, initialNorm
-        real(real64) :: normResidual(m_Anderson+1)
-        integer(int32) :: lwork!, ipar(2), itrmf
-        integer(int32) :: i, j, index, m_k, info, ldb
-        ldb = MAX(m_Anderson, (NumberXNodes))
-        lwork= MIN((NumberXNodes),m_Anderson) + ldb
+        real(real64) :: normResidual(m_Anderson+1), alpha(m_Anderson)
+        integer(int32) :: i, j, index, m_k
+        
         phi_k(:,1) = solver%phi_f
         call depositJ(solver, particleList, world, del_t)
         initialNorm = SQRT(SUM(solver%phi**2))
@@ -175,7 +172,6 @@ contains
         do i = 1, maxIter
             index = MODULO(i, m_Anderson+1) + 1
             m_k = MIN(i, m_Anderson)
-            ldb = MAX(m_k, (NumberXNodes))
             call depositJ(solver,particleList, world, del_t)
             call solver%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
@@ -199,15 +195,12 @@ contains
                     exit
                 end if
             end if
+            
             do j = 0, m_k-1
                 fitMat(:,j+1) = Residual_k(:, MODULO(i - m_k + j, m_Anderson+1) + 1) - Residual_k(:, index)
             end do
-            alpha(1:NumberXNodes) = -Residual_k(:, index)
-            call dgels('N', NumberXNodes, m_k, 1, fitMat(:, 1:m_k), NumberXNodes, alpha(1:ldb), ldb, work, lwork, info)
-            if (info /= 0) then
-                print *, "Issue with minimization procedure dgels in Anderson Acceleration!"
-                stop
-            end if
+            !call dgels('N', NumberXNodes, m_k, 1, fitMat(:, 1:m_k), NumberXNodes, alpha(1:ldb), ldb, work, lwork, info)
+            alpha(1:m_k) = solveNormalEquation(fitMat(:, 1:m_k), -Residual_k(:, index), NumberXNodes, m_k)
             alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k)) 
             phi_k(:, MODULO(i+1, m_Anderson+1) + 1) = alpha(1) * (Beta_k*Residual_k(:, MODULO(i-m_k, m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k,m_Anderson+1) + 1))
             do j=1, m_k
@@ -215,6 +208,7 @@ contains
             end do
             solver%phi_f = phi_k(:, MODULO(i+1, m_Anderson+1) + 1)
         end do
+       
     end subroutine solveDivAmpereAnderson
 
     subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)

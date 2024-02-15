@@ -574,7 +574,7 @@ contains
         ! Write Particle properties
         open(9,file=directoryName//'/SimulationFinalData.dat')
         write(9,'("Elapsed Times(s), Potential Time (s), Collision Time (s), Total Steps, Number Adaptive Steps")')
-        write(9,"(3(es16.8,1x), 2(I7, 1x))") elapsed_time, real(potentialTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1, amountTimeSplits
+        write(9,"(3(es16.8,1x), 2(I10, 1x))") elapsed_time, real(potentialTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1, amountTimeSplits
         close(9)
 
     end subroutine solveSimulation
@@ -679,7 +679,7 @@ contains
         print *, 'gaussError average is:', gaussError
         open(22,file=directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Steps Averaged, Averaging Time, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), gaussError")')
-        write(22,"((I6, 1x), 5(es16.8,1x))") i, (currentTime - startTime), inelasticEnergyLoss/(currentTime-startTime), chargeLossTotal/(currentTime-startTime), ELossTotal/(currentTime-startTime), gaussError
+        write(22,"((I10, 1x), 5(es16.8,1x))") i, (currentTime - startTime), inelasticEnergyLoss/(currentTime-startTime), chargeLossTotal/(currentTime-startTime), ELossTotal/(currentTime-startTime), gaussError
         close(22)
         print *, 'Power loss to walls is:', ELossTotal/(currentTime - startTime)
         print *, 'Power gain in plasma is:', SUM(energyAddColl)/(currentTime - startTime)

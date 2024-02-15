@@ -392,7 +392,7 @@ contains
         end do
         open(22,file=directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
-        write(22,"((I8, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/(currentTime-startTime), chargeTotal/(currentTime-startTime), energyLoss/(currentTime-startTime)
+        write(22,"((I10, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/(currentTime-startTime), chargeTotal/(currentTime-startTime), energyLoss/(currentTime-startTime)
         close(22)
         print *, 'Power loss to wall is:', energyLoss/(currentTime-startTime)
         print *, 'Power loss to inelastic collisions:', inelasticEnergyLoss/(currentTime-startTime)

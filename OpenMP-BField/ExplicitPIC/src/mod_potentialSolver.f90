@@ -367,16 +367,16 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        integer(int32) :: j, i, delIdx, iThread
-        real(real64) :: v_minus(3), v_plus(3), coeffField, tBoris(3), v_prime(3), sBoris(3), q_over_m, partLoc
+        integer(int32) :: j, i, delIdx, refIdx, iThread, wallLoss(2)
+        real(real64) :: v_minus(3), v_plus(3), coeffField, tBoris(3), v_prime(3), sBoris(3), q_over_m, partLoc, energyLoss(2)
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
-            !$OMP parallel private(iThread, i, delIdx, v_minus, v_plus, coeffField, tBoris, v_prime, sBoris, partLoc)
+            energyLoss = 0.0d0
+            wallLoss = 0
+            !$OMP parallel private(iThread, i, delIdx, v_minus, v_plus, coeffField, tBoris, v_prime, sBoris, partLoc, refIdx) reduction(+:energyLoss, wallLoss)
             iThread = omp_get_thread_num() + 1
             delIdx = 0
-            particleList(j)%refIdx(iThread) = 0
-            particleList(j)%energyLoss(:, iThread) = 0.0d0
-            particleList(j)%wallLoss(:, iThread) = 0.0d0
+            refIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 ! First half step acceleration
                 if (self%BFieldBool) then
@@ -405,36 +405,36 @@ contains
                 if (partLoc <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1,4)
-                        particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + SUM(v_prime**2)
-                        particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                        energyLoss(1) = energyLoss(1) + SUM(v_prime**2)
+                        wallLoss(1) = wallLoss(1) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
                         particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -v_prime
-                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                        refIdx = refIdx + 1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc - 2.0d0, real(NumberXNodes, kind = real64)) + 1
-                    CASE default
-                        print *, 'no case, moveParticles'
-                        stop
+                    ! CASE default
+                    !     print *, 'no case, moveParticles'
+                    !     stop
                     END SELECT
                 else if ((partLoc >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
                     CASE(1,4)
-                        particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + SUM(v_prime**2)
-                        particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                        energyLoss(2) = energyLoss(2) + SUM(v_prime**2)
+                        wallLoss(2) = wallLoss(2) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
                         particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -v_prime
-                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                        refIdx = refIdx + 1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc, real(NumberXNodes, kind = real64)) + 1
-                    CASE default
-                        print *, 'no case, moveParticles'
-                        stop
+                    ! CASE default
+                    !     print *, 'no case, moveParticles'
+                    !     stop
                     END SELECT
                 else
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = partLoc
@@ -443,9 +443,12 @@ contains
             end do loopParticles
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
+            particleList(j)%refIdx(iThread) = refIdx
             !$OMP end parallel
-            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
-            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
+            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + energyLoss
+            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + wallLoss
+            particleList(j)%energyLoss = energyLoss
+            particleList(j)%wallLoss = wallLoss
         end do loopSpecies
     end subroutine moveParticles
 
