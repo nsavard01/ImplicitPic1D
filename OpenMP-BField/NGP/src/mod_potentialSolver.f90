@@ -14,7 +14,7 @@ module mod_potentialSolver
     public :: potentialSolver, readSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
         logical :: BFieldBool, RF_bool
@@ -23,6 +23,7 @@ module mod_potentialSolver
     contains
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: solve_tridiag_Ampere
+        procedure, public, pass(self) :: getChargeContinuityError
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: setRFVoltage
         procedure, public, pass(self) :: aveRFVoltage
@@ -46,7 +47,7 @@ contains
         real(real64), intent(in) :: leftVoltage, rightVoltage
         real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
-        allocate(self % J(NumberXNodes-1, numThread), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
+        allocate(self % J(NumberXNodes-1), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes-1))
         call construct_diagMatrix(self, world)
         self % rho = 0.0d0
@@ -195,14 +196,14 @@ contains
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
-                d(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
             CASE(1,3,4)
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = (del_t * SUM(self%J(i, :))/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do
@@ -284,20 +285,50 @@ contains
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
-                d(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
             CASE(1,3)
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = -(del_t / eps_0) * (-SUM(self%J(i,:)) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = -(del_t / eps_0) * (-self%J(i) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = -(del_t / eps_0) * (-SUM(self%J(i-1, :)) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
+                    d(i) = -(del_t / eps_0) * (-self%J(i-1) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do
         res = Ax- d
 
     end function getError_tridiag_Ampere
+
+    function getChargeContinuityError(self, rho_i, world, del_t) result(chargeError)
+        class(potentialSolver), intent(in) :: self
+        real(real64), intent(in) :: del_t, rho_i(NumberXNodes)
+        type(Domain), intent(in) :: world
+        integer(int32) :: i, k
+        real(real64) :: chargeError, del_Rho
+        chargeError = 0.0d0
+        k = 0
+        do i = 1, NumberXNodes
+            del_Rho = self%rho(i) - rho_i(i)
+            if (del_Rho /= 0) then
+                SELECT CASE (world%boundaryConditions(i))
+                CASE(0)
+                    chargeError = chargeError + (1.0d0 + del_t * (self%J(i) - self%J(i-1))/del_Rho)**2
+                    k = k + 1
+                CASE(1)
+                    continue
+                CASE(2)
+                    if (i == 1) then
+                        chargeError = chargeError + (1.0d0 + del_t * self%J(1)/del_Rho)**2
+                    else
+                        chargeError = chargeError + (1.0d0 - del_t * self%J(NumberXNodes-1)/del_Rho)**2
+                    end if
+                    k = k + 1
+                END SELECT
+            end if
+        end do
+        chargeError = SQRT(chargeError/k)
+    end function getChargeContinuityError
 
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
@@ -320,7 +351,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         real(real64) :: res
-        res = del_t * SUM(self%J(1,:))
+        res = del_t * self%J(1)
         res = res + eps_0 * ((self%phi_f(1) - self%phi_f(2)) -(self%phi(1) - self%phi(2))) /world%dx_dl(1)
         res = res * (self%phi_f(1) + self%phi(1) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes)) * 0.5d0
     end function getEnergyFromBoundary

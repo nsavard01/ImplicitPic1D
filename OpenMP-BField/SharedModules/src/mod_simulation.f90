@@ -424,7 +424,7 @@ contains
                 call depositRho(solver%rho, particleList, world)
 
                 !charge conservation directly
-                chargeError = getChargeContinuityError(rho_i, solver%rho, solver%J, world, currDel_t)
+                chargeError = solver%getChargeContinuityError(rho_i, world, currDel_t)
 
                 ! Get error gauss' law
                 gaussError = solver%getError_tridiag_Poisson(world)
@@ -522,7 +522,7 @@ contains
         call writePhi(solver%phi, CurrentDiagStep, .false., directoryName)
         call depositRho(solver%rho, particleList, world)
 
-        chargeError = getChargeContinuityError(rho_i, solver%rho, solver%J, world, currDel_t)
+        chargeError = solver%getChargeContinuityError(rho_i, world, currDel_t)
 
         ! Get error gauss' law
         gaussError = solver%getError_tridiag_Poisson(world)

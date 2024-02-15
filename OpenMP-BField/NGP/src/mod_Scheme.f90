@@ -97,36 +97,6 @@ contains
         end do
     end subroutine depositRho
 
-    function getChargeContinuityError(rho_i, rho_f, J_total, world, del_t) result(chargeError)
-        real(real64), intent(in) :: del_t, rho_i(NumberXNodes), rho_f(NumberXNodes), J_total(NumberXNodes-1, numThread)
-        type(Domain), intent(in) :: world
-        integer(int32) :: i, k
-        real(real64) :: chargeError, J(NumberXNodes-1), del_Rho
-        J = SUM(J_total, DIM=2)
-        chargeError = 0.0d0
-        k = 0
-        do i = 1, NumberXNodes
-            del_Rho = rho_f(i) - rho_i(i)
-            if (del_Rho /= 0) then
-                SELECT CASE (world%boundaryConditions(i))
-                CASE(0)
-                    chargeError = chargeError + (1.0d0 + del_t * (J(i) - J(i-1))/del_Rho)**2
-                    k = k + 1
-                CASE(1)
-                    continue
-                CASE(2)
-                    if (i == 1) then
-                        chargeError = chargeError + (1.0d0 + del_t * J(1)/del_Rho)**2
-                    else
-                        chargeError = chargeError + (1.0d0 - del_t * J(NumberXNodes-1)/del_Rho)**2
-                    end if
-                    k = k + 1
-                END SELECT
-            end if
-        end do
-        chargeError = SQRT(chargeError/k)
-    end function getChargeContinuityError
-
 
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
