@@ -88,7 +88,7 @@ contains
     subroutine solveInitialPotential(solver, particleList, world, timeCurrent)
         ! Solve for initial potential
         class(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: timeCurrent
         call depositRho(solver%rho, particleList, world)
@@ -152,7 +152,7 @@ contains
     subroutine solveDivAmpereAnderson(solver, particleList, world, del_t, maxIter, eps_r)
         ! Solve for divergence of ampere using picard iterations
         type(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
@@ -197,10 +197,10 @@ contains
             end if
             
             do j = 0, m_k-1
-                fitMat(:,j+1) = Residual_k(:, MODULO(i - m_k + j, m_Anderson+1) + 1) - Residual_k(:, index)
+                fitMat(:,j+1) =  Residual_k(:, index) - Residual_k(:, MODULO(i - m_k + j, m_Anderson+1) + 1)
             end do
             !call dgels('N', NumberXNodes, m_k, 1, fitMat(:, 1:m_k), NumberXNodes, alpha(1:ldb), ldb, work, lwork, info)
-            alpha(1:m_k) = solveNormalEquation(fitMat(:, 1:m_k), -Residual_k(:, index), NumberXNodes, m_k)
+            alpha(1:m_k) = solveNormalEquation(fitMat(:, 1:m_k), Residual_k(:, index), NumberXNodes, m_k)
             alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k)) 
             phi_k(:, MODULO(i+1, m_Anderson+1) + 1) = alpha(1) * (Beta_k*Residual_k(:, MODULO(i-m_k, m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k,m_Anderson+1) + 1))
             do j=1, m_k
@@ -215,7 +215,7 @@ contains
         ! Solve for divergence of ampere's law with picard
         ! cut del_t in two if non-convergence after maxIter, repeat until convergence
         type(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r, timeCurrent
@@ -250,7 +250,7 @@ contains
 
     subroutine solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
         type(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r, timeCurrent

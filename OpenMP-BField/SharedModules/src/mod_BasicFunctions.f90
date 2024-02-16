@@ -250,13 +250,12 @@ contains
         end do
 
 
-    end subroutine
+    end subroutine solveGaussElimination
 
     function solveNormalEquation(A, b, m, n) result(b_new)
         ! normal equations for minimized A*x - b for matrix A(m,n), b(m)
         integer(int32), intent(in) :: m, n
         real(real64), intent(in) :: A(m,n), b(m)
-        integer(int32) :: i
         real(real64) :: A_new(n, n), b_new(n)
         b_new = MATMUL(TRANSPOSE(A), b)
         A_new = MATMUL(TRANSPOSE(A), A)
@@ -276,14 +275,6 @@ contains
     !     res = SUM(x * y)
     ! end function innerProduct
 
-    ! ------------------- Boolean Functions -------------------
-
-    pure function XOR_op(A, B) result(res)
-        !exclusive or function
-        logical, intent(in) :: A, B
-        logical :: res
-        res = (A .or. B) .and. (.not. (A .and. B)) 
-    end function XOR_op
 
     !------------------------ Array Functions -------------------------------------
 
