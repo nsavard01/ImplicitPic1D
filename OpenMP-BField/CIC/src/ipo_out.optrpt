@@ -19,192 +19,35 @@ INLINE REPORT: (BOUNDPLASMAEXAMPLE)
   -> (39,10) READINJECTIONINPUTS
   -> (40,10) INITIALIZESOLVER
   -> (42,10) SOLVEINITIALPOTENTIAL
-  -> INLINE: (63,23) MOD_PARTICLE^GETTOTALKE
-  -> (67,10) SOLVEPOTENTIAL
-  -> CP_CLONE (68,12) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> INLINE: (75,30) MOD_PARTICLE^GETTOTALKE
-  -> INLINE: (77,23) MOD_PARTICLE^GETTOTALKE
-  -> CP_CLONE (79,12) MOD_POTENTIALSOLVER^GETTOTALPE..1
-  -> (79,59) MOD_POTENTIALSOLVER^GETENERGYFROMBOUNDARY
-  -> INLINE: (87,16) MOD_PARTICLE^GETTOTALKE
-  -> (88,14) MOD_NULLCOLLISION^GENERATECOLLISION
-  -> INLINE: (89,16) MOD_PARTICLE^GETTOTALKE
-  -> (94,10) DEPOSITRHO
-  -> (95,33) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
-  -> (96,34) MOD_POTENTIALSOLVER^GETCHARGECONTINUITYERROR
   -> (98,10) SOLVESIMULATION
   -> (99,10) SOLVESIMULATIONFINALAVERAGE
 
 
-    Report from: OpenMP optimizations [openmp]
-
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(149,15) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(63,23)
-remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(149,15) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(75,30)
-remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(149,15) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(77,23)
-remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(149,15) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(87,16)
-remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(149,15) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(89,16)
-remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-
-    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
-
-
-LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(60,5)
-   remark #25399: memcopy generated
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(60,5)
-      remark #15300: LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(60,5)
-   <Remainder loop for vectorization>
-   LOOP END
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(70,5)
-   remark #25460: No loop optimizations reported
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(72,52)
-   <Peeled loop for vectorization>
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(72,52)
-      remark #15300: LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(72,52)
-   <Remainder loop for vectorization>
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(76,29)
-   <Peeled loop for vectorization>
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(76,29)
-      remark #15300: LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(76,29)
-   <Remainder loop for vectorization>
-      remark #15301: REMAINDER LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(76,29)
-   <Remainder loop for vectorization>
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(77,60)
-   <Peeled loop for vectorization>
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(77,60)
-      remark #15300: LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(77,60)
-   <Remainder loop for vectorization>
-      remark #15301: REMAINDER LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/BoundPlasmaExample.f90(77,60)
-   <Remainder loop for vectorization>
-   LOOP END
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(63,23)
-   remark #25439: unrolled with remainder by 2  
-   remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
-
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(63,23)
-      remark #25436: completely unrolled by 3   (pre-vector) 
-   LOOP END
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(63,23)
-<Remainder>
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(75,30)
-   remark #25439: unrolled with remainder by 2  
-   remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
-
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(75,30)
-      remark #25436: completely unrolled by 3   (pre-vector) 
-   LOOP END
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(75,30)
-<Remainder>
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(77,23)
-   remark #25439: unrolled with remainder by 2  
-   remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
-
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(77,23)
-      remark #25436: completely unrolled by 3   (pre-vector) 
-   LOOP END
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(77,23)
-<Remainder>
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(87,16)
-   remark #25439: unrolled with remainder by 2  
-   remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
-
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(87,16)
-      remark #25436: completely unrolled by 3   (pre-vector) 
-   LOOP END
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(87,16)
-<Remainder>
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(89,16)
-   remark #25439: unrolled with remainder by 2  
-   remark #25456: Number of Array Refs Scalar Replaced In Loop: 6
-
-   LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(89,16)
-      remark #25436: completely unrolled by 3   (pre-vector) 
-   LOOP END
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(151,21) inlined into ../../SharedModules/src/BoundPlasmaExample.f90(89,16)
-<Remainder>
-LOOP END
-
     Report from: Code generation optimizations [cg]
 
 ../../SharedModules/src/BoundPlasmaExample.f90(26,5):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (16, 0), and destination (alignment, offset): (1, 0)
-../../SharedModules/src/BoundPlasmaExample.f90(60,5):remark #34026: call to memcpy implemented as a call to optimized library version
 ../../SharedModules/src/BoundPlasmaExample.f90(1,9):remark #34051: REGISTER ALLOCATION : [MAIN__] ../../SharedModules/src/BoundPlasmaExample.f90:1
 
     Hardware registers
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   22[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm7]
+        Assigned     :   11[ rax rdx rcx rbx rsi rdi r8-r9 r12-r13 zmm0]
         
     Routine temporaries
-        Total         :    1530
-            Global    :     313
-            Local     :    1217
-        Regenerable   :     553
-        Spilled       :      29
+        Total         :     177
+            Global    :      18
+            Local     :     159
+        Regenerable   :      79
+        Spilled       :       3
         
     Routine stack
-        Variables     :    2120 bytes*
-            Reads     :      39 [6.76e-01 ~ 0.7%]
-            Writes    :     259 [1.04e+01 ~ 10.4%]
-        Spills        :     232 bytes*
-            Reads     :      97 [8.16e-01 ~ 0.8%]
-            Writes    :      81 [2.92e+00 ~ 2.9%]
+        Variables     :     132 bytes*
+            Reads     :       2 [0.00e+00 ~ 0.0%]
+            Writes    :      16 [8.20e+00 ~ 8.2%]
+        Spills        :       0 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       0 [0.00e+00 ~ 0.0%]
     
     Notes
     
@@ -1061,10 +904,10 @@ Begin optimization report for: READCHARGEDPARTICLEINPUTS
 
 INLINE REPORT: (READCHARGEDPARTICLEINPUTS)
   -> (271,35) MOD_PARTICLE::PARTICLE_CONSTRUCTOR
-  -> (272,22) MOD_PARTICLE^INITIALIZE_N_AVE
-  -> (273,22) MOD_PARTICLE^GENERATE3DMAXWELLIAN
-  -> (274,22) MOD_PARTICLE^INITIALIZERANDUNIFORM
-  -> (280,50) MOD_PARTICLE^GETKEAVE
+  -> (272,22) INITIALIZE_N_AVE
+  -> (273,22) GENERATE3DMAXWELLIAN
+  -> (274,22) INITIALIZERANDUNIFORM
+  -> (280,50) GETKEAVE
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
@@ -1245,11 +1088,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_PARTICLE^GENERATE3DMAXWELLIAN
+Begin optimization report for: GENERATE3DMAXWELLIAN
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_PARTICLE^GENERATE3DMAXWELLIAN)
+INLINE REPORT: (GENERATE3DMAXWELLIAN)
   -> INLINE: (107,18) RAN2
   -> INLINE: (108,18) RAN2
   -> INLINE: (109,18) RAN2
@@ -1309,11 +1152,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_PARTICLE^GETKEAVE
+Begin optimization report for: GETKEAVE
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_PARTICLE^GETKEAVE)
+INLINE REPORT: (GETKEAVE)
 
 
     Report from: OpenMP optimizations [openmp]
@@ -1883,46 +1726,6 @@ INLINE REPORT: (READINJECTIONINPUTS)
 
 ===========================================================================
 
-Begin optimization report for: MOD_POTENTIALSOLVER^GETENERGYFROMBOUNDARY
-
-    Report from: Interprocedural optimizations [ipo]
-
-INLINE REPORT: (MOD_POTENTIALSOLVER^GETENERGYFROMBOUNDARY)
-
-
-    Report from: Code generation optimizations [cg]
-
-mod_potentialSolver.f90(449,14):remark #34051: REGISTER ALLOCATION : [mod_potentialsolver_mp_getenergyfromboundary_] mod_potentialSolver.f90:449
-
-    Hardware registers
-        Reserved     :    2[ rsp rip]
-        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
-        Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   16[ rax rdx rcx rsi rdi r8-r10 zmm0-zmm7]
-        
-    Routine temporaries
-        Total         :      54
-            Global    :      17
-            Local     :      37
-        Regenerable   :       1
-        Spilled       :       0
-        
-    Routine stack
-        Variables     :       0 bytes*
-            Reads     :       0 [0.00e+00 ~ 0.0%]
-            Writes    :       0 [0.00e+00 ~ 0.0%]
-        Spills        :       0 bytes*
-            Reads     :       0 [0.00e+00 ~ 0.0%]
-            Writes    :       0 [0.00e+00 ~ 0.0%]
-    
-    Notes
-    
-        *Non-overlapping variables and spills may share stack space,
-         so the total stack size might be less than this.
-    
-
-===========================================================================
-
 Begin optimization report for: SOLVESIMULATION
 
     Report from: Interprocedural optimizations [ipo]
@@ -1933,19 +1736,19 @@ INLINE REPORT: (SOLVESIMULATION)
   -> CP_CLONE (357,14) WRITEPARTICLEDENSITY..1
   -> CP_CLONE (358,14) MOD_SIMULATION::WRITEPHI..1
   -> (359,14) WRITEDOMAIN
-  -> (361,18) MOD_PARTICLE^WRITELOCALTEMPERATURE
+  -> (361,18) WRITELOCALTEMPERATURE
   -> (373,22) SOLVEPOTENTIAL
   -> (378,34) MAXWELLIANHEATING
   -> (379,38) ADDMAXWELLIANLOSTPARTICLES
   -> (380,37) REFLUXPARTICLES
   -> (381,36) INJECTATBOUNDARY
   -> (382,43) INJECTUNIFORMFLUX
-  -> (384,26) MOD_NULLCOLLISION^GENERATECOLLISION
-  -> INLINE: (394,35) MOD_PARTICLE^GETTOTALKE
+  -> (384,26) GENERATECOLLISION
+  -> INLINE: (394,35) GETTOTALKE
   -> (396,22) DEPOSITRHO
   -> (398,22) SOLVEPOTENTIAL
   -> CP_CLONE (400,24) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> INLINE: (403,35) MOD_PARTICLE^GETTOTALKE
+  -> INLINE: (403,35) GETTOTALKE
   -> CP_CLONE (405,24) MOD_POTENTIALSOLVER^GETTOTALPE..1
   -> INLINE: (405,59) MOD_POTENTIALSOLVER^GETENERGYFROMBOUNDARY
   -> (411,34) MAXWELLIANHEATING
@@ -1953,7 +1756,7 @@ INLINE REPORT: (SOLVESIMULATION)
   -> (413,37) REFLUXPARTICLES
   -> (414,36) INJECTATBOUNDARY
   -> (415,43) INJECTUNIFORMFLUX
-  -> (417,26) MOD_NULLCOLLISION^GENERATECOLLISION
+  -> (417,26) GENERATECOLLISION
   -> CP_CLONE (421,22) LOADPARTICLEDENSITY..1
   -> CP_CLONE (422,22) WRITEPARTICLEDENSITY..1
   -> CP_CLONE (423,22) MOD_SIMULATION::WRITEPHI..1
@@ -1961,14 +1764,14 @@ INLINE REPORT: (SOLVESIMULATION)
   -> (427,31) MOD_POTENTIALSOLVER^GETCHARGECONTINUITYERROR
   -> (430,30) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
   -> CP_CLONE (447,26) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> (451,26) MOD_PARTICLE^WRITELOCALTEMPERATURE
-  -> INLINE: (454,39) MOD_PARTICLE^GETTOTALKE
-  -> INLINE: (460,25) MOD_PARTICLE^GETKEAVE
-  -> INLINE: (493,27) MOD_PARTICLE^GETTOTALKE
+  -> (451,26) WRITELOCALTEMPERATURE
+  -> INLINE: (454,39) GETTOTALKE
+  -> INLINE: (460,25) GETKEAVE
+  -> INLINE: (493,27) GETTOTALKE
   -> (495,14) DEPOSITRHO
   -> (497,14) SOLVEPOTENTIAL
   -> CP_CLONE (499,16) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> INLINE: (502,27) MOD_PARTICLE^GETTOTALKE
+  -> INLINE: (502,27) GETTOTALKE
   -> CP_CLONE (504,16) MOD_POTENTIALSOLVER^GETTOTALPE..1
   -> (504,51) MOD_POTENTIALSOLVER^GETENERGYFROMBOUNDARY
   -> (510,26) MAXWELLIANHEATING
@@ -1976,7 +1779,7 @@ INLINE REPORT: (SOLVESIMULATION)
   -> (512,29) REFLUXPARTICLES
   -> (513,28) INJECTATBOUNDARY
   -> (514,35) INJECTUNIFORMFLUX
-  -> (516,18) MOD_NULLCOLLISION^GENERATECOLLISION
+  -> (516,18) GENERATECOLLISION
   -> CP_CLONE (520,14) LOADPARTICLEDENSITY..1
   -> CP_CLONE (521,14) WRITEPARTICLEDENSITY..1
   -> CP_CLONE (522,14) MOD_SIMULATION::WRITEPHI..1
@@ -1984,10 +1787,10 @@ INLINE REPORT: (SOLVESIMULATION)
   -> (525,23) MOD_POTENTIALSOLVER^GETCHARGECONTINUITYERROR
   -> (528,22) MOD_POTENTIALSOLVER^GETERROR_TRIDIAG_POISSON
   -> CP_CLONE (545,18) MOD_POTENTIALSOLVER^GETTOTALPE..0
-  -> (549,18) MOD_PARTICLE^WRITELOCALTEMPERATURE
-  -> (550,18) MOD_PARTICLE^WRITEPHASESPACE
-  -> (552,31) MOD_PARTICLE^GETTOTALKE
-  -> INLINE: (558,17) MOD_PARTICLE^GETKEAVE
+  -> (549,18) WRITELOCALTEMPERATURE
+  -> (550,18) WRITEPHASESPACE
+  -> (552,31) GETTOTALKE
+  -> INLINE: (558,17) GETKEAVE
 
 
     Report from: OpenMP optimizations [openmp]
@@ -2356,19 +2159,19 @@ LOOP END
         Assigned     :   30[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm16]
         
     Routine temporaries
-        Total         :    3340
+        Total         :    3343
             Global    :     652
-            Local     :    2688
-        Regenerable   :    1287
+            Local     :    2691
+        Regenerable   :    1284
         Spilled       :     130
         
     Routine stack
         Variables     :    5880 bytes*
-            Reads     :     153 [1.91e+00 ~ 1.9%]
+            Reads     :     156 [1.92e+00 ~ 1.9%]
             Writes    :     675 [1.03e+01 ~ 10.3%]
         Spills        :    1016 bytes*
-            Reads     :     289 [2.78e+00 ~ 2.8%]
-            Writes    :     231 [3.64e+00 ~ 3.6%]
+            Reads     :     290 [2.79e+00 ~ 2.8%]
+            Writes    :     232 [3.65e+00 ~ 3.6%]
     
     Notes
     
@@ -2378,11 +2181,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_NULLCOLLISION^GENERATECOLLISION
+Begin optimization report for: GENERATECOLLISION
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_NULLCOLLISION^GENERATECOLLISION)
+INLINE REPORT: (GENERATECOLLISION)
   -> INLINE: (132,16) RAN2
   -> INLINE: (136,20) RAN2
   -> INLINE: (140,30) GENERATE3DMAXWELLIANVELOCITY
@@ -2392,20 +2195,20 @@ INLINE REPORT: (MOD_NULLCOLLISION^GENERATECOLLISION)
     -> INLINE: ../../SharedModules/src/mod_targetParticle.f90:(52,14) RAN2
   -> INLINE: (168,20) RAN2
   -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$8df.8.58 + 56(SI64)))))[2(SI64)]
-     -tbp-> MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
-      -> INLINE: (179,34) MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
+     -tbp-> ELASTICEXCITCOLLISIONISOTROPIC
+      -> INLINE: (179,34) ELASTICEXCITCOLLISIONISOTROPIC
         -> INLINE: (516,35) RAN2
         -> INLINE: (517,15) RAN2
   -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$8df.8.58 + 56(SI64)))))[3(SI64)]
-     -tbp-> MOD_NULLCOLLISION^IONIZATIONCOLLISIONISOTROPIC
-      -> INLINE: (184,34) MOD_NULLCOLLISION^IONIZATIONCOLLISIONISOTROPIC
+     -tbp-> IONIZATIONCOLLISIONISOTROPIC
+      -> INLINE: (184,34) IONIZATIONCOLLISIONISOTROPIC
         -> INLINE: (365,35) RAN2
         -> INLINE: (366,15) RAN2
         -> INLINE: (378,15) RAN2
         -> (380,14) MOD_NULLCOLLISION::SCATTERVECTOR
   -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$8df.8.58 + 56(SI64)))))[2(SI64)]
-     -tbp-> MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
-      -> INLINE: (198,34) MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
+     -tbp-> ELASTICEXCITCOLLISIONISOTROPIC
+      -> INLINE: (198,34) ELASTICEXCITCOLLISIONISOTROPIC
         -> INLINE: (516,35) RAN2
         -> INLINE: (517,15) RAN2
 
@@ -2687,11 +2490,11 @@ INLINE REPORT: (MOD_NULLCOLLISION::SCATTERVECTOR)
 
 ===========================================================================
 
-Begin optimization report for: MOD_PARTICLE^WRITELOCALTEMPERATURE
+Begin optimization report for: WRITELOCALTEMPERATURE
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_PARTICLE^WRITELOCALTEMPERATURE)
+INLINE REPORT: (WRITELOCALTEMPERATURE)
 
 
     Report from: OpenMP optimizations [openmp]
@@ -2810,11 +2613,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_PARTICLE^WRITEPHASESPACE
+Begin optimization report for: WRITEPHASESPACE
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_PARTICLE^WRITEPHASESPACE)
+INLINE REPORT: (WRITEPHASESPACE)
 
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
@@ -2874,11 +2677,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_PARTICLE^GETTOTALKE
+Begin optimization report for: GETTOTALKE
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_PARTICLE^GETTOTALKE)
+INLINE REPORT: (GETTOTALKE)
 
 
     Report from: OpenMP optimizations [openmp]
@@ -2980,18 +2783,18 @@ mod_potentialSolver.f90(493,9):remark #34026: call to memcpy implemented as a ca
         
     Routine temporaries
         Total         :     166
-            Global    :      38
-            Local     :     128
+            Global    :      37
+            Local     :     129
         Regenerable   :      34
         Spilled       :       7
         
     Routine stack
         Variables     :      80 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
-            Writes    :       3 [5.33e-01 ~ 0.5%]
+            Writes    :       3 [5.34e-01 ~ 0.5%]
         Spills        :       8 bytes*
-            Reads     :       1 [1.08e-02 ~ 0.0%]
-            Writes    :       1 [1.08e-02 ~ 0.0%]
+            Reads     :       1 [1.09e-02 ~ 0.0%]
+            Writes    :       1 [1.09e-02 ~ 0.0%]
     
     Notes
     
@@ -3046,19 +2849,19 @@ LOOP END
         Assigned     :   21[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm5]
         
     Routine temporaries
-        Total         :     212
-            Global    :      50
+        Total         :     210
+            Global    :      48
             Local     :     162
-        Regenerable   :      26
-        Spilled       :      17
+        Regenerable   :      25
+        Spilled       :      15
         
     Routine stack
         Variables     :       0 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
             Writes    :       0 [0.00e+00 ~ 0.0%]
-        Spills        :      88 bytes*
-            Reads     :      18 [3.89e+00 ~ 3.9%]
-            Writes    :      14 [2.09e+00 ~ 2.1%]
+        Spills        :      72 bytes*
+            Reads     :      16 [3.55e+00 ~ 3.6%]
+            Writes    :      12 [1.92e+00 ~ 1.9%]
     
     Notes
     
@@ -3170,23 +2973,6 @@ LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(172,9)
       LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(200,17)
       <Remainder loop for vectorization>
       LOOP END
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(203,28)
-   <Peeled loop for vectorization>
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(203,28)
-      remark #15300: LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(203,28)
-   <Remainder loop for vectorization>
-      remark #15301: REMAINDER LOOP WAS VECTORIZED
-   LOOP END
-
-   LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(203,28)
-   <Remainder loop for vectorization>
    LOOP END
 
    LOOP BEGIN at ../../SharedModules/src/mod_nonLinSolvers.f90(203,13)
@@ -3310,19 +3096,19 @@ LOOP END
         Assigned     :   24[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm10]
         
     Routine temporaries
-        Total         :    1004
-            Global    :     299
-            Local     :     705
-        Regenerable   :      58
-        Spilled       :      88
+        Total         :     933
+            Global    :     288
+            Local     :     645
+        Regenerable   :      62
+        Spilled       :      84
         
     Routine stack
-        Variables     :    1220 bytes*
-            Reads     :      17 [3.88e-01 ~ 0.4%]
-            Writes    :     111 [2.01e+00 ~ 2.0%]
-        Spills        :     680 bytes*
-            Reads     :     197 [6.29e+00 ~ 6.3%]
-            Writes    :      97 [3.22e+00 ~ 3.2%]
+        Variables     :    1364 bytes*
+            Reads     :      15 [3.66e-01 ~ 0.4%]
+            Writes    :     131 [2.40e+00 ~ 2.4%]
+        Spills        :     656 bytes*
+            Reads     :     196 [6.52e+00 ~ 6.5%]
+            Writes    :      94 [3.28e+00 ~ 3.3%]
     
     Notes
     
@@ -4383,19 +4169,19 @@ INLINE REPORT: (MOD_NONLINSOLVERS::ADAPTIVESOLVEDIVAMPEREJFNK)
         Assigned     :   20[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm4]
         
     Routine temporaries
-        Total         :      93
-            Global    :      33
+        Total         :      91
+            Global    :      31
             Local     :      60
         Regenerable   :      15
-        Spilled       :      13
+        Spilled       :      12
         
     Routine stack
         Variables     :       0 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
             Writes    :       0 [0.00e+00 ~ 0.0%]
-        Spills        :      56 bytes*
-            Reads     :       8 [2.62e+00 ~ 2.6%]
-            Writes    :       8 [1.41e+00 ~ 1.4%]
+        Spills        :      48 bytes*
+            Reads     :       7 [2.25e+00 ~ 2.3%]
+            Writes    :       7 [1.24e+00 ~ 1.2%]
     
     Notes
     
@@ -4776,6 +4562,46 @@ mod_domain.f90(205,16):remark #34051: REGISTER ALLOCATION : [mod_domain_mp_write
         Variables     :     544 bytes*
             Reads     :       6 [3.03e+00 ~ 3.0%]
             Writes    :      54 [2.58e+01 ~ 25.8%]
+        Spills        :       0 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       0 [0.00e+00 ~ 0.0%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: MOD_POTENTIALSOLVER^GETENERGYFROMBOUNDARY
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (MOD_POTENTIALSOLVER^GETENERGYFROMBOUNDARY)
+
+
+    Report from: Code generation optimizations [cg]
+
+mod_potentialSolver.f90(449,14):remark #34051: REGISTER ALLOCATION : [mod_potentialsolver_mp_getenergyfromboundary_] mod_potentialSolver.f90:449
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   16[ rax rdx rcx rsi rdi r8-r10 zmm0-zmm7]
+        
+    Routine temporaries
+        Total         :      54
+            Global    :      17
+            Local     :      37
+        Regenerable   :       1
+        Spilled       :       0
+        
+    Routine stack
+        Variables     :       0 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       0 [0.00e+00 ~ 0.0%]
         Spills        :       0 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
             Writes    :       0 [0.00e+00 ~ 0.0%]
@@ -5690,7 +5516,7 @@ INLINE REPORT: (SOLVESIMULATIONFINALAVERAGE)
   -> (627,33) REFLUXPARTICLES
   -> (628,32) INJECTATBOUNDARY
   -> (629,39) INJECTUNIFORMFLUX
-  -> (631,22) MOD_NULLCOLLISION^GENERATECOLLISION
+  -> (631,22) GENERATECOLLISION
   -> CP_CLONE (633,18) LOADPARTICLEDENSITY..0
   -> INLINE: (634,18) MOD_POTENTIALSOLVER^AVERFVOLTAGE
   -> INLINE: (662,14) MOD_POTENTIALSOLVER^AVERFVOLTAGE
@@ -5703,7 +5529,7 @@ INLINE REPORT: (SOLVESIMULATIONFINALAVERAGE)
   -> (703,33) REFLUXPARTICLES
   -> (704,32) INJECTATBOUNDARY
   -> (705,39) INJECTUNIFORMFLUX
-  -> (707,22) MOD_NULLCOLLISION^GENERATECOLLISION
+  -> (707,22) GENERATECOLLISION
 
 
     Report from: OpenMP optimizations [openmp]
@@ -6126,15 +5952,15 @@ mod_potentialSolver.f90(520,13):remark #34026: call to memcpy implemented as a c
         Assigned     :   53[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm31 k0-k7]
         
     Routine temporaries
-        Total         :    1985
+        Total         :    1987
             Global    :     440
-            Local     :    1545
-        Regenerable   :     449
+            Local     :    1547
+        Regenerable   :     447
         Spilled       :      59
         
     Routine stack
         Variables     :    2040 bytes*
-            Reads     :      79 [1.68e+00 ~ 1.7%]
+            Reads     :      81 [1.72e+00 ~ 1.7%]
             Writes    :     245 [4.43e+00 ~ 4.4%]
         Spills        :     504 bytes*
             Reads     :     117 [1.59e+00 ~ 1.6%]
@@ -6913,11 +6739,58 @@ mod_potentialSolver.f90(120,16):remark #34051: REGISTER ALLOCATION : [mod_potent
 
 ===========================================================================
 
-Begin optimization report for: MOD_PARTICLE^GETTOTALMOMENTUM
+Begin optimization report for: GETLFROMX
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_PARTICLE^GETTOTALMOMENTUM)
+INLINE REPORT: (GETLFROMX)
+
+
+    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
+
+
+LOOP BEGIN at mod_domain.f90(189,9)
+   remark #25478: While Loop Unrolled by 2  
+LOOP END
+
+    Report from: Code generation optimizations [cg]
+
+mod_domain.f90(177,14):remark #34051: REGISTER ALLOCATION : [mod_domain_mp_getlfromx_] mod_domain.f90:177
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   16[ rax rdx rcx rbx rbp rsi rdi r8-r9 r14-r15 zmm0-zmm4]
+        
+    Routine temporaries
+        Total         :      92
+            Global    :      21
+            Local     :      71
+        Regenerable   :      33
+        Spilled       :       5
+        
+    Routine stack
+        Variables     :     104 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       7 [3.80e+00 ~ 3.8%]
+        Spills        :       8 bytes*
+            Reads     :       3 [3.08e+00 ~ 3.1%]
+            Writes    :       1 [7.25e-01 ~ 0.7%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: GETTOTALMOMENTUM
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (GETTOTALMOMENTUM)
 
 
     Report from: OpenMP optimizations [openmp]
@@ -7013,11 +6886,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
+Begin optimization report for: ELASTICEXCITCOLLISIONISOTROPIC
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC)
+INLINE REPORT: (ELASTICEXCITCOLLISIONISOTROPIC)
   -> INLINE: (516,35) RAN2
   -> INLINE: (517,15) RAN2
 
@@ -7090,11 +6963,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_NULLCOLLISION^IONIZATIONCOLLISIONISOTROPIC
+Begin optimization report for: IONIZATIONCOLLISIONISOTROPIC
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_NULLCOLLISION^IONIZATIONCOLLISIONISOTROPIC)
+INLINE REPORT: (IONIZATIONCOLLISIONISOTROPIC)
   -> INLINE: (365,35) RAN2
   -> INLINE: (366,15) RAN2
   -> INLINE: (378,15) RAN2
@@ -7173,11 +7046,11 @@ LOOP END
 
 ===========================================================================
 
-Begin optimization report for: MOD_NULLCOLLISION^WRITECOLLISIONCROSSSECTION
+Begin optimization report for: WRITECOLLISIONCROSSSECTION
 
     Report from: Interprocedural optimizations [ipo]
 
-INLINE REPORT: (MOD_NULLCOLLISION^WRITECOLLISIONCROSSSECTION)
+INLINE REPORT: (WRITECOLLISIONCROSSSECTION)
 
 
     Report from: Code generation optimizations [cg]
@@ -7204,53 +7077,6 @@ INLINE REPORT: (MOD_NULLCOLLISION^WRITECOLLISIONCROSSSECTION)
         Spills        :      16 bytes*
             Reads     :       2 [6.44e-01 ~ 0.6%]
             Writes    :       2 [1.25e+00 ~ 1.2%]
-    
-    Notes
-    
-        *Non-overlapping variables and spills may share stack space,
-         so the total stack size might be less than this.
-    
-
-===========================================================================
-
-Begin optimization report for: GETLFROMX
-
-    Report from: Interprocedural optimizations [ipo]
-
-INLINE REPORT: (GETLFROMX)
-
-
-    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
-
-
-LOOP BEGIN at mod_domain.f90(189,9)
-   remark #25478: While Loop Unrolled by 2  
-LOOP END
-
-    Report from: Code generation optimizations [cg]
-
-mod_domain.f90(177,14):remark #34051: REGISTER ALLOCATION : [mod_domain_mp_getlfromx_] mod_domain.f90:177
-
-    Hardware registers
-        Reserved     :    2[ rsp rip]
-        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
-        Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   16[ rax rdx rcx rbx rbp rsi rdi r8-r9 r14-r15 zmm0-zmm4]
-        
-    Routine temporaries
-        Total         :      92
-            Global    :      21
-            Local     :      71
-        Regenerable   :      33
-        Spilled       :       5
-        
-    Routine stack
-        Variables     :     104 bytes*
-            Reads     :       0 [0.00e+00 ~ 0.0%]
-            Writes    :       7 [3.80e+00 ~ 3.8%]
-        Spills        :       8 bytes*
-            Reads     :       3 [3.08e+00 ~ 3.1%]
-            Writes    :       1 [7.25e-01 ~ 0.7%]
     
     Notes
     
@@ -8698,6 +8524,119 @@ mod_potentialSolver.f90(159,16):remark #34051: REGISTER ALLOCATION : [mod_potent
 
 ===========================================================================
 
+Begin optimization report for: INITIALIZERANDUNIFORM
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (INITIALIZERANDUNIFORM)
+  -> INLINE: (84,21) RAN2
+  -> INLINE: (85,45) GETLFROMX
+
+
+    Report from: OpenMP optimizations [openmp]
+
+OpenMP Construct at ../../SharedModules/src/mod_particle.f90(81,15)
+remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
+
+    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
+
+
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(83,9)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at mod_domain.f90(189,9) inlined into ../../SharedModules/src/mod_particle.f90(85,45)
+      remark #25478: While Loop Unrolled by 2  
+   LOOP END
+LOOP END
+
+    Report from: Code generation optimizations [cg]
+
+../../SharedModules/src/mod_particle.f90(75,16):remark #34051: REGISTER ALLOCATION : [mod_particle_mp_initializeranduniform_] ../../SharedModules/src/mod_particle.f90:75
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   25[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm7 zmm16-zmm17]
+        
+    Routine temporaries
+        Total         :     215
+            Global    :      39
+            Local     :     176
+        Regenerable   :      73
+        Spilled       :       9
+        
+    Routine stack
+        Variables     :     200 bytes*
+            Reads     :       2 [0.00e+00 ~ 0.0%]
+            Writes    :      19 [3.88e+00 ~ 3.9%]
+        Spills        :     120 bytes*
+            Reads     :      26 [8.38e+00 ~ 8.4%]
+            Writes    :      21 [2.42e+00 ~ 2.4%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: INITIALIZE_N_AVE
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (INITIALIZE_N_AVE)
+
+
+    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
+
+
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(72,41)
+<Peeled loop for vectorization>
+LOOP END
+
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(72,41)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(72,41)
+<Remainder loop for vectorization>
+LOOP END
+
+    Report from: Code generation optimizations [cg]
+
+../../SharedModules/src/mod_particle.f90(68,21):remark #34051: REGISTER ALLOCATION : [mod_particle_mp_initialize_n_ave_] ../../SharedModules/src/mod_particle.f90:68
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   16[ rax rdx rcx rsi rdi r8-r11 zmm0-zmm6]
+        
+    Routine temporaries
+        Total         :      41
+            Global    :      17
+            Local     :      24
+        Regenerable   :       0
+        Spilled       :       0
+        
+    Routine stack
+        Variables     :       0 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       0 [0.00e+00 ~ 0.0%]
+        Spills        :       0 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       0 [0.00e+00 ~ 0.0%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
 Begin optimization report for: INITIALIZESCHEME
 
     Report from: Interprocedural optimizations [ipo]
@@ -8891,132 +8830,19 @@ INLINE REPORT: (SOLVEINITIALPOTENTIAL)
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :    7[ rax rdx rcx rsi rdi r12-r13]
+        Assigned     :   11[ rax rdx rcx rsi rdi r8-r11 r13-r14]
         
     Routine temporaries
-        Total         :      22
+        Total         :      28
             Global    :       9
-            Local     :      13
-        Regenerable   :       5
+            Local     :      19
+        Regenerable   :       7
         Spilled       :       2
         
     Routine stack
-        Variables     :       0 bytes*
+        Variables     :      72 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
-            Writes    :       0 [0.00e+00 ~ 0.0%]
-        Spills        :       0 bytes*
-            Reads     :       0 [0.00e+00 ~ 0.0%]
-            Writes    :       0 [0.00e+00 ~ 0.0%]
-    
-    Notes
-    
-        *Non-overlapping variables and spills may share stack space,
-         so the total stack size might be less than this.
-    
-
-===========================================================================
-
-Begin optimization report for: MOD_PARTICLE^INITIALIZERANDUNIFORM
-
-    Report from: Interprocedural optimizations [ipo]
-
-INLINE REPORT: (MOD_PARTICLE^INITIALIZERANDUNIFORM)
-  -> INLINE: (84,21) RAN2
-  -> INLINE: (85,45) GETLFROMX
-
-
-    Report from: OpenMP optimizations [openmp]
-
-OpenMP Construct at ../../SharedModules/src/mod_particle.f90(81,15)
-remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
-
-    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
-
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(83,9)
-   remark #25460: No loop optimizations reported
-
-   LOOP BEGIN at mod_domain.f90(189,9) inlined into ../../SharedModules/src/mod_particle.f90(85,45)
-      remark #25478: While Loop Unrolled by 2  
-   LOOP END
-LOOP END
-
-    Report from: Code generation optimizations [cg]
-
-../../SharedModules/src/mod_particle.f90(75,16):remark #34051: REGISTER ALLOCATION : [mod_particle_mp_initializeranduniform_] ../../SharedModules/src/mod_particle.f90:75
-
-    Hardware registers
-        Reserved     :    2[ rsp rip]
-        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
-        Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   25[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm7 zmm16-zmm17]
-        
-    Routine temporaries
-        Total         :     215
-            Global    :      39
-            Local     :     176
-        Regenerable   :      73
-        Spilled       :       9
-        
-    Routine stack
-        Variables     :     200 bytes*
-            Reads     :       2 [0.00e+00 ~ 0.0%]
-            Writes    :      19 [3.88e+00 ~ 3.9%]
-        Spills        :     120 bytes*
-            Reads     :      26 [8.38e+00 ~ 8.4%]
-            Writes    :      21 [2.42e+00 ~ 2.4%]
-    
-    Notes
-    
-        *Non-overlapping variables and spills may share stack space,
-         so the total stack size might be less than this.
-    
-
-===========================================================================
-
-Begin optimization report for: MOD_PARTICLE^INITIALIZE_N_AVE
-
-    Report from: Interprocedural optimizations [ipo]
-
-INLINE REPORT: (MOD_PARTICLE^INITIALIZE_N_AVE)
-
-
-    Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
-
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(72,41)
-<Peeled loop for vectorization>
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(72,41)
-   remark #15300: LOOP WAS VECTORIZED
-LOOP END
-
-LOOP BEGIN at ../../SharedModules/src/mod_particle.f90(72,41)
-<Remainder loop for vectorization>
-LOOP END
-
-    Report from: Code generation optimizations [cg]
-
-../../SharedModules/src/mod_particle.f90(68,21):remark #34051: REGISTER ALLOCATION : [mod_particle_mp_initialize_n_ave_] ../../SharedModules/src/mod_particle.f90:68
-
-    Hardware registers
-        Reserved     :    2[ rsp rip]
-        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
-        Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   16[ rax rdx rcx rsi rdi r8-r11 zmm0-zmm6]
-        
-    Routine temporaries
-        Total         :      41
-            Global    :      17
-            Local     :      24
-        Regenerable   :       0
-        Spilled       :       0
-        
-    Routine stack
-        Variables     :       0 bytes*
-            Reads     :       0 [0.00e+00 ~ 0.0%]
-            Writes    :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       8 [1.82e+01 ~ 18.2%]
         Spills        :       0 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
             Writes    :       0 [0.00e+00 ~ 0.0%]
@@ -9274,10 +9100,10 @@ Profile feedback used a statically estimated profile for the following routines:
 
   File: ../../SharedModules/src/mod_NullCollision.f90
         MOD_NULLCOLLISION::NULLCOLLISION_CONSTRUCTOR            [Line    39]
-        MOD_NULLCOLLISION^GENERATECOLLISION                     [Line   103]
-        MOD_NULLCOLLISION^IONIZATIONCOLLISIONISOTROPIC          [Line   348]
-        MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC        [Line   500]
-        MOD_NULLCOLLISION^WRITECOLLISIONCROSSSECTION            [Line   553]
+        GENERATECOLLISION                                       [Line   103]
+        IONIZATIONCOLLISIONISOTROPIC                            [Line   348]
+        ELASTICEXCITCOLLISIONISOTROPIC                          [Line   500]
+        WRITECOLLISIONCROSSSECTION                              [Line   553]
         MOD_NULLCOLLISION::SCATTERVECTOR                        [Line   568]
         READNULLCOLLISIONINPUTS                                 [Line   600]
 
@@ -9294,14 +9120,14 @@ Profile feedback used a statically estimated profile for the following routines:
 
   File: ../../SharedModules/src/mod_particle.f90
         MOD_PARTICLE::PARTICLE_CONSTRUCTOR                      [Line    44]
-        MOD_PARTICLE^INITIALIZE_N_AVE                           [Line    68]
-        MOD_PARTICLE^INITIALIZERANDUNIFORM                      [Line    75]
-        MOD_PARTICLE^GENERATE3DMAXWELLIAN                       [Line    93]
-        MOD_PARTICLE^GETKEAVE                                   [Line   119]
-        MOD_PARTICLE^GETTOTALMOMENTUM                           [Line   132]
-        MOD_PARTICLE^GETTOTALKE                                 [Line   143]
-        MOD_PARTICLE^WRITEPHASESPACE                            [Line   160]
-        MOD_PARTICLE^WRITELOCALTEMPERATURE                      [Line   175]
+        INITIALIZE_N_AVE                                        [Line    68]
+        INITIALIZERANDUNIFORM                                   [Line    75]
+        GENERATE3DMAXWELLIAN                                    [Line    93]
+        GETKEAVE                                                [Line   119]
+        GETTOTALMOMENTUM                                        [Line   132]
+        GETTOTALKE                                              [Line   143]
+        WRITEPHASESPACE                                         [Line   160]
+        WRITELOCALTEMPERATURE                                   [Line   175]
         READCHARGEDPARTICLEINPUTS                               [Line   212]
 
   File: ../../SharedModules/src/mod_particleInjection.f90
@@ -9313,8 +9139,8 @@ Profile feedback used a statically estimated profile for the following routines:
         READINJECTIONINPUTS                                     [Line   180]
 
   File: ../../SharedModules/src/mod_simulation.f90
-        MOD_SIMULATION::WRITEPHI..1                             [Line    28]
         MOD_SIMULATION::WRITEPHI..0                             [Line    28]
+        MOD_SIMULATION::WRITEPHI..1                             [Line    28]
         MOD_SIMULATION::GENERATESAVEDIRECTORY                   [Line   264]
         SOLVESIMULATION                                         [Line   299]
         SOLVESIMULATIONFINALAVERAGE                             [Line   583]

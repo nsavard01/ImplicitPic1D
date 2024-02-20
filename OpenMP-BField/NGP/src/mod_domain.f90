@@ -239,13 +239,13 @@ contains
         open(10,file='../InputData/'//GeomFilename)
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) gridType
+        read(10, *, IOSTAT = io) gridType, debyeLength
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         close(10)
-        debyeLength = getDebyeLength(T_e, n_ave)
+        debyeLength = MIN(getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3

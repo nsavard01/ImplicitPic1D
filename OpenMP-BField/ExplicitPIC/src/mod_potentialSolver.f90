@@ -488,12 +488,12 @@ contains
         read(10, *, IOSTAT = io) BFieldMag, angle
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
-        print *, "Left voltage:", leftVoltage
-        print *, "Right  voltage:", rightVoltage
-        print *, 'BField magnitude:', BFieldMag
-        print *, 'BField angle:', angle
-        print *, 'RF frequency:', RF_frequency
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        print *, "Left voltage:", solver%phi(1)
+        print *, "Right  voltage:", solver%phi(NumberXNodes)
+        print *, 'BField magnitude:', solver%BFieldMag
+        print *, 'BField angle:', solver%BFieldAngle
+        print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
         print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""

@@ -169,8 +169,9 @@ contains
             sigma_v_low = 0.0d0
             do collIdx = 1, self%numberCollisions
                 if (energyCM > self%energyThreshold(collIdx)) then
-                    sigma_v = (self%sigmaArray(indxLow, collIdx) * (1.0d0 - d_value) + self%sigmaArray(indxHigh, collIdx) * d_value) * speedCM + sigma_v_low
-                    collisionBool = (Rand <= sigma_v/self%sigmaVMax)
+                    sigma_v = (self%sigmaArray(indxLow, collIdx) * (1.0d0 - d_value) + self%sigmaArray(indxHigh, collIdx) * d_value) * speedCM  + sigma_v_low
+                    !sigma_v = sigma_v_low + 1.0d0 - EXP(-sigma_v * targetParticleList(self%reactantsIndx(2))%density * del_t) 
+                    collisionBool = (Rand <= sigma_v/self%sigmaVMax) !P_null
                     if (collisionBool) then
                         totalCollisions = totalCollisions + 1
                         SELECT CASE (self%collisionType(collIdx))

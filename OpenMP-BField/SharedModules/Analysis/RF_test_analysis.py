@@ -48,17 +48,20 @@ Exp_RFBenchmark_test_PnullExp = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1
 Exp_RFBenchmark_test_PnullExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats/')
 Exp_RFBenchmark_test_PnullExp_noRepeats_changeSeed = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats_changeSeed/')
 Exp_RFBenchmark_test_PnullNoExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullNoExp_noRepeats/')
+Exp_RFBenchmark_test_PnullExp_noRepeats_HalfPart = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats_HalfPart/')
 Exp_RFBenchmark_test_PnullExp_noRepeats_randNew = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats_randNew/')
-Exp_RFBenchmark_test_PnullExp_noRepeats_PCG = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullExp_noRepeats_PCG/')
-Exp_RFBenchmark_test_totalColl = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_totalColl/')
-Exp_RFBenchmark_test_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_noRepeats/')
-Exp_RFBenchmark_test_serial = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_serial/')
-Exp_RFBenchmark_test_serial_higheraverage = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_serial_higheraverage/')
-Exp_RFBenchmark_test_serial_doublenumax = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_serial_doublenumax/')
-Exp_RFBenchmark_test_PnullChange_doublenumax = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullChange/')
-Exp_RFBenchmark_test_PnullChange = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_PnullChange_Regnumax/')
+
 
 NGP_RFBenchmark_test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test/')
+NGP_RFBenchmark_test_1e3eps = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test_1e-3eps/')
+NGP_RFBenchmark_test_16thread = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test_16thread/')
+NGP_RFBenchmark_test_65nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test_65nodes/')
+NGP_RFBenchmark_test_65nodes_HalfPart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test_65nodes_HalfPart/')
+NGP_RFBenchmark_test_PexpElim = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test_PexpElim/')
+NGP_RFBenchmark_test_10delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test_10delT/')
+NGP_RFBenchmark_test_10delT_PexpElim = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test_10delT_PexpElim/')
+
+CIC_RFBenchmark_test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_RFBenchmark_test/')
 
 # case 2
 Exp_RFBenchmark_test2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2/')
@@ -70,6 +73,7 @@ Exp_RFBenchmark_test3 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/Explic
 Exp_RFBenchmark_test_MT = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test_MT/')
 
 NGP_RFBenchmark_test2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test2/')
+CIC_RFBenchmark_test2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_RFBenchmark_test2/')
 
 Exp_RFBenchmark_test3_PnullExp_noRepeats = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3_PnullExp_noRepeats/')
 Exp_RFBenchmark_test3_PnullExp_noRepeats_randNew = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test3_PnullExp_noRepeats_randNew/')
@@ -81,6 +85,14 @@ NGP_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField
 
 CIC_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_test_RF/')
 CIC_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_test_typical/')
+
+
+#Eremin case
+
+Exp_RFBenchmark_EreminCase_resolved = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_resolved/')
+Exp_RFBenchmark_EreminCase_halfNumPart = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_halfNumPart/')
+Exp_RFBenchmark_EreminCase_halfNumPart_halfNumCells = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_halfNumPart_halfNumCells/')
+Exp_RFBenchmark_EreminCase_halfNumPart_doubleTime = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_halfNumPart_doubleTime/')
 
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']

@@ -99,20 +99,20 @@ contains
         read(10, *, IOSTAT = io)
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
-        if (L_domain / (NumberXNodes-1) > debyeLength) then
+        if (L_domain / (NumberXNodes-1) > fracDebye * debyeLength) then
             print *, "Insufficient amount of nodes to resolve initial debyeLength"
             NumberXNodes = NINT(L_domain/debyeLength/fracDebye) + 1
         end if
-        print *, "Number of nodes:", NumberXNodes
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
-        print *, 'Fraction of debye length:', fracDebye
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
         end if
         world = Domain(leftBoundary, rightBoundary)
         call world % constructGrid(L_domain) 
+        print *, "Number of nodes:", NumberXNodes
+        print *, "Left boundary type:", world%boundaryConditions(1)
+        print *, "Right boundary type:", world%boundaryConditions(NumberXNodes)
+        print *, 'Fraction of debye length:', world%delX/getDebyeLength(T_e, n_ave)
         print *, "Grid length:", world%L_domain
         print *, 'DelX is:', world%delX
         print *, "------------------"

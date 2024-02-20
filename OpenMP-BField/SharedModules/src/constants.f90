@@ -59,7 +59,7 @@ contains
         print *, "Initial electron temperature:", T_e
         print *, "Initial ion temperature:", T_i
         print *, "Number of diagnostic steps is:", numDiagnosticSteps
-        print *, "Fraction of 1/w_p for time step:", fractionFreq
+        print *, "Fraction of 1/w_p for time step:", del_t * plasmaFreqTemp
         print *, 'del_t will be:', del_t
         print *, "Simulation time is:", simulationTime
         print *, "Final averaging time is:", averagingTime

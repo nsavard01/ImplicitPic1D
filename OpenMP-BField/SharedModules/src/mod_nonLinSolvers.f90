@@ -157,7 +157,7 @@ contains
         integer(int32), intent(in) :: maxIter
         real(real64), intent(in) :: del_t, eps_r
         real(real64) :: initialR, sumPastResiduals, initialNorm
-        real(real64) :: normResidual(m_Anderson+1), alpha(m_Anderson)
+        real(real64) :: normResidual(m_Anderson+1), alpha(m_Anderson+1)
         integer(int32) :: i, j, index, m_k
         
         phi_k(:,1) = solver%phi_f

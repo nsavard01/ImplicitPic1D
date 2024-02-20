@@ -743,7 +743,7 @@ contains
         del_tau_a = 0.0d0
         l_f_a = l_sub
         Res_a = l_f_a - real(l_boundary)
-        if (XOR_op(oldPosDirBool, newPosDirBool)) then
+        if (oldPosDirBool .neqv. newPosDirBool) then
             ! Accel and v_i opposite, take delta_tau from time to get v_f = 0
             del_tau_b = MIN(-v_sub(1) / tempVar, del_tau)
         else
