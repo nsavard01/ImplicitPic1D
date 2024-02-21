@@ -1,4 +1,5 @@
-ALL: libnitsol.a
+
+ALL: clean libnitsol.a
 
 NITSOL = nitsol.o nitdrv.o nitjv.o nitbt.o nitgm.o nitstb.o nittfq.o nitbd.o
 
@@ -23,9 +24,6 @@ nitbd.o:	nitbd.f nitprint.h nitparam.h nitdflts.h
 libnitsol.a:  $(NITSOL)
 	ar rs $@ $?
 
-clean:
-	- /bin/rm $(NITSOL) libnitsol.a
 
-remake:
-	make clean
-	make
+clean:
+	rm -f *.o *.mod *.a

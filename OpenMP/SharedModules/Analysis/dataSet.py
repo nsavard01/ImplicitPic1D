@@ -38,9 +38,11 @@ class dataSet:
         self.fracTime = initialCond[7]
         self.numDiag = int(initialCond[11]) + 1
         self.numThreads = int(initialCond[12])
+        self.RF_rad_frequency = initialCond[13]
+        self.RF_half_amplitude = initialCond[14]
         ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
         self.particles = {}
-        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss']
+        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'numPart', 'Temp', 'numSubStep', 'numFuncEval']
         for i in range(len(ParticleProperties)):
             name = ParticleProperties.iloc[i]['name']
             self.particles[name] = {}
@@ -49,9 +51,37 @@ class dataSet:
             self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
             self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
             self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, delim_whitespace=True, names = partDiag)
-            
+
+        boundConditions = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype=np.int32, offset=4)[0:-1]
+        if (boundConditions[0] == 1):
+            self.leftBoundary = 'Dirichlet'
+        elif (boundConditions[0] == 2):
+            self.leftBoundary = 'Neumann'
+        elif (boundConditions[0] == 3):
+            self.leftBoundary = 'Periodic'
+        elif (boundConditions[0] == 4):
+            self.leftBoundary = 'RF-Dirichlet'
+        else:
+            raise Warning("Left boundary not defined!")
+
+        if (boundConditions[-1] == 1):
+            self.rightBoundary = 'Dirichlet'
+        elif (boundConditions[-1] == 2):
+            self.rightBoundary = 'Neumann'
+        elif (boundConditions[-1] == 3):
+            self.rightBoundary = 'Periodic'
+        elif (boundConditions[-1] == 4):
+            self.rightBoundary = 'RF-Dirichlet'
+        else:
+            raise Warning("Right boundary not defined!")
         self.grid = np.fromfile(self.path + 'domainGrid.dat', dtype = 'float', offset = 4)
         self.dx_dl = np.fromfile(self.path + 'domainDxDl.dat', dtype = 'float', offset = 4)
+        if (self.scheme == 0):
+            self.x_min = self.grid[0]
+            self.x_max = self.grid[-1]
+        else:
+            self.x_min = self.grid[0] - 0.5 * self.dx_dl[0]
+            self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
         self.totTime = endDiag[0]
         self.totPotTime = endDiag[1]
@@ -82,7 +112,7 @@ class dataSet:
         if (name not in self.particles.keys()):
             raise Warning('No such particle', name, 'in simulation!')
         if (i <= self.numDiag - 1):
-            phaseSpace = np.fromfile(self.path + 'PhaseSpace/phaseSpace_'+ name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
+            phaseSpace = np.fromfile(self.path + 'PhaseSpace/phaseSpace_'+ name + '_' + str(i) + '.dat', dtype = 'float', offset = 0)
             phaseSpace = phaseSpace.reshape((int(phaseSpace.size/4), 4))
             d = phaseSpace[:,0] - phaseSpace[:,0].astype(int)
             phaseSpace[:,0] = self.grid[phaseSpace[:,0].astype(int)-1] + d * (self.grid[phaseSpace[:,0].astype(int)] - self.grid[phaseSpace[:,0].astype(int)-1])

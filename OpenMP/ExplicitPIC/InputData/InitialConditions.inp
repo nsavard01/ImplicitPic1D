@@ -1,13 +1,10 @@
-16 ! number of processors
-0.32d-6 ! simulation time
-8.4d19 ! Initial number density (1/m^3) of electrons
-47.0d0 ! Initial electron Temperature (eV) 
-0.1d0 ! Initial ion Temperature (eV)
+32 ! number of processors
+3.775811209439528d-4 ! simulation time
+5.12d14 ! Initial number density (1/m^3) of electrons
+2.59d0 ! Initial electron Temperature (eV) 
+0.025d0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
-0.2d0 ! Fraction of initial 1/w_p for initial time step
-0.32d-6 ! amount of time to average final Diagnostics
-2.4d0 0! BField magnitude (T), angle theta from x axis (degrees)
-10 ! heatSkipSteps
-1.0d8 ! heating frequency Hz
-test_lowPPD !save file name
+1.5d0 9.218289085545723e-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+9.43952802359882e-05 ! amount of time to average final Diagnostics
+Exp_RFBenchmark_case2 !save file name
 END

@@ -6,38 +6,60 @@ Created on Tue Jun 27 14:32:42 2023
 """
 
 from plotProduction import *
-from generateBoundExample import *
-
-    
+from generateDivertorExample import *
+print('Loaded modules')
     
 #%%
 
-test_32nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes/')
-# test_32nodes_1us = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes_1us/')
-# test_400nodes_even0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_400nodes_even0p2T/')
-# test_100nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes/')
-# test_100nodes_even0p2_noVac = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes_even0p2T_noVacuum/')
-# test_uniformFlux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_uniformFlux/')
-# test_absNeu_noReFlux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_absorbNeumann_Noreflux/')
-# test_32nodes_sin0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes_sin0p2T/')
-# test_32nodes_sin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_32nodes_sin/')
-# test_100nodes_even0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes_even0p2T/')
-# test_absNeu = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_absorbNeumann_reflux/')
-# test_100nodes_even2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_100nodes_even2T/')
-# test_eThermal = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_Ethermal_injection/')
-# test_lowPPD = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_lowPPD/')
-# test_PureMax = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_PureMax/')
-# test_PureMax_reflux = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_PureMax_reflux/')
-# test_PureMax_refluxMax = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/test_PureMax_refluxMax/')
+print('Loading data')
 
-# testExp = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test/')
-# testExp_200PPD = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_lowPPD/')
-# testExp_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
+test_noField_uniformDomain = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_noField_uniformDomain/')
+testExp_0deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test/')
+testExp_0deg_Mach2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_0deg_Mach2/')
+testExp_45deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg/')
+testExp_45deg_eps100 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg_eps100/')
+testExp_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg/')
+testExp_extend_0p1delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p1delT/')
+testExp_extend_0p2delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p2delT/')
+testExp_extend_0p04delT_75deg = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_75deg_extend_0p04delT/')
+test_45deg_fourTimesIonSpeed = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg_fourTimesIonSpeed/')
+testExp_norm_0p05T = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/test_0p05delT/')
+test_45deg_uniformDomain = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/test_45deg_uniformDomain/')
 
+testNGP = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP/')
+testNGP_noField_uniformDomain_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_uniformDomain_32nodes_2p0T/')
+testNGP_45deg_uniformDomain_32nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_45deg_uniformDomain_32nodes_0p2T/')
+testNGP_45deg_uniformDomain_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_45deg_uniformDomain_400nodes_0p2T/')
+testNGP_45deg_uniformDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_45deg_uniformDomain/')
+test_0deg_picard = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_0deg_picard/')
+test_0deg = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_other/')
+test_0deg_vacuumStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_try/')
+test_0deg_Mach2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_0deg_Mach2/')
+test_0deg_Mach2_sin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_0deg_Mach2_sin/')
+test_0deg_vacuumStart_noExactBoundary = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_0deg_vacuumStart_notExactBoundary/')
+test_45deg_vacuumStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_45deg_vacuumStart/')
+test_45deg_vacuumStart_noExactBoundary = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/test_45deg_vacuumStart_notExactBoundary/')
+vacuumStart_45deg_PI_32Thread = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_PI_32thread/')
+vacuumStart_45deg_AA_32Thread = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_AA_32thread/')
+test_45deg_vacuumStart_noExactBoundary_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_0p2T/')
+vacuumStart_45deg_noExactBoundary_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_notExactBoundary_400nodes_0p2T/')
+vacuumStart_75deg_noExactBoundary_400nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_75deg_400nodes_0p2T/')
+vacuumStart_75deg_noExactBoundary_433nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_75deg_433nodes_0p2T/')
+testNGP_Divertor_noField_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_noField_32nodes_2p0T/')
+testNGP_Divertor_noField_32nodes_0p1T_vacStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_noField_32nodes_0p1T/')
+testNGP_Divertor_noFieldVStop_32nodes_2p0T_vacStart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_noFieldVStop_32nodes_2p0T/')
+testNGP_DivertorBigStart_noFieldVStop_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_DivertorBigStart_noFieldVStop_32nodes_2p0T/')
+testNGP_DivertorBigStart_noFieldVStop_32nodes_0p1T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_DivertorBigStart_noFieldVStop_32nodes_0p1T/')
+testNGP_Divertor_sinGrid_noFieldVStop_64nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_Divertor_sinGrid_noFieldVStop_64nodes_2p0T/')
 
-#CIC 2p5e1
-
-# convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
+#CIC
+testCIC = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC/')
+testCIC_45deg_uniformDomain = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_45deg_uniformDomain/')
+vacuumStart_45deg_CIC_2p0T_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_2p0T_31nodes/')
+testCIC_45deg_CIC_0p2T_31nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_45deg_0p2delT/')
+vacuumStart_45deg_CIC_0p2T_400nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/vacuumStart_45deg_CIC_0p2T_400nodes/')
+testCIC_45deg_fourTimesIonSpeed = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_45deg_fourTimesIonSpeed/')
+#vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
 
 # compareModelToDatas(convergenceDataExp, convergenceLabelExp, modelOther, 'ICIS2023/converge')

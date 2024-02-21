@@ -1,0 +1,10 @@
+32 ! number of threads
+3.775811209439528d-4 ! simulation time
+5.12d14 ! Initial number density (1/m^3) of particles
+2.59d0 ! T_e (eV)
+0.025d0 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+2.0d0 9.218289085545723e-11 ! Fraction of initial 1/w_p for initial time step
+9.43952802359882e-05 ! amount of time to average final Diagnostics
+CIC_RFBenchmark_test2 !filename
+END

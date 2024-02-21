@@ -45,6 +45,7 @@ Exp_64PPC_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPi
 Exp_32PPC_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_32PPC_0p5Deb_0p2delT/')
 
 #NGP 2p5e16
+testAgain_boundExample = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/testAgain_boundExample/')
 NGP_1000PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1000PPD_2p0delT_32nodes/')
 NGP_500PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_500PPD_2p0delT_32nodes/')
 NGP_100PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_100PPD_2p0delT_32nodes/')
@@ -85,16 +86,22 @@ NGP_256PPC_11nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Im
 NGP_64PPC_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_64PPC_2p0delT_32nodes/')
 NGP_64PPC_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_64PPC_2p0delT_64nodes/')
 NGP_1024PPC_32nodes_2p0delT_2p5e16_CG = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_2p5e16_1024PPC_2p0delT_32nodes_CG/')
-
+NGP_1902PPD_32nodes_2p0delT_2p5e16_noFieldTest = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_32nodes_2p0T/')
+NGP_1902PPD_64nodes_2p0delT_2p5e16_noFieldTest = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_64nodes_2p0T/')
+testNGP_noField_boundExample_64nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_64nodes_0p2T/')
+testNGP_noField_boundExample_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_32nodes_2p0T/')
+testNGP_noField_boundExample_32nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noField_boundExample_32nodes_0p2T/')
+testNGP_noFieldAlg_boundExample_32nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testNGP_noFieldAlg_boundExample_32nodes_2p0T/')
 
 #CIC 2p5e16
 CIC_475PPD_64nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_2p5e16_475PPD_2p0delT_64nodes/')
 CIC_50PPD_32nodes_2p0delT_2p5e16 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_2p5e16_50PPD_2p0delT_32nodes/')
+testCIC_noField_boundExample_64nodes_2p0T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_noField_boundExample_64nodes_2p0T/')
+testCIC_noField_boundExample_64nodes_0p2T = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/testCIC_noField_boundExample_64nodes_0p2T/')
+# convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
+# convergenceLabelExp = [r'Explicit', 'Implicit']
 
-convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
-convergenceLabelExp = [r'Explicit', 'Implicit']
-
-compareModelToDatas(convergenceDataExp, convergenceLabelExp, modelOther, 'ICIS2023/converge')
+# compareModelToDatas(convergenceDataExp, convergenceLabelExp, modelOther, 'ICIS2023/converge')
 
 # convergenceDataChangePPC = [Exp_32PPC_0p5Deb_0p2delT_2p5e16, Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_128PPC_64nodes_2p0delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelChangePPC = [r'Exp., 32 PPC', 'Exp., 128 PPC', 'Imp., 128 PPC', 'Imp., 2048 PPC']
