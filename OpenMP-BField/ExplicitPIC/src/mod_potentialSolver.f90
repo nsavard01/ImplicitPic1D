@@ -380,13 +380,13 @@ contains
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 ! First half step acceleration
                 if (self%BFieldBool) then
-                    coeffField = 0.5d0 * (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                    coeffField = 0.5d0 * q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                     ! First half step acceleration
                     v_minus(1) =  particleList(j)%phaseSpace(2, i, iThread) + coeffField
                     v_minus(2:3) = particleList(j)%phaseSpace(3:4, i, iThread)
 
                     !v_prime, first half rotation
-                    tBoris = 0.5d0 * (particleList(j)%q/particleList(j)%mass) * self%BField * del_t
+                    tBoris = 0.5d0 * q_over_m * self%BField * del_t
                     v_prime = v_minus + crossProduct(v_minus, tBoris)
 
                     !v_plus, second half rotation

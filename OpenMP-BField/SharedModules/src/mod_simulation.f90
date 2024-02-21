@@ -570,6 +570,8 @@ contains
         elapsed_time = real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
         print *, "Percentage of steps adaptive is:", 100.0d0 * real(amountTimeSplits)/real(i + 1)
+        print *, 'potentialTime is:', real(potentialTime, kind = real64) / real(timingRate, kind = real64)
+        print *, 'collision time is:', real(collisionTime, kind=real64)/real(timingRate, kind = real64)
 
         ! Write Particle properties
         open(9,file=directoryName//'/SimulationFinalData.dat')

@@ -127,6 +127,10 @@ contains
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread)
         numberTotalParticles = particleList(self%reactantsIndx(1))%N_p(iThread)
+        ! if (real(numberTotalParticles)/real(particleList(self%reactantsIndx(1))%finalIdx) > 0.95) then
+        !     print *, 'reached 95% of total amount of particles'
+        !     stop
+        ! end if
         numberSelectedReal = P_null * real(numberTotalParticles)
         numberSelected = INT(numberSelectedReal)
         Rand = ran2(irand_thread)

@@ -115,7 +115,7 @@ contains
         call random_seed()
         do i = 1, numThread
             call random_number(rando)
-            stateRan0(i) = INT(rando * (huge(i)))
+            stateRan0(i) = 12346*i + 11*i!INT(rando * (huge(i)))
             call random_number(rando)
             stateRanNew(1, i) = INT(2.0d0 * (rando-0.5d0) * (huge(stateRanNew(1, i))))
             stateRanNew(2, i) = INT(rando * (huge(stateRanNew(2, i))))

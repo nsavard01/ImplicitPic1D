@@ -89,10 +89,11 @@ CIC_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField
 
 #Eremin case
 
+NGP_RFBenchmark_ereminCase_10xdelT_32nodes_0p0004mindelX_sixteenthNumPart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_ereminCase_10xdelT_32nodes_0p0004mindelX_sixteenthNumPart/')
+
 Exp_RFBenchmark_EreminCase_resolved = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_resolved/')
-Exp_RFBenchmark_EreminCase_halfNumPart = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_halfNumPart/')
-Exp_RFBenchmark_EreminCase_halfNumPart_halfNumCells = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_halfNumPart_halfNumCells/')
-Exp_RFBenchmark_EreminCase_halfNumPart_doubleTime = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_halfNumPart_doubleTime/')
+Exp_RFBenchmark_EreminCase_eighthNumPart_quadTime_p75Cells = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_eighthNumPart_quadTime_p75Cells/')
+
 
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']

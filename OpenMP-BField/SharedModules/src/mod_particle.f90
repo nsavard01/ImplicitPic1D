@@ -103,6 +103,7 @@ contains
         !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4, irand_thread)
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread)
+        print *, irand_thread
         do i = 1, self%N_p(iThread)
             U1 = ran2(irand_thread)
             U2 = ran2(irand_thread)
@@ -112,7 +113,7 @@ contains
             self%phaseSpace(3, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * SIN(2.0d0 * pi * U2)
             self%phaseSpace(4, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U3)) * SIN(2.0d0 * pi * U4)
         end do
-        irand(:iThread) = irand_thread
+        irand(iThread) = irand_thread
         !$OMP END PARALLEL
     end subroutine generate3DMaxwellian
 

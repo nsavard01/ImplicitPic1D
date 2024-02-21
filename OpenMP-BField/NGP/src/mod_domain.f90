@@ -245,7 +245,7 @@ contains
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         close(10)
-        debyeLength = MIN(getDebyeLength(T_e, n_ave), debyeLength)
+        debyeLength = MAX(getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
@@ -255,8 +255,9 @@ contains
         print *, "Number of nodes:", NumberXNodes
         print *, "Grid length:", world%L_domain
         print *, 'gridType:', gridType
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
+        print *, "Left boundary type:", world%boundaryConditions(1)
+        print *, "Right boundary type:", world%boundaryConditions(NumberXNodes)
+        print *, 'smallest delX:', MINVAL(world%dx_dl)
         print *, "------------------"
         print *, ""
 

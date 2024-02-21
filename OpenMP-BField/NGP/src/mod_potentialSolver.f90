@@ -420,10 +420,10 @@ contains
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
 
-        print *, 'Left voltage:', leftVoltage
-        print *, 'Right voltage:', rightVoltage
-        print *, 'RF frequency:', RF_frequency
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        print *, 'Left voltage:', solver%phi(1)
+        print *, 'Right voltage:', solver%phi(NumberXNodes)
+        print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
         print *, 'RF_half_amplitude:', solver%RF_half_amplitude
         print *, 'RF_rad_frequency:', solver%RF_rad_frequency
         print *, "BField vector:", solver%BField

@@ -1,10 +1,10 @@
 32 ! number of processors
 8.0d-5 ! simulation time
-1.d17 ! Initial number density (1/m^3) of electrons
+0.1d17 ! Initial number density (1/m^3) of electrons
 4.0d0 ! Initial electron Temperature (eV) 
 0.025d0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
-1.5d0 1.25e-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+1.5d0 2.5d-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 5.0d-6 ! amount of time to average final Diagnostics
-Exp_RFBenchmark_EreminCase_halfNumPart_doubleTime !save file name
+Exp_RFBenchmark_EreminCase_eighthNumPart_quadTime_p75Cells !save file name
 END
