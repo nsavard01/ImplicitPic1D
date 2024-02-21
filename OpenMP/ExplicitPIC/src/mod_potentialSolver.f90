@@ -368,7 +368,7 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         integer(int32) :: j, i, delIdx, refIdx, iThread, wallLoss(2)
-        real(real64) :: v_prime(3), q_over_m, partLoc, energyLoss(2)
+        real(real64) :: v_prime, q_over_m, partLoc, energyLoss(2)
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             energyLoss = 0.0d0
@@ -379,19 +379,18 @@ contains
             refIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 ! First velocity change
-                v_prime(1) = particleList(j)%phaseSpace(2, i, iThread) + q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
-                v_prime(2:3) = particleList(j)%phaseSpace(3:4, i, iThread)
+                v_prime = particleList(j)%phaseSpace(2, i, iThread) + q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                 ! Get new position
-                partLoc = particleList(j)%phaseSpace(1, i, iThread) + v_prime(1) * del_t/world%delX
+                partLoc = particleList(j)%phaseSpace(1, i, iThread) + v_prime * del_t/world%delX
                 if (partLoc <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1,4)
-                        energyLoss(1) = energyLoss(1) + 0.25d0 * (v_prime(1) + particleList(j)%phaseSpace(2, i, iThread))**2 + SUM(v_prime(2:3)**2)
+                        energyLoss(1) = energyLoss(1) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
                         wallLoss(1) = wallLoss(1) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
-                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -v_prime
+                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
                         refIdx = refIdx + 1
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
@@ -403,12 +402,12 @@ contains
                 else if ((partLoc >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
                     CASE(1,4)
-                        energyLoss(2) = energyLoss(2) + 0.25d0 * (v_prime(1) + particleList(j)%phaseSpace(2, i, iThread))**2 + SUM(v_prime(2:3)**2)
+                        energyLoss(2) = energyLoss(2) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
                         wallLoss(2) = wallLoss(2) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
-                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -v_prime
+                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
                         refIdx = refIdx + 1
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
@@ -419,7 +418,8 @@ contains
                     END SELECT
                 else
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = partLoc
-                    particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = v_prime
+                    particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_prime
+                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
                 end if
             end do loopParticles
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx

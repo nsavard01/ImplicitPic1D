@@ -1,10 +1,10 @@
 32 ! number of processors
-3.775811209439528d-4 ! simulation time
-5.12d14 ! Initial number density (1/m^3) of electrons
+9.43952802359882e-05 ! simulation time
+2.56d14 ! Initial number density (1/m^3) of electrons
 2.59d0 ! Initial electron Temperature (eV) 
 0.025d0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
-1.5d0 9.218289085545723e-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+1.5d0 1.8436578171091445e-10 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 9.43952802359882e-05 ! amount of time to average final Diagnostics
-Exp_RFBenchmark_case2 !save file name
+Exp_RFBenchmark_case1 !save file name
 END

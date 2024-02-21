@@ -100,5 +100,5 @@ program BoundPlasmaExample
     ! print *, 'charge error is:', globalSolver%getChargeContinuityError(rho_i, globalWorld, currDel_t)
     ! stop
     call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, simulationTime)
-    !call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, averagingTime, 100)
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, averagingTime, 100)
 end program BoundPlasmaExample
