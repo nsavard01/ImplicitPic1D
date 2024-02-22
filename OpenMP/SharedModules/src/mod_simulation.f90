@@ -478,6 +478,7 @@ contains
                 energyAddColl = 0.0d0
                 print *, "Number of electrons is:", SUM(particleList(1)%N_p)
                 print *, "Number of ions is:", SUM(particleList(2)%N_p)
+                print *, "Percentage of steps adaptive is:", 100.0d0 * real(amountTimeSplits)/real(i + 1)
                 pastDiagTime = currentTime + currDel_t
                 diagTime = diagTime + diagTimeDivision
             end if

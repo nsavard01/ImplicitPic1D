@@ -19,21 +19,23 @@ contains
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
-        integer(int32) :: i, iThread
+        integer(int32) :: i, iThread, irand_thread
         real(real64) :: x_random
-        !$OMP parallel private(iThread, i, x_random)
+        !$OMP parallel private(iThread, i, x_random, irand_thread)
         iThread = omp_get_thread_num() + 1
+        irand_thread = irand(iThread)
         do i=1, particleList(1)%delIdx(iThread)
-            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
-            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
+            call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand_thread)
+            call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand_thread)
             energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
             + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
-            x_random = ran2(irand(iThread)) * world%L_domain + world%startX
+            x_random = ran2(irand_thread) * world%L_domain + world%startX
             particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(x_random)
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do
         particleList(2)%N_p(iThread) = particleList(2)%N_p(iThread) + particleList(1)%delIdx(iThread)
         particleList(1)%N_p(iThread) = particleList(1)%N_p(iThread) + particleList(1)%delIdx(iThread)
+        irand(iThread) = irand_thread
         !$OMP end parallel
     end subroutine addMaxwellianLostParticles
 
@@ -42,16 +44,17 @@ contains
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
-        integer(int32) :: i,j, iThread
+        integer(int32) :: i,j, iThread, irand_thread
         do j = 1, 2
-            !$OMP parallel private(iThread, i)
+            !$OMP parallel private(iThread, i, irand_thread)
             iThread = omp_get_thread_num() + 1
+            irand_thread = irand(iThread)
             do i = 1, particleList(j)%refIdx(iThread)
                 energyAddColl(iThread) = energyAddColl(iThread) - (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
                 if (j == 1) then
-                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand_thread)
                 else
-                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_i, irand(iThread))
+                    call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_i, irand_thread)
                 end if
                 if (world%boundaryConditions(1) == 2) then
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
@@ -60,6 +63,7 @@ contains
                 end if
                 energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
             end do
+            irand(iThread) = irand_thread
             !$OMP end parallel
         end do
     end subroutine refluxParticles

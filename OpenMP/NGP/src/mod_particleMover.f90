@@ -157,7 +157,7 @@ contains
                     del_tau = del_t - timePassed
 
 
-                    call particleSubStepPicard(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     
                     
                     v_f = 2.0d0 * v_half - v_sub
@@ -256,7 +256,7 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
 
-                    call particleSubStepPicard(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     
                     
                     v_f = 2.0d0 * v_half - v_sub

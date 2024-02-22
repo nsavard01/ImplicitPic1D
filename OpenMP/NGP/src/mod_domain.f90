@@ -53,7 +53,6 @@ contains
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32), intent(in) :: gridType
-        self%L_domain = L_domain
         SELECT CASE (gridType)
         CASE(0)
             call self%constructUniformGrid(L_domain)
@@ -69,6 +68,7 @@ contains
         END SELECT
         self%startX = self%grid(1)
         self%endX = self%grid(NumberXNodes)
+        self%L_domain = self%endX - self%startX
     end subroutine constructGrid
 
     subroutine constructSineGrid(self, del_x, L_domain)
