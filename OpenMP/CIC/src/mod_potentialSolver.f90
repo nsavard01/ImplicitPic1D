@@ -534,7 +534,7 @@ contains
         type(Domain), intent(in) :: world
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
-        integer(int32) :: io
+        integer(int32) :: io, i
         real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency
 
         print *, ""
@@ -550,10 +550,13 @@ contains
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
 
-        print *, 'Left voltage:', leftVoltage
-        print *, 'Right voltage:', rightVoltage
-        print *, 'RF frequency:', RF_frequency
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        if (solver%numDirichletNodes > 0) then
+            do i = 1, solver%numDirichletNodes
+                print *, 'Dirichlet potential near boundary', solver%dirichletIndx(i), 'is', solver%dirichletVals(i)
+            end do
+        end if
+        print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
         print *, 'RF_half_amplitude:', solver%RF_half_amplitude
         print *, 'RF_rad_frequency:', solver%RF_rad_frequency
         print *, "BField vector:", solver%BField

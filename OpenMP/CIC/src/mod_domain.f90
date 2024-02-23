@@ -71,6 +71,7 @@ contains
         END SELECT
         self%startX = self%grid(1) - 0.5d0 * self%dx_dl(1)
         self%endX = self%grid(NumberXNodes) + 0.5d0 * self%dx_dl(NumberXNodes)
+        self%L_domain = self%endX - self%startX
     end subroutine constructGrid
 
     subroutine constructSineGrid(self, del_x, L_domain)
@@ -232,13 +233,13 @@ contains
         open(10,file='../InputData/'//GeomFilename)
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) gridType
+        read(10, *, IOSTAT = io) gridType, debyeLength
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         close(10)
-        debyeLength = getDebyeLength(T_e, n_ave)
+        debyeLength = MAX(getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
@@ -248,8 +249,9 @@ contains
         print *, "Number of nodes:", NumberXNodes
         print *, "Grid length:", world%L_domain
         print *, 'gridType:', gridType
-        print *, "Left boundary type:", leftBoundary
-        print *, "Right boundary type:", rightBoundary
+        print *, "Left boundary type:", world%boundaryConditions(1)
+        print *, "Right boundary type:", world%boundaryConditions(NumberXNodes+1)
+        print *, 'smallest delX:', MINVAL(world%dx_dl)
         print *, "------------------"
         print *, ""
 
