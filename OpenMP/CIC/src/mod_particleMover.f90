@@ -21,7 +21,7 @@ contains
         logical, intent(in out) :: FutureAtBoundaryBool
         integer(int32), intent(in out) :: l_boundary
         integer(int32) :: l_alongV, l_awayV
-        real(real64) :: del_tau_temp, a, b, c, l_f_alongV, l_f_awayV
+        real(real64) :: del_tau_temp, a, b, c
         logical :: goingForwardBool
         ! get index cell where field and dx_dl is evaluated
         goingForwardBool = (v_sub > 0)
@@ -72,12 +72,87 @@ contains
 
     end subroutine getDelTauSubStepNoBField
 
+
+    subroutine getDelTauSubStepNoBFieldNoUTurn(l_sub, v_sub, del_tau, timePassed, d_half, q_over_m, l_cell, E_left, E_right, E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
+        integer(int32), intent(in) :: l_cell
+        real(real64), intent(in) :: q_over_m, dx_dl, E_left, E_right, l_sub
+        real(real64), intent(in out) :: del_tau, d_half, E_x, timePassed, v_sub
+        logical, intent(in) :: AtBoundaryBool
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary
+        real(real64) :: del_tau_temp, a, b, c, real_l_boundary
+        logical :: goingForwardBool
+
+        ! get index cell where field and dx_dl is evaluated
+        goingForwardBool = (v_sub > 0)    
+        if (goingForwardBool) then
+            l_boundary = l_cell + 1
+        else
+            l_boundary = l_cell
+        end if
+        real_l_boundary = real(l_boundary)
+        d_half = (l_sub + real_l_boundary) * 0.5d0 - real(l_cell)
+        E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+        a = 0.5d0 * q_over_m * E_x
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        c = (l_sub - real_l_boundary) * dx_dl
+        b = v_sub**2 - 4.0d0*a*c
+        FutureAtBoundaryBool = (b >= 0)
+        if (FutureAtBoundaryBool) then
+            del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(b))
+            FutureAtBoundaryBool = (del_tau_temp < del_tau)
+            if (FutureAtBoundaryBool) del_tau = del_tau_temp
+        end if
+        if (.not. FutureAtBoundaryBool) then
+            ! Check goes back around
+            d_half = l_sub - real(l_cell)
+            E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+            a = 0.5d0 * q_over_m * E_x
+            if ((a > 0) .neqv. goingForwardBool) then
+                del_tau_temp = ABS(v_sub)/ABS(a)
+                if (del_tau_temp < del_tau) then
+                    if (.not. AtBoundaryBool) then
+                        ! Now velocity and acceleration is same direction at point, so no more turn around
+                        ! Try finding substep toward new boundary
+                        timePassed = timePassed + del_tau_temp
+                        del_tau = del_tau - del_tau_temp
+                        v_sub = -v_sub
+                        goingForwardBool = .not. goingForwardBool
+                        if (goingForwardBool) then
+                            l_boundary = l_cell + 1
+                        else
+                            l_boundary = l_cell
+                        end if
+                        real_l_boundary = real(l_boundary)
+                        d_half = (l_sub + real_l_boundary) * 0.5d0 - real(l_cell)
+                        E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+                        a = 0.5d0 * q_over_m * E_x
+                        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+                        c = (l_sub - real_l_boundary) * dx_dl
+                        b = v_sub**2 - 4.0d0*a*c
+                        FutureAtBoundaryBool = (b >= 0)
+                        if (FutureAtBoundaryBool) then
+                            del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(b))
+                            FutureAtBoundaryBool = (del_tau_temp < del_tau)
+                            if (FutureAtBoundaryBool) del_tau = del_tau_temp
+                        end if
+                    else
+                        FutureAtBoundaryBool = .true.
+                        l_boundary = INT(l_sub)
+                        del_tau = del_tau_temp
+                    end if
+                end if
+            end if
+        end if
+        
+
+    end subroutine getDelTauSubStepNoBFieldNoUTurn
+
     subroutine analyticalParticleMoverNoBField(l_sub, v_sub, l_f, del_tau, d_half, q_over_m, l_cell, E_left, E_right, dx_dl)
         real(real64), intent(in) :: l_sub, v_sub, del_tau, q_over_m, E_left, E_right, dx_dl
         real(real64), intent(in out) :: l_f, d_half
         integer(int32), intent(in) :: l_cell
         real(real64) :: del_tau_sqr, real_l_cell, dx_sqr
-        integer(int32) :: k
         del_tau_sqr = del_tau**2
         real_l_cell = real(l_cell, kind = real64)
         dx_sqr = dx_dl**2
@@ -131,7 +206,7 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     ! Start AA
 
-                    call getDelTauSubStepNoBField(l_sub, v_sub, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
+                    call getDelTauSubStepNoBFieldNoUTurn(l_sub, v_sub, del_tau, timePassed, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
                     if (FutureAtBoundaryBool) then
                         l_f = real(l_boundary)
                     else
@@ -141,7 +216,7 @@ contains
                     v_f = 2.0d0 * v_half - v_sub
                     
         
-                    J_part = q_times_wp * (v_half)*del_tau/dx_dl/del_t
+                    J_part = q_times_wp * (l_f - l_sub)/del_t
                     J_temp(l_cell) = J_temp(l_cell) + J_part * (1.0d0 - d_half)
                     J_temp(l_cell + 1) = J_temp(l_cell + 1) + J_part * (d_half)
                     ! solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + J_part * (1.0d0 - d_half)
@@ -243,7 +318,7 @@ contains
                     dx_dl = world%dx_dl(l_cell)
             
                     ! AA particle mover
-                    call getDelTauSubStepNoBField(l_sub, v_sub, del_tau, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
+                    call getDelTauSubStepNoBFieldNoUTurn(l_sub, v_sub, del_tau, timePassed, d_half, q_over_m, l_cell, solver%EField(l_cell), solver%EField(l_cell+1), E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
                     if (FutureAtBoundaryBool) then
                         l_f = real(l_boundary)
                     else

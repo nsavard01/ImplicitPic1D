@@ -162,7 +162,7 @@ contains
                     
                     v_f = 2.0d0 * v_half - v_sub
 
-                    J_temp(l_cell) = J_temp(l_cell) + q_times_wp * (v_half)*del_tau/world%dx_dl(l_cell)/del_t
+                    J_temp(l_cell) = J_temp(l_cell) + q_times_wp * (l_f - l_sub)/del_t
                     !solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + q_times_wp * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
                     
                     if (FutureAtBoundaryBool) then

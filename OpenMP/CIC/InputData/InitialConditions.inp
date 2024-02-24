@@ -1,10 +1,10 @@
 32 ! number of threads
-9.43952802359882e-05 ! simulation time
-2.56d14 ! Initial number density (1/m^3) of particles
-2.59d0 ! T_e (eV)
+1.2d-4 ! simulation time
+1.5d17 ! Initial number density (1/m^3) of particles
+4.0d0 ! T_e (eV)
 0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-2.0d0 1.8436578171091445e-10 ! Fraction of initial 1/w_p for initial time step
-9.43952802359882e-05 ! amount of time to average final Diagnostics
-CIC_RFBenchmark_case1 !filename
+2.0d0 9.15361907d-11 ! Fraction of initial 1/w_p for initial time step
+1.0d-5 ! amount of time to average final Diagnostics
+CIC_RFBenchmark_EreminCase_15xTime_65NodesEven_sixteenthNumPart_nonPicard !filename
 END
