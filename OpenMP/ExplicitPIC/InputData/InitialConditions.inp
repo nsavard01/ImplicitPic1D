@@ -1,10 +1,10 @@
 32 ! number of processors
-1.5d-4 ! simulation time
-1.6d18 ! Initial number density (1/m^3) of electrons
-4.0d0 ! Initial electron Temperature (eV) 
+3.687315634218289e-07 ! simulation time
+2.56d14 ! Initial number density (1/m^3) of electrons
+2.59d0 ! Initial electron Temperature (eV) 
 0.025d0 ! Initial ion Temperature (eV)
-20 ! number of diagnostic data dumps    
-1.5d0 3.125e-12 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-2.0d-5 ! amount of time to average final Diagnostics
-Exp_RFBenchmark_highDensity_resolved !save file name
+100 ! number of diagnostic data dumps    
+1.5d0 1.8436578171091445e-10 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+3.687315634218289e-07 ! amount of time to average final Diagnostics
+Exp_RFBenchmark_case1_animation !save file name
 END

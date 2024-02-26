@@ -17,6 +17,7 @@ model = np.load('BoundModels/modelNonTruncSparse_2p5e+16nave_5Te_1Ti.npy')
 modelOther = np.load('BoundModels/modelNonTrunc_2p5e+16nave_5Te_1Ti.npy')
 
 NGP_BoundModel_test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_BoundModel_test/')
+CIC_BoundModel_test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_BoundModel_test/')
 
 # Exp_1000PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_1000PPD_0p5Deb_0p2delT_2p5e16/')
 # Exp_500PPD_0p5Deb_0p2delT_2p5e16 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Explicit_2p5e16_500PPD_0p5Deb_0p2delT/')
