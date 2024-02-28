@@ -52,6 +52,14 @@ contains
                 !Neumann to left
                 part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            else if (world%boundaryConditions(l_center) == 3) then
+                !periodic to left
+                part%densities(NumberXNodes, iThread) = part%densities(NumberXNodes, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            else if (world%boundaryConditions(l_right) == 3) then
+                !periodic to right
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(1, iThread) = part%densities(1, iThread) + 0.5d0 * d**2
             end if
         end do
     end subroutine interpolateParticleToNodes
@@ -83,7 +91,7 @@ contains
             iThread = omp_get_thread_num() + 1 
             particleList(i)%densities(:,iThread) = 0.0d0
             call interpolateParticleToNodes(particleList(i), world, iThread)
-            !$OMP end parallel   
+            !$OMP end parallel
             rho = rho + SUM(particleList(i)%densities, DIM = 2) * particleList(i)%w_p * particleList(i)%q
         end do
     end subroutine depositRho

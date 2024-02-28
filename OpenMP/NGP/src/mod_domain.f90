@@ -46,6 +46,10 @@ contains
         self % boundaryConditions = 0
         self%boundaryConditions(1) = leftBoundary
         self%boundaryConditions(NumberXNodes) = rightBoundary
+        if (leftBoundary == 3 .or. rightBoundary == 3) then
+            self%boundaryConditions(1) = 3
+            self%boundaryConditions(NumberXNodes) = 3
+        end if
     end function domain_constructor
 
 

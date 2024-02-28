@@ -324,6 +324,11 @@ contains
                         chargeError = chargeError + (1.0d0 - del_t * self%J(NumberXNodes-1)/del_Rho)**2
                     end if
                     k = k + 1
+                CASE(3)
+                    if (i == 1) then
+                        del_Rho = del_Rho + self%rho(NumberXNodes) - rho_i(NumberXNodes)
+                        chargeError = chargeError + (1.0d0 + del_t * (self%J(1) - self%J(NumberXNodes-1))/del_Rho)**2
+                    end if
                 END SELECT
             end if
         end do

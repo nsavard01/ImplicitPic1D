@@ -131,13 +131,14 @@ contains
 
     function getTotalMomentum(self) result(res)
         class(Particle), intent(in) :: self
-        real(real64) :: res(3), temp(3, numThread)
+        real(real64) :: res(3), temp(3)
         integer(int32) :: iThread
-        !$OMP parallel private(iThread)
+        temp = 0
+        !$OMP parallel private(iThread) reduction(+:temp)
         iThread = omp_get_thread_num() + 1
-        temp(:, iThread) = SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread), DIM = 2)
+        temp = temp +  SUM(self%phaseSpace(2:4, 1:self%N_p(iThread), iThread), DIM = 2)
         !$OMP end parallel
-        res = SUM(temp, DIM = 2) * self%w_p * self%mass
+        res = temp * self%w_p * self%mass
     end function getTotalMomentum
 
     function getTotalKE(self) result(res)

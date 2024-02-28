@@ -44,7 +44,7 @@ contains
         self % boundaryConditions = 0
         self%boundaryConditions(1) = leftBoundary
         self%boundaryConditions(NumberXNodes+1) = rightBoundary
-        if (ABS(leftBoundary) == 3 .or. ABS(rightBoundary) == 3) then
+        if (leftBoundary == 3 .or. rightBoundary == 3) then
             self%boundaryConditions(1) = 3
             self%boundaryConditions(NumberXNodes+1) = 3
         end if

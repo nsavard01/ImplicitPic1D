@@ -103,6 +103,9 @@ contains
                 print *, 'Particle temperature(K) is:', targetParticleList(j)%temperature
                 print *, 'Particle density is:', targetParticleList(j)%density
             end do
+        else
+            print *, 'No target neutral particles detected!'
+            allocate(targetParticleList(0))
         end if
 
         

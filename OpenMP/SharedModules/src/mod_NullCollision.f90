@@ -860,6 +860,9 @@ contains
                 end do
                 print *, ''
             end do
+        else
+            print *, 'No binary collisions read!'
+            allocate(nullCollisionList(0))
         end if
 
         print *, '---------------------------'

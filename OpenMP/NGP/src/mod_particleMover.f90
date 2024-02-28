@@ -156,13 +156,13 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
 
-
+                    
                     call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     
                     
                     v_f = 2.0d0 * v_half - v_sub
 
-                    J_temp(l_cell) = J_temp(l_cell) + q_times_wp * (l_f - l_sub)/del_t
+                    J_temp(l_cell) = J_temp(l_cell) + (l_f - l_sub)
                     !solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + q_times_wp * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
                     
                     if (FutureAtBoundaryBool) then
@@ -207,8 +207,9 @@ contains
             end do loopParticles
             !solver%J(:, iThread) = solver%J(:, iThread) + J_temp
             !$OMP end parallel
-            solver%J = solver%J + J_temp
+            solver%J = solver%J + J_temp * q_times_wp
         end do loopSpecies
+        solver%J = solver%J/del_t
     end subroutine depositJ
 
 
@@ -255,7 +256,7 @@ contains
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
-
+                    
                     call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
                     
                     

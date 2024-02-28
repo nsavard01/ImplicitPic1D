@@ -78,6 +78,7 @@ contains
         if (world%boundaryConditions(NumberXNodes+1)== 1 .or. world%boundaryConditions(NumberXNodes+1)== 4) then
             self%numDirichletNodes = self%numDirichletNodes + 1
         end if
+        
 
         allocate(self%dirichletIndx(self%numDirichletNodes), self%dirichletVals(self%numDirichletNodes), self%sourceTermVals(self%numDirichletNodes), self%dirichletIsRFBool(self%numDirichletNodes))
         i = 0
@@ -131,10 +132,10 @@ contains
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i-1) + world%dx_dl(i)) + 1.0d0/(world%dx_dl(i+1) + world%dx_dl(i)))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i) + world%dx_dl(i+1))
-            else if (world%boundaryConditions(i+1) == 1 .or. world%boundaryConditions(i+1) == 4) then
+            else if (world%boundaryConditions(i+1) == 1 .or. world%boundaryConditions(i+1) == 4 .or. world%boundaryConditions(i+1) == 3) then
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i-1) + world%dx_dl(i)) + 1.0d0/world%dx_dl(i))
                 self%a_tri(i-1) = 2.0d0 / (world%dx_dl(i-1) + world%dx_dl(i))
-            else if (world%boundaryConditions(i) == 1 .or. world%boundaryConditions(i) == 4) then
+            else if (world%boundaryConditions(i) == 1 .or. world%boundaryConditions(i) == 4 .or. world%boundaryConditions(i) == 3) then
                 self%b_tri(i) = -2.0d0 * (1.0d0 / (world%dx_dl(i+1) + world%dx_dl(i)) + 1.0d0/world%dx_dl(i))
                 self%c_tri(i) = 2.0d0 / (world%dx_dl(i+1) + world%dx_dl(i))
             else if (world%boundaryConditions(i+1) == 2) then
@@ -231,6 +232,10 @@ contains
                 d(i) = self%J(i+1) * del_t / eps_0 - self%EField(i+1)
             CASE(2)
                 d(i) = -self%J(i) * del_t / eps_0 + self%EField(i)
+            CASE(-3)
+                d(i) = (self%J(2) - self%J(1) - self%J(NumberXNodes+1)) * del_t / eps_0 - self%EField(2) + self%EField(1)
+            CASE(3)
+                d(i) = (self%J(1) + self%J(NumberXNodes+1) - self%J(NumberXNodes)) * del_t / eps_0 - self%EField(NumberXNodes+1) + self%EField(NumberXNodes)
             END SELECT
         end do
 
@@ -350,14 +355,19 @@ contains
                     chargeError = chargeError + (1.0d0 + del_t * (-self%J(i))/del_Rho)**2 
                 CASE(-2)
                     chargeError = chargeError + (1.0d0 + del_t * (self%J(i+1))/del_Rho)**2
+                CASE(3)
+                    chargeError = chargeError + (1.0d0 + del_t * (self%J(NumberXNodes+1) + self%J(1) - self%J(NumberXNodes))/(del_Rho))**2
+                CASE(-3)
+                    chargeError = chargeError + (1.0d0 + del_t * (self%J(2) - self%J(1) - self%J(NumberXNodes+1))/(del_Rho))**2
                 END SELECT
             end if
         end do
         chargeError = SQRT(chargeError/NumberXNodes)
     end function getChargeContinuityError
 
-    subroutine evaluateEFieldHalfTime(self)
+    subroutine evaluateEFieldHalfTime(self, boundaryConditionsLeftEdge)
         class(potentialSolver), intent(in out) :: self
+        integer(int32), intent(in) :: boundaryConditionsLeftEdge
         integer(int32) :: i
         ! 'logical' field, dphi_dl, used in particle mover
         self%EField(2:NumberXNodes) = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes))
@@ -377,6 +387,12 @@ contains
                 end if
             end if
         end do
+
+        if (boundaryConditionsLeftEdge == 3) then
+            self%EField(1) = 0.5d0 * (self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - self%phi(1) - self%phi_f(1))
+            self%EField(NumberXNodes+1) = self%EField(1)
+        end if
+
     end subroutine evaluateEFieldHalfTime
 
     subroutine evaluateEFieldCurrTime(self, world)
@@ -394,6 +410,11 @@ contains
                 self%EField(NumberXNodes+1) = 2.0d0 * (self%phi(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
             end if
         end do
+
+        if (world%boundaryConditions(1) == 3) then
+            self%EField(1) = (self%phi(NumberXNodes) - self%phi(1)) / (0.5d0 * (world%dx_dl(1) + world%dx_dl(NumberXNodes)))
+            self%EField(NumberXNodes+1) = self%EField(1)
+        end if
     end subroutine evaluateEFieldCurrTime
 
     subroutine evaluateEFieldFutureTime(self, world)
@@ -419,6 +440,10 @@ contains
                 end if
             end if
         end do
+        if (world%boundaryConditions(1) == 3) then
+            self%EField(1) = (self%phi_f(NumberXNodes) - self%phi_f(1)) / (0.5d0 * (world%dx_dl(1) + world%dx_dl(NumberXNodes)))
+            self%EField(NumberXNodes+1) = self%EField(1)
+        end if
     end subroutine evaluateEFieldFutureTime
 
     function getTotalPE(self, world, future) result(res)
@@ -438,11 +463,17 @@ contains
                     res = res + eps_0 * (self%dirichletVals(i) - self%phi_f(self%dirichletIndx(i)))**2 / world%dx_dl(self%dirichletIndx(i))
                 end if
             end do
+            if (world%boundaryConditions(1) == 3) then
+                res = res + eps_0 * (self%phi_f(NumberXNodes) - self%phi_f(1))**2 / ((world%dx_dl(1) + world%dx_dl(NumberXNodes)))
+            end if
         else
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%centerDiff)
             do i = 1, self%numDirichletNodes
                 res = res + eps_0 * (self%dirichletVals(i) - self%phi(self%dirichletIndx(i)))**2 / world%dx_dl(self%dirichletIndx(i))
             end do
+            if (world%boundaryConditions(1) == 3) then
+                res = res + eps_0 * (self%phi(NumberXNodes) - self%phi(1))**2 / ((world%dx_dl(1) + world%dx_dl(NumberXNodes)))
+            end if
         end if
     end function getTotalPE
 
