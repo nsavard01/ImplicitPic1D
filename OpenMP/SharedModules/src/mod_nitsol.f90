@@ -266,7 +266,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
     ! c use in computing the difference step; then evaluate the difference 
     ! c formula according to ijacv and ifdord. 
     ! c ------------------------------------------------------------------------
-     eps = dnrm2(n, v, 1)
+     eps = SQRT(SUM(v**2))
      if (eps .eq. 0.d0) then 
         itrmjv = 1
         go to 900
@@ -275,7 +275,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
     ! c Here ijacv = 0 or ifdord = 1 => first-order forward difference. 
     ! c ------------------------------------------------------------------------
      if (ijacv .eq. 0 .or. ifdord .eq. 1) then 
-        eps = dsqrt((1.d0 + dnrm2(n,xcur,1))*epsmach)/eps
+        eps = dsqrt((1.d0 + SQRT(SUM(xcur**2)))*epsmach)/eps
         ! could replace with just vectorized code?
         do 100 i = 1, n
            v(i) = xcur(i) + eps*v(i)
@@ -297,7 +297,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
     ! c Here ijacv = -1 and ifdord = 2 => second-order central difference. 
     ! c ------------------------------------------------------------------------
      if (ifdord .eq. 2) then 
-        eps = (((1.d0 + dnrm2(n,xcur,1))*epsmach)**(1.d0/3.d0))/eps
+        eps = (((1.d0 + SQRT(SUM(xcur**2)))*epsmach)**(1.d0/3.d0))/eps
         do 200 i = 1, n
            rwork(i) = xcur(i) + eps*v(i)
     200     continue
@@ -325,7 +325,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
      endif
 
      if (ifdord .eq. 4) then 
-        eps = (((1.d0 + dnrm2(n,xcur,1))*epsmach)**(1.d0/5.d0))/eps
+        eps = (((1.d0 + SQRT(SUM(xcur**2)))*epsmach)**(1.d0/5.d0))/eps
         do 300 i = 1, n
            rwork(i) = xcur(i) + eps*v(i)
     300     continue
@@ -1346,7 +1346,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         endif
      endif
      call dcopy( n, p, 1, u, 1 )
-     rho = ddot( n, rcgs, 1, rtil, 1 )
+     rho = SUM(rcgs*rtil)!ddot( n, rcgs, 1, rtil, 1 )
      do 20 i = 1, n
         d(i) = zero
     20   continue
@@ -1369,7 +1369,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     100  continue
      itfq = itfq + 1
      nli = nli + 1
-     sigma = ddot( n, rtil, 1, v, 1 )
+     sigma = SUM(rtil * v) !ddot( n, rtil, 1, v, 1 )
 
     ! c  If sigma = 0 we have a serious breakdown.  We check this condition
     ! c  by trying to detect whether division by sigma causes an overflow.
@@ -1411,7 +1411,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         goto 900
      end if
      call daxpy( n, -alpha, v, 1, rcgs, 1 )
-     cgsnorm = dnrm2( n, rcgs, 1 )
+     cgsnorm = SQRT(SUM(rcgs**2))!dnrm2( n, rcgs, 1 )
 
     ! c  Check for cgsnorm = NaN.
 
@@ -1468,7 +1468,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c  of -1, but we dont care until we return from this routine.
 
            call daxpy( n, one, fcur, 1, r, 1 )
-           rsnrm = dnrm2( n, r, 1 )
+           rsnrm = SQRT(SUM(r**2))!dnrm2( n, r, 1 )
 
     ! c For printing:
 
@@ -1494,7 +1494,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     60   continue
 
      rho_old = rho
-     rho = ddot( n, rtil, 1, rcgs, 1 )
+     rho = SUM(rtil * rcgs)!ddot( n, rtil, 1, rcgs, 1 )
 
     ! c  If rho_old = 0 we have a serious breakdown.  We check this condition
     ! c  by trying to detect whether division by rho_old causes an overflow.
@@ -1550,7 +1550,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord, itask, nfe, njve, nrpre, step, r, rwork1,rwork2, itrmjv )
 
         call daxpy( n, one, fcur, 1, r, 1 )
-        rsnrm = dnrm2( n, r, 1 )
+        rsnrm = SQRT(SUM(r**2)) !dnrm2( n, r, 1 )
         if ( rsnrm .le. abstol ) itrmks = 0
 
      end if
@@ -1830,7 +1830,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c ------------------------------------------------------------------------
     ! c Perform the first "half-iteration". 
     ! c ------------------------------------------------------------------------
-     rho = ddot(n,rtil,1,r,1)
+     rho = SUM(rtil * r)!ddot(n,rtil,1,r,1)
      if (istb .eq. 1) then 
         call dcopy(n,r,1,p,1)
      else
@@ -1860,7 +1860,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         itrmks = 1
         go to 900
      endif
-     tau = ddot(n,rtil,1,v,1)
+     tau = SUM(rtil * v)!ddot(n,rtil,1,v,1)
      if ( abs(tau) .lt. sfmin*abs(rho) ) then
         itrmks = 4
         goto 900
@@ -1869,7 +1869,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      endif
      call daxpy(n,-alpha,v,1,r,1)
      call daxpy(n,alpha,phat,1,step,1)
-     rsnrm = dnrm2(n,r,1)
+     rsnrm = SQRT(SUM(r**2))!dnrm2(n,r,1)
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
      if (iplvl .ge. 4) then 
@@ -1904,9 +1904,9 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         itrmks = 1
         go to 900
      endif
-     tau = dnrm2(n,t,1)
+     tau = SQRT(SUM(t**2))!dnrm2(n,t,1)
      tau = tau*tau
-     temp = ddot(n,t,1,r,1)
+     temp = SUM(t*r) !ddot(n,t,1,r,1)
      if ( tau .le. sfmin*abs(temp) ) then
         itrmks = 4
         goto 900
@@ -1919,7 +1919,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      endif
      call daxpy(n,-omega,t,1,r,1)
      call daxpy(n,omega,phat,1,step,1)
-     rsnrm = dnrm2(n,r,1)
+     rsnrm = SQRT(SUM(r**2)) !dnrm2(n,r,1)
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
      if (iplvl .ge. 4) then 
@@ -2105,7 +2105,7 @@ subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nf
         go to 900
      endif
      nfe = nfe + 1
-     fpnrm = dnrm2(n, fpls, 1) 
+     fpnrm = SQRT(SUM(fpls**2))!dnrm2(n, fpls, 1) 
     ! c ------------------------------------------------------------------------
     ! c If t-condition is met or backtracking is turned off, return. 
     ! c ------------------------------------------------------------------------
@@ -2590,7 +2590,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
         go to 900
      endif
      nfe = nfe + 1
-     fcnrm = dnrm2(n, fcur, 1) 
+     fcnrm = SQRT(SUM(fcur**2))!dnrm2(n, fcur, 1) 
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
      if (iplvl .ge. 1) then 
@@ -2739,7 +2739,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c later use. NOTE: The first n components of rwork contain the residual  
     ! c vector for the Newton equation, which is -(linear model). 
     ! c ------------------------------------------------------------------------
-     oftlm = -ddot(n, fcur, 1, rwork, 1)
+     oftlm = - SUM(fcur*rwork(1:n))!ddot(n, fcur, 1, rwork, 1)
      oftjs = oftlm - fcnrm**2
     ! c ------------------------------------------------------------------------
     ! c Determine an acceptable step via backtracking. 
@@ -2784,7 +2784,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
      call dcopy(n, xpls, 1, xcur, 1)
      call dcopy(n, fpls, 1, fcur, 1)
      fcnrm = fpnrm
-     stpnrm = dnrm2(n, step, 1)
+     stpnrm = SQRT(SUM(step**2))!dnrm2(n, step, 1)
      nni = nni + 1
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
