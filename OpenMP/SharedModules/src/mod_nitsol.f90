@@ -82,7 +82,7 @@ module mod_nitsol
    end interface
 
     private
-    public :: nitsol
+    public :: nitsol, initializeNitsol
 
     ! default parameters
     double precision, parameter :: one=1.0d0, two=2.0d0, rtfiv=2.23606797749978981, tenth=0.10d0, half=0.50d0, fournines=one-1.0d-4, zero = 0.0d0 
@@ -91,8 +91,8 @@ module mod_nitsol
     integer, parameter :: DFLT_PRLVL=0, STDOUT=6
 
     ! shared variables
-    integer :: iplvl, ipunit
-    double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, alpha, gamma
+    integer, public :: iplvl, ipunit
+    double precision, public :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, alpha, gamma
 
     ! public variables
     integer, public :: instep, newstep, krystat

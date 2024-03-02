@@ -2,7 +2,7 @@
  Reading initial inputs:
  ------------------
  Save data folder: 
- ../../../../ExplicitData/Exp_RFBenchmark_highDensity_MoreResolved
+ ../../../../ExplicitData/Exp_RFBenchmark_highDensity_EvenMoreResolved
  Number of threads is:          32
  Average initial electron density:  1.600000000000000E+018
  Initial electron temperature:   4.00000000000000     
@@ -17,12 +17,12 @@
  
  Reading domain inputs:
  ------------------
- Number of nodes:       10001
+ Number of nodes:       15001
  Left boundary type:           1
  Right boundary type:           4
- Fraction of debye length:  0.570014141574745     
+ Fraction of debye length:  0.380009427716496     
  Grid length:  6.700000000000000E-002
- DelX is:  6.700000000000000E-006
+ DelX is:  4.466666666666667E-006
  ------------------
  
  
@@ -40,18 +40,18 @@
  Reading particle inputs:
  Amount charged particles:           2
  Initializing e
- Amount of macroparticles is:     2048000
+ Amount of macroparticles is:     3072000
  Particle mass is:  9.109383701500001E-031
  Particle charge is: -1.602176634000000E-019
- Particle weight is:   52343750000.0000     
- Particle mean KE is:   6.00386396032380      , should be
+ Particle weight is:   34895833333.3333     
+ Particle mean KE is:   6.00398238884029      , should be
    6.00000000000000     
  Initializing He+
- Amount of macroparticles is:     2048000
+ Amount of macroparticles is:     3072000
  Particle mass is:  6.645566050681144E-027
  Particle charge is:  1.602176634000000E-019
- Particle weight is:   52343750000.0000     
- Particle mean KE is:  3.749397028746461E-002 , should be
+ Particle weight is:   34895833333.3333     
+ Particle mean KE is:  3.749288023691854E-002 , should be
   3.750000000000001E-002
  ---------------
  
@@ -139,53 +139,11 @@
  ------------------
  
  Simulation is   5.00000000009103      percent done
- Number of electrons is:     1823904
- Number of ions is:     1825394
+ Number of electrons is:     2685054
+ Number of ions is:     2687279
  Simulation is   10.0000020824423      percent done
- Number of electrons is:     1783683
- Number of ions is:     1785154
+ Number of electrons is:     2673773
+ Number of ions is:     2675942
  Simulation is   15.0000000007204      percent done
- Number of electrons is:     1764004
- Number of ions is:     1765455
- Simulation is   20.0000000024255      percent done
- Number of electrons is:     1751459
- Number of ions is:     1752914
- Simulation is   25.0000000041305      percent done
- Number of electrons is:     1744784
- Number of ions is:     1746211
- Simulation is   30.0000000058355      percent done
- Number of electrons is:     1739523
- Number of ions is:     1740967
- Simulation is   35.0000000075406      percent done
- Number of electrons is:     1736680
- Number of ions is:     1738136
- Simulation is   40.0000000092456      percent done
- Number of electrons is:     1734681
- Number of ions is:     1736134
- Simulation is   45.0000000109506      percent done
- Number of electrons is:     1732499
- Number of ions is:     1733936
- Simulation is   50.0000000126556      percent done
- Number of electrons is:     1732048
- Number of ions is:     1733508
- Simulation is   55.0000000143607      percent done
- Number of electrons is:     1732717
- Number of ions is:     1734190
- Simulation is   60.0000000160657      percent done
- Number of electrons is:     1733157
- Number of ions is:     1734593
- Simulation is   65.0000000177707      percent done
- Number of electrons is:     1731971
- Number of ions is:     1733408
- Simulation is   70.0000000194758      percent done
- Number of electrons is:     1731292
- Number of ions is:     1732749
- Simulation is   75.0000000211808      percent done
- Number of electrons is:     1732174
- Number of ions is:     1733632
- Simulation is   80.0000000228858      percent done
- Number of electrons is:     1731508
- Number of ions is:     1732954
- Simulation is   85.0000000088925      percent done
- Number of electrons is:     1730613
- Number of ions is:     1732040
+ Number of electrons is:     2678041
+ Number of ions is:     2680211

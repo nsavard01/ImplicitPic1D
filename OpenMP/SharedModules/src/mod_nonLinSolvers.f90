@@ -8,7 +8,11 @@ module mod_nonLinSolvers
     use mod_potentialSolver
     use mod_particleMover
     use mod_Scheme
+    use mod_nitsol
     implicit none
+
+    
+
     
     interface
         subroutine dgels(trans, m, n, nrhs, a, lda, b, ldb, work, lwork, info)
@@ -19,43 +23,29 @@ module mod_nonLinSolvers
 
         end subroutine dgels
 
-        subroutine nitsol(n, x, f, jacv, ftol, stptol, input, info, rwork, rpar, ipar, iterm, dinpr, dnorm)
-            integer, intent(in)                   :: n
-            real(kind=8), dimension(n), intent(inout) :: x
-            external :: f, jacv
-            real(kind=8), intent(in)                  :: ftol
-            real(kind=8), intent(in)                  :: stptol
-            integer, dimension(10), intent(in)    :: input
-            integer, dimension(6), intent(out)    :: info
-            real(kind=8), dimension(*), intent(inout) :: rwork
-            real(kind=8), intent(in) :: rpar
-            integer, dimension(*), intent(in out)  :: ipar
-            integer, intent(out)                  :: iterm
-            
-            real(kind=8), external :: dinpr, dnorm
-
-        end subroutine nitsol
-
         function ddot(n, x, sx, y, sy)
+            use iso_fortran_env, only: int32, real64
             implicit none
-            integer, intent(in)                :: n
-            real(kind=8), dimension(*), intent(in) :: x
-            integer, intent(in)                :: sx
-            real(kind=8), dimension(*), intent(in) :: y
-            integer, intent(in)                :: sy
-            real(kind=8)                           :: ddot
+            integer(int32), intent(in)                :: n
+            real(real64), dimension(*), intent(in) :: x
+            integer(int32), intent(in)                :: sx
+            real(real64), dimension(*), intent(in) :: y
+            integer(int32), intent(in)                :: sy
+            real(real64)                           :: ddot
           end function ddot
       
-          function dnrm2(n, x, sx)
+        function dnrm2(n, x, sx)
+            use iso_fortran_env, only: int32, real64
             implicit none
-            integer, intent(in)                :: n
-            real(kind=8), dimension(*), intent(in) :: x
-            integer, intent(in)                :: sx
-            real(kind = 8)                           :: dnrm2
-          end function dnrm2
+            integer(int32), intent(in)                :: n
+            real(real64), dimension(*), intent(in) :: x
+            integer(int32), intent(in)                :: sx
+            real(real64)                           :: dnrm2
+        end function dnrm2
 
     end interface
 
+    
     ! Initialize objects needed
     type(Domain) :: globalWorld
     type(Particle), allocatable :: globalParticleList(:)
@@ -68,18 +58,18 @@ module mod_nonLinSolvers
     integer(int32), private, allocatable :: inputJFNK(:)
     real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :)
 
-    ! Common blocks for nitsol
-    integer iplvl, ipunit
-    common /nitprint/ iplvl, ipunit
-    double precision choice1_exp, choice2_exp, choice2_coef
-    double precision eta_cutoff, etamax
-    double precision thmin, thmax, etafixed
+    ! ! Common blocks for nitsol
+    ! integer iplvl, ipunit
+    ! common /nitprint/ iplvl, ipunit
+    ! double precision choice1_exp, choice2_exp, choice2_coef
+    ! double precision eta_cutoff, etamax
+    ! double precision thmin, thmax, etafixed
 
-    common /nitparam/ choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed
+    ! common /nitparam/ choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed
 
-    integer instep, newstep, krystat
-    double precision avrate, fcurnrm
-    common /nitinfo/ avrate, fcurnrm, instep, newstep, krystat
+    ! integer instep, newstep, krystat
+    ! double precision avrate, fcurnrm
+    ! common /nitinfo/ avrate, fcurnrm, instep, newstep, krystat
 
 contains
 
@@ -127,6 +117,7 @@ contains
         CASE(0)
             allocate(Residual_k(NumberXNodes, m_Anderson+1), phi_k(NumberXNodes, m_Anderson+1), fitMat(NumberXNodes, m_Anderson) )
         CASE(1)
+            call initializeNitsol()
             allocate(inputJFNK(10))
             iplvl = 4 ! print level
             inputJFNK = 0
@@ -271,17 +262,16 @@ contains
     ! -------------------- JFNK functions ---------------------------------------
     subroutine funcNitsol(n, xcur, fcur, rpar, ipar, itrmf)
         ! Use solver and whatnot as global inputs, I'm sure as hell not combining all data into one rpar and then creating new routines on those!
-        integer(int32), intent(in) :: n
-        integer(int32), intent(in out) :: itrmf, ipar(*)
-        real(real64), intent(in) :: xcur(n)
-        real(real64), intent(in) :: rpar
-        real(real64), intent(in out) :: fcur(n)
+        integer, intent(in) :: n
+        integer, intent(in out) :: itrmf, ipar(*)
+        double precision, intent(in) :: xcur(n)
+        double precision, intent(in out) :: rpar(*), fcur(n)
         !real(real64) :: d(n)
         globalSolver%phi_f = xcur
-        call depositJ(globalSolver, globalParticleList, globalWorld, rpar)
+        call depositJ(globalSolver, globalParticleList, globalWorld, rpar(1))
         ! d = globalSolver%getError_tridiag_Ampere(globalWorld, rpar)
         ! call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, d, fcur)
-        call globalSolver%solve_tridiag_Ampere(globalWorld, rpar)
+        call globalSolver%solve_tridiag_Ampere(globalWorld, rpar(1))
         fcur = xcur - globalSolver%phi_f
         itrmf = 0
 
@@ -289,17 +279,10 @@ contains
 
     subroutine jacNitsol(n, xcur, fcur, ijob, v, z, rpar, ipar, itrmjv) 
         ! If analytical jacobian matrix-vector product or preconditioner needed
-        integer, intent(in) :: ijob
-        integer, intent(in out) :: itrmjv
-        integer, intent(in) :: n
-
-        integer, intent(in out) :: ipar(*)
-
-        real(real64), intent(in) :: fcur(n)
-        real(real64), intent(in) :: rpar
-        real(real64), intent(in) :: v(n)
-        real(real64), intent(in) ::  xcur(n)
-        real(real64), intent(in out) :: z(n)
+        integer, intent(in) :: ijob, n
+        integer, intent(in out) :: itrmjv, ipar(*)
+        double precision, intent(in) :: fcur(n), v(n), xcur(n)
+        double precision, intent(in out) :: rpar(*), z(n)
         if (ijob == 0) then
             print *, "in analytical jacobian if block"
         else if (ijob == 1) then
@@ -314,15 +297,16 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         real(real64) :: initialNorm
         integer(int32) :: info(6), iterm, ipar(2), itrmf
-        real(real64) :: fcurSolver(NumberXNodes), rworkSolver((NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3)), xcurSolver(NumberXNodes)
+        real(real64) :: fcurSolver(NumberXNodes), rworkSolver((NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3)), xcurSolver(NumberXNodes), rpar(1)
 
         ! Set Nitsol parameters
         iterm = 0
+        rpar(1) = del_t
         xcurSolver = globalSolver%phi_f
-        call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, del_t, ipar, itrmf)
+        call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, rpar, ipar, itrmf)
         initialNorm = dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
-        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), 1.d-20,inputJFNK, info, rworkSolver, del_t, ipar, iterm, ddot, dnrm2)
+        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), 1.d-20,inputJFNK, info, rworkSolver, rpar, ipar, iterm)
         SELECT CASE (iterm)
         CASE(0)
             iterNumPicard = info(4)
