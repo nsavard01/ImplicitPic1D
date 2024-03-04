@@ -94,6 +94,8 @@ module mod_nitsol
     integer, public :: iplvl, ipunit
     double precision, public :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, alpha, gamma
 
+    ! Set parameters used in driver routine
+
     ! public variables
     integer, public :: instep, newstep, krystat
     double precision, public :: avrate, fcurnrm
@@ -336,7 +338,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
            goto 900
         endif 
         temp = -eps 
-        call daxpy(n, temp, v, 1, xcur, 1)
+        xcur = xcur + temp*v!call daxpy(n, temp, v, 1, xcur, 1)
         call f(n, xcur, rwork, rpar, ipar, itrmf) 
         nfe = nfe + 1
         if (itrmf .ne. 0) then
@@ -347,7 +349,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
            z(i) = rwork(i) - z(i)
     310     continue
         temp = eps/2.d0
-        call daxpy(n, temp, v, 1, xcur, 1)
+        xcur = xcur + temp*v!call daxpy(n, temp, v, 1, xcur, 1)
         call f(n, xcur, rwork, rpar, ipar, itrmf) 
         nfe = nfe + 1
         if (itrmf .ne. 0) then
@@ -355,8 +357,8 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
            goto 900
         endif 
         temp = -8.d0
-        call daxpy(n, temp, rwork, 1, z, 1)
-        call daxpy(n, eps, v, 1, xcur, 1)
+        z = z + temp * rwork(1:n) !call daxpy(n, temp, rwork, 1, z, 1)
+        xcur = xcur + eps * v!call daxpy(n, eps, v, 1, xcur, 1)
         call f(n, xcur, rwork, rpar, ipar, itrmf) 
         nfe = nfe + 1
         if (itrmf .ne. 0) then
@@ -364,11 +366,11 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, 
            goto 900
         endif 
         temp = 8.d0
-        call daxpy(n, temp, rwork, 1, z, 1)
+        z = z + temp * rwork(1:n)!call daxpy(n, temp, rwork, 1, z, 1)
         temp = 1.d0/(6.d0*eps)
-        call dscal(n, temp, z, 1)
+        z = temp * z!call dscal(n, temp, z, 1)
         temp = -eps/2.d0
-        call daxpy(n, temp, v, 1, xcur, 1)
+        xcur = xcur + temp*v!call daxpy(n, temp, v, 1, xcur, 1)
         itrmjv = 0 
      endif
 
@@ -549,7 +551,7 @@ subroutine nitjv(n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord, itask, nfe, 
     ! c then compute P(inverse)*v in rwork1. 
     ! c ------------------------------------------------------------------------
      if (itask .eq. 0) then 
-        call dcopy(n, v, 1, rwork1, 1)
+        rwork1(1:n) = v!call dcopy(n, v, 1, rwork1, 1)
      else
         ijob = 1
         call jacv(n, xcur, fcur, ijob, v, rwork1, rpar, ipar, itrmjv)
@@ -561,7 +563,7 @@ subroutine nitjv(n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord, itask, nfe, 
     ! c z and exit.
     ! c ------------------------------------------------------------------------
      if (itask .eq. 2) then 
-        call dcopy(n, rwork1, 1, z, 1)
+        z = rwork1(1:n)!call dcopy(n, rwork1, 1, z, 1)
         go to 900
      endif
     ! c ------------------------------------------------------------------------
@@ -1000,7 +1002,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c ------------------------------------------------------------------------
     ! c Update the step. This frees rwork for use as a work array.
     ! c ------------------------------------------------------------------------
-     call daxpy(n, rsnrm0, rwork, 1, step, 1)
+     step = step + rsnrm0 * rwork(1:n)!call daxpy(n, rsnrm0, rwork, 1, step, 1)
     ! c ------------------------------------------------------------------------
     ! c If iresup .eq. 1, then update the residual vector by direct evaluation, 
     ! c using rwork and vv(.,kdp1) as work arrays. Note: Two distinct work  
@@ -1329,7 +1331,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c  Initialize residual and work vectors.
 
      call dcopy( n, fcur, 1, rcgs, 1 )
-     call dscal( n, -one, rcgs, 1 )
+     rcgs = -rcgs!call dscal( n, -one, rcgs, 1 )
 
     ! c  Choice here is rtil = r.
 
@@ -1396,7 +1398,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      endif
      call dcopy( n, u, 1, y, 1 )
      call dswap( n, q, 1, u, 1 )
-     call daxpy( n, -alpha, u, 1, q, 1 )
+     q = q - alpha * u!call daxpy( n, -alpha, u, 1, q, 1 )
      call dcopy( n, y, 1, u, 1 )
 
     ! c  Update residual.
@@ -1410,7 +1412,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         itrmks = 1
         goto 900
      end if
-     call daxpy( n, -alpha, v, 1, rcgs, 1 )
+     rcgs = rcgs - alpha * v!call daxpy( n, -alpha, v, 1, rcgs, 1 )
      cgsnorm = SQRT(SUM(rcgs**2))!dnrm2( n, rcgs, 1 )
 
     ! c  Check for cgsnorm = NaN.
@@ -1452,7 +1454,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
            write(ipunit,830) itfq, ab(k), tau, '     (estimated)'
         endif
 
-        call daxpy( n, qmreta, d, 1, step, 1 )
+      step = step + qmreta * d!call daxpy( n, qmreta, d, 1, step, 1 )
 
     ! c  Convergence check.  Do a cheap test to save on Jacobi-vector products.
     ! c  In case residual history is requested by iplvl, we must calculate 
@@ -1467,7 +1469,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c  This calculation of the QMR residual is off by a factor
     ! c  of -1, but we dont care until we return from this routine.
 
-           call daxpy( n, one, fcur, 1, r, 1 )
+           r = r + fcur!call daxpy( n, one, fcur, 1, r, 1 )
            rsnrm = SQRT(SUM(r**2))!dnrm2( n, r, 1 )
 
     ! c For printing:
@@ -1516,10 +1518,10 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
            goto 900
         endif
      endif
-     call daxpy( n, beta, q, 1, v, 1 )
+     v = v + beta * q!call daxpy( n, beta, q, 1, v, 1 )
      call dcopy( n, v, 1, u, 1 )
-     call daxpy( n, beta, p, 1, q, 1 )
-     call daxpy( n, beta, q, 1, v, 1 )
+     q = q + beta * p!call daxpy( n, beta, p, 1, q, 1 )
+     v = v + beta * q!call daxpy( n, beta, q, 1, v, 1 )
      call dcopy( n, v, 1, p, 1 )
 
      itask = 0
@@ -1549,7 +1551,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         itask = 0
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord, itask, nfe, njve, nrpre, step, r, rwork1,rwork2, itrmjv )
 
-        call daxpy( n, one, fcur, 1, r, 1 )
+        r = r + fcur!call daxpy( n, one, fcur, 1, r, 1 )
         rsnrm = SQRT(SUM(r**2)) !dnrm2( n, r, 1 )
         if ( rsnrm .le. abstol ) itrmks = 0
 
@@ -1557,7 +1559,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
 
     ! c  Correct residual before returning.
 
-     call dscal( n, -one, r, 1 )
+     r = -r!call dscal( n, -one, r, 1 )
 
     ! c If ijacv = -1, then restore it to the original value ijacv = 0. 
 
@@ -1819,7 +1821,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c ------------------------------------------------------------------------
      call dcopy(n,fcur,1,r,1)
      temp = -1.d0
-     call dscal(n,temp,r,1)
+     r = temp * r!call dscal(n,temp,r,1)
      call dcopy(n,r,1,rtil,1)
     ! c ------------------------------------------------------------------------
     ! c Top of the iteration loop. 
@@ -1839,9 +1841,9 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
            goto 900
         else
            beta = (rho/rhomns)*(alpha/omega)
-           call daxpy(n,-omega,v,1,p,1)
-           call dscal(n,beta,p,1)
-           call daxpy(n,1.d0,r,1,p,1)
+           p = p - omega*v!call daxpy(n,-omega,v,1,p,1)
+           p = beta * p!call dscal(n,beta,p,1)
+           p = p + r!call daxpy(n,1.d0,r,1,p,1)
         endif
      endif
      if (irpre .eq. 0) then 
@@ -1867,8 +1869,8 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      else
         alpha = rho/tau
      endif
-     call daxpy(n,-alpha,v,1,r,1)
-     call daxpy(n,alpha,phat,1,step,1)
+     r = r - alpha*v!call daxpy(n,-alpha,v,1,r,1)
+     step = step + alpha * phat!call daxpy(n,alpha,phat,1,step,1)
      rsnrm = SQRT(SUM(r**2))!dnrm2(n,r,1)
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
@@ -1917,8 +1919,8 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         itrmks = 4
         go to 900
      endif
-     call daxpy(n,-omega,t,1,r,1)
-     call daxpy(n,omega,phat,1,step,1)
+     r = r -omega*t!call daxpy(n,-omega,t,1,r,1)
+     step = step + omega * phat!call daxpy(n,omega,phat,1,step,1)
      rsnrm = SQRT(SUM(r**2)) !dnrm2(n,r,1)
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
@@ -2130,7 +2132,7 @@ subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nf
     ! c ------------------------------------------------------------------------
     ! c ... then reduce the step, increase eta, update redfac ... 
     ! c ------------------------------------------------------------------------
-     call dscal(n, theta, step, 1)
+     step = theta * step!call dscal(n, theta, step, 1)
      eta = 1.d0 - theta*(1.d0 - eta)
      redfac = theta*redfac
     ! c ------------------------------------------------------------------------

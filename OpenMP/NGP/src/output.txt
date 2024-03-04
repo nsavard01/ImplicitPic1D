@@ -5,53 +5,140 @@
  Reading initial inputs:
  ------------------
  Save data folder: 
- ../../../../ImplicitData-BField/NGP_45deg_0p05T_2p0T_minDelTau
- Number of threads is:           1
- Average initial electron density:  2.500000000000000E+016
- Initial electron temperature:   5.00000000000000     
- Initial ion temperature:   1.00000000000000     
+ ../../../../ImplicitData/NGP_RFBenchmark_highDensity_sixteenthPart_129nodes
+ Number of threads is:          32
+ Average initial electron density:  1.600000000000000E+018
+ Initial electron temperature:   4.00000000000000     
+ Initial ion temperature:  2.500000000000000E-002
  Number of diagnostic steps is:          20
- Fraction of 1/w_p for time step:   2.00000000000000     
- del_t will be:  2.242169601898683E-010
- Simulation time is:  2.200000000000000E-005
- Final averaging time is:  2.200000000000000E-005
+ Fraction of 1/w_p for time step:   2.22998295747385     
+ del_t will be:  3.125000000000000E-011
+ Simulation time is:  1.500000000000000E-004
+ Final averaging time is:  1.400000000000000E-005
  ------------------
  
  
  Reading domain inputs:
  ------------------
- Number of nodes:          32
- Grid length:  5.000000000000000E-002
+ Number of nodes:         129
+ Grid length:  6.700000000000000E-002
+ gridType:           0
  Left boundary type:           1
- Right boundary type:           2
- Grid type is:           2
+ Right boundary type:           4
+ smallest delX:  5.234374999999875E-004
+ ------------------
+ 
+ 
+ Reading solver inputs:
+ ------------------
+ Left voltage:  0.000000000000000E+000
+ Right voltage:  0.000000000000000E+000
+ RF frequency:   200000000.000000     
+ RF_half_amplitude:   2000.00000000000     
+ RF_rad_frequency:   1256637061.43592     
  BField vector:  0.000000000000000E+000  0.000000000000000E+000
   0.000000000000000E+000
  ------------------
  
  Reading particle inputs:
+ Amount charged particles:           2
  Initializing e
- Amount of macroparticles is:       10000
+ Amount of macroparticles is:      192000
  Particle mass is:  9.109383701500001E-031
  Particle charge is: -1.602176634000000E-019
- Particle weight is:   125000000000.000     
- Particle mean KE is:   7.45879958649461      , should be
-   7.50000000000000     
- Initializing H+
- Amount of macroparticles is:       10000
- Particle mass is:  1.672621923690000E-027
+ Particle weight is:   558333333333.333     
+ Particle mean KE is:   5.98583657942376      , should be
+   6.00000000000000     
+ Initializing He+
+ Amount of macroparticles is:      192000
+ Particle mass is:  6.645566050681144E-027
  Particle charge is:  1.602176634000000E-019
- Particle weight is:   125000000000.000     
- Particle mean KE is:   1.49257261634456      , should be
-   1.50000000000000     
+ Particle weight is:   558333333333.333     
+ Particle mean KE is:  3.765164374359557E-002 , should be
+  3.750000000000001E-002
  ---------------
  
+ Reading particle inputs:
+ Initializing target particle:He      
+ Particle mass is:  6.646476989051294E-027
+ Particle temperature(K) is:   300.000000000000     
+ Particle density is:  3.210000000000000E+021
+ ---------------
+ 
+ Reading collision inputs:
+ ---------------------------
+ Taking reactions from turner_benchmark_he_electron_table.dat
+ 
+ Null Collision generated
+ Reactants are:e and He      
+ Amount of collisions:           4
+ Reduced mass:  9.108135378514684E-031
+ length of arrays:         773
+ Max sigma_v:  8.977580782689968E-014
+ reducedMass:  9.108135378514684E-031
+ reducedMassIonization:  4.554379705840549E-031
+ 
+ For collision #:           1
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           1
+ number Products are:           2
+ products are:
+ e and He      
+ 
+ For collision #:           2
+ Energy threshold:   24.5870000000000     
+ Collision type:           2
+ number Products are:           3
+ products are:
+ e and He+and e
+ 
+ For collision #:           3
+ Energy threshold:   20.6100000000000     
+ Collision type:           3
+ number Products are:           2
+ products are:
+ e and He      
+ 
+ For collision #:           4
+ Energy threshold:   19.8200000000000     
+ Collision type:           3
+ number Products are:           2
+ products are:
+ e and He      
+ 
+ 
+ Null Collision generated
+ Reactants are:He+ and He      
+ Amount of collisions:           2
+ Reduced mass:  3.323010744325864E-027
+ length of arrays:         101
+ Max sigma_v:  3.891896383417535E-014
+ reducedMass:  3.323010744325864E-027
+ reducedMassIonization:  0.000000000000000E+000
+ 
+ For collision #:           1
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           4
+ number Products are:           2
+ products are:
+ He+ and He      
+ 
+ For collision #:           2
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           1
+ number Products are:           2
+ products are:
+ He+ and He      
+ 
+ ---------------------------
  
  Reading initial inputs for particle injection:
  ------------------
- Particle lost is reinjected: T
- Particle refluxing activated on neumann boundary: T
+ Particle lost is reinjected: F
+ Particle refluxing activated on neumann boundary: F
  Particle injection on neumann boundary F
+ Particle injection unformly with maxwellian F
+ Electron maxwellian heating F
  ------------------
  
  Reading non-linear solver inputs:
@@ -61,3 +148,41 @@
  Anderson number m is:          10
  Relaxation parameter is:  0.500000000000000     
  
+ Simulation is   5.00002083330928      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  1.849245470109229E-005
+ Total wall power loss:   887398.825499668     
+ Total collision energy loss:   287871.436167222     
+ Number of electrons is:      225417
+ Number of ions is:      225564
+ Percentage of steps adaptive is:  1.666625001041641E-003
+ Simulation is   10.0000000000523      percent done
+ Total wall power loss:   589344.922519341     
+ Total collision energy loss:   202401.840049480     
+ Number of electrons is:      218105
+ Number of ions is:      218255
+ Percentage of steps adaptive is:  1.666635417252593E-003
+ Simulation is   15.0000000001311      percent done
+ Total wall power loss:   617221.165148217     
+ Total collision energy loss:   231528.349831689     
+ Number of electrons is:      231944
+ Number of ions is:      232091
+ Percentage of steps adaptive is:  1.527752315239190E-003
+ Simulation is   20.0000000002098      percent done
+ Total wall power loss:   601292.898900459     
+ Total collision energy loss:   213824.665690737     
+ Number of electrons is:      233388
+ Number of ions is:      233565
+ Percentage of steps adaptive is:  1.354146918690769E-003
+ Simulation is   25.0000208331171      percent done
+ Total wall power loss:   628119.987397800     
+ Total collision energy loss:   229326.321325570     
+ Number of electrons is:      243939
+ Number of ions is:      244076
+ Percentage of steps adaptive is:  1.416644236466256E-003
+ Simulation is   30.0000208326538      percent done
+ Total wall power loss:   633974.571941238     
+ Total collision energy loss:   218064.507478852     
+ Number of electrons is:      239198
+ Number of ions is:      239349
+ Percentage of steps adaptive is:  1.249982639130012E-003

@@ -24,7 +24,7 @@ BoundPlasmaExample.o: ../../SharedModules/src/BoundPlasmaExample.f90 constants.o
 mod_simulation.o: ../../SharedModules/src/mod_simulation.f90 constants.o mod_BasicFunctions.o mod_domain.o mod_particle.o mod_targetParticle.o mod_NullCollision.o mod_Scheme.o mod_particleInjection.o mod_potentialSolver.o mod_particleMover.o mod_nitsol.o mod_nonLinSolvers.o
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_nonLinSolvers.o: ../../SharedModules/src/mod_nonLinSolvers.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_Scheme.o mod_potentialSolver.o mod_particleMover.o mod_nitsol.o
+mod_nonLinSolvers.o: mod_nonLinSolvers.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_Scheme.o mod_potentialSolver.o mod_particleMover.o mod_nitsol.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_particleMover.o: mod_particleMover.f90 mod_domain.o constants.o mod_BasicFunctions.o mod_particle.o mod_potentialSolver.o

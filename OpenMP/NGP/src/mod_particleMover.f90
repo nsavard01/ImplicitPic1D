@@ -62,7 +62,7 @@ contains
         integer(int32), intent(in out) :: l_boundary
         real(real64) :: c,a, b, del_tau_temp
         integer(int32) :: l_alongV, l_awayV
-        
+        ! print *, 'del_tau is:', del_tau
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
         a = 0.5d0 * q_over_m * E_x
         if (v_sub > 0) then
@@ -156,12 +156,10 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
 
-                    
                     call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
-                    
-                    
+    
                     v_f = 2.0d0 * v_half - v_sub
-
+                    
                     J_temp(l_cell) = J_temp(l_cell) + (l_f - l_sub)
                     !solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + q_times_wp * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
                     
