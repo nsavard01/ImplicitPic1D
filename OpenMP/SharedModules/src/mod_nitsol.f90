@@ -92,7 +92,7 @@ module mod_nitsol
 
     ! shared variables
     integer :: iplvl, ipunit
-    double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax
+    double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, sfmin
     double precision, allocatable :: rworkNitsol(:)
 
     ! Set parameters used in driver routine
@@ -110,6 +110,7 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
    integer :: input(10), sizeWorkArray
     ! initialize variables upon first call
     epsmach = 2.0d0*dlamch( 'e' )
+    sfmin = dlamch('s')
     cndmax = 1.0/100.0d0/epsmach
     iplvl = DFLT_CHOICE1_EXP
     ipunit = STDOUT
@@ -126,10 +127,10 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
    input = 0
    input(1) = maxIter ! maximum iterations
    input(2) = 0 !ijacv
-   input(3) = 0 ! krylov solver
+   input(3) = 2 ! krylov solver
    input(4) = m_Anderson ! maximum krylov subspace dimension
    input(5) = 0 !ipre
-   input(9) = 10 !number backtracks
+   input(9) = -1 !number backtracks
    input(6) = m_Anderson*10
    input(10) = 2 ! eta with gamma and alpha
    etamax = 0.8d0 ! eta max
@@ -1424,15 +1425,6 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      character*2 :: ab(0:1)
      data ab /'.a','.b'/
 
-     double precision :: sfmin
-     data sfmin /zero/
-
-
-    ! c  Start of executable code-
-
-    ! c  Initialize sfmin only on first entry.
-
-     if ( sfmin .eq. zero ) sfmin = dlamch( 's' )
 
     ! c If finite-differences are used to evaluate J*v products (ijacv= 0), then 
     ! c ijacv is set to -1 within this subroutine to signal to nitjv that the 
@@ -1442,12 +1434,12 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      if (ijacv .eq. 0) ijacv = -1 
 
     ! c Set the stopping tolerance, initialize the step, etc. 
-
      rsnrm = fcnrm
      abstol = eta*rsnrm
-     do 10 i = 1, n
-        step(i) = zero
-    10   continue
+     step(1:n) = 0.0d0
+   !   do 10 i = 1, n
+   !      step(i) = zero
+   !  10   continue
      itfq = 0
 
     ! c For printing:
@@ -1464,15 +1456,15 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
 
     ! c  Initialize residual and work vectors.
 
-     rcgs = fcur!call dcopy( n, fcur, 1, rcgs, 1 )
-     rcgs = -rcgs!call dscal( n, -one, rcgs, 1 )
+     rcgs = fcur !call dcopy( n, fcur, 1, rcgs, 1 )
+     rcgs = -rcgs !call dscal( n, -one, rcgs, 1 )
 
     ! c  Choice here is rtil = r.
 
      rtil = rcgs!call dcopy( n, rcgs, 1, rtil, 1 )
 
      if ( irpre .eq. 0 ) then
-        p = rcgs!call dcopy( n, rcgs, 1, p, 1 )
+        p = rcgs !call dcopy( n, rcgs, 1, p, 1 )
      else
         itask = 2
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, rcgs, p, rwork1, rwork2, itrmjv )    
@@ -1482,10 +1474,11 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         endif
      endif
      u = p!call dcopy( n, p, 1, u, 1 )
-     rho = SUM(rcgs*rtil)!ddot( n, rcgs, 1, rtil, 1 )
-     do 20 i = 1, n
-        d(i) = zero
-    20   continue
+     rho = SUM(rcgs * rtil)!ddot( n, rcgs, 1, rtil, 1 )
+     d(1:n) = 0.0d0
+   !   do 20 i = 1, n
+   !      d(i) = zero
+   !  20   continue
 
      itask = 0
      call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, p, v, rwork1, rwork2, itrmjv )
@@ -1505,7 +1498,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     100  continue
      itfq = itfq + 1
      nli = nli + 1
-     sigma = SUM(rtil * v) !ddot( n, rtil, 1, v, 1 )
+     sigma = SUM(rtil * v)!ddot( n, rtil, 1, v, 1 )
 
     ! c  If sigma = 0 we have a serious breakdown.  We check this condition
     ! c  by trying to detect whether division by sigma causes an overflow.
@@ -1516,7 +1509,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      else
         alpha = rho/sigma
      endif
-
+    
     ! c  Need Pv for calculation of q.  First store result in q, then
     ! c  swap some vectors to cast calculation of q as a SAXPY.
 
@@ -1531,22 +1524,29 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         endif
      endif
      y = u!call dcopy( n, u, 1, y, 1 )
-     call dswap( n, q, 1, u, 1 )
+     !call dswap( n, q, 1, u, 1 )
+   !   print *, u
+   !   print *, q
+     do i = 1, n
+         cgsnorm = u(i)
+         u(i) = q(i)
+         q(i) = cgsnorm
+     end do
      q = q - alpha * u!call daxpy( n, -alpha, u, 1, q, 1 )
-     u = y!call dcopy( n, y, 1, u, 1 )
+     u = y !call dcopy( n, y, 1, u, 1 )
 
     ! c  Update residual.
-
-     do 30 i = 1, n
-        y(i) = u(i) + q(i)
-    30   continue
+     y = u + q
+   !   do 30 i = 1, n
+   !      y(i) = u(i) + q(i)
+   !  30   continue
      itask = 0
      call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, y, v, rwork1, rwork2, itrmjv )
      if ( itrmjv .ne. 0 ) then
         itrmks = 1
         goto 900
      end if
-     rcgs = rcgs - alpha * v!call daxpy( n, -alpha, v, 1, rcgs, 1 )
+     rcgs = rcgs - alpha * v !call daxpy( n, -alpha, v, 1, rcgs, 1 )
      cgsnorm = SQRT(SUM(rcgs**2))!dnrm2( n, rcgs, 1 )
 
     ! c  Check for cgsnorm = NaN.
@@ -1566,14 +1566,16 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         t = t/alpha
 
         if ( k .eq. 0 ) then
-           do 40 i = 1, n
-              d(i) = u(i) + t*d(i)
-    40         continue
+            d = u + t*d
+   !         do 40 i = 1, n
+   !            d(i) = u(i) + t*d(i)
+   !  40         continue
            omega = sqrt(omega*cgsnorm)
         else if ( k .eq. 1 ) then
-           do 50 i = 1, n
-              d(i) = q(i) + t*d(i)
-    50         continue
+            d = q + t * d
+   !         do 50 i = 1, n
+   !            d(i) = q(i) + t*d(i)
+   !  50         continue
            omega = cgsnorm
         endif
 
@@ -1603,9 +1605,8 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c  This calculation of the QMR residual is off by a factor
     ! c  of -1, but we dont care until we return from this routine.
 
-           r = r + fcur!call daxpy( n, one, fcur, 1, r, 1 )
+           r = r + fcur !call daxpy( n, one, fcur, 1, r, 1 )
            rsnrm = SQRT(SUM(r**2))!dnrm2( n, r, 1 )
-
     ! c For printing:
 
            if ( iplvl .ge. 4 ) then 
@@ -1630,7 +1631,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     60   continue
 
      rho_old = rho
-     rho = SUM(rtil * rcgs)!ddot( n, rtil, 1, rcgs, 1 )
+     rho = SUM(rtil * rcgs) !ddot( n, rtil, 1, rcgs, 1 )
 
     ! c  If rho_old = 0 we have a serious breakdown.  We check this condition
     ! c  by trying to detect whether division by rho_old causes an overflow.
@@ -1643,7 +1644,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      endif
 
      if ( irpre .eq. 0 ) then
-        v = rcgs!call dcopy( n, rcgs, 1, v, 1 )
+        v = rcgs !call dcopy( n, rcgs, 1, v, 1 )
      else
         itask = 2
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, rcgs, v, rwork1, rwork2, itrmjv )    
@@ -1652,11 +1653,11 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
            goto 900
         endif
      endif
-     v = v + beta * q!call daxpy( n, beta, q, 1, v, 1 )
+     v = v + beta * q !call daxpy( n, beta, q, 1, v, 1 )
      u = v!call dcopy( n, v, 1, u, 1 )
-     q = q + beta * p!call daxpy( n, beta, p, 1, q, 1 )
-     v = v + beta * q!call daxpy( n, beta, q, 1, v, 1 )
-     p = v!call dcopy( n, v, 1, p, 1 )
+     q = q + beta * p !call daxpy( n, beta, p, 1, q, 1 )
+     v = v + beta * q !call daxpy( n, beta, q, 1, v, 1 )
+     p = v !call dcopy( n, v, 1, p, 1 )
 
      itask = 0
      call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, p, v, rwork1, rwork2, itrmjv )
@@ -1685,7 +1686,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         itask = 0
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord, itask, nfe, njve, nrpre, step, r, rwork1,rwork2, itrmjv )
 
-        r = r + fcur!call daxpy( n, one, fcur, 1, r, 1 )
+        r = r + fcur !call daxpy( n, one, fcur, 1, r, 1 )
         rsnrm = SQRT(SUM(r**2)) !dnrm2( n, r, 1 )
         if ( rsnrm .le. abstol ) itrmks = 0
 
@@ -1693,7 +1694,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
 
     ! c  Correct residual before returning.
 
-     r = -r!call dscal( n, -one, r, 1 )
+     r = -r !call dscal( n, -one, r, 1 )
 
     ! c If ijacv = -1, then restore it to the original value ijacv = 0. 
 
@@ -1909,15 +1910,8 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c ------------------------------------------------------------------------
     ! c
      double precision :: abstol, alpha, beta, omega, rho, rhomns, tau, temp
-     integer :: i, istb, itask, itrmjv
+     integer :: istb, itask, itrmjv
 
-     double precision :: sfmin
-     data sfmin /0.0d0/
-    ! c ------------------------------------------------------------------------
-    ! c
-    ! c  Initialize sfmin only on first entry.
-    ! c
-     if ( sfmin .eq. 0.0d0 ) sfmin = dlamch( 's' )
     ! c ------------------------------------------------------------------------
     ! c If finite-differences are used to evaluate J*v products (ijacv= 0), then 
     ! c ijacv is set to -1 within this subroutine to signal to nitjv that the 
@@ -1930,9 +1924,10 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c ------------------------------------------------------------------------
      rsnrm = fcnrm
      abstol = eta*rsnrm
-     do 10 i = 1, n
-        step(i) = 0.d0
-    10   continue
+     step(1:n) = 0.0d0
+   !   do 10 i = 1, n
+   !      step(i) = 0.d0
+   !  10   continue
      istb = 0
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
@@ -2727,6 +2722,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
      endif
      nfe = nfe + 1
      fcnrm = SQRT(SUM(fcur**2))!dnrm2(n, fcur, 1) 
+     
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
      if (iplvl .ge. 1) then 

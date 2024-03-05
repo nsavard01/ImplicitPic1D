@@ -221,9 +221,9 @@ contains
         call depositJ(globalSolver, globalParticleList, globalWorld, rpar(1))
         ! d = globalSolver%getError_tridiag_Ampere(globalWorld, rpar)
         ! call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, d, fcur)
-        ! call globalSolver%solve_tridiag_Ampere(globalWorld, rpar(1))
-        ! fcur = xcur - globalSolver%phi_f
-        fcur = globalSolver%getError_tridiag_Ampere(globalWorld, rpar(1))
+        call globalSolver%solve_tridiag_Ampere(globalWorld, rpar(1))
+        fcur = xcur - globalSolver%phi_f
+        !fcur = globalSolver%getError_tridiag_Ampere(globalWorld, rpar(1))
         itrmf = 0
 
     end subroutine funcNitsol

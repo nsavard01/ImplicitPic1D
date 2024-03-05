@@ -132,7 +132,7 @@ contains
             inputJFNK = 0
             inputJFNK(1) = maxIter ! maximum iterations
             inputJFNK(2) = 0 !ijacv
-            inputJFNK(3) = 0 ! krylov solver
+            inputJFNK(3) = 2 ! krylov solver
             inputJFNK(4) = m_Anderson ! maximum krylov subspace dimension
             inputJFNK(5) = 0 !ipre
             inputJFNK(9) = -1 !number backtracks
@@ -283,6 +283,7 @@ contains
         ! call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, d, fcur)
         call globalSolver%solve_tridiag_Ampere(globalWorld, rpar)
         fcur = xcur - globalSolver%phi_f
+        !fcur = globalSolver%getError_tridiag_Ampere(globalWorld, rpar)
         itrmf = 0
 
     end subroutine funcNitsol
@@ -314,7 +315,7 @@ contains
         real(real64), intent(in) :: del_t, eps_r
         real(real64) :: initialNorm
         integer(int32) :: info(6), iterm, ipar(2), itrmf
-        real(real64) :: fcurSolver(NumberXNodes), rworkSolver((NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3)), xcurSolver(NumberXNodes)
+        real(real64) :: fcurSolver(NumberXNodes), xcurSolver(NumberXNodes), rworkSolver(NumberXNodes * 14) !(NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3)
 
         ! Set Nitsol parameters
         iterm = 0
