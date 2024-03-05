@@ -186,3 +186,43 @@
  Number of electrons is:      239198
  Number of ions is:      239349
  Percentage of steps adaptive is:  1.249982639130012E-003
+ Simulation is   35.0000208321904      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  1.891953672496072E-005
+ Total wall power loss:   628009.166145105     
+ Total collision energy loss:   222865.095318088     
+ Number of electrons is:      240731
+ Number of ions is:      240893
+ Percentage of steps adaptive is:  1.249982887139045E-003
+ Simulation is   40.0000208317270      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  1.130266423343402E-005
+ Total wall power loss:   613448.643491363     
+ Total collision energy loss:   221761.700374043     
+ Number of electrons is:      246434
+ Number of ions is:      246585
+ Percentage of steps adaptive is:  1.249983073145884E-003
+ Simulation is   45.0000208312637      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  2.621338449231892E-005
+ Total wall power loss:   662804.908513444     
+ Total collision energy loss:   235621.098821988     
+ Number of electrons is:      251497
+ Number of ions is:      251648
+ Percentage of steps adaptive is:  1.342573324179144E-003
+ Simulation is   50.0000208308004      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  8.669822718116380E-005
+ Total wall power loss:   655204.108488966     
+ Total collision energy loss:   230675.584604996     
+ Number of electrons is:      253136
+ Number of ions is:      253302
+ Percentage of steps adaptive is:  1.416645416985412E-003
+ Simulation is   55.0000208303370      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  4.874853891227602E-005
+ Total wall power loss:   622070.324166819     
+ Total collision energy loss:   215333.214092336     
+ Number of electrons is:      248172
+ Number of ions is:      248323
+ Percentage of steps adaptive is:  1.515127410851797E-003

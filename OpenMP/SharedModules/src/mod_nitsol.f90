@@ -91,10 +91,12 @@ module mod_nitsol
     integer, parameter :: DFLT_PRLVL=0, STDOUT=6
 
     ! shared variables
-    integer, public :: iplvl, ipunit
-    double precision, public :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, alpha, gamma
+    integer :: iplvl, ipunit
+    double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, alpha, gamma
 
     ! Set parameters used in driver routine
+    integer :: nnimax_glob, ijacv_glob, ifdord_glob, ikrysl_glob, kdmax_glob, irpre_glob, iksmax_glob, iresup_glob, ibtmax_glob, ieta_glob
+
 
     ! public variables
     integer, public :: instep, newstep, krystat
@@ -102,7 +104,9 @@ module mod_nitsol
 
 contains
 
-subroutine initializeNitsol()
+subroutine initializeNitsol(maxIter, m_Anderson)
+   integer, intent(in) :: maxIter, m_Anderson
+   integer :: input(10)
     ! initialize variables upon first call
     epsmach = 2.0d0*dlamch( 'e' )
     cndmax = 1.0/100.0d0/epsmach
@@ -116,6 +120,125 @@ subroutine initializeNitsol()
     thmin = DFLT_THMIN
     thmax = DFLT_THMAX
     etafixed = DFLT_ETA_FIXED
+
+   iplvl = 4 ! print level
+   input = 0
+   input(1) = maxIter ! maximum iterations
+   input(2) = 0 !ijacv
+   input(3) = 0 ! krylov solver
+   input(4) = m_Anderson ! maximum krylov subspace dimension
+   input(5) = 0 !ipre
+   input(9) = 10 !number backtracks
+   input(6) = m_Anderson*10
+   input(10) = 2 ! eta with gamma and alpha
+   etamax = 0.8d0 ! eta max
+   choice2_exp = 1.5d0 ! alpha
+   choice2_coef = 0.9d0 ! gamma 
+
+   ! c ------------------------------------------------------------------------ 
+   ! c
+   ! c Begin executable code. 
+   ! c 
+   ! c ------------------------------------------------------------------------
+   ! c Check inputs and initialize parameters. 
+   ! c ------------------------------------------------------------------------
+   if (ipunit .gt. 6) open( unit=ipunit, status='unknown' )
+   if (ipunit .eq. 0) ipunit = 6
+   if (input(1) .eq. 0) then
+      nnimax_glob = 200
+   else
+      if (input(1) .gt. 0) then 
+         nnimax_glob = input(1)
+      else
+         stop "negative max iteration for nitsol"
+      endif
+   endif
+   if (input(2) .eq. 0 .or. input(2) .eq. 1) then 
+      ijacv_glob = input(2) 
+   else
+      stop "ijacv should be 0 or 1 in nitsol"
+   endif
+   if (input(3) .ge. 0 .and. input(3) .le. 2) then 
+      ikrysl_glob = input(3)
+   else 
+      stop "input(3) in nitsol not correct"
+   endif
+   if (ikrysl_glob .eq. 0) then 
+      if (input(4) .eq. 0) then 
+         kdmax_glob = 20
+      else
+         if (input(4) .gt. 0) then 
+            kdmax_glob = input(4) 
+         else
+            stop "input(4) in nitsol not correct"
+         endif
+      endif
+   endif
+   if (input(5) .eq. 0 .or. input(5) .eq. 1) then 
+      irpre_glob = input(5) 
+   else
+      stop "input(5) in nitsol not correct"
+   endif
+   if (input(6) .eq. 0) then 
+      iksmax_glob = 1000
+   else
+      if (input(6) .gt. 0) then 
+         iksmax_glob = input(6)
+      else
+         stop "input(6) in nitsol incorrect"
+      endif
+   endif
+   if (ikrysl_glob .eq. 0) then 
+      if (input(7) .eq. 0 .or. input(7) .eq. 1) then 
+         iresup_glob = input(7)
+      else
+         stop "input(7) in nitsol incorrect"
+      endif
+   endif
+   if (ijacv_glob .eq. 0) then 
+      if (input(8) .eq. 0) then 
+         if (ikrysl_glob .eq. 0) then 
+            ifdord_glob = 2
+         else
+            ifdord_glob = 1
+         endif
+      else
+         if (input(8) .eq. 1 .or. input(8) .eq. 2 .or. input(8) .eq. 4) then 
+            ifdord_glob = input(8)
+         else
+            stop "input(8) in nitsol not correct"
+         endif
+      endif
+   endif
+   if (input(9) .eq. 0) then 
+      ibtmax_glob = 10
+   else
+      if (input(9) .gt. 0 .or. input(9) .eq. -1) then 
+         ibtmax_glob = input(9)
+      else
+         stop "input(9) in nitsol not correct"
+      endif
+   endif
+   if (input(10) .ge. 0 .and. input(10) .le. 3) then 
+      ieta_glob = input(10)
+   else
+      stop "input(10) in nitsol not correct"
+   endif
+! c ------------------------------------------------------------------------
+! c  Check possible invalid value for printout level.  In
+! c  case the value is invalid the default is restored.
+! c ------------------------------------------------------------------------
+   if ( iplvl .lt. 0 .or. iplvl .gt. 4 ) iplvl = DFLT_PRLVL
+! c ------------------------------------------------------------------------
+! c  Check possible invalid values for various parameters.  In
+! c  case the values are invalid the defaults are restored.
+! c ------------------------------------------------------------------------
+   if ( choice1_exp .le. 1.0d0 .or. choice1_exp .gt. 2.0d0 ) choice1_exp = DFLT_CHOICE1_EXP
+   if ( choice2_exp .le. 1.0d0 .or. choice2_exp .gt. 2.0d0 ) choice2_exp = DFLT_CHOICE2_EXP
+   if ( choice2_coef .lt. 0.0d0 .or. choice2_coef .gt. 1.0d0 ) choice2_coef = DFLT_CHOICE2_COEF
+   if ( etamax .le. 0.0d0 ) etamax = DFLT_ETA_MAX
+   if ( thmin .lt. 0.0d0 .or. thmin .gt. thmax ) thmin = DFLT_THMIN
+   if ( thmax .gt. 1.0d0 .or. thmax .lt. thmin ) thmax = DFLT_THMAX
 end subroutine initializeNitsol
 
 subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, itrmjv) 
@@ -1330,15 +1453,15 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
 
     ! c  Initialize residual and work vectors.
 
-     call dcopy( n, fcur, 1, rcgs, 1 )
+     rcgs = fcur!call dcopy( n, fcur, 1, rcgs, 1 )
      rcgs = -rcgs!call dscal( n, -one, rcgs, 1 )
 
     ! c  Choice here is rtil = r.
 
-     call dcopy( n, rcgs, 1, rtil, 1 )
+     rtil = rcgs!call dcopy( n, rcgs, 1, rtil, 1 )
 
      if ( irpre .eq. 0 ) then
-        call dcopy( n, rcgs, 1, p, 1 )
+        p = rcgs!call dcopy( n, rcgs, 1, p, 1 )
      else
         itask = 2
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, rcgs, p, rwork1, rwork2, itrmjv )    
@@ -1347,7 +1470,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
            goto 900
         endif
      endif
-     call dcopy( n, p, 1, u, 1 )
+     u = p!call dcopy( n, p, 1, u, 1 )
      rho = SUM(rcgs*rtil)!ddot( n, rcgs, 1, rtil, 1 )
      do 20 i = 1, n
         d(i) = zero
@@ -1387,7 +1510,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c  swap some vectors to cast calculation of q as a SAXPY.
 
      if ( irpre .eq. 0 ) then
-        call dcopy( n, v, 1, q, 1 )
+        q = v!call dcopy( n, v, 1, q, 1 )
      else
         itask = 2
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, v, q, rwork1, rwork2, itrmjv )    
@@ -1396,10 +1519,10 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
            goto 900
         endif
      endif
-     call dcopy( n, u, 1, y, 1 )
+     y = u!call dcopy( n, u, 1, y, 1 )
      call dswap( n, q, 1, u, 1 )
      q = q - alpha * u!call daxpy( n, -alpha, u, 1, q, 1 )
-     call dcopy( n, y, 1, u, 1 )
+     u = y!call dcopy( n, y, 1, u, 1 )
 
     ! c  Update residual.
 
@@ -1509,7 +1632,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
      endif
 
      if ( irpre .eq. 0 ) then
-        call dcopy( n, rcgs, 1, v, 1 )
+        v = rcgs!call dcopy( n, rcgs, 1, v, 1 )
      else
         itask = 2
         call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, rcgs, v, rwork1, rwork2, itrmjv )    
@@ -1519,10 +1642,10 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         endif
      endif
      v = v + beta * q!call daxpy( n, beta, q, 1, v, 1 )
-     call dcopy( n, v, 1, u, 1 )
+     u = v!call dcopy( n, v, 1, u, 1 )
      q = q + beta * p!call daxpy( n, beta, p, 1, q, 1 )
      v = v + beta * q!call daxpy( n, beta, q, 1, v, 1 )
-     call dcopy( n, v, 1, p, 1 )
+     p = v!call dcopy( n, v, 1, p, 1 )
 
      itask = 0
      call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord,itask, nfe, njve, nrpre, p, v, rwork1, rwork2, itrmjv )
@@ -1819,10 +1942,10 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c ------------------------------------------------------------------------
     ! c Set up r and rtil. 
     ! c ------------------------------------------------------------------------
-     call dcopy(n,fcur,1,r,1)
+     r = fcur!call dcopy(n,fcur,1,r,1)
      temp = -1.d0
      r = temp * r!call dscal(n,temp,r,1)
-     call dcopy(n,r,1,rtil,1)
+     rtil = r!call dcopy(n,r,1,rtil,1)
     ! c ------------------------------------------------------------------------
     ! c Top of the iteration loop. 
     ! c ------------------------------------------------------------------------
@@ -1834,7 +1957,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c ------------------------------------------------------------------------
      rho = SUM(rtil * r)!ddot(n,rtil,1,r,1)
      if (istb .eq. 1) then 
-        call dcopy(n,r,1,p,1)
+        p = r!call dcopy(n,r,1,p,1)
      else
         if ( abs(rhomns) .lt. sfmin*abs(rho) ) then
            itrmks = 4
@@ -1847,7 +1970,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
         endif
      endif
      if (irpre .eq. 0) then 
-        call dcopy(n,p,1,phat,1)
+        phat = p!call dcopy(n,p,1,phat,1)
      else
         itask = 2
         call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, ijacv, ifdord, itask, nfe, njve, nrpre, p, phat, rwork1, rwork2, itrmjv)
@@ -1891,7 +2014,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, ijacv, 
     ! c Perform the second "half-iteration". 
     ! c ------------------------------------------------------------------------
      if (irpre .eq. 0) then 
-        call dcopy(n,r,1,phat,1)
+        phat = r!call dcopy(n,r,1,phat,1)
      else
         itask = 2
         call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, ijacv, ifdord, itask, nfe, njve, nrpre, r, phat, rwork1, rwork2, itrmjv)
@@ -2783,8 +2906,8 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c ------------------------------------------------------------------------
     ! c Update xcur, fcur, fcnrm, stpnrm, nni for next iteration.
     ! c ------------------------------------------------------------------------
-     call dcopy(n, xpls, 1, xcur, 1)
-     call dcopy(n, fpls, 1, fcur, 1)
+     xcur = xpls!call dcopy(n, xpls, 1, xcur, 1)
+     fcur = fpls!call dcopy(n, fpls, 1, fcur, 1)
      fcnrm = fpnrm
      stpnrm = SQRT(SUM(step**2))!dnrm2(n, step, 1)
      nni = nni + 1
@@ -2823,11 +2946,11 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
      endif
 end subroutine nitdrv
 
-subroutine nitsol(n, x, f, jacv, ftol, stptol, input, info, rwork, rpar, ipar, iterm)
+subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rwork, rpar, ipar, iterm)
 
 
-   integer, intent(in) :: n, input(10)
-   integer, intent(in out) :: info(6), ipar(*), iterm 
+   integer, intent(in) :: n
+   integer, intent(in out) :: info(6), ipar(*), iterm
    double precision, intent(in) :: ftol, stptol
    double precision, intent(in out) :: x(n), rwork(*), rpar(*) 
    procedure(funcInterface) :: f
@@ -3268,121 +3391,18 @@ subroutine nitsol(n, x, f, jacv, ftol, stptol, input, info, rwork, rpar, ipar, i
     ! c Remaining declarations:
     ! c
      integer :: ibtmax, ieta, ifdord, ijacv, ikrysl, iksmax, iresup, irpre, kdmax, lfcur, lfpls, lrwork, lstep, lxpls, nbt, nfe, njve, nli, nni, nnimax, nrpre 
+     ibtmax = ibtmax_glob
+     ieta = ieta_glob
+     ifdord = ifdord_glob
+     ijacv = ijacv_glob
+     ikrysl = ikrysl_glob
+     iksmax = iksmax_glob
+     irpre = irpre_glob
+     iresup = iresup_glob
+     kdmax = kdmax_glob
+     nnimax = nnimax_glob
 
-    ! c ------------------------------------------------------------------------ 
-    ! c
-    ! c Begin executable code. 
-    ! c 
-    ! c ------------------------------------------------------------------------
-    ! c Check inputs and initialize parameters. 
-    ! c ------------------------------------------------------------------------
-     if (ipunit .gt. 6) open( unit=ipunit, status='unknown' )
-     if (ipunit .eq. 0) ipunit = 6
-     if (input(1) .eq. 0) then
-        nnimax = 200
-     else
-        if (input(1) .gt. 0) then 
-           nnimax = input(1)
-        else
-           iterm = -1
-           go to 900
-        endif
-     endif
-     if (input(2) .eq. 0 .or. input(2) .eq. 1) then 
-        ijacv = input(2) 
-     else
-        iterm = -2
-        go to 900
-     endif
-     if (input(3) .ge. 0 .and. input(3) .le. 2) then 
-        ikrysl = input(3)
-     else 
-        iterm = -3
-        go to 900
-     endif
-     if (ikrysl .eq. 0) then 
-        if (input(4) .eq. 0) then 
-           kdmax = 20
-        else
-           if (input(4) .gt. 0) then 
-              kdmax = input(4) 
-           else
-              iterm = -4
-              go to 900
-           endif
-        endif
-     endif
-     if (input(5) .eq. 0 .or. input(5) .eq. 1) then 
-        irpre = input(5) 
-     else
-        iterm = -5
-        go to 900
-     endif
-     if (input(6) .eq. 0) then 
-        iksmax = 1000
-     else
-        if (input(6) .gt. 0) then 
-           iksmax = input(6)
-        else
-           iterm = -6
-           go to 900
-        endif
-     endif
-     if (ikrysl .eq. 0) then 
-        if (input(7) .eq. 0 .or. input(7) .eq. 1) then 
-           iresup = input(7)
-        else
-           iterm = -7
-           go to 900
-        endif
-     endif
-     if (ijacv .eq. 0) then 
-        if (input(8) .eq. 0) then 
-           if (ikrysl .eq. 0) then 
-              ifdord = 2
-           else
-              ifdord = 1
-           endif
-        else
-           if (input(8) .eq. 1 .or. input(8) .eq. 2 .or. input(8) .eq. 4) then 
-              ifdord = input(8)
-           else
-              iterm = -8
-              go to 900
-           endif
-        endif
-     endif
-     if (input(9) .eq. 0) then 
-        ibtmax = 10
-     else
-        if (input(9) .gt. 0 .or. input(9) .eq. -1) then 
-           ibtmax = input(9)
-        else
-           iterm = -9 
-           go to 900
-        endif
-     endif
-     if (input(10) .ge. 0 .and. input(10) .le. 3) then 
-        ieta = input(10)
-     else
-        iterm = -10
-        go to 900
-     endif
-    ! c ------------------------------------------------------------------------
-    ! c  Check possible invalid value for printout level.  In
-    ! c  case the value is invalid the default is restored.
-    ! c ------------------------------------------------------------------------
-     if ( iplvl .lt. 0 .or. iplvl .gt. 4 ) iplvl = DFLT_PRLVL
-    ! c ------------------------------------------------------------------------
-    ! c  Check possible invalid values for various parameters.  In
-    ! c  case the values are invalid the defaults are restored.
-    ! c ------------------------------------------------------------------------
-     if ( choice1_exp .le. 1.0d0 .or. choice1_exp .gt. 2.0d0 ) choice1_exp = DFLT_CHOICE1_EXP
-     if ( choice2_exp .le. 1.0d0 .or. choice2_exp .gt. 2.0d0 ) choice2_exp = DFLT_CHOICE2_EXP
-     if ( choice2_coef .lt. 0.0d0 .or. choice2_coef .gt. 1.0d0 ) choice2_coef = DFLT_CHOICE2_COEF
-     if ( etamax .le. 0.0d0 ) etamax = DFLT_ETA_MAX
-     if ( thmin .lt. 0.0d0 .or. thmin .gt. thmax ) thmin = DFLT_THMIN
-     if ( thmax .gt. 1.0d0 .or. thmax .lt. thmin ) thmax = DFLT_THMAX
+    
     ! c ------------------------------------------------------------------------
     ! c  Initialize some pointers into the rwork array.
     ! c ------------------------------------------------------------------------

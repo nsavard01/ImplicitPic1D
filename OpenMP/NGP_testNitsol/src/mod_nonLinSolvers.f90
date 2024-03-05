@@ -81,21 +81,9 @@ contains
         CASE(0)
             allocate(Residual_k(NumberXNodes, m_Anderson+1), phi_k(NumberXNodes, m_Anderson+1), fitMat(NumberXNodes, m_Anderson) )
         CASE(1)
-            call initializeNitsol()
-            allocate(inputJFNK(10), rworkSolver((NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3)))
-            iplvl = 4 ! print level
-            inputJFNK = 0
-            inputJFNK(1) = maxIter ! maximum iterations
-            inputJFNK(2) = 0 !ijacv
-            inputJFNK(3) = 0 ! krylov solver
-            inputJFNK(4) = m_Anderson ! maximum krylov subspace dimension
-            inputJFNK(5) = 0 !ipre
-            inputJFNK(9) = 10 !number backtracks
-            inputJFNK(6) = m_Anderson*10
-            inputJFNK(10) = 2 ! eta with gamma and alpha
-            etamax = 0.8d0 ! eta max
-            choice2_exp = 1.5d0 ! alpha
-            choice2_coef = 0.9d0 ! gamma 
+            call initializeNitsol(maxIter, m_Anderson)
+            allocate(rworkSolver((NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3))) !(NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3)
+            
         END SELECT
 
     end subroutine initializeSolver
@@ -237,6 +225,7 @@ contains
         ! call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, d, fcur)
         call globalSolver%solve_tridiag_Ampere(globalWorld, rpar(1))
         fcur = xcur - globalSolver%phi_f
+        !fcur = globalSolver%getError_tridiag_Ampere(globalWorld, rpar(1))
         itrmf = 0
 
     end subroutine funcNitsol
@@ -251,7 +240,6 @@ contains
             print *, "in analytical jacobian if block"
         else if (ijob == 1) then
             call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, v, z)
-            print *, 'In solve tridiag?'
         end if
         itrmjv = 0
     end subroutine jacNitsol
@@ -270,7 +258,7 @@ contains
         call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, rpar, ipar, itrmf)
         initialNorm = SQRT(SUM(fcurSolver**2))!dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
-        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), 1.d-20,inputJFNK, info, rworkSolver, rpar, ipar, iterm)
+        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), 1.d-20, info, rworkSolver, rpar, ipar, iterm)
         SELECT CASE (iterm)
         CASE(0)
             iterNumPicard = info(4)
