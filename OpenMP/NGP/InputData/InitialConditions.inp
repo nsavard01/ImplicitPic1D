@@ -6,5 +6,5 @@
 20 ! number of diagnostic data dumps    
 5.0d0 3.125e-11 ! Fraction of initial 1/w_p for initial time step
 1.4d-5 ! amount of time to average final Diagnostics
-NGP_RFBenchmark_highDensity_sixteenthPart_129nodes !filename
+NGP_RFBenchmark_highDensity_sixteenthPart_257nodes !filename
 END

@@ -32,7 +32,7 @@ module mod_nonLinSolvers
 
     !allocatable arrays for JFNK or Anderson
     !integer(int32), private, allocatable :: inputJFNK(:)
-    real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :), rworkSolver(:)
+    real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :)
 
 
 contains
@@ -81,9 +81,7 @@ contains
         CASE(0)
             allocate(Residual_k(NumberXNodes, m_Anderson+1), phi_k(NumberXNodes, m_Anderson+1), fitMat(NumberXNodes, m_Anderson) )
         CASE(1)
-            call initializeNitsol(maxIter, m_Anderson)
-            allocate(rworkSolver((NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3))) !(NumberXNodes)*(m_Anderson+5)+m_Anderson*(m_Anderson+3)
-            
+            call initializeNitsol(maxIter, m_Anderson, NumberXNodes)
         END SELECT
 
     end subroutine initializeSolver
@@ -258,7 +256,7 @@ contains
         call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, rpar, ipar, itrmf)
         initialNorm = SQRT(SUM(fcurSolver**2))!dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
-        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), 1.d-20, info, rworkSolver, rpar, ipar, iterm)
+        call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_r * SQRT(real(NumberXNodes)), 1.d-20, info, rpar, ipar, iterm)
         SELECT CASE (iterm)
         CASE(0)
             iterNumPicard = info(4)

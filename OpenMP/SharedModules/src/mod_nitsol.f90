@@ -93,6 +93,7 @@ module mod_nitsol
     ! shared variables
     integer :: iplvl, ipunit
     double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax
+    double precision, allocatable :: rworkNitsol(:)
 
     ! Set parameters used in driver routine
     integer :: nnimax_glob, ijacv_glob, ifdord_glob, ikrysl_glob, kdmax_glob, irpre_glob, iksmax_glob, iresup_glob, ibtmax_glob, ieta_glob
@@ -104,9 +105,9 @@ module mod_nitsol
 
 contains
 
-subroutine initializeNitsol(maxIter, m_Anderson)
-   integer, intent(in) :: maxIter, m_Anderson
-   integer :: input(10)
+subroutine initializeNitsol(maxIter, m_Anderson, n_size)
+   integer, intent(in) :: maxIter, m_Anderson, n_size
+   integer :: input(10), sizeWorkArray
     ! initialize variables upon first call
     epsmach = 2.0d0*dlamch( 'e' )
     cndmax = 1.0/100.0d0/epsmach
@@ -239,12 +240,20 @@ subroutine initializeNitsol(maxIter, m_Anderson)
    if ( etamax .le. 0.0d0 ) etamax = DFLT_ETA_MAX
    if ( thmin .lt. 0.0d0 .or. thmin .gt. thmax ) thmin = DFLT_THMIN
    if ( thmax .gt. 1.0d0 .or. thmax .lt. thmin ) thmax = DFLT_THMAX
+   if (ikrysl_glob == 0) then
+      sizeWorkArray = n_size*(kdmax_glob+5)+kdmax_glob*(kdmax_glob+3)
+   else if (ikrysl_glob == 1) then
+      sizeWorkArray = n_size*11
+   else if (ikrysl_glob == 2) then
+      sizeWorkArray = n_size * 14
+   end if
+   allocate(rworkNitsol(sizeWorkArray))
 end subroutine initializeNitsol
 
 subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ijacv, ifdord, nfe, v, z, rwork, itrmjv) 
 
-     integer, intent(in) :: n, ijacv
-     integer, intent(in out) :: ipar(*),ifdord, nfe, itrmjv
+     integer, intent(in) :: n, ijacv, ifdord
+     integer, intent(in out) :: ipar(*), nfe, itrmjv
      double precision, intent(in) :: fcur(n)
      double precision, intent(in out) :: xcur(n), rpar(*), v(n), z(n), rwork(n) 
      procedure(funcInterface) :: f
@@ -502,8 +511,8 @@ end subroutine nitfd
 
 subroutine nitjv(n, xcur, fcur, f, jacv, rpar, ipar, ijacv, ifdord, itask, nfe, njve, nrpre, v, z, rwork1, rwork2, itrmjv) 
 
-     integer, intent(in) :: n, ijacv, itask
-     integer, intent(in out) :: ifdord, ipar(*), nfe, njve, nrpre, itrmjv
+     integer, intent(in) :: n, ijacv, itask, ifdord
+     integer, intent(in out) :: ipar(*), nfe, njve, nrpre, itrmjv
      double precision, intent(in) :: fcur(n)
      double precision, intent(in out) :: xcur(n), rpar(*), v(n), z(n), rwork1(n), rwork2(n)
      procedure(funcInterface) :: f
@@ -714,8 +723,8 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
         nrpre, nli, kdmax, kdmaxp1, vv, rr, svbig, svsml, w, rwork, &
         rsnrm, itrmks)
 
-   integer, intent(in) :: n, irpre, iksmax, iresup, kdmax, kdmaxp1
-   integer, intent(in out) :: ijacv, ipar(*), ifdord, nfe, njve, nrpre, nli, itrmks
+   integer, intent(in) :: n, irpre, iksmax, iresup, kdmax, kdmaxp1, ifdord
+   integer, intent(in out) :: ijacv, ipar(*), nfe, njve, nrpre, nli, itrmks
    double precision, intent(in) :: eta, fcnrm
    double precision, intent(in out) :: xcur(n), fcur(n), step(n), rpar(*), &
       vv(n,kdmaxp1), rr(kdmax,kdmax), svbig(kdmax), svsml(kdmax), &
@@ -2300,8 +2309,8 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
         ijacv, ikrysl, kdmax, irpre, iksmax, iresup, ifdord, ibtmax, ieta, iterm, nfe, &
          njve, nrpre, nli, nni, nbt, rwork)
 
-   integer, intent(in) :: n, nnimax, ikrysl, kdmax, irpre, iksmax, iresup, ibtmax, ieta
-   integer, intent(in out) :: ipar(*), ijacv, ifdord, nfe, njve, nrpre, nli, nni, nbt, iterm
+   integer, intent(in) :: n, nnimax, ikrysl, kdmax, irpre, iksmax, iresup, ibtmax, ieta, ifdord
+   integer, intent(in out) :: ipar(*), ijacv, nfe, njve, nrpre, nli, nni, nbt, iterm
    double precision, intent(in) :: ftol, stptol
    double precision, intent(in out) :: xcur(n), fcur(n), xpls(n), fpls(n), step(n), rpar(*), rwork(*)
    procedure(funcInterface) :: f
@@ -2948,13 +2957,13 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
      endif
 end subroutine nitdrv
 
-subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rwork, rpar, ipar, iterm)
+subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rpar, ipar, iterm)
 
 
    integer, intent(in) :: n
    integer, intent(in out) :: info(6), ipar(*), iterm
    double precision, intent(in) :: ftol, stptol
-   double precision, intent(in out) :: x(n), rwork(*), rpar(*) 
+   double precision, intent(in out) :: x(n), rpar(*) 
    procedure(funcInterface) :: f
    procedure(jacvInterface) :: jacv
 
@@ -3416,8 +3425,8 @@ subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rwork, rpar, ipar, iterm)
     ! c ------------------------------------------------------------------------
     ! c Call nitdrv. 
     ! c ------------------------------------------------------------------------
-     call nitdrv(n, x, rwork(lfcur), rwork(lxpls), rwork(lfpls), rwork(lstep), f, jacv, rpar, ipar, ftol, stptol, nnimax, &
-     ijacv, ikrysl, kdmax, irpre, iksmax, iresup, ifdord, ibtmax, ieta, iterm, nfe, njve, nrpre, nli, nni, nbt, rwork(lrwork))
+     call nitdrv(n, x, rworkNitsol(lfcur), rworkNitsol(lxpls), rworkNitsol(lfpls), rworkNitsol(lstep), f, jacv, rpar, ipar, ftol, stptol, nnimax, &
+     ijacv, ikrysl, kdmax, irpre, iksmax, iresup, ifdord, ibtmax, ieta, iterm, nfe, njve, nrpre, nli, nni, nbt, rworkNitsol(lrwork))
     ! c ------------------------------------------------------------------------
     ! c Set output for return. 
     ! c ------------------------------------------------------------------------
