@@ -92,7 +92,7 @@ module mod_nitsol
 
     ! shared variables
     integer :: iplvl, ipunit
-    double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, alpha, gamma
+    double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax
 
     ! Set parameters used in driver routine
     integer :: nnimax_glob, ijacv_glob, ifdord_glob, ikrysl_glob, kdmax_glob, irpre_glob, iksmax_glob, iresup_glob, ibtmax_glob, ieta_glob
@@ -931,9 +931,10 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c ------------------------------------------------------------------------
     ! c Initialize. 
     ! c ------------------------------------------------------------------------
-     do 20 i = 1, n
-        step(i) = 0.d0
-    20   continue
+     step(1:n) = 0
+   !   do 20 i = 1, n
+   !      step(i) = 0.d0
+   !  20   continue
      igm = 0
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
@@ -959,9 +960,9 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c ------------------------------------------------------------------------
     ! c Place the normalized initial residual in the first column of the vv array.
     ! c ------------------------------------------------------------------------
-     call dcopy(n, fcur, 1, vv(1,1), 1)
+     vv(1:n, 1) = fcur!call dcopy(n, fcur, 1, vv(1,1), 1)
      temp = -1.d0/fcnrm
-     call dscal(n, temp, vv(1,1), 1)
+     vv(1:n, 1) = temp * vv(1:n, 1)!call dscal(n, temp, vv(1,1), 1)
     ! c ------------------------------------------------------------------------
     ! c Top of the outer GMRES loop. 
     ! c ------------------------------------------------------------------------
@@ -996,10 +997,10 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c Do modified Gram-Schmidt. 
     ! c ------------------------------------------------------------------------
      do 210 i = 2, kd
-        rr(i-1,kd) = ddot(n, vv(1,i), 1, vv(1,kdp1), 1)
-        call daxpy(n, -rr(i-1,kd), vv(1,i), 1, vv(1,kdp1), 1)
+        rr(i-1,kd) = SUM(vv(1:n,i) * vv(1:n, kdp1))!ddot(n, vv(1,i), 1, vv(1,kdp1), 1)
+        vv(1:n, kdp1) = vv(1:n, kdp1) -rr(i-1, kd) * vv(1:n, i)!call daxpy(n, -rr(i-1,kd), vv(1,i), 1, vv(1,kdp1), 1)
     210  continue
-     rr(kd,kd) = dnrm2(n, vv(1,kdp1), 1)
+     rr(kd,kd) = SQRT(SUM(vv(1:n, kdp1)**2)) !dnrm2(n, vv(1,kdp1), 1)
     ! c ------------------------------------------------------------------------
     ! c Update the estimates of the largest and smallest singular values. 
     ! c ------------------------------------------------------------------------
@@ -1012,12 +1013,12 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
         ijob = 1
         call dlaic1(ijob, kd-1, svbig, big, rr(1,kd), rr(kd,kd),sestpr, sn, cs)
         big = sestpr
-        call dscal(kd-1, sn, svbig, 1)
+        svbig(1:kd-1) = svbig(1:kd-1) * sn !call dscal(kd-1, sn, svbig, 1)
         svbig(kd) = cs
         ijob = 2
         call dlaic1(ijob, kd-1, svsml, small, rr(1,kd), rr(kd,kd),sestpr, sn, cs)
         small = sestpr
-        call dscal(kd-1, sn, svsml, 1)
+        svsml(1:kd-1) = svsml(1:kd-1) * sn !call dscal(kd-1, sn, svsml, 1)
         svsml(kd) = cs
      endif
     ! c ------------------------------------------------------------------------
@@ -1030,7 +1031,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
         else 
            kdp1 = kd
            kd = kd - 1
-           call daxpy(n, w(kd), vv(1,kdp1), 1, vv(1,1), 1)
+           vv(1:n, 1) = vv(1:n, 1) + w(kd) * vv(1:n, kdp1) !call daxpy(n, w(kd), vv(1,kdp1), 1, vv(1,1), 1)
            go to 300
         endif
      endif
@@ -1038,11 +1039,11 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c Normalize vv(.,kdp1). 
     ! c ------------------------------------------------------------------------
      temp = 1.d0/rr(kd,kd) 
-     call dscal(n, temp, vv(1,kdp1), 1)
+     vv(1:n, kdp1) = vv(1:n, kdp1) * temp !call dscal(n, temp, vv(1,kdp1), 1)
     ! c ------------------------------------------------------------------------
     ! c Update w and the residual norm by rsnrm <- rsnrm*dsin(dacos(w(kd)/rsnrm). 
     ! c ------------------------------------------------------------------------
-     w(kd) = ddot(n, vv(1,1), 1, vv(1,kdp1), 1)
+     w(kd) = SUM(vv(1:n, 1) * vv(1:n, kdp1))!ddot(n, vv(1,1), 1, vv(1,kdp1), 1)
      temp = max(min(w(kd)/rsnrm,1.0D0),-1.0d0) 
      rsnrm = rsnrm*dsin(dacos(temp))
     ! c ------------------------------------------------------------------------ 
@@ -1061,7 +1062,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c If not terminating the inner loop, update the residual vector 
     ! c and go to the top of the inner loop. 
     ! c ------------------------------------------------------------------------
-     call daxpy(n, -w(kd), vv(1,kdp1), 1, vv(1,1), 1)
+     vv(1:n, 1) = vv(1:n, 1) - w(kd) * vv(1:n, kdp1)!call daxpy(n, -w(kd), vv(1,kdp1), 1, vv(1,1), 1)
      go to 200
     ! c ------------------------------------------------------------------------
     ! c Bottom of inner loop.
@@ -1081,24 +1082,24 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c ------------------------------------------------------------------------
     ! c Use svbig for storage of the original components of w. 
     ! c ------------------------------------------------------------------------
-     call dcopy(kd, w, 1, svbig, 1)
+     svbig(1:kd) = w(1:kd) !call dcopy(kd, w, 1, svbig, 1)
     ! c ------------------------------------------------------------------------
     ! c Overwrite w with the solution of the upper triangular system.
     ! c ------------------------------------------------------------------------
      do 310 i = kd, 1, -1
         w(i) = w(i)/rr(i,i)
-        if (i .gt. 1) call daxpy(i-1, -w(i), rr(1,i), 1, w, 1)
+        if (i .gt. 1) w(1:i-1) = w(1:i-1) - w(i) * rr(1:i-1, i) !call daxpy(i-1, -w(i), rr(1,i), 1, w, 1)
     310  continue
     ! c ------------------------------------------------------------------------
     ! c Now form the linear combination to accumulate the correction in 
     ! c the work vector.
     ! c ------------------------------------------------------------------------
-     call dcopy(n, vv(1,1), 1, rwork, 1)
-     call dscal(n, w(1), rwork, 1)
+     rwork(1:n) = vv(1:n, 1) !call dcopy(n, vv(1,1), 1, rwork, 1)
+     rwork(1:n) = rwork(1:n) * w(1) !call dscal(n, w(1), rwork, 1)
      if (kd .gt. 1) then 
-        call daxpy(kd-1, w(1), svbig, 1, w(2), 1)
+        w(2:kd) =  w(2:kd) + w(1) * svbig(1:kd-1)!call daxpy(kd-1, w(1), svbig, 1, w(2), 1)
         do 320 i = 2, kd
-           call daxpy(n, w(i), vv(1,i), 1, rwork, 1)
+           rwork(1:n) = rwork(1:n) + w(i) * vv(1:n, i)!call daxpy(n, w(i), vv(1,i), 1, rwork, 1)
     320     continue
      endif
     ! c ------------------------------------------------------------------------
@@ -1106,7 +1107,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c combination. This frees vv(.,kdp1) for use as a work array. 
     ! c ------------------------------------------------------------------------
      if (iresup .eq. 0) then 
-        call daxpy(n, -svbig(kd), vv(1,kdp1), 1, vv(1,1), 1)
+        vv(1:n, 1) = vv(1:n, 1) -svbig(kd) * vv(1:n, kdp1) !call daxpy(n, -svbig(kd), vv(1,kdp1), 1, vv(1,1), 1)
      endif
     ! c ------------------------------------------------------------------------
     ! c If right preconditioning is used, overwrite 
@@ -1144,9 +1145,10 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
            itrmks = 1
            go to 900
         endif
-        do 330 i = 1, n
-           vv(i,1) = -fcur(i) - vv(i,1)
-    330     continue
+        vv(1:n, 1) = -fcur - vv(1:n, 1)
+   !      do 330 i = 1, n
+   !         vv(i,1) = -fcur(i) - vv(i,1)
+   !  330     continue
      endif
     ! c ------------------------------------------------------------------------
     ! c Test for termination.  
@@ -1179,7 +1181,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
         rsnrm0 = dnrm2(n, vv(1,1), 1)
         temp = 1.d0/rsnrm0
      endif
-     call dscal(n, temp, vv(1,1), 1)
+     vv(1:n, 1) = vv(1:n, 1) * temp !call dscal(n, temp, vv(1,1), 1)
      go to 100
     ! c ------------------------------------------------------------------------
     ! c All returns made here.
@@ -1187,7 +1189,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     900  continue
      if (itrmks .ne. 1 .and. itrmks .ne. 2) then 
         if (iresup .eq. 0) then 
-           call dscal(n, rsnrm0, vv(1,1), 1)
+           vv(1:n, 1) = vv(1:n, 1) * rsnrm0 !call dscal(n, rsnrm0, vv(1,1), 1)
            rsnrm = rsnrm0*rsnrm
         else
            rsnrm = dnrm2(n, vv(1,1), 1)
@@ -2681,7 +2683,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c NOTE: In nitinfo.h, instep, newstep, krystat are declared integer, 
     ! c and avrate and fcurnrm are declared double precision. 
     ! c 
-     double precision eta, etamin, fcnrm, flmnrm, fpnrm, oftjs, oftlm, redfac, rsnrm, stpnrm, temp 
+     double precision eta, etamin, fcnrm, flmnrm, fpnrm, oftjs, oftlm, redfac, rsnrm, stpnrm, temp, alpha, gamma
      integer ibt, itrmbt, itrmf, itrmks, lrr, lsvbig, lsvsml, lvv, lw, lr, ld, lrcgs, lrtil, lp, lphat, lq, lu, lv, lt, lrwork, ly, kdmaxp1
 
 
