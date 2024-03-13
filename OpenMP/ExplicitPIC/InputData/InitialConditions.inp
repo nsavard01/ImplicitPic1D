@@ -4,7 +4,7 @@
 4.0d0 ! Initial electron Temperature (eV) 
 0.025d0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
-1.5d0 3.125e-12 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+1.5d0 1.5625e-12 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 1.4d-5 ! amount of time to average final Diagnostics
-Exp_RFBenchmark_highDensity_EvenMoreResolved !save file name
+Exp_RFBenchmark_highDensity_SuperResolved !save file name
 END

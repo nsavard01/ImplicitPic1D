@@ -42,15 +42,18 @@ def plotAvePhi(dataSet, label = ''):
 def maxwellEDVF(x, T):
     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)  
     
-def plotAveEVDF(dataSet):
+def plotAveEVDF(dataSet, CurveFit = False, label = ''):
     Vbins, VHist = dataSet.getAveEVDF()
     dv = Vbins[1] - Vbins[0]
     Norm = np.sum(VHist * dv)
     VHist = VHist/Norm
-    popt, pcov = opt.curve_fit(maxwellEDVF, Vbins, VHist, p0 = [dataSet.T_e])
-    plt.plot(Vbins, VHist, 'o-', label = 'Global EDVF')
-    plt.plot(Vbins, maxwellEDVF(Vbins, popt[0]), label = 'Best Fit T_e = ' + '{:2.2f}'.format(popt[0]))
-    plt.legend(loc = 'best')
+    plt.plot(Vbins, VHist, 'o-', label=label)
+    plt.ylabel('EVDF (s/m)')
+    plt.xlabel('Distance (m)')
+    if CurveFit:
+        popt, pcov = opt.curve_fit(maxwellEDVF, Vbins, VHist, p0 = [dataSet.T_e])
+        plt.plot(Vbins, maxwellEDVF(Vbins, popt[0]), label = label + 'Fit T_e = ' + '{:2.2f}'.format(popt[0]))
+    #plt.legend(loc = 'best')
     
 
     

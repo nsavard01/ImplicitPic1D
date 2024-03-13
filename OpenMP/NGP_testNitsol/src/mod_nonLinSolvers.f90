@@ -162,10 +162,7 @@ contains
         real(real64), intent(in) :: del_t, eps_r, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
         currDel_t = remainDel_t
-        if (solver%RF_bool) then
-            ! if RF, change value of future phi values at RF boundary
-            call solver%setRFVoltage(world, timeCurrent + remainDel_t)
-        end if
+        call globalSolver%resetVoltageCondition(globalWorld, timeCurrent + currDel_t)
         call solveDivAmpereAnderson(solver, particleList, world, remainDel_t, maxIter, eps_r) 
         if (iterNumPicard < maxIter) then
             remainDel_t = del_t  
@@ -179,10 +176,7 @@ contains
                 if (iterNumAdaptiveSteps > 4) then
                     stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
                 end if
-                if (solver%RF_bool) then
-                    ! if RF, change value of future phi values at RF boundary
-                    call solver%setRFVoltage(world, timeCurrent + currDel_t)
-                end if 
+                call globalSolver%resetVoltageCondition(globalWorld, timeCurrent + currDel_t)
                 call solveDivAmpereAnderson(solver, particleList, world, currDel_t, maxIter, eps_r)  
             end do 
             remainDel_t = remainDel_t - currDel_t 
@@ -253,6 +247,7 @@ contains
         iterm = 0
         xcurSolver = globalSolver%phi_f
         rpar(1) = del_t
+        print *, 'del_t is:', del_t
         call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, rpar, ipar, itrmf)
         initialNorm = SQRT(SUM(fcurSolver**2))!dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
@@ -261,7 +256,7 @@ contains
         CASE(0)
             iterNumPicard = info(4)
             call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
-        CASE(1)
+        CASE(1,5,6)
             iterNumPicard = maxIter
         CASE default
             print *, "Nitsol error with iterm == ", iterm
@@ -277,10 +272,7 @@ contains
         real(real64), intent(in) :: del_t, eps_r, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
         currDel_t = remainDel_t
-        if (globalSolver%RF_bool) then
-            ! if RF, change value of future phi values at RF boundary
-            call globalSolver%setRFVoltage(globalWorld, timeCurrent + remainDel_t)
-        end if
+        call globalSolver%resetVoltageCondition(globalWorld, timeCurrent + currDel_t)
         call solveJFNK(remainDel_t, maxIter, eps_r)
         if (iterNumPicard < maxIter) then
             remainDel_t = del_t
@@ -293,10 +285,7 @@ contains
                 if (iterNumAdaptiveSteps > 4) then
                     stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
                 end if
-                if (globalSolver%RF_bool) then
-                    ! if RF, change value of future phi values at RF boundary
-                    call globalSolver%setRFVoltage(globalWorld, timeCurrent + currDel_t)
-                end if
+                call globalSolver%resetVoltageCondition(globalWorld, timeCurrent + currDel_t)
                 call solveJFNK(currDel_t, maxIter, eps_r)
             end do
             remainDel_t = remainDel_t - currDel_t 

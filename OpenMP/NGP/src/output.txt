@@ -5,14 +5,15 @@
  Reading initial inputs:
  ------------------
  Save data folder: 
- ../../../../ImplicitData/NGP_RFBenchmark_highDensity_sixteenthPart_257nodes
+ ../../../../ImplicitData/NGP_RFBenchmark_highDensity_sixteenthPart_513nodes_nor
+ mTime
  Number of threads is:          32
  Average initial electron density:  1.600000000000000E+018
  Initial electron temperature:   4.00000000000000     
  Initial ion temperature:  2.500000000000000E-002
  Number of diagnostic steps is:          20
- Fraction of 1/w_p for time step:   2.22998295747385     
- del_t will be:  3.125000000000000E-011
+ Fraction of 1/w_p for time step:  0.222998295747385     
+ del_t will be:  3.125000000000000E-012
  Simulation time is:  1.500000000000000E-004
  Final averaging time is:  1.400000000000000E-005
  ------------------
@@ -20,12 +21,12 @@
  
  Reading domain inputs:
  ------------------
- Number of nodes:         257
+ Number of nodes:         513
  Grid length:  6.700000000000000E-002
  gridType:           0
  Left boundary type:           1
  Right boundary type:           4
- smallest delX:  2.617187499999868E-004
+ smallest delX:  1.308593749999865E-004
  ------------------
  
  
@@ -148,115 +149,154 @@
  Anderson number m is:          10
  Relaxation parameter is:  0.500000000000000     
  
- Simulation is   5.00002083330929      percent done
- Total wall power loss:   909229.296203793     
- Total collision energy loss:   333037.026660858     
- Number of electrons is:      240264
- Number of ions is:      240421
- Percentage of steps adaptive is:  1.333144471199913E-002
- Simulation is   10.0000000000523      percent done
- Total wall power loss:   643041.901318575     
- Total collision energy loss:   252756.696628358     
- Number of electrons is:      244770
- Number of ions is:      244928
- Percentage of steps adaptive is:  1.208184827281647E-002
- Simulation is   15.0000000001310      percent done
- Total wall power loss:   645988.206827527     
- Total collision energy loss:   250679.463533944     
- Number of electrons is:      247152
- Number of ions is:      247312
- Percentage of steps adaptive is:  1.305383317478944E-002
- Simulation is   20.0000000002096      percent done
+ Simulation is   5.00000000009103      percent done
+ Total wall power loss:   802774.174816624     
+ Total collision energy loss:   295646.493228155     
+ Number of electrons is:      197334
+ Number of ions is:      197474
+ Percentage of steps adaptive is:  4.166663194447338E-005
+ Simulation is   10.0000020824423      percent done
+ Total wall power loss:   485904.318165786     
+ Total collision energy loss:   209378.598132565     
+ Number of electrons is:      173929
+ Number of ions is:      174076
+ Percentage of steps adaptive is:  2.083332031250814E-005
+ Simulation is   15.0000000007204      percent done
+ Total wall power loss:   441263.255111778     
+ Total collision energy loss:   204106.010321818     
+ Number of electrons is:      158073
+ Number of ions is:      158218
+ Percentage of steps adaptive is:  1.388888503086527E-005
+ Simulation is   20.0000000024255      percent done
+ Total wall power loss:   420611.570279008     
+ Total collision energy loss:   200618.884150085     
+ Number of electrons is:      147933
+ Number of ions is:      148071
+ Percentage of steps adaptive is:  2.083332682291870E-005
+ Simulation is   25.0000000041305      percent done
+ Total wall power loss:   401952.640799296     
+ Total collision energy loss:   200632.911497763     
+ Number of electrons is:      142399
+ Number of ions is:      142534
+ Percentage of steps adaptive is:  1.666666250000104E-005
+ Simulation is   30.0000000058355      percent done
+ Total wall power loss:   392979.410507006     
+ Total collision energy loss:   199462.591860043     
+ Number of electrons is:      138745
+ Number of ions is:      138870
+ Percentage of steps adaptive is:  2.083332754629790E-005
+ Simulation is   35.0000000075406      percent done
  -------------------------WARNING------------------------
- Gauss error is:  1.519526300013277E-005
- Total wall power loss:   642087.460081276     
- Total collision energy loss:   251983.794970598     
- Number of electrons is:      250240
- Number of ions is:      250422
- Percentage of steps adaptive is:  1.322740301293161E-002
- Simulation is   25.0000208331170      percent done
+ Gauss error is:  1.320472299383269E-005
+ Total wall power loss:   384254.649956819     
+ Total collision energy loss:   198660.551594190     
+ Number of electrons is:      136506
+ Number of ions is:      136643
+ Percentage of steps adaptive is:  1.785713860544319E-005
+ Simulation is   40.0000000092456      percent done
+ Total wall power loss:   381792.773330598     
+ Total collision energy loss:   199992.546502697     
+ Number of electrons is:      135332
+ Number of ions is:      135457
+ Percentage of steps adaptive is:  1.562499674479235E-005
+ Simulation is   45.0000000109506      percent done
  -------------------------WARNING------------------------
- Gauss error is:  9.160778752298964E-005
- Total wall power loss:   660743.737332649     
- Total collision energy loss:   253727.437141024     
- Number of electrons is:      253032
- Number of ions is:      253201
- Percentage of steps adaptive is:  1.383139693776205E-002
- Simulation is   30.0000208326536      percent done
+ Gauss error is:  1.552126560393471E-005
+ Total wall power loss:   383095.024976641     
+ Total collision energy loss:   197848.152094551     
+ Number of electrons is:      134308
+ Number of ions is:      134437
+ Percentage of steps adaptive is:  1.388888631687290E-005
+ Simulation is   50.0000000126556      percent done
+ Total wall power loss:   377618.647592666     
+ Total collision energy loss:   198409.127905150     
+ Number of electrons is:      133487
+ Number of ions is:      133624
+ Percentage of steps adaptive is:  1.249999791666701E-005
+ Simulation is   55.0000000143607      percent done
+ Total wall power loss:   376560.577254583     
+ Total collision energy loss:   199079.411577274     
+ Number of electrons is:      133010
+ Number of ions is:      133140
+ Percentage of steps adaptive is:  1.136363464187354E-005
+ Simulation is   60.0000000160657      percent done
  -------------------------WARNING------------------------
- Gauss error is:  1.566377080175467E-004
- Total wall power loss:   654596.852256931     
- Total collision energy loss:   251937.875671754     
- Number of electrons is:      248123
- Number of ions is:      248279
- Percentage of steps adaptive is:  1.395636587342201E-002
- Simulation is   35.0000208321903      percent done
+ Gauss error is:  1.091907138428009E-005
+ Total wall power loss:   377636.450039402     
+ Total collision energy loss:   198120.441591775     
+ Number of electrons is:      132573
+ Number of ions is:      132701
+ Percentage of steps adaptive is:  1.041666521990761E-005
+ Simulation is   65.0000000177707      percent done
  -------------------------WARNING------------------------
- Gauss error is:  1.791604086142902E-005
- Total wall power loss:   649442.698321245     
- Total collision energy loss:   248592.854680142     
- Number of electrons is:      250424
- Number of ions is:      250598
- Percentage of steps adaptive is:  1.410513623359534E-002
- Simulation is   40.0000208317269      percent done
+ Gauss error is:  1.813434040941687E-005
+ Total wall power loss:   377623.794428114     
+ Total collision energy loss:   197227.273867560     
+ Number of electrons is:      132295
+ Number of ions is:      132427
+ Percentage of steps adaptive is:  9.615383382643156E-006
+ Simulation is   70.0000000194758      percent done
  -------------------------WARNING------------------------
- Gauss error is:  1.074561779245943E-005
- Total wall power loss:   664052.069322891     
- Total collision energy loss:   252247.795524502     
- Number of electrons is:      252669
- Number of ions is:      252818
- Percentage of steps adaptive is:  1.400843943380908E-002
- Simulation is   45.0000208312637      percent done
- Total wall power loss:   659536.897423947     
- Total collision energy loss:   251876.093011947     
- Number of electrons is:      253177
- Number of ions is:      253343
- Percentage of steps adaptive is:  1.365552977206375E-002
- Simulation is   50.0000208308007      percent done
+ Gauss error is:  7.746376432190107E-005
+ Total wall power loss:   375749.110345138     
+ Total collision energy loss:   197251.752815513     
+ Number of electrons is:      132335
+ Number of ions is:      132467
+ Percentage of steps adaptive is:  8.928570365646386E-006
+ Simulation is   75.0000000211808      percent done
  -------------------------WARNING------------------------
- Gauss error is:  8.219869257669588E-005
- Total wall power loss:   665665.860020687     
- Total collision energy loss:   253946.820833479     
- Number of electrons is:      251833
- Number of ions is:      251998
- Percentage of steps adaptive is:  1.374809817975180E-002
- Simulation is   55.0000208303376      percent done
+ Gauss error is:  1.158294061865231E-005
+ Total wall power loss:   374713.420059394     
+ Total collision energy loss:   198221.316374880     
+ Number of electrons is:      132292
+ Number of ions is:      132427
+ Percentage of steps adaptive is:  8.333332407407511E-006
+ Simulation is   80.0000000228858      percent done
  -------------------------WARNING------------------------
- Gauss error is:  6.518698297779650E-004
- Total wall power loss:   658554.392733436     
- Total collision energy loss:   251345.772731385     
- Number of electrons is:      255071
- Number of ions is:      255226
- Percentage of steps adaptive is:  1.363449405801174E-002
- Simulation is   60.0000208298746      percent done
+ Gauss error is:  1.821592465205522E-004
+ Total wall power loss:   376751.496463113     
+ Total collision energy loss:   196909.482325422     
+ Number of electrons is:      132078
+ Number of ions is:      132207
+ Percentage of steps adaptive is:  7.812499186198002E-006
+ Simulation is   85.0000000088925      percent done
  -------------------------WARNING------------------------
- Gauss error is:  1.150868103519681E-004
- Total wall power loss:   672003.252438993     
- Total collision energy loss:   251867.963153740     
- Number of electrons is:      258237
- Number of ions is:      258398
- Percentage of steps adaptive is:  1.392166304506696E-002
- Simulation is   65.0000208294115      percent done
+ Gauss error is:  1.579178816851078E-005
+ Total wall power loss:   374777.988181987     
+ Total collision energy loss:   196668.531521021     
+ Number of electrons is:      132040
+ Number of ions is:      132172
+ Percentage of steps adaptive is:  7.352940455594073E-006
+ Simulation is   90.0000020722468      percent done
  -------------------------WARNING------------------------
- Gauss error is:  2.779659866665784E-005
- Total wall power loss:   663521.864871544     
- Total collision energy loss:   255857.690057866     
- Number of electrons is:      256925
- Number of ions is:      257084
- Percentage of steps adaptive is:  1.387627045588195E-002
- Simulation is   70.0000208289483      percent done
+ Gauss error is:  1.136148243151006E-005
+ Total wall power loss:   376380.613125112     
+ Total collision energy loss:   196501.240419845     
+ Number of electrons is:      132176
+ Number of ions is:      132306
+ Percentage of steps adaptive is:  6.944443801440388E-006
+ Simulation is   95.0000020522678      percent done
  -------------------------WARNING------------------------
- Gauss error is:  4.819387597521258E-005
- Total wall power loss:   668827.211377840     
- Total collision energy loss:   253822.242032472     
- Number of electrons is:      254604
- Number of ions is:      254772
- Percentage of steps adaptive is:  1.365884026030952E-002
- Simulation is   75.0000208284852      percent done
+ Gauss error is:  1.061010200232482E-005
+ Total wall power loss:   375771.033277666     
+ Total collision energy loss:   196815.067466814     
+ Number of electrons is:      131871
+ Number of ions is:      131997
+ Percentage of steps adaptive is:  6.578946791320457E-006
  -------------------------WARNING------------------------
- Gauss error is:  1.921476395870737E-005
- Total wall power loss:   657604.201336916     
- Total collision energy loss:   252468.150783189     
- Number of electrons is:      253222
- Number of ions is:      253384
- Percentage of steps adaptive is:  1.363702137457287E-002
+ Gauss error is:  3.797622900807503E-005
+ Elapsed time for simulation is:   56670.7724850000      seconds
+ Percentage of steps adaptive is:  6.249999479166710E-006
+ potentialTime is:   55854.3488170000     
+ collision time is:   813.727613000000     
+ Averaging finished over  1.400000306905875E-005 simulation time (s)
+ gaussError average is:  5.220686901789971E-002
+ Power loss to walls is:   375480.011293724     
+ Power gain in plasma is:  0.000000000000000E+000
+ Electron total power loss in W/m^2:   14234.3978326427     
+ Ion total power loss in W/m^2:   361245.613461082     
+ Electron average wall loss flux:  3.585137309309737E+021
+ Ion average wall loss flux:  3.585575999689758E+021
+ Performing average for EEDF over 50/omega_p
+ E_max is:   2565.74490498223     
+ V_max is:   30042248.5224374     

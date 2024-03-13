@@ -25,7 +25,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getChargeContinuityError
         procedure, public, pass(self) :: getTotalPE
-        procedure, public, pass(self) :: setRFVoltage
+        procedure, public, pass(self) :: resetVoltageCondition
         procedure, public, pass(self) :: aveRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
@@ -361,16 +361,17 @@ contains
         res = res * (self%phi_f(1) + self%phi(1) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes)) * 0.5d0
     end function getEnergyFromBoundary
 
-    subroutine setRFVoltage(self, world, timeFuture)
+    subroutine resetVoltageCondition(self, world, timeFuture)
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: timeFuture 
+        real(real64), intent(in) :: timeFuture
         if (world%boundaryConditions(1) == 4) then
             self%phi_f(1) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * (timeFuture))
         else
             self%phi_f(NumberXNodes) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * (timeFuture))
         end if
-    end subroutine setRFVoltage
+        self%phi_f(2:NumberXNodes-1) = self%phi(2:NumberXNodes-1)
+    end subroutine resetVoltageCondition
 
     subroutine resetVoltage(self)
         class(potentialSolver), intent(in out) :: self

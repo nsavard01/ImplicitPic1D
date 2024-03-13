@@ -95,6 +95,8 @@ module mod_nitsol
     double precision :: choice1_exp, choice2_exp, choice2_coef, eta_cutoff, etamax, thmin, thmax, etafixed, epsmach, cndmax, sfmin
     double precision, allocatable :: rworkNitsol(:)
 
+    logical :: nitsolInitBool = .false.
+
     ! Set parameters used in driver routine
     integer :: nnimax_glob, ijacv_glob, ifdord_glob, ikrysl_glob, kdmax_glob, irpre_glob, iksmax_glob, iresup_glob, ibtmax_glob, ieta_glob
 
@@ -131,7 +133,7 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
    input(4) = m_Anderson ! maximum krylov subspace dimension
    input(5) = 0 !ipre
    input(9) = -1 !number backtracks
-   input(6) = m_Anderson*10
+   input(6) = m_Anderson*2
    input(10) = 2 ! eta with gamma and alpha
    etamax = 0.8d0 ! eta max
    choice2_exp = 1.5d0 ! alpha
@@ -249,11 +251,12 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
       sizeWorkArray = n_size * 14
    end if
    allocate(rworkNitsol(sizeWorkArray))
+   nitsolInitBool = .true.
 end subroutine initializeNitsol
 
-subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ifdord, nfe, v, z, rwork, itrmjv) 
+subroutine nitfd(n, xcur, fcur, f, rpar, ipar, nfe, v, z, rwork, itrmjv) 
 
-     integer, intent(in) :: n, ifdord
+     integer, intent(in) :: n
      integer, intent(in out) :: ipar(*), nfe, itrmjv
      double precision, intent(in) :: fcur(n)
      double precision, intent(in out) :: xcur(n), rpar(*), v(n), z(n), rwork(n) 
@@ -409,7 +412,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ifdord, nfe, v, z, rwork, itrmjv)
     ! c ------------------------------------------------------------------------
     ! c Here ijacv = 0 or ifdord = 1 => first-order forward difference. 
     ! c ------------------------------------------------------------------------
-     if (ijacv_glob .eq. 0 .or. ifdord .eq. 1) then 
+     if (ijacv_glob .eq. 0 .or. ifdord_glob .eq. 1) then 
         eps = dsqrt((1.d0 + SQRT(SUM(xcur**2)))*epsmach)/eps
         ! could replace with just vectorized code?
         do 100 i = 1, n
@@ -431,7 +434,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ifdord, nfe, v, z, rwork, itrmjv)
     ! c ------------------------------------------------------------------------
     ! c Here ijacv = -1 and ifdord = 2 => second-order central difference. 
     ! c ------------------------------------------------------------------------
-     if (ifdord .eq. 2) then 
+     if (ifdord_glob .eq. 2) then 
         eps = (((1.d0 + SQRT(SUM(xcur**2)))*epsmach)**(1.d0/3.d0))/eps
         do 200 i = 1, n
            rwork(i) = xcur(i) + eps*v(i)
@@ -459,7 +462,7 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ifdord, nfe, v, z, rwork, itrmjv)
         go to 900
      endif
 
-     if (ifdord .eq. 4) then 
+     if (ifdord_glob .eq. 4) then 
         eps = (((1.d0 + SQRT(SUM(xcur**2)))*epsmach)**(1.d0/5.d0))/eps
         do 300 i = 1, n
            rwork(i) = xcur(i) + eps*v(i)
@@ -510,9 +513,9 @@ subroutine nitfd(n, xcur, fcur, f, rpar, ipar, ifdord, nfe, v, z, rwork, itrmjv)
     900  continue
 end subroutine nitfd
 
-subroutine nitjv(n, xcur, fcur, f, jacv, rpar, ipar, ifdord, itask, nfe, njve, nrpre, v, z, rwork1, rwork2, itrmjv) 
+subroutine nitjv(n, xcur, fcur, f, jacv, rpar, ipar, itask, nfe, njve, nrpre, v, z, rwork1, rwork2, itrmjv) 
 
-     integer, intent(in) :: n, itask, ifdord
+     integer, intent(in) :: n, itask
      integer, intent(in out) :: ipar(*), nfe, njve, nrpre, itrmjv
      double precision, intent(in) :: fcur(n)
      double precision, intent(in out) :: xcur(n), rpar(*), v(n), z(n), rwork1(n), rwork2(n)
@@ -708,7 +711,7 @@ subroutine nitjv(n, xcur, fcur, f, jacv, rpar, ipar, ifdord, itask, nfe, njve, n
         ijob = 0
         call jacv(n, xcur, fcur, ijob, rwork1, z, rpar, ipar, itrmjv)
      else	
-        call nitfd(n, xcur, fcur, f, rpar, ipar, ifdord, nfe, rwork1, z, rwork2, itrmjv)
+        call nitfd(n, xcur, fcur, f, rpar, ipar, nfe, rwork1, z, rwork2, itrmjv)
      endif
      njve = njve + 1
     ! c ------------------------------------------------------------------------
@@ -720,16 +723,15 @@ end subroutine nitjv
 
 
 subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
-        ipar, irpre, iksmax, iresup, ifdord, nfe, njve, & 
-        nrpre, nli, kdmax, kdmaxp1, vv, rr, svbig, svsml, w, rwork, &
+        ipar, nfe, njve, nrpre, nli, kdmaxp1, vv, rr, svbig, svsml, w, rwork, &
         rsnrm, itrmks)
 
-   integer, intent(in) :: n, irpre, iksmax, iresup, kdmax, kdmaxp1, ifdord
+   integer, intent(in) :: n, kdmaxp1
    integer, intent(in out) :: ipar(*), nfe, njve, nrpre, nli, itrmks
    double precision, intent(in) :: eta, fcnrm
    double precision, intent(in out) :: xcur(n), fcur(n), step(n), rpar(*), &
-      vv(n,kdmaxp1), rr(kdmax,kdmax), svbig(kdmax), svsml(kdmax), &
-      w(kdmax), rwork(n), rsnrm
+      vv(n,kdmaxp1), rr(kdmax_glob,kdmax_glob), svbig(kdmax_glob), svsml(kdmax_glob), &
+      w(kdmax_glob), rwork(n), rsnrm
    procedure(funcInterface) :: f
    procedure(jacvInterface) :: jacv
 
@@ -992,12 +994,12 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c Note: rwork can be used for both work arrays in this call because 
     ! c the second is not referenced within nitjv. 
     ! c ------------------------------------------------------------------------
-     if (irpre .eq. 0) then 
+     if (irpre_glob .eq. 0) then 
         itask = 0
      else
         itask = 1
      endif
-     call nitjv(n, xcur, fcur, f, jacv, rpar, ipar, ifdord, itask, nfe, njve, nrpre, vv(1,kd), vv(1,kdp1), rwork, rwork, itrmjv)
+     call nitjv(n, xcur, fcur, f, jacv, rpar, ipar, itask, nfe, njve, nrpre, vv(1,kd), vv(1,kdp1), rwork, rwork, itrmjv)
      if (itrmjv .gt. 0) then 
         if (itrmjv .eq. 1) itrmks = 1
         if (itrmjv .eq. 2) itrmks = 2
@@ -1067,7 +1069,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c ------------------------------------------------------------------------
     ! c Test for termination of the inner loop.
     ! c ------------------------------------------------------------------------
-     if ( (rsnrm0*rsnrm .le. abstol) .or. (kd .eq. kdmax) .or.  (igm .ge. iksmax) )  go to 300
+     if ( (rsnrm0*rsnrm .le. abstol) .or. (kd .eq. kdmax_glob) .or.  (igm .ge. iksmax_glob) )  go to 300
     ! c ------------------------------------------------------------------------
     ! c If not terminating the inner loop, update the residual vector 
     ! c and go to the top of the inner loop. 
@@ -1116,7 +1118,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c If iresup .eq. 0, then update the residual vector by linear 
     ! c combination. This frees vv(.,kdp1) for use as a work array. 
     ! c ------------------------------------------------------------------------
-     if (iresup .eq. 0) then 
+     if (iresup_glob .eq. 0) then 
         vv(1:n, 1) = vv(1:n, 1) -svbig(kd) * vv(1:n, kdp1) !call daxpy(n, -svbig(kd), vv(1,kdp1), 1, vv(1,1), 1)
      endif
     ! c ------------------------------------------------------------------------
@@ -1125,9 +1127,9 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c Note: vv(.,kdp1) can be used for both work arrays in this call because 
     ! c the second is not referenced within nitjv. 
     ! c ------------------------------------------------------------------------
-     if (irpre .gt. 0) then 
+     if (irpre_glob .gt. 0) then 
         itask = 2
-        call nitjv(n, xcur, fcur,f, jacv, rpar, ipar, ifdord, itask, nfe, njve, nrpre, rwork, rwork, vv(1,kdp1), vv(1,kdp1), itrmjv)
+        call nitjv(n, xcur, fcur,f, jacv, rpar, ipar, itask, nfe, njve, nrpre, rwork, rwork, vv(1,kdp1), vv(1,kdp1), itrmjv)
         if (itrmjv .gt. 0) then 
            itrmks = 2
            go to 900
@@ -1146,10 +1148,10 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c is temporarily set to -1 to signal to nitjv that the order of the 
     ! c finite-difference formula is to be determined by ifdord. 
     ! c ------------------------------------------------------------------------
-     if (iresup .eq. 1) then 
+     if (iresup_glob .eq. 1) then 
         itask = 0
         if (ijacv_glob .eq. 0) ijacv_glob = -1 
-        call nitjv(n, xcur, fcur, f, jacv, rpar, ipar, ifdord, itask, nfe, njve, nrpre, step, vv(1,1), rwork, vv(1,kdp1), itrmjv)
+        call nitjv(n, xcur, fcur, f, jacv, rpar, ipar, itask, nfe, njve, nrpre, step, vv(1,1), rwork, vv(1,kdp1), itrmjv)
         if (ijacv_glob .eq. -1) ijacv_glob = 0
         if (itrmjv .gt. 0) then 
            itrmks = 1
@@ -1167,7 +1169,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
         itrmks = 0
         go to 900
      endif
-     if (igm .ge. iksmax) then 
+     if (igm .ge. iksmax_glob) then 
         itrmks = 3
         go to 900
      endif
@@ -1176,7 +1178,7 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
         go to 900
      endif
      temp = dfloat(kd)*dlog(abstol/(rsnrm0*rsnrm))/dlog(rsnrm/(1.d0 + 10.d0*epsmach))
-     if (temp .ge. 1000.d0*dfloat(iksmax - igm)) then 
+     if (temp .ge. 1000.d0*dfloat(iksmax_glob - igm)) then 
         itrmks = 4
         go to 900
      endif
@@ -1184,11 +1186,11 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c If not terminating, then normalize the initial residual, etc., and 
     ! c return to the top of the outer loop. 
     ! c ------------------------------------------------------------------------
-     if (iresup .eq. 0) then 
+     if (iresup_glob .eq. 0) then 
         rsnrm0 = rsnrm0*rsnrm
         temp = 1.d0/rsnrm
      else
-        rsnrm0 = dnrm2(n, vv(1,1), 1)
+        rsnrm0 = SQRT(SUM(vv(1:n,1)**2)) !dnrm2(n, vv(1,1), 1)
         temp = 1.d0/rsnrm0
      endif
      vv(1:n, 1) = vv(1:n, 1) * temp !call dscal(n, temp, vv(1,1), 1)
@@ -1198,11 +1200,11 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
     ! c ------------------------------------------------------------------------
     900  continue
      if (itrmks .ne. 1 .and. itrmks .ne. 2) then 
-        if (iresup .eq. 0) then 
+        if (iresup_glob .eq. 0) then 
            vv(1:n, 1) = vv(1:n, 1) * rsnrm0 !call dscal(n, rsnrm0, vv(1,1), 1)
            rsnrm = rsnrm0*rsnrm
         else
-           rsnrm = dnrm2(n, vv(1,1), 1)
+           rsnrm = SQRT(SUM(vv(1:n,1)**2)) !dnrm2(n, vv(1,1), 1)
         endif
      endif
     ! c ------------------------------------------------------------------------ 
@@ -1220,11 +1222,11 @@ subroutine nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, &
 end subroutine nitgm
 
 
-subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, &
-        iksmax, ifdord, nfe, njve, nrpre, nli, r,rcgs, rtil, d, p, q, u, v, y, rwork1, rwork2, &
+subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, &
+        nfe, njve, nrpre, nli, r,rcgs, rtil, d, p, q, u, v, y, rwork1, rwork2, &
         rsnrm, itrmks )
 
-   integer :: ifdord, iksmax, irpre, itrmks, n, nfe, njve,nrpre, nli
+   integer :: itrmks, n, nfe, njve,nrpre, nli
 
    integer :: ipar(*)
 
@@ -1463,11 +1465,11 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
 
      rtil = rcgs!call dcopy( n, rcgs, 1, rtil, 1 )
 
-     if ( irpre .eq. 0 ) then
+     if ( irpre_glob .eq. 0 ) then
         p = rcgs !call dcopy( n, rcgs, 1, p, 1 )
      else
         itask = 2
-        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ifdord,itask, nfe, njve, nrpre, rcgs, p, rwork1, rwork2, itrmjv )    
+        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar,itask, nfe, njve, nrpre, rcgs, p, rwork1, rwork2, itrmjv )    
         if ( itrmjv .ne. 0 ) then
            itrmks = 2
            goto 900
@@ -1481,7 +1483,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
    !  20   continue
 
      itask = 0
-     call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ifdord,itask, nfe, njve, nrpre, p, v, rwork1, rwork2, itrmjv )
+     call nitjv( n, xcur, fcur, f, jacv, rpar, ipar,itask, nfe, njve, nrpre, p, v, rwork1, rwork2, itrmjv )
      if ( itrmjv .ne. 0 ) then
         itrmks = 1
         goto 900
@@ -1513,11 +1515,11 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
     ! c  Need Pv for calculation of q.  First store result in q, then
     ! c  swap some vectors to cast calculation of q as a SAXPY.
 
-     if ( irpre .eq. 0 ) then
+     if ( irpre_glob .eq. 0 ) then
         q = v!call dcopy( n, v, 1, q, 1 )
      else
         itask = 2
-        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ifdord,itask, nfe, njve, nrpre, v, q, rwork1, rwork2, itrmjv )    
+        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar,itask, nfe, njve, nrpre, v, q, rwork1, rwork2, itrmjv )    
         if ( itrmjv .ne. 0 ) then
            itrmks = 2
            goto 900
@@ -1541,7 +1543,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
    !      y(i) = u(i) + q(i)
    !  30   continue
      itask = 0
-     call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ifdord,itask, nfe, njve, nrpre, y, v, rwork1, rwork2, itrmjv )
+     call nitjv( n, xcur, fcur, f, jacv, rpar, ipar,itask, nfe, njve, nrpre, y, v, rwork1, rwork2, itrmjv )
      if ( itrmjv .ne. 0 ) then
         itrmks = 1
         goto 900
@@ -1600,7 +1602,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
         if ( tau .le. abstol ) then
 
            itask = 0
-           call nitjv( n, xcur, fcur, f, jacv, rpar, ipar,ifdord, itask, nfe, njve, nrpre, step, r, rwork1,rwork2, itrmjv )
+           call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, itask, nfe, njve, nrpre, step, r, rwork1,rwork2, itrmjv )
 
     ! c  This calculation of the QMR residual is off by a factor
     ! c  of -1, but we dont care until we return from this routine.
@@ -1643,11 +1645,11 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
         beta = rho/rho_old
      endif
 
-     if ( irpre .eq. 0 ) then
+     if ( irpre_glob .eq. 0 ) then
         v = rcgs !call dcopy( n, rcgs, 1, v, 1 )
      else
         itask = 2
-        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ifdord,itask, nfe, njve, nrpre, rcgs, v, rwork1, rwork2, itrmjv )    
+        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar,itask, nfe, njve, nrpre, rcgs, v, rwork1, rwork2, itrmjv )    
         if ( itrmjv .ne. 0 ) then
            itrmks = 2
            goto 900
@@ -1660,12 +1662,12 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
      p = v !call dcopy( n, v, 1, p, 1 )
 
      itask = 0
-     call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ifdord,itask, nfe, njve, nrpre, p, v, rwork1, rwork2, itrmjv )
+     call nitjv( n, xcur, fcur, f, jacv, rpar, ipar,itask, nfe, njve, nrpre, p, v, rwork1, rwork2, itrmjv )
      if ( itrmjv .ne. 0 ) then
         itrmks = 1
         goto 900
      end if
-     if ( itfq .ge. iksmax ) then
+     if ( itfq .ge. iksmax_glob ) then
         itrmks = 3
         goto 900
      end if
@@ -1684,7 +1686,7 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
      if ( rsnrm .eq. fcnrm ) then
 
         itask = 0
-        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, ifdord, itask, nfe, njve, nrpre, step, r, rwork1,rwork2, itrmjv )
+        call nitjv( n, xcur, fcur, f, jacv, rpar, ipar, itask, nfe, njve, nrpre, step, r, rwork1,rwork2, itrmjv )
 
         r = r + fcur !call daxpy( n, one, fcur, 1, r, 1 )
         rsnrm = SQRT(SUM(r**2)) !dnrm2( n, r, 1 )
@@ -1724,11 +1726,11 @@ subroutine nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, irpre, 
 end subroutine nittfq
 
 subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, &
-    irpre, iksmax, ifdord, nfe, njve, nrpre, nli, r, rtil, p, phat, v, &
+    nfe, njve, nrpre, nli, r, rtil, p, phat, v, &
     t, rwork1, rwork2, rsnrm, itrmks)
 
 
-   integer :: n, ipar(*), irpre, iksmax, ifdord, nfe, njve, nrpre, nli, itrmks
+   integer :: n, ipar(*), nfe, njve, nrpre, nli, itrmks
    double precision :: xcur(n), fcur(n), fcnrm, step(n), eta, rpar(*), &
    r(n), rtil(n), p(n), phat(n), v(n), t(n), rwork1(n), rwork2(n), rsnrm
    procedure(funcInterface) :: f
@@ -1975,18 +1977,18 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, &
            p = p + r!call daxpy(n,1.d0,r,1,p,1)
         endif
      endif
-     if (irpre .eq. 0) then 
+     if (irpre_glob .eq. 0) then 
         phat = p!call dcopy(n,p,1,phat,1)
      else
         itask = 2
-        call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, ifdord, itask, nfe, njve, nrpre, p, phat, rwork1, rwork2, itrmjv)
+        call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, itask, nfe, njve, nrpre, p, phat, rwork1, rwork2, itrmjv)
         if (itrmjv .gt. 0) then 
            itrmks = 2
            go to 900
         endif
      endif
      itask = 0
-     call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, ifdord, itask, nfe, njve, nrpre, phat, v, rwork1, rwork2, itrmjv)
+     call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, itask, nfe, njve, nrpre, phat, v, rwork1, rwork2, itrmjv)
      if (itrmjv .gt. 0) then 
         itrmks = 1
         go to 900
@@ -2019,18 +2021,18 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, &
     ! c ------------------------------------------------------------------------
     ! c Perform the second "half-iteration". 
     ! c ------------------------------------------------------------------------
-     if (irpre .eq. 0) then 
+     if (irpre_glob .eq. 0) then 
         phat = r!call dcopy(n,r,1,phat,1)
      else
         itask = 2
-        call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, ifdord, itask, nfe, njve, nrpre, r, phat, rwork1, rwork2, itrmjv)
+        call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, itask, nfe, njve, nrpre, r, phat, rwork1, rwork2, itrmjv)
         if (itrmjv .gt. 0) then 
            itrmks = 2
            go to 900
         endif
      endif
      itask = 0
-     call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, ifdord, itask, nfe, njve, nrpre, phat, t, rwork1, rwork2, itrmjv)
+     call nitjv(n, xcur, fcur, f, jacv,rpar, ipar, itask, nfe, njve, nrpre, phat, t, rwork1, rwork2, itrmjv)
      if (itrmjv .gt. 0) then 
         itrmks = 1
         go to 900
@@ -2066,7 +2068,7 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, &
         itrmks = 0
         go to 900
      endif
-     if (istb .ge. iksmax) then 
+     if (istb .ge. iksmax_glob) then 
         itrmks = 3
         go to 900
      endif
@@ -2103,9 +2105,9 @@ subroutine nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv, rpar, ipar, &
      if (ijacv_glob .eq. -1) ijacv_glob = 0 
 end subroutine nitstb
 
-subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nfe, ibt, ibtmax, f, rpar, ipar, itrmbt)
+subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nfe, ibt, f, rpar, ipar, itrmbt)
 
-   integer, intent(in) :: n, ibtmax
+   integer, intent(in) :: n
    integer, intent(in out) :: ipar(*), itrmbt, ibt, nfe
    double precision, intent(in) :: xcur(n), fcnrm
    double precision, intent(in out) :: eta, xpls(n), fpls(n), fpnrm, oftjs, redfac, rpar(*), step(n)
@@ -2240,7 +2242,7 @@ subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nf
     ! c ------------------------------------------------------------------------
     ! c If t-condition is met or backtracking is turned off, return. 
     ! c ------------------------------------------------------------------------
-     if (fpnrm .le. (1.d0 - t*(1.d0-eta))*fcnrm .or. ibtmax .eq. -1) then 
+     if (fpnrm .le. (1.d0 - t*(1.d0-eta))*fcnrm .or. ibtmax_glob .eq. -1) then 
         itrmbt = 0
         go to 900 
      endif
@@ -2248,7 +2250,7 @@ subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nf
     ! c Otherwise, ... 
     ! c ------------------------------------------------------------------------
      ibt = ibt + 1
-     if (ibt .gt. ibtmax) then 
+     if (ibt .gt. ibtmax_glob) then 
         itrmbt = 1
         go to 900
      endif
@@ -2287,7 +2289,7 @@ subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nf
     900  continue
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
-     if (iplvl .ge. 3 .and. ibtmax .ne. -1) then 
+     if (iplvl .ge. 3 .and. ibtmax_glob .ne. -1) then 
         write(ipunit,*) 
         if (ibt .eq. 0) then 
            write(ipunit,820) 
@@ -2301,10 +2303,9 @@ subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nf
 end subroutine nitbt
 
 subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, stptol, &
-      ikrysl, kdmax, irpre, iksmax, iresup, ifdord, ibtmax, ieta, iterm, nfe, &
-         njve, nrpre, nli, nni, nbt, rwork)
+   iterm, nfe, njve, nrpre, nli, nni, nbt, rwork)
 
-   integer, intent(in) :: n, ikrysl, kdmax, irpre, iksmax, iresup, ibtmax, ieta, ifdord
+   integer, intent(in) :: n
    integer, intent(in out) :: ipar(*), nfe, njve, nrpre, nli, nni, nbt, iterm
    double precision, intent(in) :: ftol, stptol
    double precision, intent(in out) :: xcur(n), fcur(n), xpls(n), fpls(n), step(n), rpar(*), rwork(*)
@@ -2697,10 +2698,10 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c ------------------------------------------------------------------------
     ! c Initialize.
     ! c ------------------------------------------------------------------------
-     if (ieta .eq. 0) alpha = choice1_exp
-     if (ieta .eq. 2) alpha = choice2_exp
-     if (ieta .eq. 2) gamma = choice2_coef
-     if (ieta .eq. 3) then 
+     if (ieta_glob .eq. 0) alpha = choice1_exp
+     if (ieta_glob .eq. 2) alpha = choice2_exp
+     if (ieta_glob .eq. 2) gamma = choice2_coef
+     if (ieta_glob .eq. 3) then 
         eta = etafixed
      else
         eta = .5d0
@@ -2788,23 +2789,23 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
      newstep = 0
      instep = nni
      fcurnrm = fcnrm
-    ! c ------------------------------------------------------------------------
-    ! c If ikrysl = 0, apply GMRES, using fpls as a work array. 
-    ! c ------------------------------------------------------------------------
-     if (ikrysl .eq. 0) then 
-        kdmaxp1 = kdmax + 1 
-        lvv = 1
-        lrr = lvv + n*kdmaxp1
-        lsvbig = lrr + kdmax*kdmax 
-        lsvsml = lsvbig + kdmax
-        lw = lsvsml + kdmax
-        call nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv,rpar, ipar, irpre, iksmax, iresup, ifdord, nfe, njve, &
-        nrpre, nli, kdmax, kdmaxp1, rwork(lvv), rwork(lrr), rwork(lsvbig), rwork(lsvsml), rwork(lw), fpls, rsnrm, itrmks)
-     endif
-    ! c ------------------------------------------------------------------------
-    ! c If ikrysl = 1, apply BiCGSTAB, using fpls as a work array. 
-    ! c ------------------------------------------------------------------------
-     if (ikrysl .eq. 1) then 
+     SELECT CASE (ikrysl_glob)
+     CASE(0)
+      ! c ------------------------------------------------------------------------
+      ! c If ikrysl = 0, apply GMRES, using fpls as a work array. 
+      ! c ------------------------------------------------------------------------
+      kdmaxp1 = kdmax_glob + 1 
+      lvv = 1
+      lrr = lvv + n*kdmaxp1
+      lsvbig = lrr + kdmax_glob*kdmax_glob 
+      lsvsml = lsvbig + kdmax_glob
+      lw = lsvsml + kdmax_glob
+      call nitgm(n, xcur, fcur, fcnrm, step, eta, f, jacv,rpar, ipar, nfe, njve, &
+      nrpre, nli, kdmaxp1, rwork(lvv), rwork(lrr), rwork(lsvbig), rwork(lsvsml), rwork(lw), fpls, rsnrm, itrmks)
+     CASE(1)
+      ! c ------------------------------------------------------------------------
+      ! c If ikrysl = 1, apply BiCGSTAB, using fpls as a work array. 
+      ! c ------------------------------------------------------------------------
         lr = 1
         lrtil = lr + n
         lp = lrtil + n
@@ -2813,34 +2814,40 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
         lt = lv + n
         lrwork = lt + n
         call nitstb (n, xcur, fcur, fcnrm, step, eta, f, jacv,rpar, &
-        ipar, irpre, iksmax, ifdord, nfe, njve, &
+        ipar, nfe, njve, &
         nrpre, nli, rwork(lr), rwork(lrtil), rwork(lp), &
         rwork(lphat), rwork(lv), rwork(lt), rwork(lrwork), fpls, rsnrm, itrmks)
-     endif
-    ! c ------------------------------------------------------------------------
-    ! c If ikrysl = 2, apply TFQMR 
-    ! c ------------------------------------------------------------------------
-     if (ikrysl .eq. 2) then 
-        lr = 1
-        lrcgs = lr + n
-        lrtil = lrcgs + n
-        ld = lrtil + n
-        lp = ld + n
-        lq = lp + n
-        lu = lq + n
-        lv = lu + n
-        ly = lv + n
-        lrwork = ly + n
-        call nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv,rpar, &
-        ipar, irpre, iksmax, ifdord, nfe, njve, nrpre, nli, &
-        rwork(lr), rwork(lrcgs), rwork(lrtil), rwork(ld), rwork(lp), rwork(lq), &
-        rwork(lu), rwork(lv), rwork(ly), rwork(lrwork), fpls, rsnrm, itrmks)
-     endif
+     CASE(2)
+      ! c ------------------------------------------------------------------------
+      ! c If ikrysl = 2, apply TFQMR 
+      ! c ------------------------------------------------------------------------
+         lr = 1
+         lrcgs = lr + n
+         lrtil = lrcgs + n
+         ld = lrtil + n
+         lp = ld + n
+         lq = lp + n
+         lu = lq + n
+         lv = lu + n
+         ly = lv + n
+         lrwork = ly + n
+         call nittfq (n, xcur, fcur, fcnrm, step, eta, f, jacv,rpar, &
+         ipar, nfe, njve, nrpre, nli, &
+         rwork(lr), rwork(lrcgs), rwork(lrtil), rwork(ld), rwork(lp), rwork(lq), &
+         rwork(lu), rwork(lv), rwork(ly), rwork(lrwork), fpls, rsnrm, itrmks)
+     END SELECT
+     
     ! c ------------------------------------------------------------------------
     ! c  Set values in nitinfo that reflect state of iterative solver.
     ! c ------------------------------------------------------------------------
      krystat = itrmks
      avrate = (rsnrm/fcnrm)**(1.0d0/dble(nli))
+
+     if (avrate > 0.98) then
+         iterm = 5
+         go to 900
+     end if
+     
     ! c ------------------------------------------------------------------------
     ! c Check itrmks and decide whether to terminate or continue: 
     ! c        0 => continue, inexact Newton condition successfully met 
@@ -2876,7 +2883,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c ------------------------------------------------------------------------
     ! c Determine an acceptable step via backtracking. 
     ! c ------------------------------------------------------------------------
-     call nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nfe, ibt, ibtmax, f, rpar, ipar, itrmbt)
+     call nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nfe, ibt, f, rpar, ipar, itrmbt)
      if (itrmbt .eq. 1) then
         iterm = 6
         go to 900
@@ -2888,28 +2895,28 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c ------------------------------------------------------------------------
     ! c Set eta for next iteration. 
     ! c ------------------------------------------------------------------------
-     if (ieta .eq. 0) then 
+     if (ieta_glob .eq. 0) then 
         etamin = eta**alpha
         temp = 1.d0 - redfac
         flmnrm = dsqrt((temp*fcnrm)**2 + 2.d0*redfac*temp*oftlm + (redfac*rsnrm)**2)
         eta = dabs(fpnrm - flmnrm)/fcnrm 
      endif
-     if (ieta .eq. 1) then 
+     if (ieta_glob .eq. 1) then 
         etamin = eta**2
         eta = (fpnrm/fcnrm)**2
      endif
-     if (ieta .eq. 2) then 
+     if (ieta_glob .eq. 2) then 
         etamin = gamma*eta**alpha
         eta = gamma*(fpnrm/fcnrm)**alpha
      endif
-     if (ieta .ne. 3) then 
+     if (ieta_glob .ne. 3) then 
         if (etamin .le. eta_cutoff) etamin = 0.d0
     ! chfw         if (etamin .le. 1.d-1) etamin = 1.d-1
         if (eta .lt. etamin) eta = etamin 
         if (eta .gt. etamax) eta = etamax 
         if (eta*fpnrm .le. 2.d0*ftol) eta = (.8d0*ftol)/fpnrm
      endif
-     if (ieta .eq. 3) eta = etafixed
+     if (ieta_glob .eq. 3) eta = etafixed
     ! c ------------------------------------------------------------------------
     ! c Update xcur, fcur, fcnrm, stpnrm, nni for next iteration.
     ! c ------------------------------------------------------------------------
@@ -2925,7 +2932,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
         injve = njve - injve 
         inrpre = nrpre  - inrpre 
         inli = nli - inli 
-        if (ieta .gt. 0) then 
+        if (ieta_glob .gt. 0) then 
            temp = 1.d0 - redfac
            flmnrm = dsqrt((temp*fcnrm)**2 + 2.d0*redfac*temp*oftlm + (redfac*rsnrm)**2)
         endif
@@ -3397,15 +3404,12 @@ subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rpar, ipar, iterm)
     ! c
     ! c Remaining declarations:
     ! c
-     integer :: ibtmax, ieta, ifdord, ikrysl, iksmax, iresup, irpre, kdmax, lfcur, lfpls, lrwork, lstep, lxpls, nbt, nfe, njve, nli, nni, nrpre 
-     ibtmax = ibtmax_glob
-     ieta = ieta_glob
-     ifdord = ifdord_glob
-     ikrysl = ikrysl_glob
-     iksmax = iksmax_glob
-     irpre = irpre_glob
-     iresup = iresup_glob
-     kdmax = kdmax_glob
+
+     integer :: lfcur, lfpls, lrwork, lstep, lxpls, nbt, nfe, njve, nli, nni, nrpre 
+     if (.not. nitsolInitBool) then
+         print *, "Nitsol has not been initialized!"
+         stop
+      end if
 
     
     ! c ------------------------------------------------------------------------
@@ -3420,7 +3424,7 @@ subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rpar, ipar, iterm)
     ! c Call nitdrv. 
     ! c ------------------------------------------------------------------------
      call nitdrv(n, x, rworkNitsol(lfcur), rworkNitsol(lxpls), rworkNitsol(lfpls), rworkNitsol(lstep), f, jacv, rpar, ipar, ftol, stptol, &
-      ikrysl, kdmax, irpre, iksmax, iresup, ifdord, ibtmax, ieta, iterm, nfe, njve, nrpre, nli, nni, nbt, rworkNitsol(lrwork))
+      iterm, nfe, njve, nrpre, nli, nni, nbt, rworkNitsol(lrwork))
     ! c ------------------------------------------------------------------------
     ! c Set output for return. 
     ! c ------------------------------------------------------------------------
