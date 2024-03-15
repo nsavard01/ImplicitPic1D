@@ -189,20 +189,27 @@ contains
         print *, ""
         print *, "Reading initial inputs for particle injection:"
         print *, "------------------"
-        open(10,file='../InputData/'//InjFilename, IOSTAT=io)
-        read(10, *, IOSTAT = io) tempInt
-        addLostPartBool = (tempInt == 1)
-        read(10, *, IOSTAT = io) tempInt
-        refluxPartBool = (tempInt == 1)
-        read(10, *, IOSTAT = io) tempInt, injectionFlux
-        injectionBool = (tempInt == 1)
-        if (.not. injectionBool) then
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//InjFilename, IOSTAT=io)
+            read(10, *, IOSTAT = io) tempInt
+            addLostPartBool = (tempInt == 1)
+            read(10, *, IOSTAT = io) tempInt
+            refluxPartBool = (tempInt == 1)
             read(10, *, IOSTAT = io) tempInt, injectionFlux
-            uniformInjectionBool = (tempInt == 1)
+            injectionBool = (tempInt == 1)
+            if (.not. injectionBool) then
+                read(10, *, IOSTAT = io) tempInt, injectionFlux
+                uniformInjectionBool = (tempInt == 1)
+            end if
+            read(10, *, IOSTAT = io) tempInt, FractionFreqHeating
+            heatingBool = (tempInt == 1)
+            close(10)
+        else
+            open(10,file=restartDirectory//"/"//"ParticleInjectionInput.dat", IOSTAT=io)
+            read(10, *, IOSTAT = io)
+            read(10, *, IOSTAT = io) addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, FractionFreqHeating
+            close(10)
         end if
-        read(10, *, IOSTAT = io) tempInt, FractionFreqHeating
-        heatingBool = (tempInt == 1)
-        close(10)
         print *, "Particle lost is reinjected:", addLostPartBool
         print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
         print *, "Particle injection on neumann boundary", injectionBool
@@ -233,5 +240,14 @@ contains
         print *, "------------------"
         print *, ""
     end subroutine readInjectionInputs
+
+    subroutine writeParticleInjectionInputs(dirName)
+        character(*), intent(in) :: dirName
+
+        open(15,file=dirName//'/ParticleInjectionInput.dat')
+        write(15,'("AddLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, FractionFreqHeating")')
+        write(15,"(5(L, 1x), 2(es16.8,1x))") addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, FractionFreqHeating
+        close(15)
+    end subroutine writeParticleInjectionInputs
 
 end module mod_particleInjection

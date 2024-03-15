@@ -83,17 +83,16 @@ class dataSetExplicit:
             print("No averaging done for this simulation!")
             
             
-    def getPhaseSpace(self, name, i):
+    def getPhaseSpace(self, name):
         if (name not in self.particles.keys()):
             raise Warning('No such particle', name, 'in simulation!')
-        if (i <= self.numDiag - 1):
-            phaseSpace = np.fromfile(self.path + 'PhaseSpace/phaseSpace_'+ name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
-            phaseSpace = phaseSpace.reshape((int(phaseSpace.size/4), 4))
-            d = phaseSpace[:,0] - phaseSpace[:,0].astype(int)
-            phaseSpace[:,0] = self.grid[phaseSpace[:,0].astype(int)-1] + d * (self.grid[phaseSpace[:,0].astype(int)] - self.grid[phaseSpace[:,0].astype(int)-1])
-            return phaseSpace
-        else:
-            raise Warning("No such i diagnostic!")
+
+        phaseSpace = np.fromfile(self.path + 'PhaseSpace/phaseSpace_'+ name + '.dat', dtype = 'float', offset = 4)
+        phaseSpace = phaseSpace.reshape((int(phaseSpace.size/4), 4))
+        d = phaseSpace[:,0] - phaseSpace[:,0].astype(int)
+        phaseSpace[:,0] = self.grid[phaseSpace[:,0].astype(int)-1] + d * (self.grid[phaseSpace[:,0].astype(int)] - self.grid[phaseSpace[:,0].astype(int)-1])
+        return phaseSpace
+
     
     def getPhi(self, i):
         if (i <= self.numDiag - 1):

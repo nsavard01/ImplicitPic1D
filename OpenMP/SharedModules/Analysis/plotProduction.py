@@ -151,38 +151,40 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
             plt.legend(loc='lower center')
             plt.pause(pauseTime)
             
-            
-def update_plot_PhaseSpace(i, scat, dataSet, name):
-    phaseSpace = dataSet.getPhaseSpace(name, i)
-    scat.set_offsets(phaseSpace[:,0:2])
-    return scat,
-
-def PhaseSpaceAnimation(dataSet, name, boolMakeAnimation = False, savePath = 'PhaseSpaceAnimation.gif'): 
-    if name not in dataSet.particles.keys():
-        raise Warning("Particle", name, "does not exist in the dataSet!")
-    if boolMakeAnimation:
-        numframes = dataSet.numDiag
-        phaseSpace = dataSet.getPhaseSpace(name, 0)
-        fig = plt.figure()
-        scat = plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
-        plt.xlabel('Distance (m)')
-        plt.ylabel('Speed (m/s)')
-        vmax = abs(np.max(phaseSpace[:,1]))*2.0
-        plt.axis([dataSet.grid[0], dataSet.grid[-1], -vmax, vmax])
-        ani = animation.FuncAnimation(fig, update_plot_PhaseSpace, frames=range(numframes), interval = 100,
-                                      fargs=(scat, dataSet, name))
-        ani.save(savePath)
-        plt.show()
-    else:
-        plt.figure(figsize = (5,4), dpi = 80)
-        for y in range(dataSet.numDiag):
-            plt.cla()
-            phaseSpace = dataSet.getPhaseSpace(name, y)
-            plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
-            plt.xlabel('Distance (m)')
-            plt.ylabel('Particle velocity (m/s)')
-            plt.xlim([0, dataSet.grid[-1]])
-            plt.pause(0.1)
+def plotPhaseSpace(dataSet, name):
+    phaseSpace = dataSet.getPhaseSpace(name)
+    plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
+# def update_plot_PhaseSpace(i, scat, dataSet, name):
+#     phaseSpace = dataSet.getPhaseSpace(name, i)
+#     scat.set_offsets(phaseSpace[:,0:2])
+#     return scat,
+#
+# def PhaseSpaceAnimation(dataSet, name, boolMakeAnimation = False, savePath = 'PhaseSpaceAnimation.gif'):
+#     if name not in dataSet.particles.keys():
+#         raise Warning("Particle", name, "does not exist in the dataSet!")
+#     if boolMakeAnimation:
+#         numframes = dataSet.numDiag
+#         phaseSpace = dataSet.getPhaseSpace(name, 0)
+#         fig = plt.figure()
+#         scat = plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
+#         plt.xlabel('Distance (m)')
+#         plt.ylabel('Speed (m/s)')
+#         vmax = abs(np.max(phaseSpace[:,1]))*2.0
+#         plt.axis([dataSet.grid[0], dataSet.grid[-1], -vmax, vmax])
+#         ani = animation.FuncAnimation(fig, update_plot_PhaseSpace, frames=range(numframes), interval = 100,
+#                                       fargs=(scat, dataSet, name))
+#         ani.save(savePath)
+#         plt.show()
+#     else:
+#         plt.figure(figsize = (5,4), dpi = 80)
+#         for y in range(dataSet.numDiag):
+#             plt.cla()
+#             phaseSpace = dataSet.getPhaseSpace(name, y)
+#             plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
+#             plt.xlabel('Distance (m)')
+#             plt.ylabel('Particle velocity (m/s)')
+#             plt.xlim([0, dataSet.grid[-1]])
+#             plt.pause(0.1)
             
     
  

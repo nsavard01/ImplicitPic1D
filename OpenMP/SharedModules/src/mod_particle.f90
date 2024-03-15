@@ -158,15 +158,14 @@ contains
 
     ! --------------------------- Writing Particle Data to File -----------------------------------
 
-    subroutine writePhaseSpace(self, CurrentDiagStep, dirName)
+    subroutine writePhaseSpace(self, dirName)
         ! Writes particle phase space into binary file
         class(Particle), intent(in) :: self
-        integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
         integer(int32) :: i
-        write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file=dirName//'/PhaseSpace/phaseSpace_'//self%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED', access = 'STREAM', status = 'REPLACE')
+        !write(char_i, '(I3)'), CurrentDiagStep
+        open(10,file=dirName//'/PhaseSpace/phaseSpace_'//self%name//".dat", form='UNFORMATTED', access = 'STREAM', status = 'REPLACE')
         do i = 1, numThread
             write(10) self%phaseSpace(:, 1:self%N_p(i), i)
         end do
@@ -217,62 +216,115 @@ contains
         integer(int32), intent(in) :: numThread
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
-        integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
+        integer(int32) :: j, io, numSpecies = 0, numParticles(100), particleIdxFactor(100), i, tempInt
         character(len=15) :: name
         character(len=8) :: particleNames(100)
-        real(real64) :: mass(100), charge(100), Ti(100)
+        real(real64) :: mass(100), charge(100), Ti(100), tempReal
+        logical :: boolVal
 
         print *, "Reading particle inputs:"
-        open(10,file='../InputData/'//filename, action = 'read')
-        do j=1, 10000
-            read(10,*) name
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//filename, action = 'read')
+            do j=1, 10000
+                read(10,*) name
 
-            if( name(1:9).eq.'ELECTRONS') then
-                read(10,*) name
-                read(10,*) name
-                read(10,'(A4)', ADVANCE = 'NO') name(1:2)
-                numSpecies = numSpecies + 1
-                read(10,*) numParticles(numSpecies), particleIdxFactor(numSpecies)
-                Ti(numSpecies) = T_e
-                mass(numSpecies) = m_e
-                charge(numSpecies) = -1.0
-                particleNames(numSpecies) = 'e'
-                read(10,*) name
-                read(10,*) name
-            endif
-
-
-            if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
-                do while(name(1:4).ne.'----')
+                if( name(1:9).eq.'ELECTRONS') then
                     read(10,*) name
-                end do
-                read(10,'(A6)', ADVANCE = 'NO') name
-                do while (name(1:4).ne.'----')
+                    read(10,*) name
+                    read(10,'(A4)', ADVANCE = 'NO') name(1:2)
                     numSpecies = numSpecies + 1
-                    read(10,*) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
-                    Ti(numSpecies) = T_i
-                    mass(numSpecies) = mass(numSpecies) * m_amu - charge(numSpecies) * m_e
-                    particleNames(numSpecies) = trim(name)
+                    read(10,*) numParticles(numSpecies), particleIdxFactor(numSpecies)
+                    Ti(numSpecies) = T_e
+                    mass(numSpecies) = m_e
+                    charge(numSpecies) = -1.0
+                    particleNames(numSpecies) = 'e'
+                    read(10,*) name
+                    read(10,*) name
+                endif
+
+
+                if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
+                    do while(name(1:4).ne.'----')
+                        read(10,*) name
+                    end do
                     read(10,'(A6)', ADVANCE = 'NO') name
+                    do while (name(1:4).ne.'----')
+                        numSpecies = numSpecies + 1
+                        read(10,*) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                        Ti(numSpecies) = T_i
+                        mass(numSpecies) = mass(numSpecies) * m_amu - charge(numSpecies) * m_e
+                        particleNames(numSpecies) = trim(name)
+                        read(10,'(A6)', ADVANCE = 'NO') name
+                    end do
+                endif      
+
+                if (name(1:7) == 'ENDFILE') then
+                    close(10)
+                    exit
+                end if
+
+            end do
+        else
+            open(10,file=restartDirectory//"/"//"ParticleProperties.dat", IOSTAT=io)
+            read(10, *, IOSTAT = io)
+            read(10, '(A)', Advance = 'NO', IOSTAT = io) name
+            do while (io == 0)    
+                do j = 1, len(name)
+                    if (name(j:j) == ' ') then
+                        exit
+                    end if
                 end do
-            endif      
+                backspace(10)
+                numSpecies = numSpecies + 1
+                read(10, *, IOSTAT = io) name(1:j-1), mass(numSpecies), charge(numSpecies), Ti(numSpecies), particleIdxFactor(numSpecies)
+                particleNames(numSpecies) = name(1:j-1)
+                open(20,file=restartDirectory//"/"//"ParticleDiagnostic_"//trim(particleNames(numSpecies))//".dat", IOSTAT=io)
+                read(20, *, IOSTAT = io)
+                read(20, '(A)', Advance = 'NO', IOSTAT = io) name
+                do while (io == 0)
+                    read(20, *, IOSTAT = io)
+                    read(20, '(A)', Advance = 'NO', IOSTAT = io) name
+                end do
+                backspace(20)
+                backspace(20)
+                read(20, *, IOSTAT = io) tempReal, tempReal, tempReal, tempReal, tempReal, numParticles(numSpecies)
+                close(20)
+                read(10, '(A)', Advance = 'NO', IOSTAT = io) name
+            end do
+            close(10) 
 
-            if (name(1:7) == 'ENDFILE') then
-                close(10)
-                exit
-            end if
-
-        end do
+        end if
 
         numberChargedParticles = numSpecies
         print *, 'Amount charged particles:', numberChargedParticles
         if (numberChargedParticles > 0) then
             allocate(particleList(numberChargedParticles))
             do j=1, numberChargedParticles
-                particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
-                call particleList(j) % initialize_n_ave(n_ave, world%L_domain)
-                call particleList(j) % generate3DMaxwellian(Ti(j), irand)
-                call particleList(j)% initializeRandUniform(world, irand)
+                if (.not. restartBool) then
+                    particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
+                    call particleList(j) % initialize_n_ave(n_ave, world%L_domain)
+                    call particleList(j) % generate3DMaxwellian(Ti(j), irand)
+                    call particleList(j)% initializeRandUniform(world, irand)
+                else
+                    particleList(j) = Particle(mass(j), charge(j), Ti(j), numParticles(j), particleIdxFactor(j), trim(particleNames(j)), numThread)
+                    numParticles(j) = numParticles(j)/numThread
+                    tempInt = MOD(particleList(j)%N_p(1), numThread)
+                    INQUIRE(file=restartDirectory//"/PhaseSpace/phaseSpace_"//particleList(j)%name//".dat", exist = boolVal)
+                    if (.not. boolVal) then
+                        print *, 'Phase Space information for particle', particleList(j)%name, 'does not exist!'
+                        stop
+                    end if
+                    open(10,file=restartDirectory//"/PhaseSpace/phaseSpace_"//particleList(j)%name//".dat", form = 'UNFORMATTED', access = 'stream', status = 'old', IOSTAT=io)
+                    do i = 1, numThread
+                        if (i <= tempInt) then
+                            particleList(j)%N_p(i) = numParticles(j) + 1
+                        else
+                            particleList(j)%N_p(i) = numParticles(j)
+                        end if
+                        read(10,  IOSTAT = io) particleList(j)%phaseSpace(:, 1:particleList(j)%N_p(i), i)
+                    end do
+                    close(10)
+                end if
                 print *, 'Initializing ', particleList(j) % name
                 print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
                 print *, "Particle mass is:", particleList(j)%mass

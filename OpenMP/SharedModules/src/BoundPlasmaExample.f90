@@ -19,13 +19,11 @@ program BoundPlasmaExample
     integer(int32) :: i, j, iThread, startTime, endTime
     real(real64) :: remainDel_t, currDel_t, PE_i, KE_i, PE_f, KE_f, Momentum_i(3), Momentum_f(3)
     real(real64), allocatable :: rho_i(:)
-    character(:), allocatable :: saveFolderName !name of the particle
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
 
-    saveFolderName = '../../../../ImplicitData/'
     call initializeScheme()
-    call readInitialInputs('InitialConditions.inp', saveFolderName)
+    call readInitialInputs('InitialConditions.inp')
     call initializeRandomGenerators(numThread, stateRan0, stateRanNew)
     call readWorld('Geometry.inp', globalWorld, T_e, n_ave)
     call readSolver('Geometry.inp', globalSolver, globalWorld)
@@ -39,7 +37,7 @@ program BoundPlasmaExample
     call readInjectionInputs('ParticleInjection.inp', globalParticleList(1)%w_p, globalSolver%BFieldAngle)
     call initializeSolver()
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
-    call solveInitialPotential(globalSolver, globalParticleList, globalWorld, 0.0d0)
+    call solveInitialPotential(globalSolver, globalParticleList, globalWorld, startSimulationTime)
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
     ! E_i = globalSolver%getTotalPE(globalWorld, .false.)
@@ -55,7 +53,7 @@ program BoundPlasmaExample
     ! end do
     ! print *, ABS((E_i - E_f)/(E_i))
     ! stop
-  
+    
     ! allocate(rho_i(NumberXNodes))
     ! rho_i = globalSolver%rho
     ! KE_i = 0.0d0
@@ -69,7 +67,7 @@ program BoundPlasmaExample
     !     Momentum_i = Momentum_i + globalParticleList(j)%getTotalMomentum()
     ! end do
     ! call system_clock(startTime)
-    ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r, 0.0d0)
+    ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r, startSimulationTime)
     ! call system_clock(endTime)
     ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0

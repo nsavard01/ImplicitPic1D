@@ -23,6 +23,7 @@ module mod_domain
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
+        procedure, public, pass(self) :: makeArraysFromGrid
         procedure, public, pass(self) :: getLFromX
         procedure, public, pass(self) :: writeDomain
     end type Domain
@@ -70,9 +71,7 @@ contains
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
         END SELECT
-        self%startX = self%grid(1)
-        self%endX = self%grid(NumberXNodes)
-        self%L_domain = self%endX - self%startX
+        call self%makeArraysFromGrid()
     end subroutine constructGrid
 
     subroutine constructSineGrid(self, del_x, L_domain)
@@ -91,14 +90,6 @@ contains
             self % grid(i) = L_domain * ((real(i)-1.0d0)/(real(NumberXNodes) - 1.0d0) - (1.0d0/(real(NumberXNodes) - 1.0d0) - del_x/L_domain) &
             * SIN(2 * pi * (i-1) / (NumberXNodes - 1)) / SIN(2 * pi / (NumberXNodes - 1)) )
         end do
-        do i = 1, NumberXNodes-1
-            self%dx_dl(i) = self%grid(i+1) - self%grid(i)
-        end do
-        do i = 2, NumberXNodes-1
-            self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2.0d0
-        end do
-        self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
-        self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
 
     end subroutine constructSineGrid
 
@@ -116,14 +107,7 @@ contains
             self % grid(i) = L_domain * ((real(i)-1.0d0)/(real(NumberXNodes) - 1.0d0)/2.0d0 - (1.0d0/(real(NumberXNodes) - 1.0d0)/2.0d0 - del_x/L_domain) &
             * SIN(pi * (real(i)-1)/(real(NumberXNodes) - 1)) / SIN(pi / (real(NumberXNodes) - 1.0d0)) )
         end do
-        do i = 1, NumberXNodes-1
-            self%dx_dl(i) = self%grid(i+1) - self%grid(i)
-        end do
-        do i = 2, NumberXNodes-1
-            self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
-        end do
-        self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
-        self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
+        
 
         if (self%boundaryConditions(1) == 3 .or. self%boundaryConditions(NumberXNodes) == 3) then
             print *, "Mesh is not periodic, cannot have periodic boundary!"
@@ -152,14 +136,6 @@ contains
         do i = 2,NumberXNodes-1
             self % grid(i) = A * (EXP(k * real(i-1, kind = real64)) - 1.0d0)
         end do
-        do i = 1, NumberXNodes-1
-            self%dx_dl(i) = self%grid(i+1) - self%grid(i)
-        end do
-        do i = 2, NumberXNodes-1
-            self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
-        end do
-        self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
-        self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
 
         if (self%boundaryConditions(1) == 3 .or. self%boundaryConditions(NumberXNodes) == 3) then
             print *, "Mesh is not periodic, cannot have periodic boundary!"
@@ -176,15 +152,23 @@ contains
         do i = 2, NumberXNodes-1
             self % grid(i) =  (i-1) * L_domain / (NumberXNodes - 1)
         end do
+    end subroutine constructUniformGrid
+
+    subroutine makeArraysFromGrid(self)
+        class(Domain), intent(in out) :: self
+        integer(int32) :: i
         do i = 1, NumberXNodes-1
             self%dx_dl(i) = self%grid(i+1) - self%grid(i)
         end do
         do i = 2, NumberXNodes-1
-            self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2
+            self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2.0d0
         end do
         self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
         self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXNodes-1)
-    end subroutine constructUniformGrid
+        self%startX = self%grid(1)
+        self%endX = self%grid(NumberXNodes)
+        self%L_domain = self%endX - self%startX
+    end subroutine makeArraysFromGrid
 
     function getLFromX(self, x) result(l)
         class(Domain), intent(in) :: self
@@ -234,9 +218,9 @@ contains
         type(Domain), intent(in out) :: world
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave
-        integer(int32) :: io, leftBoundary, rightBoundary, gridType
+        integer(int32) :: io, leftBoundary, rightBoundary, gridType, intArray(20), i
         real(real64) :: debyeLength, L_domain
-
+        integer(int32), allocatable :: boundArray(:)
         print *, ""
         print *, "Reading domain inputs:"
         print *, "------------------"
@@ -249,13 +233,33 @@ contains
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         close(10)
+        if (restartBool) then
+            open(10,file=restartDirectory//"/"//"InitialConditions.dat", IOSTAT=io)
+            read(10, *, IOSTAT = io)
+            read(10, *, IOSTAT = io) intArray(1), NumberXNodes
+            close(10) 
+            allocate(boundArray(NumberXNodes))
+            open(10,file=restartDirectory//"/"//"domainBoundaryConditions.dat", form='UNFORMATTED', IOSTAT=io)
+            read(10, IOSTAT = io) boundArray
+            close(10)
+            leftBoundary = boundArray(1)
+            rightBoundary = boundArray(NumberXNodes)
+            deallocate(boundArray)
+        end if
         debyeLength = MAX(getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
         end if
         world = Domain(leftBoundary, rightBoundary)
-        call world % constructGrid(debyeLength, L_domain, gridType)
+        if (.not. restartBool) then
+            call world % constructGrid(debyeLength, L_domain, gridType)
+        else
+            open(10,file=restartDirectory//"/"//"domainGrid.dat", form='UNFORMATTED', IOSTAT=io)
+            read(10, IOSTAT = io) world%grid
+            close(10)
+            call world%makeArraysFromGrid()
+        end if
         print *, "Number of nodes:", NumberXNodes
         print *, "Grid length:", world%L_domain
         print *, 'gridType:', gridType

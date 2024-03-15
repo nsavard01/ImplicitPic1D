@@ -409,8 +409,9 @@ contains
         type(Domain), intent(in) :: world
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
-        integer(int32) :: io
-        real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency
+        integer(int32) :: io, intTemp
+        real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency, realTemp(20)
+        real(real64), allocatable :: allocReal(:)
 
         print *, ""
         print *, "Reading solver inputs:"
@@ -421,10 +422,30 @@ contains
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
-        read(10, *, IOSTAT = io) BFieldMag, angle
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
-
+        if (restartBool) then
+            allocate(allocReal(NumberXNodes))
+            open(10,file=restartDirectory//"/Phi/phi_0.dat", form='UNFORMATTED', IOSTAT=io)
+            read(10, IOSTAT = io) allocReal
+            close(10)
+            leftVoltage = allocReal(1)
+            rightVoltage = allocReal(NumberXNodes)
+            deallocate(allocReal)
+            open(10,file=restartDirectory//"/"//"InitialConditions.dat", IOSTAT=io)
+            read(10, *, IOSTAT = io)
+            read(10, *, IOSTAT = io) realTemp(1:15)
+            close(10) 
+            RF_frequency = realTemp(14)/2.0d0/pi
+            if (world%boundaryConditions(1) == 4) then
+                leftVoltage = realTemp(15)
+            else if (world%boundaryConditions(NumberXNodes) == 4) then
+                rightVoltage = realTemp(15)
+            end if
+            
+        end if
+        BFieldMag = 0.0d0
+        angle = 0.0d0 
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
         print *, 'Left voltage:', solver%phi(1)
         print *, 'Right voltage:', solver%phi(NumberXNodes)

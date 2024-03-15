@@ -60,44 +60,63 @@ contains
     subroutine readNeutralParticleInputs(filename, targetParticleList)
         type(targetParticle), allocatable, intent(out) :: targetParticleList(:)
         character(len=*), intent(in) :: filename
-        integer(int32) :: j, numNeutral = 0
+        integer(int32) :: j, numNeutral = 0, io
         character(len=15) :: name
-        character(len=8) :: neutralName
-        real(real64) :: mass_neutral, Temp_neutral, density_neutral
+        character(len=8) :: neutralName(100)
+        real(real64) :: mass_neutral(100), Temp_neutral(100), density_neutral(100)
 
         print *, "Reading particle inputs:"
-        open(10,file='../InputData/'//filename, action = 'read')
-        do j=1, 10000
-            read(10,*) name
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//filename, action = 'read')
+            do j=1, 10000
+                read(10,*) name
 
 
-            if( name(1:4).eq.'NEUT' .or. name(1:4).eq.'Neut' .or. name(1:4).eq.'neut' ) then
-                do while(name(1:4).ne.'----')
-                    read(10,*) name
-                end do
-                read(10,'(A6)', ADVANCE = 'NO') name
-                do while (name(1:4).ne.'----')
-                    numNeutral = numNeutral + 1
-                    read(10,*) mass_neutral, Temp_neutral, density_neutral
-                    mass_neutral = mass_neutral * m_amu
-                    neutralName = trim(name)
+                if( name(1:4).eq.'NEUT' .or. name(1:4).eq.'Neut' .or. name(1:4).eq.'neut' ) then
+                    do while(name(1:4).ne.'----')
+                        read(10,*) name
+                    end do
                     read(10,'(A6)', ADVANCE = 'NO') name
+                    do while (name(1:4).ne.'----')
+                        numNeutral = numNeutral + 1
+                        read(10,*) mass_neutral(numNeutral), Temp_neutral(numNeutral), density_neutral(numNeutral)
+                        mass_neutral(numNeutral) = mass_neutral(numNeutral) * m_amu
+                        neutralName(numNeutral) = trim(name)
+                        read(10,'(A6)', ADVANCE = 'NO') name
+                    end do
+                endif       
+
+                if (name(1:7) == 'ENDFILE') then
+                    close(10)
+                    exit
+                end if
+
+            end do
+        else
+            open(10,file=restartDirectory//"/TargetProperties.dat", IOSTAT=io)
+            read(10, *, IOSTAT = io)
+            read(10, '(A)', Advance = 'NO', IOSTAT = io) name
+            do while (io == 0)    
+                do j = 1, len(name)
+                    if (name(j:j) == ' ') then
+                        exit
+                    end if
                 end do
-            endif       
-
-            if (name(1:7) == 'ENDFILE') then
-                close(10)
-                exit
-            end if
-
-        end do
+                backspace(10)
+                numNeutral = numNeutral + 1
+                read(10, *, IOSTAT = io) name(1:j-1), mass_neutral(numNeutral), density_neutral(numNeutral), Temp_neutral(numNeutral)
+                neutralName(numNeutral) = name(1:j-1)
+                read(10, '(A)', Advance = 'NO', IOSTAT = io) name
+            end do
+            close(10)
+        end if
 
 
         numberNeutralParticles = numNeutral
         if (numberNeutralParticles > 0) then
             allocate(targetParticleList(numberNeutralParticles))
             do j = 1, numberNeutralParticles
-                targetParticleList(j) = targetParticle(neutralName, mass_neutral, density_neutral, Temp_neutral)
+                targetParticleList(j) = targetParticle(neutralName(j), mass_neutral(j), density_neutral(j), Temp_neutral(j))
                 print *, 'Initializing target particle:', targetParticleList(j)%name
                 print *, 'Particle mass is:', targetParticleList(j)%mass
                 print *, 'Particle temperature(K) is:', targetParticleList(j)%temperature

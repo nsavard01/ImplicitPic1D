@@ -195,3 +195,17 @@
  Simulation is   95.0000008363333      percent done
  Number of electrons is:     3419468
  Number of ions is:     3422245
+ Simulation is   100.000000816354      percent done
+ Number of electrons is:     3419078
+ Number of ions is:     3421841
+ Elapsed time for simulation is:   432335.467168000      seconds
+ moverTime is:   224955.498678000     
+ potentialTime is:   203035.389326000     
+ collision time is:   4320.18464800000     
+ Averaging over  1.400000000000000E-005 seconds
+ Averaging finished over  1.382649681975205E-005 simulation time (s)
+ Power loss to wall is:   429999.022022725     
+ Power loss to inelastic collisions:   192881.038910160     
+ Electron average wall loss (A/m^2):  -655.664209258243     
+ Ion average wall loss (A/m^2):   655.621508486144     
+ Performing average for EEDF over 50/omega_p
