@@ -95,7 +95,7 @@ contains
         del_t = MIN(fractionFreq * 1.0d0 / plasmaFreqTemp, del_t)
         simulationTime = simulationTime + startSimulationTime
         print *, "Save data folder: ", directoryName
-        print *, "Number of threads is:", numThread
+        print *, "Number of threads is:", omp_get_max_threads()
         print *, "Average initial electron density:", n_ave
         print *, "Initial electron temperature:", T_e
         print *, "Initial ion temperature:", T_i
