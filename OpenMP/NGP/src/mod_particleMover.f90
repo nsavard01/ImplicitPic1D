@@ -126,7 +126,7 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, q_over_m, f_tol, v_half, dx_dl, E_x, q_times_wp, J_temp(NumberXNodes-1)
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, q_over_m, f_tol, v_half, dx_dl, E_x, q_times_wp
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: AtBoundaryBool, FutureAtBoundaryBool, timeNotConvergedBool
         solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
@@ -135,10 +135,10 @@ contains
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
             q_times_wp = particleList(j)%q * particleList(j)%w_p
-            J_temp = 0
             !$OMP parallel private(iThread, i, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
-                numIter, timeNotConvergedBool) reduction(+:J_temp)
+                numIter, timeNotConvergedBool)
             iThread = omp_get_thread_num() + 1 
+            particleList(j)%J_particle(:,iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 v_sub = particleList(j)%phaseSpace(2,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
@@ -160,8 +160,8 @@ contains
     
                     v_f = 2.0d0 * v_half - v_sub
                     
-                    J_temp(l_cell) = J_temp(l_cell) + (l_f - l_sub)
-                    !solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + q_times_wp * (v_half(1))*del_tau/world%dx_dl(l_cell)/del_t
+                    !J_temp(l_cell) = J_temp(l_cell) + (l_f - l_sub)
+                    particleList(j)%J_particle(l_cell, iThread) = particleList(j)%J_particle(l_cell, iThread) + l_f - l_sub
                     
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
@@ -205,7 +205,7 @@ contains
             end do loopParticles
             !solver%J(:, iThread) = solver%J(:, iThread) + J_temp
             !$OMP end parallel
-            solver%J = solver%J + J_temp * q_times_wp
+            solver%J = solver%J + SUM(particleList(j)%J_particle, DIM = 2) * q_times_wp
         end do loopSpecies
         solver%J = solver%J/del_t
     end subroutine depositJ

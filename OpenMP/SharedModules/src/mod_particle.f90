@@ -19,7 +19,7 @@ module mod_particle
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
         real(real64), allocatable :: wallLoss(:), energyLoss(:)
-        real(real64), allocatable :: densities(:, :)
+        real(real64), allocatable :: densities(:, :), J_particle(:,:)
         real(real64) :: numFuncEvalAve, numSubStepsAve
         real(real64) :: accumEnergyLoss(2)
 
@@ -57,7 +57,7 @@ contains
         self%numFuncEvalAve = 0.0d0
         self%numSubStepsAve = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
-            self%delIdx(numThread), self%wallLoss(2), self%energyLoss(2), self%refIdx(numThread), self%densities(NumberXNodes, numThread))
+            self%delIdx(numThread), self%wallLoss(2), self%energyLoss(2), self%refIdx(numThread), self%densities(NumberXNodes, numThread), self%J_particle(NumberXNodes-1, numThread))
         self%refIdx = 0
         self%delIdx = 0
         self%N_p = N_p
