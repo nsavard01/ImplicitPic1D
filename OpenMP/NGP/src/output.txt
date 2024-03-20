@@ -269,3 +269,52 @@
  Number of electrons is:     1361840
  Number of ions is:     1362949
  Percentage of steps adaptive is:  9.172129935084632E-002
+ Simulation is   80.0000208280346      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  4.264643200097673E-004
+ Total wall power loss:   433208.582803806     
+ Total collision energy loss:   194738.231061850     
+ Number of electrons is:     1362783
+ Number of ions is:     1363897
+ Percentage of steps adaptive is:  9.176462568644597E-002
+ Simulation is   85.0000208291388      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  7.118973726404731E-005
+ Total wall power loss:   434131.661140585     
+ Total collision energy loss:   194110.396117356     
+ Number of electrons is:     1361253
+ Number of ions is:     1362346
+ Percentage of steps adaptive is:  9.126462603174697E-002
+ Simulation is   90.0000208308398      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  6.590610648099633E-004
+ Total wall power loss:   432604.717319210     
+ Total collision energy loss:   194745.787069113     
+ Number of electrons is:     1362289
+ Number of ions is:     1363397
+ Percentage of steps adaptive is:  9.137472123309388E-002
+ Simulation is   95.0000208325406      percent done
+ -------------------------WARNING------------------------
+ Gauss error is:  8.443727576455657E-004
+ Total wall power loss:   434067.449389841     
+ Total collision energy loss:   194193.947245599     
+ Number of electrons is:     1363528
+ Number of ions is:     1364636
+ Percentage of steps adaptive is:  9.167023429807637E-002
+ -------------------------WARNING------------------------
+ Gauss error is:  1.342083099216003E-004
+ Elapsed time for simulation is:   125383.546575000      seconds
+ Percentage of steps adaptive is:  9.162428713827712E-002
+ potentialTime is:   124750.993472000     
+ collision time is:   630.431145000000     
+ Averaging finished over  1.400000000476362E-005 simulation time (s)
+ gaussError average is:  6.278702472591147E-002
+ Power loss to walls is:   433848.542544403     
+ Power gain in plasma is:  0.000000000000000E+000
+ Electron total power loss in W/m^2:   10404.9189552272     
+ Ion total power loss in W/m^2:   423443.623589175     
+ Electron average wall loss flux:  4.114717260504695E+021
+ Ion average wall loss flux:  4.114637498599960E+021
+ Performing average for EEDF over 50/omega_p
+ E_max is:   2546.40556359536     
+ V_max is:   29928812.4080896     

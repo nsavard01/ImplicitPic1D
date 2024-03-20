@@ -1,12 +1,12 @@
 32 ! number of threads
-1.5d-4  0.0d0 ! simulation time
-1.6d18 ! Initial number density (1/m^3) of particles
-4.0d0 ! T_e (eV)
+9.43952802359882e-05   0.0d0 ! simulation time
+2.56d14  ! Initial number density (1/m^3) of particles
+2.59d0 ! T_e (eV)
 0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-3.0d0 3.125e-11 ! Fraction of initial 1/w_p for initial time step
-1.4d-5 ! amount of time to average final Diagnostics
+1.5d0 1.8436578171091448e-10 ! Fraction of initial 1/w_p for initial time step
+9.43952802359882e-05 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-NGP_RFBenchmark_highDenity_halfPart_1001nodes_10xtime !filename
+NGP_RF_Benchmark_case1 !filename
 no NGP_RF_Benchmark_case1 ! Restart(yes/no) and directory to take from
 END

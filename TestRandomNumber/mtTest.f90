@@ -4,7 +4,6 @@ program mtTest
     use omp_lib
     use mod_Random
     use mod_PCG
-    use mod_testThread
     use iso_fortran_env, only: output_unit, wp => real64, i4 => int32, i8 => int64
     
     implicit none
@@ -12,10 +11,9 @@ program mtTest
 
     type(mt19937), allocatable :: randGen(:)
     type(randType), allocatable :: randOther(:)
-    type(testThread) :: varTest
     real(wp) :: r, temp
     integer(i4) :: i, j, startTime, endTime, timingRate, iThread
-    integer, parameter :: n = 10**6, numThread = 16, numBins = 200, outer_n = 10
+    integer, parameter :: n = 10**7, numThread = 16, numBins = 200, outer_n = 100
     integer(int32) :: hist(numBins), thread_irand
     real(real64) :: var, mean
     integer(int32), pointer :: point_irand
@@ -38,8 +36,6 @@ program mtTest
         call randOther(i)%initialize(INT(r * (huge(irand(i))) + 1))
     end do
 
-    
-    varTest = testThread(1)
 
     ! call random%initialize(42)
 
@@ -69,6 +65,26 @@ program mtTest
 
     ! ! randomness tests:
 
+    
+    print *, 'starting irand:'
+    print *, irand
+    call system_clock(startTime)
+    !$OMP parallel private(iThread, j,i, point_irand)
+    iThread = omp_get_thread_num() + 1
+    point_irand => irand(iThread)
+    do j = 1, n
+        point_irand = point_irand + mod(j, iThread)
+    end do
+    !irand(iThread) = thread_irand
+    !$OMP end parallel
+    call system_clock(endTime)
+ 
+    print *, 'Time:', real(endTime - startTime)/real(timingRate)
+    print *, 'end irand:'
+    print *, irand
+    stop
+
+
     ! var = 0
     ! mean = 0
     ! print *, 'starting irand:'
@@ -77,15 +93,13 @@ program mtTest
     ! !$OMP parallel private(iThread, j,i, thread_irand)
     ! iThread = omp_get_thread_num() + 1
     ! thread_irand = irand(iThread)
-    ! !$OMP barrier
     ! do j = 1, outer_n
     !     do i = 1, n
     !         x(i, iThread) = ran2(thread_irand)
     !     end do
-    !     ! var = var + SUM((x(:,iThread) - 0.5d0)**2)
-    !     ! mean = mean + SUM(x(:,iThread))
+    !     var = var + SUM((x(:,iThread) - 0.5d0)**2)
+    !     mean = mean + SUM(x(:,iThread))
     ! end do
-    ! !$OMP barrier
     ! irand(iThread) = thread_irand
     ! !$OMP end parallel
     ! call system_clock(endTime)
