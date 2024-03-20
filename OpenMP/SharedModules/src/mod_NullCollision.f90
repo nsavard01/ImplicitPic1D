@@ -126,7 +126,7 @@ contains
             velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation, irand_thread) reduction(+:energyLoss,totalCollisions)
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread)
-        numberTotalParticles = particleList(self%reactantsIndx(1))%N_p(iThread)
+        numberTotalParticles = particleList(self%reactantsIndx(1))%numToCollide(iThread)
         numberSelectedReal = P_null * real(numberTotalParticles)
         numberSelected = INT(numberSelectedReal)
         Rand = ran2(irand_thread)
@@ -219,6 +219,7 @@ contains
             numberTotalParticles = numberTotalParticles - 1
         end do
         irand(iThread) = irand_thread
+        particleList(self%reactantsIndx(1))%numToCollide(iThread) = numberTotalParticles
         !$OMP end parallel
         self%totalEnergyLoss = self%totalEnergyLoss + energyLoss
         self%totalAmountCollisions = self%totalAmountCollisions + totalCollisions

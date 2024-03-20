@@ -14,11 +14,11 @@ module mod_particle
     ! Particle contains particle properties and stored values in phase space df
     type :: Particle
         character(:), allocatable :: name !name of the particle
-        integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:) !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
+        integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:), numToCollide(:) !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
         integer(int32) :: finalIdx, accumWallLoss(2)
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
-        real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
-        real(real64), allocatable :: wallLoss(:), energyLoss(:)
+        real(real64) :: mass, q, w_p, q_over_m, q_times_wp ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
+        real(real64), allocatable :: wallLoss(:,:), energyLoss(:,:)
         real(real64), allocatable :: densities(:, :), J_particle(:,:)
         real(real64) :: numFuncEvalAve, numSubStepsAve
         real(real64) :: accumEnergyLoss(2)
@@ -51,13 +51,16 @@ contains
         self % mass = mass
         self % q = q
         self % w_p = w_p
+        self%q_over_m = q/mass
+        self%q_times_wp = q * w_p
         self % finalIdx = finalIdx
         self%accumWallLoss = 0.0d0
         self%accumEnergyLoss = 0.0d0
         self%numFuncEvalAve = 0.0d0
         self%numSubStepsAve = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
-            self%delIdx(numThread), self%wallLoss(2), self%energyLoss(2), self%refIdx(numThread), self%densities(NumberXNodes, numThread), self%J_particle(NumberXNodes-1, numThread))
+            self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
+            self%densities(NumberXNodes, numThread), self%J_particle(NumberXNodes-1, numThread), self%numToCollide(numThread))
         self%refIdx = 0
         self%delIdx = 0
         self%N_p = N_p

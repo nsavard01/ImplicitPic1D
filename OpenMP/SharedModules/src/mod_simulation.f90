@@ -559,7 +559,7 @@ contains
             chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
             Etotal = Etotal + particleList(j)%getTotalKE()
             energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%w_p * particleList(j)%mass * 0.5d0
-            write(unitPart1+j,"(5(es16.8,1x), (I6, 1x), 3(es16.8,1x))") currentTime + currDel_t, &
+            write(unitPart1+j,"(5(es16.8,1x), (I10, 1x), 3(es16.8,1x))") currentTime + currDel_t, &
                 particleList(j)%accumWallLoss(1) * particleList(j)%q * particleList(j)%w_p/(currentTime + currDel_t - pastDiagTime), particleList(j)%accumWallLoss(2) * particleList(j)%q * particleList(j)%w_p/(currentTime + currDel_t - pastDiagTime), &
                 particleList(j)%accumEnergyLoss(1)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime + currDel_t - pastDiagTime), &
                 particleList(j)%accumEnergyLoss(2)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime + currDel_t - pastDiagTime), SUM(particleList(j)%N_p), &
