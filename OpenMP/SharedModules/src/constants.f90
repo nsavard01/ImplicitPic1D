@@ -14,7 +14,7 @@ module constants
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
     ! Essential parameters set that is important for entire simulation state
     integer(int32), protected :: numDiagnosticSteps, numThread
-    logical, protected :: restartBool
+    logical, protected :: restartBool = .false.
     real(real64), protected :: fractionFreq, n_ave, T_e, T_i
     real(real64), protected :: del_t, simulationTime, averagingTime
     character(len=:), allocatable, protected :: directoryName, restartDirectory ! Name of save directory

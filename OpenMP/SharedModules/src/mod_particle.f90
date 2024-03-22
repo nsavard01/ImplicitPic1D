@@ -19,7 +19,7 @@ module mod_particle
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p, q_over_m, q_times_wp ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
         real(real64), allocatable :: wallLoss(:,:), energyLoss(:,:)
-        real(real64), allocatable :: densities(:, :), J_particle(:,:)
+        real(real64), allocatable :: densities(:, :), workSpace(:,:)
         real(real64) :: numFuncEvalAve, numSubStepsAve
         real(real64) :: accumEnergyLoss(2)
 
@@ -60,7 +60,7 @@ contains
         self%numSubStepsAve = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
-            self%densities(NumberXNodes, numThread), self%J_particle(NumberXHalfNodes, numThread), self%numToCollide(numThread))
+            self%densities(NumberXNodes, numThread), self%workSpace(NumberXNodes, numThread), self%numToCollide(numThread))
         self%refIdx = 0
         self%delIdx = 0
         self%N_p = N_p
@@ -182,8 +182,8 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
-        integer(int32) :: j, index, counter(NumberXHalfNodes, numThread), iThread
-        real(real64) :: temp(NumberXHalfNodes, numThread), EHist(NumberXHalfNodes)
+        integer(int32) :: j, index, counter(NumberXNodes-1, numThread), iThread
+        real(real64) :: temp(NumberXNodes-1, numThread), EHist(NumberXNodes-1)
         temp = 0.0d0
         counter = 0
         !$OMP parallel private(iThread, j, index) 
@@ -196,7 +196,7 @@ contains
             end if
         end do
         !$OMP end parallel
-        do j = 1, NumberXHalfNodes
+        do j = 1, NumberXNodes-1
             if (SUM(counter(j, :)) > 0) then
                 EHist(j) = SUM(temp(j,:))*self%mass/SUM(counter(j, :))/3.0d0/e
             else

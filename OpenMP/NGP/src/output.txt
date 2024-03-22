@@ -299,3 +299,9 @@
  Number of electrons is:     1441918
  Number of ions is:     1443062
  Percentage of steps adaptive is:  1.355078914708965E-002
+ -------------------------WARNING------------------------
+ Gauss error is:  2.193268188727629E-004
+ Elapsed time for simulation is:   162265.466750000      seconds
+ Percentage of steps adaptive is:  1.351900263505984E-002
+ potentialTime is:   161628.628298000     
+ collision time is:   634.485109000000     

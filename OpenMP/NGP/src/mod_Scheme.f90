@@ -109,13 +109,17 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         real(real64) :: densities(NumberXNodes)
-        integer(int32) :: i
+        integer(int32) :: i, iThread
         logical, intent(in) :: boolAverage
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            densities = (SUM(particleList(i)%densities, DIM=2)/world%nodeVol) * particleList(i)%w_p
-            write(char_i, '(I3)'), CurrentDiagStep
+            densities = 0.0d0
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1
+            call world%addThreadedDomainArray(densities, particleList(i)%densities, NumberXNodes, iThread, particleList(i)%w_p)
+            !$OMP end parallel
+            densities = densities/world%nodeVol
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else

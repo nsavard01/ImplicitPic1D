@@ -367,17 +367,18 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        integer(int32) :: j, i, delIdx, refIdx, iThread, wallLoss(2)
-        real(real64) :: v_prime, q_over_m, partLoc, energyLoss(2)
+        integer(int32) :: j, i, delIdx, refIdx, iThread, N_p
+        real(real64) :: v_prime, q_over_m, partLoc
         loopSpecies: do j = 1, numberChargedParticles
             q_over_m = particleList(j)%q/particleList(j)%mass
-            energyLoss = 0.0d0
-            wallLoss = 0
-            !$OMP parallel private(iThread, i, delIdx, v_prime,partLoc, refIdx) reduction(+:energyLoss, wallLoss)
+            !$OMP parallel private(iThread, i, delIdx, v_prime,partLoc, refIdx, N_p)
             iThread = omp_get_thread_num() + 1
             delIdx = 0
             refIdx = 0
-            loopParticles: do i = 1, particleList(j)%N_p(iThread)
+            particleList(j)%wallLoss(:, iThread) = 0
+            particleList(j)%energyLoss(:, iThread) = 0.0d0
+            N_p = particleList(j)%N_p(iThread)
+            loopParticles: do i = 1, N_p
                 ! First velocity change
                 v_prime = particleList(j)%phaseSpace(2, i, iThread) + q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                 ! Get new position
@@ -385,8 +386,8 @@ contains
                 if (partLoc <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1,4)
-                        energyLoss(1) = energyLoss(1) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
-                        wallLoss(1) = wallLoss(1) + 1 !C/m^2 in 1D
+                        particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
+                        particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
@@ -402,8 +403,8 @@ contains
                 else if ((partLoc >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
                     CASE(1,4)
-                        energyLoss(2) = energyLoss(2) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
-                        wallLoss(2) = wallLoss(2) + 1 !C/m^2 in 1D
+                        particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
+                        particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
@@ -422,14 +423,13 @@ contains
                     particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
                 end if
             end do loopParticles
-            particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
+            particleList(j)%N_p(iThread) = N_p - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             particleList(j)%refIdx(iThread) = refIdx
             !$OMP end parallel
-            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + energyLoss
-            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + wallLoss
-            particleList(j)%energyLoss = energyLoss
-            particleList(j)%wallLoss = wallLoss
+            particleList(j)%numToCollide = particleList(j)%N_p
+            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM=2)
+            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM=2)
         end do loopSpecies
     end subroutine moveParticles
 
@@ -466,7 +466,6 @@ contains
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         read(10, *, IOSTAT = io) 
-        read(10, *, IOSTAT = io) BFieldMag, angle
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
@@ -475,6 +474,7 @@ contains
         print *, 'BField magnitude:', solver%BFieldMag
         print *, 'BField angle:', solver%BFieldAngle
         print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
+        print *, 'RF half amplitude:', solver%RF_half_amplitude
         print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""

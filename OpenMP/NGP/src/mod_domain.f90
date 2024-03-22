@@ -239,7 +239,7 @@ contains
         ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp
         class(Domain), intent(in) :: self
         real(real64), intent(in out) :: array_add(N_x)
-        real(real64), intent(in) :: x(N_x, numThread), const
+        real(real64), intent(in) :: x(NumberXNodes, numThread), const
         integer(int32), intent(in) :: iThread, N_x
         if (N_x == NumberXNodes .and. iThread <= self%numThreadNodeIndx) then
             array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) = array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) &

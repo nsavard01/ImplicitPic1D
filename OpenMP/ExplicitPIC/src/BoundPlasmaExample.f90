@@ -17,11 +17,9 @@ program BoundPlasmaExample
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
-    character(:), allocatable :: saveFolderName !name of the particle
     
    
-    saveFolderName = '../../../../ExplicitData/'
-    call readInitialInputs('InitialConditions.inp', saveFolderName)
+    call readInitialInputs('InitialConditions.inp')
     call initializeRandomGenerators(numThread, stateRan0, stateRanNew)
     call readWorld('Geometry.inp', world, T_e, n_ave)
     call readSolver('Geometry.inp', solver, world)

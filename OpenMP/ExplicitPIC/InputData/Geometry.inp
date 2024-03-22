@@ -3,6 +3,5 @@
 1 4 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 RF dirichlet)
 0. 450. ! Voltage for left and right side boundary, used for dirichlet and periodic conditions
 5.0d0 ! fraction of debye length
-0.0d0 0. ! BField magnitude (T), angle theta from x axis (degrees)
 13.56d6 ! Osciallating voltage frequency
 END

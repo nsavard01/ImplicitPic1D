@@ -20,6 +20,7 @@ module mod_domain
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: writeDomain
         procedure, public, pass(self) :: getLFromX
+        procedure, public, pass(self) :: addThreadedDomainArray
     end type Domain
 
 
@@ -33,7 +34,7 @@ contains
     type(Domain) function domain_constructor(leftBoundary, rightBoundary) result(self)
         ! Construct domain object, initialize grid, dx_dl, and dx_dl.
         integer(int32), intent(in) :: leftBoundary, rightBoundary
-        integer(int32) :: i
+        integer(int32) :: i, k, spacingThread, modThread
         allocate(self % grid(NumberXNodes), self%boundaryConditions(NumberXNodes))
         self % grid = (/(i, i=0, NumberXNodes-1)/)
         self % delX = 0.0d0
@@ -81,7 +82,17 @@ contains
         
     end function getLFromX
 
-   
+    subroutine addThreadedDomainArray(self, array_add, x, iThread, const)
+        ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp
+        class(Domain), intent(in) :: self
+        real(real64), intent(in out) :: array_add(NumberXNodes)
+        real(real64), intent(in) :: x(NumberXNodes, numThread), const
+        integer(int32), intent(in) :: iThread
+        
+        array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) = array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) &
+            + SUM(x(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread), :), DIM=2) * const
+
+    end subroutine addThreadedDomainArray
 
     subroutine writeDomain(self, dirName)
         ! Writes domain data into binary file under Data
@@ -116,7 +127,6 @@ contains
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io) fracDebye
         read(10, *, IOSTAT = io) 
-        read(10, *, IOSTAT = io)
         close(10)
         debyeLength = getDebyeLength(T_e, n_ave)
         if (L_domain / (NumberXNodes-1) > fracDebye * debyeLength) then

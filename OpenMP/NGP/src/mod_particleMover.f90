@@ -137,7 +137,7 @@ contains
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
         
-            particleList(j)%J_particle(:,iThread) = 0.0d0
+            particleList(j)%workSpace(1:NumberXHalfNodes,iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 v_sub = particleList(j)%phaseSpace(2,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
@@ -160,7 +160,7 @@ contains
                     v_f = 2.0d0 * v_half - v_sub
                     
                     !J_temp(l_cell) = J_temp(l_cell) + (l_f - l_sub)
-                    particleList(j)%J_particle(l_cell, iThread) = particleList(j)%J_particle(l_cell, iThread) + l_f - l_sub
+                    particleList(j)%workSpace(l_cell, iThread) = particleList(j)%workSpace(l_cell, iThread) + l_f - l_sub
                     
                     if (FutureAtBoundaryBool) then
                         SELECT CASE (world%boundaryConditions(l_boundary))
@@ -206,7 +206,7 @@ contains
         end do loopSpecies
         !$OMP barrier
         do j = 1, numberChargedParticles
-            call world%addThreadedDomainArray(solver%J, particleList(j)%J_particle, NumberXHalfNodes, iThread, particleList(j)%q_times_wp)
+            call world%addThreadedDomainArray(solver%J, particleList(j)%workSpace, NumberXHalfNodes, iThread, particleList(j)%q_times_wp)
         end do
         !$OMP end parallel
         solver%J = solver%J/del_t
@@ -222,17 +222,15 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl, E_x, accumEnergyLoss(2, numberChargedParticles)
-        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p, accumWallLoss(2, numberChargedParticles)
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl, E_x
+        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p
         logical :: AtBoundaryBool, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool
         solver%EField = 0.5d0 * (solver%phi(1:NumberXHalfNodes) + solver%phi_f(1:NumberXHalfNodes) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0
-        accumEnergyLoss = 0.0d0
-        accumWallLoss = 0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, delIdx, dx_dl, E_x, l_boundary, numIter, &
-                refIdx, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool, N_p) reduction(+:numSubStepAve, funcEvalCounter, accumEnergyLoss, accumWallLoss)
+                refIdx, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool, N_p) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
@@ -327,8 +325,6 @@ contains
             particleList(j)%N_p(iThread) = N_p - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             particleList(j)%refIdx(iThread) = refIdx
-            accumWallLoss(:, j) = accumWallLoss(:, j) + particleList(j)%wallLoss(:, iThread)
-            accumEnergyLoss(:, j) = accumEnergyLoss(:,j) + particleList(j)%energyLoss(:, iThread)
         end do loopSpecies
         !$OMP end parallel
         do j = 1, numberChargedParticles
