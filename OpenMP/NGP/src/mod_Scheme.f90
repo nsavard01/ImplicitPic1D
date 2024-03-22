@@ -66,7 +66,7 @@ contains
 
 
     subroutine loadParticleDensity(particleList, world, reset)
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         logical, intent(in) :: reset
         integer(int32) :: i, iThread
@@ -83,7 +83,7 @@ contains
 
     subroutine depositRho(rho, particleList, world) 
         real(real64), intent(in out) :: rho(NumberXNodes)
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         integer(int32) :: i, iThread
         rho = 0.0d0
@@ -104,13 +104,13 @@ contains
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
         ! Re-use rho array since it doesn't get used after first Poisson
-        type(Particle), intent(in) :: particleList(:)
+        type(Particle), intent(in) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
+        logical, intent(in) :: boolAverage
         real(real64) :: densities(NumberXNodes)
         integer(int32) :: i, iThread
-        logical, intent(in) :: boolAverage
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles

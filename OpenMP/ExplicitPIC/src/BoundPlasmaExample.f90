@@ -31,7 +31,7 @@ program BoundPlasmaExample
     ! end do
     call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p, solver%BFieldAngle)
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
-    call solver%depositRho(particleList)
+    call solver%depositRho(particleList, world)
     call solver%solve_tridiag_Poisson(world, 0.0d0)
     
     ! do j = 1, numberChargedParticles

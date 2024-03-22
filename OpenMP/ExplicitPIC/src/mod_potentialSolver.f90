@@ -15,7 +15,7 @@ module mod_potentialSolver
     public :: potentialSolver, readSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), rho(:, :), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64), allocatable :: phi(:), rho(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: energyError, rho_const, siedelIter, siedelEps, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
         logical :: BFieldBool
@@ -48,7 +48,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
-        allocate(self % rho(NumberXNodes, numThread), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
+        allocate(self % rho(NumberXNodes), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
         self % a_tri = 0.0d0
         self % c_tri = 0.0d0
@@ -87,24 +87,30 @@ contains
 
     end function potentialSolver_constructor
 
-    subroutine depositRho(self, particleList) 
+    subroutine depositRho(self, particleList, world) 
         class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in) :: particleList(:)
+        type(Domain), intent(in) :: world
+        type(Particle), intent(in out) :: particleList(:)
         integer(int32) :: i, j, l_left, l_right, iThread
         real(real64) :: d
         self % rho = self%rho_const
+        !$OMP parallel private(iThread, j, i, l_left, l_right, d)
+        iThread = omp_get_thread_num() + 1
         do i=1, numberChargedParticles
-            !$OMP parallel private(iThread, j, l_left, l_right, d)
-            iThread = omp_get_thread_num() + 1
+            particleList(i)%workSpace(:, iThread) = 0.0d0   
             do j = 1, particleList(i)%N_p(iThread)
                 l_left = INT(particleList(i)%phaseSpace(1, j, iThread))
                 l_right = l_left + 1
                 d = particleList(i)%phaseSpace(1, j, iThread) - real(l_left)
-                self % rho(l_left, iThread) = self % rho(l_left, iThread) + (1.0d0-d) * particleList(i)%w_p * particleList(i)%q
-                self % rho(l_right, iThread) = self % rho(l_right, iThread) + d * particleList(i)%w_p * particleList(i)%q
-            end do
-            !$OMP end parallel
+                particleList(i)%workSpace(l_left, iThread) = particleList(i)%workSpace(l_left, iThread) + (1.0d0-d)
+                particleList(i)%workSpace(l_right, iThread) = particleList(i)%workSpace(l_right, iThread) + d
+            end do        
         end do
+        !$OMP barrier
+        do i = 1, numberChargedParticles
+            call world%addThreadedDomainArray(self%rho, particleList(i)%workSpace, iThread, particleList(i)%q_times_wp)
+        end do
+        !$OMP end parallel
     end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
@@ -157,7 +163,7 @@ contains
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                d(i) = (-SUM(self%rho(i, :))) / eps_0
+                d(i) = -self%rho(i) / eps_0
             CASE(1,3)
                 d(i) = self%phi(i)
             CASE(4)
@@ -194,7 +200,7 @@ contains
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                b(i) = (-SUM(self%rho(i, :))) / eps_0
+                b(i) = -self%rho(i) / eps_0
             CASE(1,3)
                 b(i) = self%phi(i)
             END SELECT
@@ -233,7 +239,7 @@ contains
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                b(i) = (-SUM(self%rho(i, :))) / eps_0
+                b(i) = -self%rho(i) / eps_0
             CASE(1,3)
                 b(i) = self%phi(i)
             END SELECT
@@ -369,10 +375,9 @@ contains
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         integer(int32) :: j, i, delIdx, refIdx, iThread, N_p
         real(real64) :: v_prime, q_over_m, partLoc
+        !$OMP parallel private(iThread, i, j,delIdx, v_prime,partLoc, refIdx, N_p)
+        iThread = omp_get_thread_num() + 1
         loopSpecies: do j = 1, numberChargedParticles
-            q_over_m = particleList(j)%q/particleList(j)%mass
-            !$OMP parallel private(iThread, i, delIdx, v_prime,partLoc, refIdx, N_p)
-            iThread = omp_get_thread_num() + 1
             delIdx = 0
             refIdx = 0
             particleList(j)%wallLoss(:, iThread) = 0
@@ -380,7 +385,7 @@ contains
             N_p = particleList(j)%N_p(iThread)
             loopParticles: do i = 1, N_p
                 ! First velocity change
-                v_prime = particleList(j)%phaseSpace(2, i, iThread) + q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                v_prime = particleList(j)%phaseSpace(2, i, iThread) + particleList(j)%q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                 ! Get new position
                 partLoc = particleList(j)%phaseSpace(1, i, iThread) + v_prime * del_t/world%delX
                 if (partLoc <= 1) then
@@ -426,11 +431,13 @@ contains
             particleList(j)%N_p(iThread) = N_p - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             particleList(j)%refIdx(iThread) = refIdx
-            !$OMP end parallel
+        end do loopSpecies
+        !$OMP end parallel
+        do j = 1, numberChargedParticles
             particleList(j)%numToCollide = particleList(j)%N_p
             particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM=2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM=2)
-        end do loopSpecies
+        end do
     end subroutine moveParticles
 
     ! ---------------- Initial Poisson Solver -------------------------------------------------
@@ -438,10 +445,10 @@ contains
     subroutine solvePotential(self, particleList, world, timeCurrent)
         ! Solve for initial potential
         class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: timeCurrent
-        call self%depositRho(particleList)
+        call self%depositRho(particleList, world)
         call self%solve_tridiag_Poisson(world, timeCurrent)
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)

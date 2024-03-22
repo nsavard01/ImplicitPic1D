@@ -45,52 +45,58 @@ contains
 
 
 
-    subroutine loadParticleDensity(densities, particleList, world)
-        type(Particle), intent(in) :: particleList(numberChargedParticles)
+    subroutine loadParticleDensity(particleList, world, reset)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
-        real(real64), intent(in out) :: densities(NumberXNodes,numberChargedParticles)
+        logical, intent(in) :: reset
         integer(int32) :: i,j, l_left, l_right, iThread
-        real(real64) :: d, tempDensity(NumberXNodes, numThread)
+        real(real64) :: d
+        !$OMP parallel private(iThread, j, i, l_left, l_right, d)
+        iThread = omp_get_thread_num() + 1
         do i=1, numberChargedParticles
-            tempDensity = 0.0d0
-            !$OMP parallel private(iThread, j, l_left, l_right, d)
-            iThread = omp_get_thread_num() + 1
+            if (reset) then
+                particleList(i)%densities(:,iThread) = 0.0d0
+            end if
             do j = 1, particleList(i)%N_p(iThread)
                 l_left = INT(particleList(i)%phaseSpace(1,j, iThread))
                 l_right = l_left + 1
                 d = particleList(i)%phaseSpace(1,j, iThread) - l_left
-                tempDensity(l_left, iThread) = tempDensity(l_left, iThread) + (1.0d0-d)
-                tempDensity(l_right, iThread) = tempDensity(l_right, iThread) + d
+                particleList(i)%densities(l_left, iThread) = particleList(i)%densities(l_left, iThread) + (1.0d0-d)
+                particleList(i)%densities(l_right, iThread) = particleList(i)%densities(l_right, iThread) + d
             end do
-            !$OMP end parallel
-            densities(:, i) = densities(:, i) + SUM(tempDensity, DIM = 2) * particleList(i)%w_p
         end do
+        !$OMP end parallel
 
     end subroutine loadParticleDensity
 
-    subroutine WriteParticleDensity(densities, particleList, world, CurrentDiagStep, boolAverage, dirName) 
+    subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
         ! Re-use rho array since it doesn't get used after first Poisson
-        real(real64), intent(in out) :: densities(NumberXNodes,numberChargedParticles)
         type(Particle), intent(in) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         character(*), intent(in) :: dirName
         integer(int32), intent(in) :: CurrentDiagStep
-        integer(int32) :: i
         logical, intent(in) :: boolAverage
+        real(real64) :: densities(NumberXNodes)
+        integer(int32) :: i, iThread
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            densities(:, i) = densities(:,i)/world%delX
-            densities(1, i) = 2.0d0 * densities(1, i)
-            densities(NumberXNodes, i) = 2.0d0 * densities(NumberXNodes, i)
+            densities = 0.0d0
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1
+            call world%addThreadedDomainArray(densities, particleList(i)%densities, iThread, particleList(i)%w_p)
+            !$OMP end parallel
+            densities = densities/world%delX
+            densities(1) = 2.0d0 * densities(1)
+            densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
             end if
-            write(41) densities(:, i)
+            write(41) densities
             close(41)
         end do
         
@@ -147,7 +153,7 @@ contains
         real(real64), intent(in) :: del_t, simulationTime
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
-        real(real64) :: densities(NumberXNodes, numberChargedParticles), diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
+        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
         allocate(energyAddColl(numThread))
         CurrentDiagStep = 1
@@ -191,9 +197,8 @@ contains
         energyAddColl = 0.0d0
         inelasticEnergyLoss = 0.0d0
         !call solver%initialVRewind(particleList, del_t)
-        densities = 0.0d0
-        call loadParticleDensity(densities, particleList, world)
-        call writeParticleDensity(densities, particleList, world, 0, .false., directoryName) 
+        call loadParticleDensity(particleList, world, .true.)
+        call writeParticleDensity(particleList, world, CurrentDiagStep, .false., directoryName)  
         call writePhi(solver%phi, 0, .false., directoryName)
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
@@ -248,9 +253,8 @@ contains
                 end do
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
-                densities = 0.0d0
-                call loadParticleDensity(densities, particleList, world)
-                call writeParticleDensity(densities, particleList, world, CurrentDiagStep, .false., directoryName) 
+                call loadParticleDensity(particleList, world, .true.)
+                call writeParticleDensity(particleList, world, CurrentDiagStep, .false., directoryName)  
                 call writePhi(solver%phi, CurrentDiagStep, .false., directoryName)
                 chargeTotal = 0.0d0
                 energyLoss = 0.0d0
@@ -317,8 +321,8 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
         integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber), k
-        real(real64) :: startTime, phi_average(NumberXNodes), densities(NumberXNodes, numberChargedParticles), chargeTotal, energyLoss, meanLoss, stdLoss
+        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber), k, iThread
+        real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss
         real(real64) :: E_max, VMax
         real(real64), allocatable :: wallLoss(:)
 
@@ -333,7 +337,6 @@ contains
         inelasticEnergyLoss = 0.0d0
         energyAddColl = 0.0d0
         phi_average = 0.0d0
-        densities = 0.0d0
         startTime = currentTime
         i = 0
         do j = 1, numberBinaryCollisions
@@ -356,7 +359,7 @@ contains
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do
-            call loadParticleDensity(densities, particleList, world)
+            call loadParticleDensity(particleList, world, .false.)
             phi_average = phi_average + solver%phi
             ! if (MODULO(i, heatSkipSteps) == 0) then
             !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSksipSteps*del_t)
@@ -376,9 +379,7 @@ contains
             end if
         end do
         print *, "Averaging finished over", (currentTime - startTime), 'simulation time (s)'
-        stepsAverage = i
-        densities = densities/i
-        call writeParticleDensity(densities, particleList, world, 0, .true., directoryName) 
+        stepsAverage = i 
         phi_average = phi_average/stepsAverage
         call writePhi(phi_average, 0, .true., directoryName)
         chargeTotal = 0.0d0
@@ -386,7 +387,12 @@ contains
         do i=1, numberChargedParticles
             chargeTotal = chargeTotal + SUM(particleList(i)%accumWallLoss) * particleList(i)%q * particleList(i)%w_p
             energyLoss = energyLoss + SUM(particleList(i)%accumEnergyLoss) * particleList(i)%mass * particleList(i)%w_p * 0.5d0
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1
+            particleList(i)%densities(:, iThread) = particleList(i)%densities(:, iThread) /real(stepsAverage)
+            !$OMP end parallel
         end do
+        call writeParticleDensity(particleList, world, 0, .true., directoryName) 
         do j = 1, numberBinaryCollisions
             inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
         end do
