@@ -96,6 +96,7 @@ contains
         simulationTime = simulationTime + startSimulationTime
         print *, "Save data folder: ", directoryName
         print *, "Number of threads is:", omp_get_max_threads()
+        print *, 'Total allowable threads:', omp_get_num_procs()
         print *, "Average initial electron density:", n_ave
         print *, "Initial electron temperature:", T_e
         print *, "Initial ion temperature:", T_i

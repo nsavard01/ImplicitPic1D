@@ -12,7 +12,8 @@ module mod_domain
     type :: Domain
         real(real64), allocatable :: grid(:) !Physical grid where phi is evaluated
         real(real64) :: delX, L_domain, startX, endX !Physical grid where E-Fields are
-        integer(int32), allocatable :: boundaryConditions(:) ! Boundary condition flags for fields and particles
+        integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:) ! Boundary condition flags for fields and particles
+        integer(int32) :: numThreadNodeIndx
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
@@ -40,6 +41,25 @@ contains
         self % boundaryConditions = 0
         self%boundaryConditions(1) = leftBoundary
         self%boundaryConditions(NumberXNodes) = rightBoundary
+        if (numThread < NumberXNodes) then
+            self%numThreadNodeIndx = numThread
+        else
+            self%numThreadNodeIndx = NumberXNodes
+        end if
+        allocate(self%threadNodeIndx(2, self%numThreadNodeIndx))
+        spacingThread = NumberXNodes/self%numThreadNodeIndx - 1
+        modThread = MOD(NumberXNodes, self%numThreadNodeIndx)
+        k = 1
+        do i = 1, self%numThreadNodeIndx
+            self%threadNodeIndx(1, i) = k
+            if (i <= modThread) then
+                k = k + spacingThread + 1
+            else
+                k = k + spacingThread
+            end if
+            self%threadNodeIndx(2,i) = k
+            k = k + 1
+        end do
     end function domain_constructor
 
 

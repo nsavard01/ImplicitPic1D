@@ -126,18 +126,16 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, q_over_m, f_tol, v_half, dx_dl, E_x, q_times_wp, J_temp(NumberXNodes-1)
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl, E_x
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: AtBoundaryBool, FutureAtBoundaryBool, timeNotConvergedBool
-        solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
+        solver%EField = 0.5d0 * (solver%phi(1:NumberXHalfNodes) + solver%phi_f(1:NumberXHalfNodes) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         f_tol = del_t * 1.d-10
-        J_temp = 0.0d0
+        solver%J = 0.0d0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, AtBoundaryBool, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
-                numIter, timeNotConvergedBool, q_over_m, q_times_wp) reduction(+:J_temp)
+                numIter, timeNotConvergedBool)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
-            q_over_m = particleList(j)%q/particleList(j)%mass
-            q_times_wp = particleList(j)%q * particleList(j)%w_p
         
             particleList(j)%J_particle(:,iThread) = 0.0d0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
@@ -157,7 +155,7 @@ contains
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
 
-                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_half, del_tau, E_x, particleList(j)%q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
     
                     v_f = 2.0d0 * v_half - v_sub
                     
@@ -204,10 +202,14 @@ contains
                     
                 end do
             end do loopParticles
-            J_temp = J_temp + particleList(j)%J_particle(:, iThread)* q_times_wp
+            !J_temp = J_temp + particleList(j)%J_particle(:, iThread)* particleList(j)%q_times_wp
         end do loopSpecies
+        !$OMP barrier
+        do j = 1, numberChargedParticles
+            call world%addThreadedDomainArray(solver%J, particleList(j)%J_particle, NumberXHalfNodes, iThread, particleList(j)%q_times_wp)
+        end do
         !$OMP end parallel
-        solver%J = J_temp/del_t
+        solver%J = solver%J/del_t
     end subroutine depositJ
 
 
@@ -223,7 +225,7 @@ contains
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl, E_x, accumEnergyLoss(2, numberChargedParticles)
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p, accumWallLoss(2, numberChargedParticles)
         logical :: AtBoundaryBool, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool
-        solver%EField = 0.5d0 * (solver%phi(1:NumberXNodes-1) + solver%phi_f(1:NumberXNodes-1) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
+        solver%EField = 0.5d0 * (solver%phi(1:NumberXHalfNodes) + solver%phi_f(1:NumberXHalfNodes) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0

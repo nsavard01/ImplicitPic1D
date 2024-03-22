@@ -60,7 +60,7 @@ contains
         self%numSubStepsAve = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
-            self%densities(NumberXNodes, numThread), self%J_particle(NumberXNodes-1, numThread), self%numToCollide(numThread))
+            self%densities(NumberXNodes, numThread), self%J_particle(NumberXHalfNodes, numThread), self%numToCollide(numThread))
         self%refIdx = 0
         self%delIdx = 0
         self%N_p = N_p
@@ -73,6 +73,7 @@ contains
         class(Particle), intent(in out) :: self
         real(real64), intent(in) :: n_ave, L_domain
         self % w_p = n_ave * L_domain / SUM(self % N_p)
+        self%q_times_wp = self%q * self%w_p
     end subroutine initialize_n_ave
 
     subroutine initializeRandUniform(self, world, irand)
@@ -181,8 +182,8 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
-        integer(int32) :: j, index, counter(NumberXNodes-1, numThread), iThread
-        real(real64) :: temp(NumberXNodes-1, numThread), EHist(NumberXNodes-1)
+        integer(int32) :: j, index, counter(NumberXHalfNodes, numThread), iThread
+        real(real64) :: temp(NumberXHalfNodes, numThread), EHist(NumberXHalfNodes)
         temp = 0.0d0
         counter = 0
         !$OMP parallel private(iThread, j, index) 
@@ -195,7 +196,7 @@ contains
             end if
         end do
         !$OMP end parallel
-        do j = 1, NumberXNodes-1
+        do j = 1, NumberXHalfNodes
             if (SUM(counter(j, :)) > 0) then
                 EHist(j) = SUM(temp(j,:))*self%mass/SUM(counter(j, :))/3.0d0/e
             else

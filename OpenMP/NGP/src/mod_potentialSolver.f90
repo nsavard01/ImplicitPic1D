@@ -47,8 +47,8 @@ contains
         real(real64), intent(in) :: leftVoltage, rightVoltage
         real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
-        allocate(self % J(NumberXNodes-1), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
-        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes-1))
+        allocate(self % J(NumberXHalfNodes), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXHalfNodes), &
+        self%b_tri(NumberXNodes), self%c_tri(NumberXHalfNodes), self%EField(NumberXHalfNodes))
         call construct_diagMatrix(self, world)
         self % rho = 0.0d0
         self % J = 0.0d0
@@ -131,7 +131,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: timeCurrent
         integer(int32) :: i
-        real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
+        real(real64) :: m, d(NumberXNodes), cp(NumberXHalfNodes),dp(NumberXNodes)
 
         do i=1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
@@ -147,21 +147,21 @@ contains
         cp(1) = self%c_tri(1)/self%b_tri(1)
         dp(1) = d(1)/self%b_tri(1)
     ! solve for vectors c-prime and d-prime
-        do i = 2,NumberXNodes-1
+        do i = 2,NumberXHalfNodes
             m = self%b_tri(i)-cp(i-1)*self%a_tri(i-1)
             cp(i) = self%c_tri(i)/m
             dp(i) = (d(i)-dp(i-1)*self%a_tri(i-1))/m
         end do
-        m = self%b_tri(NumberXNodes)-cp(NumberXNodes-1)*self%a_tri(NumberXNodes-1)
-        dp(NumberXNodes) = (d(NumberXNodes)-dp(NumberXNodes-1)*self%a_tri(NumberXNodes-1))/m
+        m = self%b_tri(NumberXNodes)-cp(NumberXHalfNodes)*self%a_tri(NumberXHalfNodes)
+        dp(NumberXNodes) = (d(NumberXNodes)-dp(NumberXHalfNodes)*self%a_tri(NumberXHalfNodes))/m
     ! initialize x
         self%phi = dp
     ! solve for x from the vectors c-prime and d-prime
-        do i = NumberXNodes-1, 1, -1
+        do i = NumberXHalfNodes, 1, -1
             self%phi(i) = dp(i)-cp(i)*self%phi(i+1)
         end do
         self%phi_f = self%phi
-        !self%EField = (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) / world%dx_dl
+        !self%EField = (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Poisson
 
     function getError_tridiag_Poisson(self, world) result(res)
@@ -192,7 +192,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
-        real(real64) :: m, d(NumberXNodes), cp(NumberXNodes-1),dp(NumberXNodes)
+        real(real64) :: m, d(NumberXNodes), cp(NumberXHalfNodes),dp(NumberXNodes)
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
@@ -211,22 +211,22 @@ contains
         cp(1) = self%c_tri(1)/self%b_tri(1)
         dp(1) = d(1)/self%b_tri(1)
     ! solve for vectors c-prime and d-prime
-        do i = 2,NumberXNodes-1
+        do i = 2,NumberXHalfNodes
             m = self%b_tri(i)-cp(i-1)*self%a_tri(i-1)
             cp(i) = self%c_tri(i)/m
             dp(i) = (d(i)-dp(i-1)*self%a_tri(i-1))/m
         end do
-        m = self%b_tri(NumberXNodes)-cp(NumberXNodes-1)*self%a_tri(NumberXNodes-1)
-        dp(NumberXNodes) = (d(NumberXNodes)-dp(NumberXNodes-1)*self%a_tri(NumberXNodes-1))/m
+        m = self%b_tri(NumberXNodes)-cp(NumberXHalfNodes)*self%a_tri(NumberXHalfNodes)
+        dp(NumberXNodes) = (d(NumberXNodes)-dp(NumberXHalfNodes)*self%a_tri(NumberXHalfNodes))/m
     ! initialize phi_f
         !d = self%phi_f
         self%phi_f(NumberXNodes) = dp(NumberXNodes)
 
     ! solve for x from the vectors c-prime and d-prime
-        do i = NumberXNodes-1, 1, -1
+        do i = NumberXHalfNodes, 1, -1
             self%phi_f(i) = dp(i)-cp(i)*self%phi_f(i+1)
         end do
-        !self%EField = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
+        !self%EField = 0.5d0 * (self%phi(1:NumberXHalfNodes) + self%phi_f(1:NumberXHalfNodes) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
 
     ! subroutine solve_CG_Ampere(self, world, del_t)
@@ -321,13 +321,13 @@ contains
                     if (i == 1) then
                         chargeError = chargeError + (1.0d0 + del_t * self%J(1)/del_Rho)**2
                     else
-                        chargeError = chargeError + (1.0d0 - del_t * self%J(NumberXNodes-1)/del_Rho)**2
+                        chargeError = chargeError + (1.0d0 - del_t * self%J(NumberXHalfNodes)/del_Rho)**2
                     end if
                     k = k + 1
                 CASE(3)
                     if (i == 1) then
                         del_Rho = del_Rho + self%rho(NumberXNodes) - rho_i(NumberXNodes)
-                        chargeError = chargeError + (1.0d0 + del_t * (self%J(1) - self%J(NumberXNodes-1))/del_Rho)**2
+                        chargeError = chargeError + (1.0d0 + del_t * (self%J(1) - self%J(NumberXHalfNodes))/del_Rho)**2
                     end if
                 END SELECT
             end if

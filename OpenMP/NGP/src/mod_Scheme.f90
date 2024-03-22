@@ -70,15 +70,15 @@ contains
         type(Domain), intent(in) :: world
         logical, intent(in) :: reset
         integer(int32) :: i, iThread
-        do i = 1, numberChargedParticles
-            !$OMP parallel private(iThread)
+        !$OMP parallel private(iThread, i)
+        do i = 1, numberChargedParticles  
             iThread = omp_get_thread_num() + 1 
             if (reset) then
                 particleList(i)%densities(:,iThread) = 0.0d0
             end if
             call interpolateParticleToNodes(particleList(i), world, iThread)
-            !$OMP end parallel
         end do
+        !$OMP end parallel
     end subroutine
 
     subroutine depositRho(rho, particleList, world) 
@@ -87,14 +87,17 @@ contains
         type(Domain), intent(in) :: world
         integer(int32) :: i, iThread
         rho = 0.0d0
+        !$OMP parallel private(iThread, i)
         do i = 1, numberChargedParticles
-            !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1 
             particleList(i)%densities(:,iThread) = 0.0d0
-            call interpolateParticleToNodes(particleList(i), world, iThread)
-            !$OMP end parallel   
-            rho = rho + SUM(particleList(i)%densities, DIM = 2) * particleList(i)%w_p * particleList(i)%q
+            call interpolateParticleToNodes(particleList(i), world, iThread) 
         end do
+        !$OMP barrier
+        do i = 1, numberChargedParticles
+            call world%addThreadedDomainArray(rho, particleList(i)%densities, NumberXNodes, iThread, particleList(i)%q_times_wp)
+        end do
+        !$OMP end parallel  
     end subroutine depositRho
 
 
