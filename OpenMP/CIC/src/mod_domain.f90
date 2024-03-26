@@ -7,13 +7,15 @@ module mod_domain
     private
     public :: Domain, readWorld
     integer(int32), public, protected :: NumberXNodes = 10
+    integer(int32), public, protected :: NumberXHalfNodes = 11
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
         real(real64), allocatable :: grid(:) !array representing values at grid in m
         real(real64), allocatable :: dx_dl(:), centerDiff(:) !ratio of grid differences from physical to logical, assume logical separated by 1
-        integer(int32), allocatable :: boundaryConditions(:) ! Boundary condition flags for fields and particles
+        integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary condition flags for fields and particles
         real(real64) :: L_domain, startX, endX
+        integer(int32) :: numThreadNodeIndx, numThreadHalfNodeIndx
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
@@ -22,6 +24,7 @@ module mod_domain
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
+        procedure, public, pass(self) :: addThreadedDomainArray
         procedure, public, pass(self) :: getLFromX
         procedure, public, pass(self) :: writeDomain
     end type Domain
@@ -37,17 +40,59 @@ contains
     type(Domain) function domain_constructor(leftBoundary, rightBoundary) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         integer(int32), intent(in) :: leftBoundary, rightBoundary
-        integer(int32) :: i
-        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes), self%centerDiff(NumberXNodes-1), self%boundaryConditions(NumberXNodes+1))
+        integer(int32) :: i, k, spacingThread, modThread
+        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXNodes), self%centerDiff(NumberXNodes-1), self%boundaryConditions(NumberXHalfNodes))
         self % grid = (/(i, i=1, NumberXNodes)/)
         self % dx_dl = 1.0d0
         self % boundaryConditions = 0
         self%boundaryConditions(1) = leftBoundary
-        self%boundaryConditions(NumberXNodes+1) = rightBoundary
+        self%boundaryConditions(NumberXHalfNodes) = rightBoundary
         if (leftBoundary == 3 .or. rightBoundary == 3) then
             self%boundaryConditions(1) = 3
-            self%boundaryConditions(NumberXNodes+1) = 3
+            self%boundaryConditions(NumberXHalfNodes) = 3
         end if
+
+        if (numThread < NumberXNodes) then
+            self%numThreadNodeIndx = numThread
+        else
+            self%numThreadNodeIndx = NumberXNodes
+        end if
+
+        allocate(self%threadNodeIndx(2, self%numThreadNodeIndx))
+        spacingThread = NumberXNodes/self%numThreadNodeIndx - 1
+        modThread = MOD(NumberXNodes, self%numThreadNodeIndx)
+        k = 1
+        do i = 1, self%numThreadNodeIndx
+            self%threadNodeIndx(1, i) = k
+            if (i <= modThread) then
+                k = k + spacingThread + 1
+            else
+                k = k + spacingThread
+            end if
+            self%threadNodeIndx(2,i) = k
+            k = k + 1
+        end do
+        
+        if (numThread < NumberXHalfNodes) then
+            self%numThreadHalfNodeIndx = numThread
+        else
+            self%numThreadHalfNodeIndx = NumberXHalfNodes
+        end if
+        allocate(self%threadHalfNodeIndx(2, self%numThreadHalfNodeIndx))
+        spacingThread = NumberXHalfNodes/self%numThreadHalfNodeIndx - 1
+        modThread = MOD(NumberXHalfNodes, self%numThreadHalfNodeIndx)
+        k = 1
+        do i = 1, self%numThreadHalfNodeIndx
+            self%threadHalfNodeIndx(1, i) = k
+            if (i <= modThread) then
+                k = k + spacingThread + 1
+            else
+                k = k + spacingThread
+            end if
+            self%threadHalfNodeIndx(2,i) = k
+            k = k + 1
+        end do
+        
     end function domain_constructor
 
 
@@ -202,6 +247,20 @@ contains
         
     end function getLFromX
 
+    subroutine addThreadedDomainArray(self, array_add, x, N_x, N_x_array, iThread, const)
+        ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp
+        class(Domain), intent(in) :: self
+        real(real64), intent(in out) :: array_add(N_x)
+        real(real64), intent(in) :: x(N_x_array, numThread), const
+        integer(int32), intent(in) :: iThread, N_x, N_x_array
+        if (N_x == NumberXNodes .and. iThread <= self%numThreadNodeIndx) then
+            array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) = array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) &
+            + SUM(x(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread), :), DIM=2) * const
+        else if (N_x == NumberXHalfNodes .and. iThread <= self%numThreadHalfNodeIndx) then
+            array_add(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread)) = array_add(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread)) &
+            + SUM(x(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread), :), DIM=2) * const
+        end if
+    end subroutine addThreadedDomainArray
 
     subroutine writeDomain(self, dirName)
         ! Writes domain data into binary file under Data
@@ -224,9 +283,9 @@ contains
         type(Domain), intent(in out) :: world
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave
-        integer(int32) :: io, leftBoundary, rightBoundary, gridType
+        integer(int32) :: io, leftBoundary, rightBoundary, gridType, tempInt, i
         real(real64) :: debyeLength, L_domain
-
+        integer(int32), allocatable :: boundArray(:)
         print *, ""
         print *, "Reading domain inputs:"
         print *, "------------------"
@@ -239,6 +298,21 @@ contains
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         close(10)
+        if (restartBool) then
+            open(10,file=restartDirectory//"/"//"InitialConditions.dat", IOSTAT=io)
+            read(10, *, IOSTAT = io)
+            read(10, *, IOSTAT = io) tempInt, NumberXNodes
+            close(10) 
+            NumberXHalfNodes = NumberXNodes+1
+            allocate(boundArray(NumberXHalfNodes))
+            open(10,file=restartDirectory//"/"//"domainBoundaryConditions.dat", form='UNFORMATTED', IOSTAT=io)
+            read(10, IOSTAT = io) boundArray
+            close(10)
+            leftBoundary = boundArray(1)
+            rightBoundary = boundArray(NumberXHalfNodes)
+            deallocate(boundArray)
+        end if
+        NumberXHalfNodes = NumberXNodes + 1
         debyeLength = MAX(getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3

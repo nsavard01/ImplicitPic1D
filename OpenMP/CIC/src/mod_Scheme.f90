@@ -69,31 +69,42 @@ contains
         type(Domain), intent(in) :: world
         logical, intent(in) :: reset
         integer(int32) :: i, iThread
+        !$OMP parallel private(iThread, i)
         do i = 1, numberChargedParticles
-            !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1 
             if (reset) then
                 particleList(i)%densities(:,iThread) = 0.0d0
             end if
             call interpolateParticleToNodes(particleList(i), world, iThread)
-            !$OMP end parallel
         end do
+        !$OMP end parallel
     end subroutine
 
     subroutine depositRho(rho, particleList, world) 
         real(real64), intent(in out) :: rho(NumberXNodes)
-        type(Particle), intent(in out) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         integer(int32) :: i, iThread
         rho = 0.0d0
+        !$OMP parallel private(iThread, i)
         do i = 1, numberChargedParticles
-            !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1 
             particleList(i)%densities(:,iThread) = 0.0d0
             call interpolateParticleToNodes(particleList(i), world, iThread)
-            !$OMP end parallel
-            rho = rho + SUM(particleList(i)%densities, DIM = 2) * particleList(i)%w_p * particleList(i)%q
         end do
+        !$OMP barrier
+        do i = 1, numberChargedParticles
+            call world%addThreadedDomainArray(rho, particleList(i)%densities, NumberXNodes, NumberXNodes, iThread, particleList(i)%q_times_wp)
+        end do
+        !$OMP end parallel
+        ! print *, rho
+        ! print *, ''
+        ! rho = 0.0d0
+        ! do i = 1, numberChargedParticles
+        !     rho = rho + SUM(particleList(i)%densities, DIM=2) * particleList(i)%q_times_wp
+        ! end do
+        ! print *, rho
+        ! stop
     end subroutine depositRho
 
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
@@ -104,12 +115,17 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         real(real64) :: densities(NumberXNodes)
-        integer(int32) :: i
+        integer(int32) :: i, iThread
         logical, intent(in) :: boolAverage
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            densities = (SUM(particleList(i)%densities, DIM=2)/world%dx_dl) * particleList(i)%w_p
+            densities = 0.0d0
+            !$OMP parallel private(iThread)
+            iThread = omp_get_thread_num() + 1
+            call world%addThreadedDomainArray(densities, particleList(i)%densities, NumberXNodes,NumberXNodes, iThread, particleList(i)%w_p)
+            !$OMP end parallel
+            densities = densities/world%dx_dl
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

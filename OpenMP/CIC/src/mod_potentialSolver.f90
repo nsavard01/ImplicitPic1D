@@ -54,8 +54,8 @@ contains
         real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
         integer(int32) :: i
-        allocate(self % J(NumberXNodes+1), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
-        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes+1))
+        allocate(self % J(NumberXHalfNodes), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
+        self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXHalfNodes))
         self % rho = 0.0d0
         self % J = 0.0d0
         self % phi = 0.0d0
@@ -75,7 +75,7 @@ contains
         if (world%boundaryConditions(1)== 1 .or. world%boundaryConditions(1)== 4) then
             self%numDirichletNodes = self%numDirichletNodes + 1
         end if
-        if (world%boundaryConditions(NumberXNodes+1)== 1 .or. world%boundaryConditions(NumberXNodes+1)== 4) then
+        if (world%boundaryConditions(NumberXHalfNodes)== 1 .or. world%boundaryConditions(NumberXHalfNodes)== 4) then
             self%numDirichletNodes = self%numDirichletNodes + 1
         end if
         
@@ -95,12 +95,12 @@ contains
             self%dirichletIsRFBool(i) = .true.
             self%RF_voltage = 0.0d0
         end if
-        if (world%boundaryConditions(NumberXNodes+1) == 1) then
+        if (world%boundaryConditions(NumberXHalfNodes) == 1) then
             i = i + 1
             self%dirichletIndx(i) = NumberXNodes
             self%dirichletVals(i) = rightVoltage
             self%dirichletIsRFBool(i) = .false.
-        else if (world%boundaryConditions(NumberXNodes+1) == 4) then
+        else if (world%boundaryConditions(NumberXHalfNodes) == 4) then
             if (self%RF_half_amplitude /= 0) then
                 print *, 'Half amplitude voltage for RF already set, have two RF boundaries!'
                 stop
@@ -114,7 +114,7 @@ contains
             end if
         end if
         self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
-        self%RF_bool = self%RF_rad_frequency > 0 .and. self%RF_half_amplitude > 0 .and. (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes+1) == 4)
+        self%RF_bool = self%RF_rad_frequency > 0 .and. self%RF_half_amplitude > 0 .and. (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXHalfNodes) == 4)
         call self%construct_diagMatrix(world)
     end function potentialSolver_constructor
 
@@ -233,9 +233,9 @@ contains
             CASE(2)
                 d(i) = -self%J(i) * del_t / eps_0 + self%EField(i)
             CASE(-3)
-                d(i) = (self%J(2) - self%J(1) - self%J(NumberXNodes+1)) * del_t / eps_0 - self%EField(2) + self%EField(1)
+                d(i) = (self%J(2) - self%J(1) - self%J(NumberXHalfNodes)) * del_t / eps_0 - self%EField(2) + self%EField(1)
             CASE(3)
-                d(i) = (self%J(1) + self%J(NumberXNodes+1) - self%J(NumberXNodes)) * del_t / eps_0 - self%EField(NumberXNodes+1) + self%EField(NumberXNodes)
+                d(i) = (self%J(1) + self%J(NumberXHalfNodes) - self%J(NumberXNodes)) * del_t / eps_0 - self%EField(NumberXHalfNodes) + self%EField(NumberXNodes)
             END SELECT
         end do
 
@@ -338,9 +338,10 @@ contains
         class(potentialSolver), intent(in) :: self
         real(real64), intent(in) :: del_t, rho_i(NumberXNodes)
         type(Domain), intent(in) :: world
-        integer(int32) :: i
+        integer(int32) :: i, k
         real(real64) :: chargeError, del_Rho
         chargeError = 0.0d0
+        k = 0
         do i = 1, NumberXNodes
             del_Rho = self%rho(i) - rho_i(i)
             if (del_Rho /= 0) then
@@ -356,13 +357,14 @@ contains
                 CASE(-2)
                     chargeError = chargeError + (1.0d0 + del_t * (self%J(i+1))/del_Rho)**2
                 CASE(3)
-                    chargeError = chargeError + (1.0d0 + del_t * (self%J(NumberXNodes+1) + self%J(1) - self%J(NumberXNodes))/(del_Rho))**2
+                    chargeError = chargeError + (1.0d0 + del_t * (self%J(NumberXHalfNodes) + self%J(1) - self%J(NumberXNodes))/(del_Rho))**2
                 CASE(-3)
-                    chargeError = chargeError + (1.0d0 + del_t * (self%J(2) - self%J(1) - self%J(NumberXNodes+1))/(del_Rho))**2
+                    chargeError = chargeError + (1.0d0 + del_t * (self%J(2) - self%J(1) - self%J(NumberXHalfNodes))/(del_Rho))**2
                 END SELECT
+                k = k + 1
             end if
         end do
-        chargeError = SQRT(chargeError/NumberXNodes)
+        chargeError = SQRT(chargeError/k)
     end function getChargeContinuityError
 
     subroutine evaluateEFieldHalfTime(self, boundaryConditionsLeftEdge)
@@ -381,16 +383,16 @@ contains
                 end if
             else
                 if (self%dirichletIsRFBool(i)) then
-                    self%EField(NumberXNodes+1) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - self%dirichletVals(i) - self%RF_voltage 
+                    self%EField(NumberXHalfNodes) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - self%dirichletVals(i) - self%RF_voltage 
                 else
-                    self%EField(NumberXNodes+1) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%dirichletVals(i)
+                    self%EField(NumberXHalfNodes) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%dirichletVals(i)
                 end if
             end if
         end do
 
         if (boundaryConditionsLeftEdge == 3) then
             self%EField(1) = 0.5d0 * (self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - self%phi(1) - self%phi_f(1))
-            self%EField(NumberXNodes+1) = self%EField(1)
+            self%EField(NumberXHalfNodes) = self%EField(1)
         end if
 
     end subroutine evaluateEFieldHalfTime
@@ -407,13 +409,13 @@ contains
             if (self%dirichletIndx(i) == 1) then
                 self%EField(1) = 2.0d0 * (self%dirichletVals(i) - self%phi(1))/world%dx_dl(1)
             else
-                self%EField(NumberXNodes+1) = 2.0d0 * (self%phi(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
+                self%EField(NumberXHalfNodes) = 2.0d0 * (self%phi(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
             end if
         end do
 
         if (world%boundaryConditions(1) == 3) then
             self%EField(1) = (self%phi(NumberXNodes) - self%phi(1)) / (0.5d0 * (world%dx_dl(1) + world%dx_dl(NumberXNodes)))
-            self%EField(NumberXNodes+1) = self%EField(1)
+            self%EField(NumberXHalfNodes) = self%EField(1)
         end if
     end subroutine evaluateEFieldCurrTime
 
@@ -434,15 +436,15 @@ contains
                 end if
             else
                 if (self%dirichletIsRFBool(i)) then
-                    self%EField(NumberXNodes+1) = 2.0d0 * (self%phi_f(NumberXNodes) - self%RF_voltage)/world%dx_dl(NumberXNodes) 
+                    self%EField(NumberXHalfNodes) = 2.0d0 * (self%phi_f(NumberXNodes) - self%RF_voltage)/world%dx_dl(NumberXNodes) 
                 else
-                    self%EField(NumberXNodes+1) = 2.0d0 * (self%phi_f(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
+                    self%EField(NumberXHalfNodes) = 2.0d0 * (self%phi_f(NumberXNodes) - self%dirichletVals(i))/world%dx_dl(NumberXNodes)
                 end if
             end if
         end do
         if (world%boundaryConditions(1) == 3) then
             self%EField(1) = (self%phi_f(NumberXNodes) - self%phi_f(1)) / (0.5d0 * (world%dx_dl(1) + world%dx_dl(NumberXNodes)))
-            self%EField(NumberXNodes+1) = self%EField(1)
+            self%EField(NumberXHalfNodes) = self%EField(1)
         end if
     end subroutine evaluateEFieldFutureTime
 
@@ -566,7 +568,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
         integer(int32) :: io, i
-        real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency
+        real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency, realTemp(20)
 
         print *, ""
         print *, "Reading solver inputs:"
@@ -577,10 +579,24 @@ contains
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
-        read(10, *, IOSTAT = io) BFieldMag, angle
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
-
+        if (restartBool) then
+            leftVoltage = 0.0d0
+            rightVoltage = 0.0d0
+            open(10,file=restartDirectory//"/"//"InitialConditions.dat", IOSTAT=io)
+            read(10, *, IOSTAT = io)
+            read(10, *, IOSTAT = io) realTemp(1:15)
+            close(10) 
+            RF_frequency = realTemp(14)/2.0d0/pi
+            if (world%boundaryConditions(1) == 4) then
+                leftVoltage = realTemp(15)
+            else if (world%boundaryConditions(NumberXHalfNodes) == 4) then
+                rightVoltage = realTemp(15)
+            end if   
+        end if
+        BFieldMag = 0.0d0
+        angle = 0.0d0
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
         if (solver%numDirichletNodes > 0) then
             do i = 1, solver%numDirichletNodes

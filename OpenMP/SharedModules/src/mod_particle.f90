@@ -47,6 +47,7 @@ contains
         real(real64), intent(in) :: mass, q, w_p
         integer(int32), intent(in) :: N_p, finalIdx, numThread
         character(*), intent(in) :: particleName
+        integer(int32) :: maxNumNodes
         self % name = particleName
         self % mass = mass
         self % q = q
@@ -58,9 +59,10 @@ contains
         self%accumEnergyLoss = 0.0d0
         self%numFuncEvalAve = 0.0d0
         self%numSubStepsAve = 0.0d0
+        maxNumNodes = MAX(NumberXNodes, NumberXHalfNodes)
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
-            self%densities(NumberXNodes, numThread), self%workSpace(NumberXNodes, numThread), self%numToCollide(numThread))
+            self%densities(NumberXNodes, numThread), self%workSpace(maxNumNodes, numThread), self%numToCollide(numThread))
         self%refIdx = 0
         self%delIdx = 0
         self%N_p = N_p
@@ -176,14 +178,14 @@ contains
         close(10)
     end subroutine writePhaseSpace
 
-    subroutine writeLocalTemperature(self, CurrentDiagStep, dirName)
+    subroutine writeLocalTemperature(self, CurrentDiagStep, dirName, numCells)
         ! Write particle temperature averaged over local grid
         class(Particle), intent(in) :: self
-        integer(int32), intent(in) :: CurrentDiagStep
+        integer(int32), intent(in) :: CurrentDiagStep, numCells
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
-        integer(int32) :: j, index, counter(NumberXNodes-1, numThread), iThread
-        real(real64) :: temp(NumberXNodes-1, numThread), EHist(NumberXNodes-1)
+        integer(int32) :: j, index, counter(numCells, numThread), iThread
+        real(real64) :: temp(numCells, numThread), EHist(numCells)
         temp = 0.0d0
         counter = 0
         !$OMP parallel private(iThread, j, index) 
@@ -196,7 +198,7 @@ contains
             end if
         end do
         !$OMP end parallel
-        do j = 1, NumberXNodes-1
+        do j = 1, numCells
             if (SUM(counter(j, :)) > 0) then
                 EHist(j) = SUM(temp(j,:))*self%mass/SUM(counter(j, :))/3.0d0/e
             else

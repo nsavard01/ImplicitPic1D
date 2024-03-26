@@ -365,7 +365,7 @@ contains
         call writePhi(solver%phi, 0, .false., directoryName)
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
-            call particleList(j)%writeLocalTemperature(0, directoryName)
+            call particleList(j)%writeLocalTemperature(0, directoryName, MIN(NumberXNodes, NumberXHalfNodes))
             ! call particleList(j)%writePhaseSpace(0, directoryName)
         end do
         currentTime = startSimulationTime
@@ -455,7 +455,7 @@ contains
                 chargeTotal = 0.0d0
                 energyLoss = 0.0d0
                 do j=1, numberChargedParticles
-                    call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
+                    call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName, MIN(NumberXNodes, NumberXHalfNodes))
                     call particleList(j)%writePhaseSpace(directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
                     Etotal = Etotal + particleList(j)%getTotalKE()
@@ -554,7 +554,7 @@ contains
         chargeTotal = 0.0d0
         energyLoss = 0.0d0
         do j=1, numberChargedParticles
-            call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName)
+            call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName, MIN(NumberXNodes, NumberXHalfNodes))
             call particleList(j)%writePhaseSpace(directoryName)
             chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
             Etotal = Etotal + particleList(j)%getTotalKE()

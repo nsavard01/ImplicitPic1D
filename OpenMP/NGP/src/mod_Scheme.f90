@@ -120,6 +120,7 @@ contains
             call world%addThreadedDomainArray(densities, particleList(i)%densities, NumberXNodes, iThread, particleList(i)%w_p)
             !$OMP end parallel
             densities = densities/world%nodeVol
+            write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else

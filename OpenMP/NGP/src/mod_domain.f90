@@ -25,6 +25,7 @@ module mod_domain
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
+        procedure, public, pass(self) :: constructHalfEvenHalfSinusoid
         procedure, public, pass(self) :: makeArraysFromGrid
         procedure, public, pass(self) :: addThreadedDomainArray
         procedure, public, pass(self) :: getLFromX
@@ -109,6 +110,8 @@ contains
             call self%constructHalfSineGrid(del_x, L_domain)
         CASE(3)
             call self%constructExpHalfGrid(del_x, L_domain)
+        CASE(4)
+            call self%constructHalfEvenHalfSinusoid(del_x, L_domain)
         CASE default
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
@@ -195,6 +198,30 @@ contains
             self % grid(i) =  (i-1) * L_domain / (NumberXHalfNodes)
         end do
     end subroutine constructUniformGrid
+
+    subroutine constructHalfEvenHalfSinusoid(self, del_x, L_domain)
+        class(Domain), intent(in out) :: self
+        real(real64), intent(in) :: del_x, L_domain
+        integer(int32) :: numEvenCells, numSinCells, i
+        real(real64) :: leftX, rightX, evenDelX, middleDelX
+        numEvenCells = (NumberXNodes-1)/4 
+        numSinCells = NumberXNodes - 1 - 2 * numEvenCells
+        evenDelX = del_x/numEvenCells
+        self%grid(1) = 0.0d0
+        self%grid(NumberXNodes) = L_domain
+        do i = 1, numEvenCells
+            self%grid(i+1) = self%grid(i) + evenDelX
+            self%grid(NumberXNodes-i) = self%grid(NumberXNodes-i+1) - evenDelX
+        end do
+        middleDelX = self%grid(NumberXNodes-numEvenCells) - self%grid(numEvenCells+1)
+        do i = 2,numSinCells
+            self % grid(i+numEvenCells) = self%grid(numEvenCells+1) + middleDelX * ((real(i)-1.0d0)/(real(numSinCells)) - (1.0d0/(real(numSinCells)) - evenDelX/middleDelX) &
+            * SIN(2 * pi * (i-1) / (numSinCells)) / SIN(2 * pi / (numSinCells)) )
+        end do
+        
+
+
+    end subroutine constructHalfEvenHalfSinusoid
 
     subroutine makeArraysFromGrid(self)
         class(Domain), intent(in out) :: self

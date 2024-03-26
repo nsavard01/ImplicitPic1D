@@ -39,7 +39,6 @@ program BoundPlasmaExample
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld, startSimulationTime)
 
-
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
     ! E_i = globalSolver%getTotalPE(globalWorld, .false.)

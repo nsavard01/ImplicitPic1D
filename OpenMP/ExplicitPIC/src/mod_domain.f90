@@ -7,6 +7,7 @@ module mod_domain
     private
     public :: Domain, readWorld
     integer(int32), public, protected :: NumberXNodes = 10
+    integer(int32), public, protected :: NumberXHalfNodes = 10
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
@@ -133,6 +134,7 @@ contains
             print *, "Insufficient amount of nodes to resolve initial debyeLength"
             NumberXNodes = NINT(L_domain/debyeLength/fracDebye) + 1
         end if
+        NumberXHalfNodes = NumberXNodes-1
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
