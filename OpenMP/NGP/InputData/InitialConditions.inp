@@ -7,6 +7,6 @@
 3.0d0 3.125e-11 ! Fraction of initial 1/w_p for initial time step
 1.4d-5 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-NGP_RFBenchmark_highDensity_fourthPart_257nodes_10xtime_halfEvenHalfSin !filename
+NGP_RFBenchmark_highDensity_halfPart_2001_10xtime_even !filename
 no NGP_RFBenchmark_highDenity_halfPart_513nodes_10xtime ! Restart(yes/no) and directory to take from
 END

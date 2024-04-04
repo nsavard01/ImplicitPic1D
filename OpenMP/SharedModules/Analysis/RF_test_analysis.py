@@ -73,7 +73,6 @@ Exp_RFBenchmark_highDensity_SuperResolved = dataSetExplicit('Y:/scratch/nsavard/
 Exp_RFBenchmark_highDensity_p75Cells_doubleTime_halfParticles = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_highDensity_p75Cells_doubleTime_halfParticles/')
 Exp_RFBenchmark_highDensity_p75Cells_doubleTime_quarterParticles = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_highDensity_p75Cells_doubleTime_quarterParticles/')
 
-
 NGP_RFBenchmark_highDensity_sixteenthPart_129nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_sixteenthPart_129nodes/')
 NGP_RFBenchmark_highDensity_sixteenthPart_257nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_sixteenthPart_257nodes/')
 NGP_RFBenchmark_highDensity_sixteenthPart_257nodes_normTime = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_sixteenthPart_257nodes_normTime/')
@@ -83,7 +82,8 @@ NGP_RFBenchmark_highDensity_halfPart_1001nodes_10xtime = dataSet('Y:/scratch/nsa
 NGP_RFBenchmark_highDensity_halfPart_513nodes_10xtime = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDenity_halfPart_513nodes_10xtime/')
 NGP_RFBenchmark_highDensity_fourthPart_257nodes_10xtime_halfEvenHalfSin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_fourthPart_257nodes_10xtime_halfEvenHalfSin/')
 NGP_RFBenchmark_highDensity_halfPart_513nodes_10xtime_restart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_513nodes_10xtime_restart/')
-
+NGP_RFBenchmark_highDensity_halfPart_257nodes_10xtime_halfEvenHalfSin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_257nodes_10xtime_halfEvenHalfSin/')
+NGP_RFBenchmark_highDensity_halfPart_2001_10xtime_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_2001_10xtime_even/')
 
 CIC_RF_Benchmark_case1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1/')
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
