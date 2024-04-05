@@ -9,21 +9,61 @@ module mod_particleMover
     implicit none
     integer(int32), parameter, private :: m_Anderson_Particle = 2
     integer(int32), parameter, private :: maxPartIter = 50
-    real(real64), allocatable, private :: particleOmega(:,:), particleAccelGrad(:, :), particleLAccel(:,:), particleAccelLeft(:,:)
+    real(real64), allocatable, private :: particleTimeStep(:,:), particleAccelGrad(:, :), particleAccelLeft(:,:)
 
 
 contains
 
+    subroutine particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, accel_grad, accel_left, dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
+        real(real64), intent(in) :: dx_dl, l_sub, v_sub, f_tol, accel_left, accel_grad
+        real(real64), intent(in out) :: l_f, del_tau, v_f, d_half
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary, numIter
+        integer(int32) :: i
+        real(real64) :: accel, del_tau_temp, l_f_prev, v_half
+        ! get index cell where field and dx_dl is evaluated
+        l_f_prev = l_sub
+        do i = 1, maxPartIter
+            d_half = (l_sub + l_f_prev) * 0.5d0
+            accel = (accel_left - accel_grad * d_half)
+            v_half = v_sub + 0.5d0 * accel * del_tau/dx_dl
+            l_f = l_sub + v_half * del_tau / dx_dl
+            if (v_half < 0) then
+                FutureAtBoundaryBool = (l_f < 0)
+                if (FutureAtBoundaryBool) l_f = 0.0d0
+            else
+                FutureAtBoundaryBool = (l_f > 1)
+                if (FutureAtBoundaryBool) l_f = 1.0d0
+            end if
+            if (ABS(l_f - l_f_prev) < 1.d-10) exit
+            l_f_prev = l_f
+        end do
+        numIter = i
+        if (.not. FutureAtBoundaryBool) then
+            v_f = 2.0d0 * v_half - v_sub
+        else
+            if (l_f /= l_sub) then
+                v_f = SIGN(1.0d0, v_half) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
+                del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_f + v_sub)
+                numIter = numIter + 1
+            else
+                del_tau = ABS(v_sub)/ABS(accel)
+                v_f = -v_sub
+            end if
+            l_boundary = INT(l_f)
+        end if
 
+    end subroutine particleSubStepPicard
 
     subroutine allocateParticleMoverData()
-        allocate(particleOmega(NumberXNodes,numberChargedParticles), particleAccelGrad(NumberXNodes, numberChargedParticles), &
-            particleLAccel(NumberXNodes,numberChargedParticles), particleAccelLeft(NumberXNodes,numberChargedParticles))
+        allocate(particleTimeStep(NumberXNodes,numberChargedParticles), particleAccelGrad(NumberXNodes, numberChargedParticles), &
+        particleAccelLeft(NumberXNodes,numberChargedParticles))
 
     end subroutine allocateParticleMoverData
 
+
     subroutine initializeParticleMoverData(EField, dx_dl, particleList)
-        ! For analytical solver
+        ! For picard solver
         real(real64), intent(in) :: EField(NumberXHalfNodes), dx_dl(NumberXNodes)
         type(Particle), intent(in) :: particleList(numberChargedParticles)
         integer(int32) :: i, j
@@ -31,13 +71,11 @@ contains
             do i = 1, NumberXNodes
                 particleAccelGrad(i, j) = particleList(j)%q_over_m * (EField(i) - EField(i+1))
                 particleAccelLeft(i, j) = particleList(j)%q_over_m * (EField(i))
-                particleOmega(i, j) = SQRT(ABS(particleAccelGrad(i, j)))/dx_dl(i)
-                particleLAccel(i,j) = -particleAccelLeft(i,j)/particleAccelGrad(i,j)
+                particleTimeStep(i, j) = 0.1d0 / (SQRT(ABS(particleAccelGrad(i, j)))/dx_dl(i))
             end do
         end do
 
     end subroutine initializeParticleMoverData
-
 
     subroutine particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, accel_left, accel_grad, omega, l_accel, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
         ! Do initial substep, where particles start between nodes
@@ -205,10 +243,158 @@ contains
         
     end subroutine particleSubStepNoBField
 
-  
+    subroutine getDelTauSubStepNoBField(l_sub, v_sub, del_tau, d_half, q_over_m, l_cell, E_left, E_right, E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
+        integer(int32), intent(in) :: l_cell
+        real(real64), intent(in) :: q_over_m, dx_dl, E_left, E_right, l_sub, v_sub
+        real(real64), intent(in out) :: del_tau, d_half, E_x
+        logical, intent(in) :: AtBoundaryBool
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary
+        integer(int32) :: l_alongV, l_awayV
+        real(real64) :: del_tau_temp, a, b, c
+        logical :: goingForwardBool
+        ! get index cell where field and dx_dl is evaluated
+        goingForwardBool = (v_sub > 0)
+        if (goingForwardBool) then
+            l_alongV = l_cell + 1
+            l_awayV = l_cell
+        else
+            l_alongV = l_cell
+            l_awayV = l_cell + 1
+        end if
+       
+        d_half = (l_sub + real(l_alongV)) * 0.5d0 - real(l_cell)
+        E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+        a = 0.5d0 * q_over_m * E_x
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        c = (l_sub - real(l_alongV)) * dx_dl
+        b = v_sub**2 - 4.0d0*a*c
+        FutureAtBoundaryBool = (b >= 0)
+        if (FutureAtBoundaryBool) then
+            del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(b))
+            FutureAtBoundaryBool = (del_tau_temp < del_tau)
+            if (FutureAtBoundaryBool) then
+                del_tau = del_tau_temp
+                l_boundary = l_alongV
+            end if
+        end if
+        if (.not. FutureAtBoundaryBool) then
+            ! v and a opposite direction, boundary opposite direction of v
+            d_half = (l_sub + real(l_awayV)) * 0.5d0 - real(l_cell)
+            E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+            a = 0.5d0 * q_over_m * E_x
+            FutureAtBoundaryBool = ((a > 0) .neqv. goingForwardBool)
+            if (FutureAtBoundaryBool) then
+                if (.not. AtBoundaryBool) then
+                    c = (l_sub - real(l_awayV)) * dx_dl
+                    del_tau_temp = 2.0d0 * ABS(c)/(SQRT(v_sub**2 - 4.0d0*a*c) - ABS(v_sub))
+                else
+                    del_tau_temp = ABS(v_sub)/ABS(a)
+                end if
+                FutureAtBoundaryBool = (del_tau_temp < del_tau)
+                if (FutureAtBoundaryBool) then
+                    del_tau = del_tau_temp
+                    l_boundary = l_awayV
+                end if
+            end if
+        end if
+        
+
+    end subroutine getDelTauSubStepNoBField
 
 
-    !-------------------------------------- Analytical particle movers ----------------------------------------------    
+    subroutine getDelTauSubStepNoBFieldNoUTurn(l_sub, v_sub, del_tau, timePassed, d_half, q_over_m, l_cell, E_left, E_right, E_x, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary)
+        integer(int32), intent(in) :: l_cell
+        real(real64), intent(in) :: q_over_m, dx_dl, E_left, E_right, l_sub
+        real(real64), intent(in out) :: del_tau, d_half, E_x, timePassed, v_sub
+        logical, intent(in) :: AtBoundaryBool
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary
+        real(real64) :: del_tau_temp, a, b, c, real_l_boundary
+        logical :: goingForwardBool
+
+        ! get index cell where field and dx_dl is evaluated
+        goingForwardBool = (v_sub > 0)    
+        if (goingForwardBool) then
+            l_boundary = l_cell + 1
+        else
+            l_boundary = l_cell
+        end if
+        real_l_boundary = real(l_boundary)
+        d_half = (l_sub + real_l_boundary) * 0.5d0 - real(l_cell)
+        E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+        a = 0.5d0 * q_over_m * E_x
+        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+        c = (l_sub - real_l_boundary) * dx_dl
+        b = v_sub**2 - 4.0d0*a*c
+        FutureAtBoundaryBool = (b >= 0)
+        if (FutureAtBoundaryBool) then
+            del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(b))
+            FutureAtBoundaryBool = (del_tau_temp < del_tau)
+            if (FutureAtBoundaryBool) del_tau = del_tau_temp
+        end if
+        if (.not. FutureAtBoundaryBool) then
+            ! Check goes back around
+            d_half = l_sub - real(l_cell)
+            E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+            a = 0.5d0 * q_over_m * E_x
+            if ((a > 0) .neqv. goingForwardBool) then
+                del_tau_temp = ABS(v_sub)/ABS(a)
+                if (del_tau_temp < del_tau) then
+                    if (.not. AtBoundaryBool) then
+                        ! Now velocity and acceleration is same direction at point, so no more turn around
+                        ! Try finding substep toward new boundary
+                        timePassed = timePassed + del_tau_temp
+                        del_tau = del_tau - del_tau_temp
+                        v_sub = -v_sub
+                        goingForwardBool = .not. goingForwardBool
+                        if (goingForwardBool) then
+                            l_boundary = l_cell + 1
+                        else
+                            l_boundary = l_cell
+                        end if
+                        real_l_boundary = real(l_boundary)
+                        d_half = (l_sub + real_l_boundary) * 0.5d0 - real(l_cell)
+                        E_x = (E_right * d_half + E_left * (1.0d0 - d_half))/dx_dl
+                        a = 0.5d0 * q_over_m * E_x
+                        ! Particle first between nodes, so solve quadratic for that particle depending on conditions
+                        c = (l_sub - real_l_boundary) * dx_dl
+                        b = v_sub**2 - 4.0d0*a*c
+                        FutureAtBoundaryBool = (b >= 0)
+                        if (FutureAtBoundaryBool) then
+                            del_tau_temp = 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(b))
+                            FutureAtBoundaryBool = (del_tau_temp < del_tau)
+                            if (FutureAtBoundaryBool) del_tau = del_tau_temp
+                        end if
+                    else
+                        FutureAtBoundaryBool = .true.
+                        l_boundary = INT(l_sub)
+                        del_tau = del_tau_temp
+                    end if
+                end if
+            end if
+        end if
+        
+
+    end subroutine getDelTauSubStepNoBFieldNoUTurn
+
+    ! subroutine analyticalParticleMoverNoBField(l_sub, v_sub, l_f, del_tau, d_half, q_over_m, l_cell, E_left, E_right, dx_dl)
+    !     real(real64), intent(in) :: l_sub, v_sub, del_tau, q_over_m, E_left, E_right, dx_dl
+    !     real(real64), intent(in out) :: l_f, d_half
+    !     integer(int32), intent(in) :: l_cell
+    !     real(real64) :: del_tau_sqr, real_l_cell, dx_sqr
+    !     del_tau_sqr = del_tau**2
+    !     real_l_cell = real(l_cell, kind = real64)
+    !     dx_sqr = dx_dl**2
+    !     l_f = (2.0d0*E_left*del_tau_sqr*real_l_cell*q_over_m - E_left*del_tau_sqr*l_sub*q_over_m + 2.0d0*E_left*del_tau_sqr*q_over_m - &
+    !         2.0d0*E_right*del_tau_sqr*real_l_cell*q_over_m + E_right*del_tau_sqr*l_sub*q_over_m + 4.0d0*del_tau*dx_dl*v_sub + 4.0d0*dx_sqr*l_sub)&
+    !         /(E_left*del_tau_sqr*q_over_m - E_right*del_tau_sqr*q_over_m + 4.0d0*dx_sqr)
+    !     d_half = (l_f + l_sub)*0.5d0 - real(l_cell)
+
+    
+    ! end subroutine analyticalParticleMoverNoBField
+
+    !-------------------------------------------- Picard particle movers -----------------------------------------------
 
     subroutine depositJ(solver, particleList, world, del_t)
         ! particle substepping procedure which deposits J, also used for general moving of particles
@@ -219,8 +405,8 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, v_sign
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part, d_half
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: FutureAtBoundaryBool, AtBoundaryBool, timeNotConvergedBool
 
         call solver%evaluateEFieldHalfTime(world%boundaryConditions(1))
@@ -228,7 +414,7 @@ contains
         f_tol = del_t * 1.d-10
         solver%J = 0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, AtBoundaryBool, &
-                dx_dl, l_boundary, numIter, timeNotConvergedBool, J_part, v_sign)
+                dx_dl, l_boundary, numIter, timeNotConvergedBool, J_part, d_half)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles 
             particleList(j)%workSpace(1:numberXHalfNodes, iThread) = 0.0d0
@@ -240,22 +426,21 @@ contains
                 timeNotConvergedBool = .true.
                 del_tau = del_t
                 do while(timeNotConvergedBool)
-                    v_sign = INT(SIGN(1.0d0, v_sub))
                     if (.not. AtBoundaryBool) then
                         l_cell = INT(l_sub)
                     else
-                        l_cell = INT(l_sub) + (v_sign - 1)/2
+                        l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
                     end if
                     
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
+                    del_tau = MIN(del_tau, particleTimeStep(l_cell,j))
+                    call particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, particleAccelGrad(l_cell, j), particleAccelLeft(l_cell, j), dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
                     
-                    call particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), &
-                        particleOmega(l_cell, j), particleLAccel(l_cell, j), dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
+                    J_part = l_f - l_sub
+                    particleList(j)%workSpace(l_cell, iThread) = particleList(j)%workSpace(l_cell, iThread) + (1.0d0-d_half) * J_part
+                    particleList(j)%workSpace(l_cell + 1, iThread) = particleList(j)%workSpace(l_cell + 1, iThread) + J_part * d_half
                     
-                    J_part = 0.5d0 * (l_f**2 - l_sub**2)
-                    particleList(j)%workSpace(l_cell, iThread) = particleList(j)%workSpace(l_cell, iThread) + l_f - l_sub - J_part
-                    particleList(j)%workSpace(l_cell + 1, iThread) = particleList(j)%workSpace(l_cell + 1, iThread) + J_part
                     ! solver%J(l_cell, iThread) = solver%J(l_cell, iThread) + J_part * (1.0d0 - d_half)
                     ! solver%J(l_cell+1, iThread) = solver%J(l_cell+1, iThread) + J_part * (d_half)
                     l_f = real(l_cell) + l_f
@@ -322,16 +507,16 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numSubStepAve(numberChargedParticles), numIter, funcEvalCounter(numberChargedParticles), delIdx, refIdx, N_p, v_sign
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, d_half, dx_dl
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numSubStepAve(numberChargedParticles), numIter, funcEvalCounter(numberChargedParticles), delIdx, refIdx, N_p
         logical :: FutureAtBoundaryBool, AtBoundaryBool, refluxedBool, timeNotConvergedBool
         call solver%evaluateEFieldHalfTime(world%boundaryConditions(1))
         call initializeParticleMoverData(solver%EField, world%dx_dl, particleList)
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0
-        !$OMP parallel private(iThread, i, j,l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
-                AtBoundaryBool, dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, timeNotConvergedBool, N_p, v_sign) reduction(+:numSubStepAve, funcEvalCounter)
+        !$OMP parallel private(iThread, i, j,l_f, l_sub, v_sub, v_f, d_half, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
+                AtBoundaryBool, dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, timeNotConvergedBool, N_p) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
@@ -348,12 +533,11 @@ contains
                 timeNotConvergedBool = .true.
                 del_tau = del_t
                 do while(timeNotConvergedBool)
-                    v_sign = INT(SIGN(1.0d0, v_sub))
                     numSubStepAve(j) = numSubStepAve(j) + 1
                     if (.not. AtBoundaryBool) then
                         l_cell = INT(l_sub)
                     else
-                        l_cell = INT(l_sub) + (v_sign - 1)/2
+                        l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
                     end if
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
@@ -368,8 +552,9 @@ contains
                     ! ! del_tau = MIN(del_tau, 0.1 * dx_dl / SQRT(ABS(q_over_m * (solver%EField(l_cell+1) - solver%EField(l_cell)))))
                     ! ! call getDelTauSubStepPicard(l_sub, v_sub, l_f, d_half, v_half, del_tau, solver%EField(l_cell), solver%EField(l_cell+1), E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary, AtBoundaryBool)
                     ! v_f = 2.0d0 * v_half - v_sub
-                    call particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), &
-                        particleOmega(l_cell, j), particleLAccel(l_cell, j), dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
+                    del_tau = MIN(del_tau, particleTimeStep(l_cell, j))
+                    call particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, particleAccelGrad(l_cell, j), particleAccelLeft(l_cell, j), dx_dl, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
+                    funcEvalCounter(j) = funcEvalCounter(j) + numIter
                     l_f = real(l_cell) + l_f
                     if (FutureAtBoundaryBool) then
                         l_boundary = l_cell + l_boundary
@@ -449,5 +634,7 @@ contains
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM=2)
         end do
     end subroutine moveParticles
+
+    
 
 end module mod_particleMover
