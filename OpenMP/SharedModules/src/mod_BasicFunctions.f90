@@ -105,14 +105,15 @@ contains
         end do
     end subroutine getRandom
 
-    subroutine initializeRandomGenerators(numThread, stateRan0, stateRanNew)
+    subroutine initializeRandomGenerators(numThread, stateRan0, stateRanNew, preDeterminedBool)
         integer(int32), allocatable, intent(out) :: stateRan0(:), stateRanNew(:,:)
         integer(int32), intent(in) :: numThread
+        logical, intent(in) :: preDeterminedBool
         real(real64) :: rando
         integer(int32) :: i
         
         allocate(stateRan0(numThread), stateRanNew(2,numThread))
-        call random_seed()
+        if (.not. preDeterminedBool) call random_seed()
         do i = 1, numThread
             call random_number(rando)
             stateRan0(i) = INT(rando * (huge(i))) !12345 * i + 11 * (i-1) !
