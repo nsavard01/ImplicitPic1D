@@ -20,7 +20,7 @@ program BoundPlasmaExample
     
    
     call readInitialInputs('InitialConditions.inp')
-    call initializeRandomGenerators(numThread, stateRan0, stateRanNew)
+    call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)
     call readWorld('Geometry.inp', world, T_e, n_ave)
     call readSolver('Geometry.inp', solver, world)
     call readChargedParticleInputs('BoundExample.inp', stateRan0, T_e, T_i, numThread, world, particleList)

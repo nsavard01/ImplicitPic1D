@@ -1,14 +1,14 @@
 ELECTRONS
-name	 NumParticles/thread   ArraySizeMultiplication
+name	 NumParticles/thread   ArraySizeMultiplication   PartDistribution
 -------------------------------------------
-e	  2048	 4
+e	  2048	 4     1
 -------------------------------------------
 
 
 IONS
-name   massAtom(AMU)  charge 	NumParticles/thread   ArraySizeMultiplication
+name   massAtom(AMU)  charge 	NumParticles/thread   ArraySizeMultiplication   PartDistribution
 --------------------------------------------------
-He+   4.002602     1. 		2048   4
+He+   4.002602     1. 		2048   4    1
 --------------------------------------------------
 
 

@@ -39,134 +39,136 @@ contains
     end subroutine initializeParticleMoverData
 
 
-    ! subroutine particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, accel_left, accel_grad, omega, l_accel, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
-    !     ! Do initial substep, where particles start between nodes
-    !     integer(int32), intent(in) :: v_sign
-    !     real(real64), intent(in) :: dx_dl, l_sub, v_sub, accel_left, accel_grad, omega, l_accel
-    !     real(real64), intent(in out) :: del_tau, l_f, v_f
-    !     logical, intent(in) :: AtBoundaryBool
-    !     logical, intent(in out) :: FutureAtBoundaryBool
-    !     integer(int32), intent(in out) :: l_boundary
-    !     real(real64) :: diff_PE, v_i_sqr, accel_grad_root, u_i, l_sub_sqr, C_1, C_2, del_tau_temp, phase, cos_phase, sin_phase
-    !     ! real(real64) :: l_f_test, v_f_test, del_t_test, l_f_prev, l_i_test, v_i_test, l_half_test
-    !     logical :: peakBool
-    !     ! integer(int32) :: i, k
-    !     ! print *, 'del_tau is:', del_tau
-    !     ! Particle first between nodes, so solve quadratic for that particle depending on conditions
-    !     ! accel_left = E_left * q_over_m
-    !     ! accel_right = E_right * q_over_m
-    !     ! accel_grad = (accel_left - accel_right)
-    !     l_sub_sqr = l_sub**2
-    !     v_i_sqr = v_sub**2
-    !     ! l_accel = -accel_left/accel_grad
-    !     accel_grad_root = omega*dx_dl
-    !     u_i = l_sub + l_accel
-    !     if (accel_grad > 0) then
-    !         ! On potential well
-    !         if (v_sign > 0) then
-    !             l_boundary = 1
-    !         else
-    !             l_boundary = 0
-    !         end if
-    !         l_f = real(l_boundary)
-    !         diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
-    !         FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-    !         if (FutureAtBoundaryBool) then
-    !             v_f = SQRT(diff_PE + v_i_sqr) * v_sign
-    !             C_2 = u_i**2 * accel_grad + v_i_sqr
-    !             C_1 = u_i * (l_f + l_accel) * accel_grad + v_sub * v_f
-    !             del_tau_temp = ACOS(C_1/C_2)/omega
-    !             FutureAtBoundaryBool = (del_tau_temp < del_tau)
-    !         else
-    !             ! Particle does u-turn
-    !             l_boundary = 1 - l_boundary
-    !             l_f = real(l_boundary)
-    !             if (.not. AtBoundaryBool) then
-    !                 diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
-    !                 FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-    !                 if (FutureAtBoundaryBool) then
-    !                     v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
-    !                     phase = v_sub/accel_grad_root/u_i
-    !                     if (phase < 0) then
-    !                         phase = 2.0d0 * (ATAN(phase) + pi)
-    !                     else
-    !                         phase = 2 * ATAN(phase)
-    !                     end if
-    !                     C_2 = u_i**2 * accel_grad + v_i_sqr
-    !                     C_1 = u_i * (l_f + l_accel) * accel_grad - v_sub * v_f
-    !                     phase = phase + ACOS(C_1/C_2)
-    !                     del_tau_temp = phase/omega
-    !                     FutureAtBoundaryBool = (del_tau_temp < del_tau)
-    !                 end if
-    !             else
-    !                 v_f = -v_sub
-    !                 phase = v_sub/accel_grad_root/u_i
-    !                 if (phase < 0) then
-    !                     phase = 2.0d0 * (ATAN(phase) + pi)
-    !                 else
-    !                     phase = 2 * ATAN(phase)
-    !                 end if
-    !                 del_tau_temp = phase/omega
-    !                 FutureAtBoundaryBool = (del_tau_temp < del_tau)
-    !             end if
-    !         end if
-    !         if (.not. FutureAtBoundaryBool) then
-    !             phase = omega*del_tau
-    !             cos_phase = COS(phase)
-    !             sin_phase = SIN(phase)
-    !             l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
-    !             v_f = -accel_grad_root * u_i * sin_phase + v_sub * cos_phase
-    !         end if
-    !     else
-    !         ! On potential hill
-    !         if (v_sign > 0) then
-    !             l_boundary = 1
-    !             peakBool = (-l_accel > l_sub .and. -l_accel < 1)
-    !         else
-    !             l_boundary = 0
-    !             peakBool = (-l_accel < l_sub .and. -l_accel > 0)
-    !         end if
-    !         l_f = real(l_boundary)
-    !         if (peakBool) then
-    !             diff_PE = 2.0d0 * (accel_left * (-l_accel - l_sub) - 0.5d0 * accel_grad * (l_accel**2 - l_sub_sqr))
-    !         else
-    !             diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
-    !         end if
-    !         FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-    !         if (FutureAtBoundaryBool) then
-    !             if (peakBool) diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
-    !             v_f = SQRT(diff_PE + v_i_sqr) * v_sign
-    !             C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
-    !             C_2 = v_i_sqr + u_i**2 * accel_grad
-    !             del_tau_temp = ASINH(C_1/C_2)/omega
-    !             FutureAtBoundaryBool = (del_tau_temp < del_tau)
-    !         else
-    !             l_boundary = 1 - l_boundary
-    !             l_f = real(l_boundary)
-    !             if (.not. AtBoundaryBool) then
-    !                 diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
-    !                 v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
-    !                 C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
-    !             else
-    !                 v_f = -v_sub
-    !                 C_1 = 2.0d0 * accel_grad_root * (v_sub * u_i)
-    !             end if
-    !             C_2 = v_i_sqr + u_i**2 * accel_grad
-    !             del_tau_temp = ASINH(C_1/C_2)/omega
-    !             FutureAtBoundaryBool = (del_tau_temp < del_tau)
-    !         end if
-    !         if (.not. FutureAtBoundaryBool) then
-    !             phase = omega*del_tau
-    !             cos_phase = COSH(phase)
-    !             sin_phase = SINH(phase)
-    !             l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
-    !             v_f = accel_grad_root * u_i * sin_phase + v_sub * cos_phase
-    !         end if
-    !     end if
-    !     if (FutureAtBoundaryBool) del_tau = del_tau_temp
+    subroutine particleSubStepWell(l_sub, v_sub, del_tau, l_f, v_f, accel_left, accel_grad, omega, l_accel, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
+        integer(int32), intent(in) :: v_sign
+        real(real64), intent(in) :: dx_dl, l_sub, v_sub, accel_left, accel_grad, omega, l_accel
+        real(real64), intent(in out) :: del_tau, l_f, v_f
+        logical, intent(in) :: AtBoundaryBool
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary
+        real(real64) :: diff_PE, v_i_sqr, accel_grad_root, u_i, l_sub_sqr, C_1, C_2, phase, cos_phase, sin_phase
+        logical :: inCellBool, equalVSignBool, highPhaseBool
+        l_sub_sqr = l_sub**2
+        v_i_sqr = v_sub**2
+        accel_grad_root = omega*dx_dl
+        u_i = l_sub + l_accel
+        phase = omega*del_tau
+        cos_phase = COS(phase)
+        sin_phase = SIN(phase)
+        l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
+        v_f = -accel_grad_root * u_i * sin_phase + v_sub * cos_phase
+        inCellBool = (INT(l_f+1) == 1)
+        equalVSignBool = (v_sign == INT(SIGN(1.0d0, v_f)))
+        highPhaseBool = (phase > 2.0d0 * pi)
+        FutureAtBoundaryBool = (.not. inCellBool) .or. (INT(SIGN(1.0d0, l_f - l_sub)) /= v_sign) .or. (.not. equalVSignBool) .or. highPhaseBool
+        if (FutureAtBoundaryBool) then
+            if (v_sign > 0) then
+                l_boundary = 1
+            else
+                l_boundary = 0
+            end if
+            diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
+            FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
+            if (FutureAtBoundaryBool) then
+                l_f = real(l_boundary)
+                v_f = SQRT(diff_PE + v_i_sqr) * v_sign
+                C_2 = u_i**2 * accel_grad + v_i_sqr
+                C_1 = u_i * (l_f + l_accel) * accel_grad + v_sub * v_f
+                del_tau = ACOS(C_1/C_2)/omega
+            else if (highPhaseBool .or. equalVSignBool .or. (.not. inCellBool)) then
+                l_boundary = 1-l_boundary
+                if (.not. AtBoundaryBool) then
+                    diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
+                    FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
+                    if (FutureAtBoundaryBool) then
+                        l_f = real(l_boundary)
+                        v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
+                        phase = v_sub/accel_grad_root/u_i
+                        if (phase < 0) then
+                            phase = 2.0d0 * (ATAN(phase) + pi)
+                        else
+                            phase = 2 * ATAN(phase)
+                        end if
+                        C_2 = u_i**2 * accel_grad + v_i_sqr
+                        C_1 = u_i * (l_f + l_accel) * accel_grad - v_sub * v_f
+                        phase = phase + ACOS(C_1/C_2)
+                        del_tau = phase/omega
+                    end if
+                else
+                    FutureAtBoundaryBool = .true.
+                    l_f = real(l_boundary)
+                    v_f = -v_sub
+                    phase = v_sub/accel_grad_root/u_i
+                    if (phase < 0) then
+                        phase = 2.0d0 * (ATAN(phase) + pi)
+                    else
+                        phase = 2 * ATAN(phase)
+                    end if
+                    del_tau = phase/omega
+                end if
+            end if
+        end if
+    end subroutine particleSubStepWell
 
-        
-    ! end subroutine particleSubStepNoBField
+    subroutine particleSubStepHill(l_sub, v_sub, del_tau, l_f, v_f, accel_left, accel_grad, omega, l_accel, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
+        integer(int32), intent(in) :: v_sign
+        real(real64), intent(in) :: dx_dl, l_sub, v_sub, accel_left, accel_grad, omega, l_accel
+        real(real64), intent(in out) :: del_tau, l_f, v_f
+        logical, intent(in) :: AtBoundaryBool
+        logical, intent(in out) :: FutureAtBoundaryBool
+        integer(int32), intent(in out) :: l_boundary
+        real(real64) :: diff_PE, v_i_sqr, accel_grad_root, u_i, l_sub_sqr, C_1, C_2, phase, cos_phase, sin_phase
+        logical :: inCellBool, equalVSignBool
+
+        l_sub_sqr = l_sub**2
+        v_i_sqr = v_sub**2
+        accel_grad_root = omega*dx_dl
+        u_i = l_sub + l_accel
+        phase = omega*del_tau
+        cos_phase = COSH(phase)
+        sin_phase = SINH(phase)
+        l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
+        v_f = accel_grad_root * u_i * sin_phase + v_sub * cos_phase
+        inCellBool = (INT(l_f+1) == 1)
+        equalVSignBool = (v_sign == INT(SIGN(1.0d0, v_f)))
+        FutureAtBoundaryBool = (.not. inCellBool) .or. (.not. equalVSignBool)
+        if (FutureAtBoundaryBool) then
+            if (v_sign > 0) then
+                l_boundary = 1
+                FutureAtBoundaryBool = l_f > 1
+            else
+                l_boundary = 0
+                FutureAtBoundaryBool = l_f < 0
+            end if
+            if (FutureAtBoundaryBool) then
+                diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
+            else if ((.not. equalVSignBool) .and. (INT(-l_accel+1) /= 1)) then
+                diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
+                FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
+            end if
+            if (FutureAtBoundaryBool) then
+                l_f = real(l_boundary)
+                v_f = SQRT(diff_PE + v_i_sqr) * v_sign
+                C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
+                C_2 = v_i_sqr + u_i**2 * accel_grad
+                del_tau = ASINH(C_1/C_2)/omega
+            else if  (.not. inCellBool) then
+                FutureAtBoundaryBool = .true.
+                l_boundary = 1-l_boundary
+                l_f = real(l_boundary)
+                if (.not. AtBoundaryBool) then
+                    diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
+                    v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
+                    C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
+                else
+                    v_f = -v_sub
+                    C_1 = 2.0d0 * accel_grad_root * v_sub * u_i
+                end if
+                C_2 = v_i_sqr + u_i**2 * accel_grad
+                del_tau = ASINH(C_1/C_2)/omega
+            end if
+        end if
+end subroutine particleSubStepHill
 
     subroutine particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, accel_left, accel_grad, omega, l_accel, dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
         ! Do initial substep, where particles start between nodes
@@ -350,18 +352,16 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part, diff_PE, v_i_sqr, accel_grad_root, u_i, l_sub_sqr, C_1, C_2, phase, cos_phase, sin_phase, &
-        accel_grad, omega, l_accel, accel_left
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, v_sign
-        logical :: FutureAtBoundaryBool, AtBoundaryBool, timeNotConvergedBool, inCellBool, equalVSignBool, highPhaseBool
+        logical :: FutureAtBoundaryBool, AtBoundaryBool, timeNotConvergedBool
 
         call solver%evaluateEFieldHalfTime(world%boundaryConditions(1))
         call initializeParticleMoverData(solver%EField, world%dx_dl, particleList)
         f_tol = del_t * 1.d-10
         solver%J = 0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, AtBoundaryBool, &
-                dx_dl, l_boundary, numIter, timeNotConvergedBool, J_part, v_sign, diff_PE, v_i_sqr, accel_grad_root, u_i, l_sub_sqr, C_1, C_2, phase, cos_phase, sin_phase, &
-                inCellBool, equalVSignBool, highPhaseBool, omega, accel_grad, l_accel, accel_left)
+                dx_dl, l_boundary, numIter, timeNotConvergedBool, J_part, v_sign)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles 
             particleList(j)%workSpace(1:numberXHalfNodes, iThread) = 0.0d0
@@ -382,119 +382,15 @@ contains
 
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
-                    l_accel = particleLAccel(l_cell, j)
-                    omega = particleOmega(l_cell, j)
-                    accel_left = particleAccelLeft(l_cell, j)
-                    accel_grad = particleAccelGrad(l_cell, j)
+                    
                     ! call particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), &
                     !     particleOmega(l_cell, j), particleLAccel(l_cell, j), dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
-                    l_sub_sqr = l_sub**2
-                    v_i_sqr = v_sub**2
-                    accel_grad_root = omega*dx_dl
-                    u_i = l_sub + l_accel
-                    phase = omega*del_tau
-                    if (accel_grad > 0) then
-                        ! On potential well
-                        cos_phase = COS(phase)
-                        sin_phase = SIN(phase)
-                        l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
-                        v_f = -accel_grad_root * u_i * sin_phase + v_sub * cos_phase
-                        inCellBool = (INT(l_f+1) == 1)
-                        equalVSignBool = (v_sign == INT(SIGN(1.0d0, v_f)))
-                        highPhaseBool = (phase > 2.0d0 * pi)
-                        FutureAtBoundaryBool = (.not. inCellBool) .or. (INT(SIGN(1.0d0, l_f - l_sub)) /= v_sign) .or. (.not. equalVSignBool) .or. highPhaseBool
-                        if (FutureAtBoundaryBool) then
-                            if (v_sign > 0) then
-                                l_boundary = 1
-                            else
-                                l_boundary = 0
-                            end if
-                            diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                            FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-                            if (FutureAtBoundaryBool) then
-                                l_f = real(l_boundary)
-                                v_f = SQRT(diff_PE + v_i_sqr) * v_sign
-                                C_2 = u_i**2 * accel_grad + v_i_sqr
-                                C_1 = u_i * (l_f + l_accel) * accel_grad + v_sub * v_f
-                                del_tau = ACOS(C_1/C_2)/omega
-                            else if (highPhaseBool .or. equalVSignBool .or. (.not. inCellBool)) then
-                                l_boundary = 1-l_boundary
-                                if (.not. AtBoundaryBool) then
-                                    diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                                    FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-                                    if (FutureAtBoundaryBool) then
-                                        l_f = real(l_boundary)
-                                        v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
-                                        phase = v_sub/accel_grad_root/u_i
-                                        if (phase < 0) then
-                                            phase = 2.0d0 * (ATAN(phase) + pi)
-                                        else
-                                            phase = 2 * ATAN(phase)
-                                        end if
-                                        C_2 = u_i**2 * accel_grad + v_i_sqr
-                                        C_1 = u_i * (l_f + l_accel) * accel_grad - v_sub * v_f
-                                        phase = phase + ACOS(C_1/C_2)
-                                        del_tau = phase/omega
-                                    end if
-                                else
-                                    FutureAtBoundaryBool = .true.
-                                    l_f = real(l_boundary)
-                                    v_f = -v_sub
-                                    phase = v_sub/accel_grad_root/u_i
-                                    if (phase < 0) then
-                                        phase = 2.0d0 * (ATAN(phase) + pi)
-                                    else
-                                        phase = 2 * ATAN(phase)
-                                    end if
-                                    del_tau = phase/omega
-                                end if
-                            end if
-                        end if
+                    if (particleAccelGrad(l_cell, j) > 0) then
+                        call particleSubStepWell(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), particleOmega(l_cell, j), particleLAccel(l_cell, j), &
+                        dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
                     else
-                        ! On potential hill
-                        cos_phase = COSH(phase)
-                        sin_phase = SINH(phase)
-                        l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
-                        v_f = accel_grad_root * u_i * sin_phase + v_sub * cos_phase
-                        inCellBool = (INT(l_f+1) == 1)
-                        equalVSignBool = (v_sign == INT(SIGN(1.0d0, v_f)))
-                        FutureAtBoundaryBool = (.not. inCellBool) .or. (.not. equalVSignBool)
-                        if (FutureAtBoundaryBool) then
-                            if (v_sign > 0) then
-                                l_boundary = 1
-                                FutureAtBoundaryBool = l_f > 1
-                            else
-                                l_boundary = 0
-                                FutureAtBoundaryBool = l_f < 0
-                            end if
-                            if (FutureAtBoundaryBool) then
-                                diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                            else if ((.not. equalVSignBool) .and. (INT(-l_accel+1) /= 1)) then
-                                diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                                FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-                            end if
-                            if (FutureAtBoundaryBool) then
-                                l_f = real(l_boundary)
-                                v_f = SQRT(diff_PE + v_i_sqr) * v_sign
-                                C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
-                                C_2 = v_i_sqr + u_i**2 * accel_grad
-                                del_tau = ASINH(C_1/C_2)/omega
-                            else if  (.not. inCellBool) then
-                                FutureAtBoundaryBool = .true.
-                                l_boundary = 1-l_boundary
-                                l_f = real(l_boundary)
-                                if (.not. AtBoundaryBool) then
-                                    diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
-                                    v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
-                                    C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
-                                else
-                                    v_f = -v_sub
-                                    C_1 = 2.0d0 * accel_grad_root * v_sub * u_i
-                                end if
-                                C_2 = v_i_sqr + u_i**2 * accel_grad
-                                del_tau = ASINH(C_1/C_2)/omega
-                            end if
-                        end if
+                        call particleSubStepHill(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), particleOmega(l_cell, j), particleLAccel(l_cell, j), &
+                            dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
                     end if
                     J_part = 0.5d0 * (l_f**2 - l_sub**2)
                     particleList(j)%workSpace(l_cell, iThread) = particleList(j)%workSpace(l_cell, iThread) + l_f - l_sub - J_part
@@ -556,18 +452,16 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl, diff_PE, v_i_sqr, accel_grad_root, u_i, l_sub_sqr, C_1, C_2, phase, cos_phase, sin_phase, &
-        accel_grad, omega, l_accel, accel_left
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numSubStepAve(numberChargedParticles), numIter, funcEvalCounter(numberChargedParticles), delIdx, refIdx, N_p, v_sign
-        logical :: FutureAtBoundaryBool, AtBoundaryBool, refluxedBool, timeNotConvergedBool, inCellBool, equalVSignBool, highPhaseBool
+        logical :: FutureAtBoundaryBool, AtBoundaryBool, refluxedBool, timeNotConvergedBool
         call solver%evaluateEFieldHalfTime(world%boundaryConditions(1))
         call initializeParticleMoverData(solver%EField, world%dx_dl, particleList)
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0
         !$OMP parallel private(iThread, i, j,l_f, l_sub, v_sub, v_f, v_half, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
-                AtBoundaryBool, dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, timeNotConvergedBool, N_p, v_sign, diff_PE, v_i_sqr, accel_grad_root, u_i, l_sub_sqr, C_1, C_2, phase, cos_phase, sin_phase, &
-                inCellBool, equalVSignBool, highPhaseBool, omega, accel_grad, l_accel, accel_left) reduction(+:numSubStepAve, funcEvalCounter)
+                AtBoundaryBool, dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, timeNotConvergedBool, N_p, v_sign) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
@@ -593,122 +487,15 @@ contains
                     end if
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
-                    
 
-                    l_accel = particleLAccel(l_cell, j)
-                    omega = particleOmega(l_cell, j)
-                    accel_left = particleAccelLeft(l_cell, j)
-                    accel_grad = particleAccelGrad(l_cell, j)
-                    ! call particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), &
-                    !     particleOmega(l_cell, j), particleLAccel(l_cell, j), dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
-                    l_sub_sqr = l_sub**2
-                    v_i_sqr = v_sub**2
-                    accel_grad_root = omega*dx_dl
-                    u_i = l_sub + l_accel
-                    phase = omega*del_tau
-                    if (accel_grad > 0) then
-                        ! On potential well
-                        cos_phase = COS(phase)
-                        sin_phase = SIN(phase)
-                        l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
-                        v_f = -accel_grad_root * u_i * sin_phase + v_sub * cos_phase
-                        inCellBool = (INT(l_f+1) == 1)
-                        equalVSignBool = (v_sign == INT(SIGN(1.0d0, v_f)))
-                        highPhaseBool = (phase > 2.0d0 * pi)
-                        FutureAtBoundaryBool = (.not. inCellBool) .or. (INT(SIGN(1.0d0, l_f - l_sub)) /= v_sign) .or. (.not. equalVSignBool) .or. highPhaseBool
-                        if (FutureAtBoundaryBool) then
-                            if (v_sign > 0) then
-                                l_boundary = 1
-                            else
-                                l_boundary = 0
-                            end if
-                            diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                            FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-                            if (FutureAtBoundaryBool) then
-                                l_f = real(l_boundary)
-                                v_f = SQRT(diff_PE + v_i_sqr) * v_sign
-                                C_2 = u_i**2 * accel_grad + v_i_sqr
-                                C_1 = u_i * (l_f + l_accel) * accel_grad + v_sub * v_f
-                                del_tau = ACOS(C_1/C_2)/omega
-                            else if (highPhaseBool .or. equalVSignBool .or. (.not. inCellBool)) then
-                                l_boundary = 1-l_boundary
-                                if (.not. AtBoundaryBool) then
-                                    diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                                    FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-                                    if (FutureAtBoundaryBool) then
-                                        l_f = real(l_boundary)
-                                        v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
-                                        phase = v_sub/accel_grad_root/u_i
-                                        if (phase < 0) then
-                                            phase = 2.0d0 * (ATAN(phase) + pi)
-                                        else
-                                            phase = 2 * ATAN(phase)
-                                        end if
-                                        C_2 = u_i**2 * accel_grad + v_i_sqr
-                                        C_1 = u_i * (l_f + l_accel) * accel_grad - v_sub * v_f
-                                        phase = phase + ACOS(C_1/C_2)
-                                        del_tau = phase/omega
-                                    end if
-                                else
-                                    FutureAtBoundaryBool = .true.
-                                    l_f = real(l_boundary)
-                                    v_f = -v_sub
-                                    phase = v_sub/accel_grad_root/u_i
-                                    if (phase < 0) then
-                                        phase = 2.0d0 * (ATAN(phase) + pi)
-                                    else
-                                        phase = 2 * ATAN(phase)
-                                    end if
-                                    del_tau = phase/omega
-                                end if
-                            end if
-                        end if
+                    if (particleAccelGrad(l_cell, j) > 0) then
+                        call particleSubStepWell(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), particleOmega(l_cell, j), particleLAccel(l_cell, j), &
+                        dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
                     else
-                        ! On potential hill
-                        cos_phase = COSH(phase)
-                        sin_phase = SINH(phase)
-                        l_f = -l_accel + u_i * cos_phase + (v_sub/accel_grad_root) * sin_phase
-                        v_f = accel_grad_root * u_i * sin_phase + v_sub * cos_phase
-                        inCellBool = (INT(l_f+1) == 1)
-                        equalVSignBool = (v_sign == INT(SIGN(1.0d0, v_f)))
-                        FutureAtBoundaryBool = (.not. inCellBool) .or. (.not. equalVSignBool)
-                        if (FutureAtBoundaryBool) then
-                            if (v_sign > 0) then
-                                l_boundary = 1
-                                FutureAtBoundaryBool = l_f > 1
-                            else
-                                l_boundary = 0
-                                FutureAtBoundaryBool = l_f < 0
-                            end if
-                            if (FutureAtBoundaryBool) then
-                                diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                            else if ((.not. equalVSignBool) .and. (INT(-l_accel+1) /= 1)) then
-                                diff_PE = 2.0d0 * (accel_left * (real(l_boundary) - l_sub) - 0.5d0 * accel_grad * (real(l_boundary)**2 - l_sub_sqr))
-                                FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
-                            end if
-                            if (FutureAtBoundaryBool) then
-                                l_f = real(l_boundary)
-                                v_f = SQRT(diff_PE + v_i_sqr) * v_sign
-                                C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
-                                C_2 = v_i_sqr + u_i**2 * accel_grad
-                                del_tau = ASINH(C_1/C_2)/omega
-                            else if  (.not. inCellBool) then
-                                FutureAtBoundaryBool = .true.
-                                l_boundary = 1-l_boundary
-                                l_f = real(l_boundary)
-                                if (.not. AtBoundaryBool) then
-                                    diff_PE = 2.0d0 * (accel_left * (l_f - l_sub) - 0.5d0 * accel_grad * (l_f**2 - l_sub_sqr))
-                                    v_f = -SQRT(diff_PE + v_i_sqr) * v_sign
-                                    C_1 = accel_grad_root * (v_sub * (l_f + l_accel) - u_i * v_f)
-                                else
-                                    v_f = -v_sub
-                                    C_1 = 2.0d0 * accel_grad_root * v_sub * u_i
-                                end if
-                                C_2 = v_i_sqr + u_i**2 * accel_grad
-                                del_tau = ASINH(C_1/C_2)/omega
-                            end if
-                        end if
+                        call particleSubStepHill(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), particleOmega(l_cell, j), particleLAccel(l_cell, j), &
+                            dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
                     end if
+                  
                     ! call particleSubStepNoBField(l_sub, v_sub, del_tau, l_f, v_f, particleAccelLeft(l_cell, j), particleAccelGrad(l_cell, j), &
                     !     particleOmega(l_cell, j), particleLAccel(l_cell, j), dx_dl, AtBoundaryBool, FutureAtBoundaryBool, l_boundary, v_sign)
                     l_f = real(l_cell) + l_f

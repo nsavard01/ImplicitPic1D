@@ -639,16 +639,16 @@ Begin optimization report for: CONSTRUCTGRID
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (CONSTRUCTGRID)
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.83 + 56(SI64)))))[3(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.82 + 56(SI64)))))[3(SI64)]
      -tbp-> CONSTRUCTUNIFORMGRID
       -> (106,18) CONSTRUCTUNIFORMGRID
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.83 + 56(SI64)))))[2(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.82 + 56(SI64)))))[2(SI64)]
      -tbp-> CONSTRUCTSINEGRID
       -> (108,18) CONSTRUCTSINEGRID
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.83 + 56(SI64)))))[1(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.82 + 56(SI64)))))[1(SI64)]
      -tbp-> CONSTRUCTHALFSINEGRID
       -> (110,18) CONSTRUCTHALFSINEGRID
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.83 + 56(SI64)))))[5(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_domain_mp_constructgrid_$SELF_V$346.11.82 + 56(SI64)))))[5(SI64)]
      -tbp-> CONSTRUCTEXPHALFGRID
       -> (112,18) CONSTRUCTEXPHALFGRID
 
@@ -2158,7 +2158,7 @@ INLINE REPORT: (ALLOCATEPARTICLEMOVERDATA)
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMoverPicard.f90(58,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_allocateparticlemoverdata_] mod_particleMoverPicard.f90:58
+mod_particleMover.f90(19,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_allocateparticlemoverdata_] mod_particleMover.f90:19
 
     Hardware registers
         Reserved     :    2[ rsp rip]
@@ -2167,15 +2167,15 @@ mod_particleMoverPicard.f90(58,16):remark #34051: REGISTER ALLOCATION : [mod_par
         Assigned     :   15[ rax rdx rcx rbx rbp rsi rdi r8-r15]
         
     Routine temporaries
-        Total         :     155
-            Global    :      23
-            Local     :     132
-        Regenerable   :      27
+        Total         :     202
+            Global    :      26
+            Local     :     176
+        Regenerable   :      34
         Spilled       :       6
         
     Routine stack
-        Variables     :      24 bytes*
-            Reads     :       3 [1.38e+00 ~ 1.4%]
+        Variables     :      32 bytes*
+            Reads     :       4 [1.43e+00 ~ 1.4%]
             Writes    :       0 [0.00e+00 ~ 0.0%]
         Spills        :       0 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
@@ -2879,19 +2879,19 @@ INLINE REPORT: (MOD_NULLCOLLISION^GENERATECOLLISION)
     -> INLINE: ../../SharedModules/src/mod_targetParticle.f90:(51,14) RAN2
     -> INLINE: ../../SharedModules/src/mod_targetParticle.f90:(52,14) RAN2
   -> INLINE: (168,20) RAN2
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$947.8.57 + 56(SI64)))))[2(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$947.8.56 + 56(SI64)))))[2(SI64)]
      -tbp-> MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
       -> INLINE: (180,34) MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
         -> INLINE: (518,35) RAN2
         -> INLINE: (519,15) RAN2
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$947.8.57 + 56(SI64)))))[3(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$947.8.56 + 56(SI64)))))[3(SI64)]
      -tbp-> MOD_NULLCOLLISION^IONIZATIONCOLLISIONISOTROPIC
       -> INLINE: (185,34) MOD_NULLCOLLISION^IONIZATIONCOLLISIONISOTROPIC
         -> INLINE: (367,35) RAN2
         -> INLINE: (368,15) RAN2
         -> INLINE: (380,15) RAN2
         -> (382,14) MOD_NULLCOLLISION::SCATTERVECTOR
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$947.8.57 + 56(SI64)))))[2(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_nullcollision_mp_generatecollision_$SELF_V$947.8.56 + 56(SI64)))))[2(SI64)]
      -tbp-> MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
       -> INLINE: (199,34) MOD_NULLCOLLISION^ELASTICEXCITCOLLISIONISOTROPIC
         -> INLINE: (518,35) RAN2
@@ -4071,232 +4071,313 @@ Begin optimization report for: MOVEPARTICLES
 INLINE REPORT: (MOVEPARTICLES)
   -> INDIRECT: raddr(mod_potentialsolver_mp_evaluateefieldhalftime_)(P64)
      -tbp-> MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-      -> (513,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-  -> (514,14) MOD_PARTICLEMOVER::INITIALIZEPARTICLEMOVERDATA
-  -> INLINE: (556,26) MOD_PARTICLEMOVER::PARTICLESUBSTEPPICARD
+      -> (458,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
+  -> (459,14) MOD_PARTICLEMOVER::INITIALIZEPARTICLEMOVERDATA
+  -> (492,30) MOD_PARTICLEMOVER::PARTICLESUBSTEPWELL
+  -> (495,30) MOD_PARTICLEMOVER::PARTICLESUBSTEPHILL
 
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at mod_particleMoverPicard.f90(518,15)
+OpenMP Construct at mod_particleMover.f90(463,15)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_particleMoverPicard.f90(516,9)
+LOOP BEGIN at mod_particleMover.f90(461,9)
    remark #25408: memset generated
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(516,9)
+   LOOP BEGIN at mod_particleMover.f90(461,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(516,9)
+   LOOP BEGIN at mod_particleMover.f90(461,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(517,9)
+LOOP BEGIN at mod_particleMover.f90(462,9)
    remark #25408: memset generated
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(517,9)
+   LOOP BEGIN at mod_particleMover.f90(462,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(517,9)
+   LOOP BEGIN at mod_particleMover.f90(462,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(629,9)
+LOOP BEGIN at mod_particleMover.f90(572,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(630,13)
+   LOOP BEGIN at mod_particleMover.f90(573,13)
       remark #25401: memcopy(with guard) generated
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(630,13)
+      LOOP BEGIN at mod_particleMover.f90(573,13)
       <Multiversioned v2>
          remark #25439: unrolled with remainder by 2  
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(630,13)
+      LOOP BEGIN at mod_particleMover.f90(573,13)
       <Remainder, Multiversioned v2>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(631,76)
+   LOOP BEGIN at mod_particleMover.f90(574,76)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(631,76)
+   LOOP BEGIN at mod_particleMover.f90(574,76)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(631,76)
+   LOOP BEGIN at mod_particleMover.f90(574,76)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(631,103)
+   LOOP BEGIN at mod_particleMover.f90(574,103)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(631,103)
+   LOOP BEGIN at mod_particleMover.f90(574,103)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(631,103)
+   LOOP BEGIN at mod_particleMover.f90(574,103)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(632,78)
+   LOOP BEGIN at mod_particleMover.f90(575,78)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(632,78)
+   LOOP BEGIN at mod_particleMover.f90(575,78)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(632,78)
+   LOOP BEGIN at mod_particleMover.f90(575,78)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(632,105)
+   LOOP BEGIN at mod_particleMover.f90(575,105)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(632,105)
+   LOOP BEGIN at mod_particleMover.f90(575,105)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(632,105)
+   LOOP BEGIN at mod_particleMover.f90(575,105)
    <Remainder loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+   LOOP BEGIN at mod_particleMover.f90(576,81)
       remark #25408: memset generated
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+      LOOP BEGIN at mod_particleMover.f90(576,81)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+      LOOP BEGIN at mod_particleMover.f90(576,81)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+   LOOP BEGIN at mod_particleMover.f90(576,81)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+      LOOP BEGIN at mod_particleMover.f90(576,81)
       <Peeled loop for vectorization>
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+      LOOP BEGIN at mod_particleMover.f90(576,81)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+      LOOP BEGIN at mod_particleMover.f90(576,81)
       <Remainder loop for vectorization>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(633,81)
+      LOOP BEGIN at mod_particleMover.f90(576,81)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(633,13)
+   LOOP BEGIN at mod_particleMover.f90(576,13)
       remark #25436: completely unrolled by 2  
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+   LOOP BEGIN at mod_particleMover.f90(577,77)
       remark #25408: memset generated
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+      LOOP BEGIN at mod_particleMover.f90(577,77)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+      LOOP BEGIN at mod_particleMover.f90(577,77)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+   LOOP BEGIN at mod_particleMover.f90(577,77)
       remark #25460: No loop optimizations reported
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+      LOOP BEGIN at mod_particleMover.f90(577,77)
       <Peeled loop for vectorization>
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+      LOOP BEGIN at mod_particleMover.f90(577,77)
          remark #15300: LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+      LOOP BEGIN at mod_particleMover.f90(577,77)
       <Remainder loop for vectorization>
          remark #15301: REMAINDER LOOP WAS VECTORIZED
       LOOP END
 
-      LOOP BEGIN at mod_particleMoverPicard.f90(634,77)
+      LOOP BEGIN at mod_particleMover.f90(577,77)
       <Remainder loop for vectorization>
       LOOP END
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(634,13)
+   LOOP BEGIN at mod_particleMover.f90(577,13)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(524,13)
+LOOP BEGIN at mod_particleMover.f90(469,13)
    remark #25478: While Loop Unrolled by 2  
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(525,13)
+LOOP BEGIN at mod_particleMover.f90(470,13)
    remark #25478: While Loop Unrolled by 2  
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(567,123)
+LOOP BEGIN at mod_particleMover.f90(510,123)
    remark #25436: completely unrolled by 2  
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(570,123)
+LOOP BEGIN at mod_particleMover.f90(513,123)
    remark #25436: completely unrolled by 2  
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(621,21)
+LOOP BEGIN at mod_particleMover.f90(564,21)
    remark #25436: completely unrolled by 2  
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMoverPicard.f90(514,14):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-mod_particleMoverPicard.f90(516,9):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMoverPicard.f90(517,9):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMoverPicard.f90(630,13):remark #34026: call to memcpy implemented as a call to optimized library version
-mod_particleMoverPicard.f90(633,81):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMoverPicard.f90(634,77):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMoverPicard.f90(503,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_moveparticles_] mod_particleMoverPicard.f90:503
+mod_particleMover.f90(459,14):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+mod_particleMover.f90(461,9):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(462,9):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(573,13):remark #34026: call to memcpy implemented as a call to optimized library version
+mod_particleMover.f90(576,81):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(577,77):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(448,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_moveparticles_] mod_particleMover.f90:448
 
     Hardware registers
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   36[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm22]
+        Assigned     :   27[ rax rdx rcx rsi rdi r8-r15 zmm0-zmm10 zmm16-zmm18]
         
     Routine temporaries
-        Total         :    1189
-            Global    :     282
-            Local     :     907
-        Regenerable   :     128
-        Spilled       :      66
+        Total         :    1204
+            Global    :     278
+            Local     :     926
+        Regenerable   :     144
+        Spilled       :      72
         
     Routine stack
-        Variables     :     688 bytes*
-            Reads     :      35 [1.53e-01 ~ 0.2%]
-            Writes    :      44 [1.79e-01 ~ 0.2%]
-        Spills        :     544 bytes*
-            Reads     :     126 [2.74e+00 ~ 2.7%]
-            Writes    :     107 [1.88e+00 ~ 1.9%]
+        Variables     :     752 bytes*
+            Reads     :      47 [2.00e+00 ~ 2.0%]
+            Writes    :      60 [3.04e+00 ~ 3.0%]
+        Spills        :     592 bytes*
+            Reads     :     137 [5.81e+00 ~ 5.8%]
+            Writes    :      97 [2.90e+00 ~ 2.9%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: MOD_PARTICLEMOVER::PARTICLESUBSTEPWELL
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (MOD_PARTICLEMOVER::PARTICLESUBSTEPWELL)
+
+
+    Report from: Code generation optimizations [cg]
+
+mod_particleMover.f90(42,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_particlesubstepwell_] mod_particleMover.f90:42
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   36[ rax rdx rcx rbx rbp rsi rdi r8-r15 zmm0-zmm12 zmm16-zmm23]
+        
+    Routine temporaries
+        Total         :     156
+            Global    :      58
+            Local     :      98
+        Regenerable   :      13
+        Spilled       :      19
+        
+    Routine stack
+        Variables     :       0 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       0 [0.00e+00 ~ 0.0%]
+        Spills        :     104 bytes*
+            Reads     :      30 [5.79e+00 ~ 5.8%]
+            Writes    :      17 [6.19e+00 ~ 6.2%]
+    
+    Notes
+    
+        *Non-overlapping variables and spills may share stack space,
+         so the total stack size might be less than this.
+    
+
+===========================================================================
+
+Begin optimization report for: MOD_PARTICLEMOVER::PARTICLESUBSTEPHILL
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (MOD_PARTICLEMOVER::PARTICLESUBSTEPHILL)
+
+
+    Report from: Code generation optimizations [cg]
+
+mod_particleMover.f90(113,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_particlesubstephill_] mod_particleMover.f90:113
+
+    Hardware registers
+        Reserved     :    2[ rsp rip]
+        Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
+        Callee-save  :    6[ rbx rbp r12-r15]
+        Assigned     :   32[ rax rdx rcx rbx rbp rsi rdi r8-r11 r13-r15 zmm0-zmm11 zmm16-zmm21]
+        
+    Routine temporaries
+        Total         :     138
+            Global    :      45
+            Local     :      93
+        Regenerable   :      14
+        Spilled       :      14
+        
+    Routine stack
+        Variables     :       0 bytes*
+            Reads     :       0 [0.00e+00 ~ 0.0%]
+            Writes    :       0 [0.00e+00 ~ 0.0%]
+        Spills        :      72 bytes*
+            Reads     :      27 [6.70e+00 ~ 6.7%]
+            Writes    :       9 [7.84e+00 ~ 7.8%]
     
     Notes
     
@@ -7573,7 +7654,7 @@ Begin optimization report for: MOD_POTENTIALSOLVER^SOLVE_TRIDIAG_AMPERE
     Report from: Interprocedural optimizations [ipo]
 
 INLINE REPORT: (MOD_POTENTIALSOLVER^SOLVE_TRIDIAG_AMPERE)
-  -> INDIRECT-: (*((P64*) *((P64*) (mod_potentialsolver_mp_solve_tridiag_ampere_$SELF_V$8fd.5.27 + 56(SI64)))))[10(SI64)]
+  -> INDIRECT-: (*((P64*) *((P64*) (mod_potentialsolver_mp_solve_tridiag_ampere_$SELF_V$8fd.5.26 + 56(SI64)))))[10(SI64)]
      -tbp-> MOD_POTENTIALSOLVER^EVALUATEEFIELDCURRTIME
       -> INLINE: (222,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDCURRTIME
 
@@ -7665,88 +7746,89 @@ Begin optimization report for: DEPOSITJ
 INLINE REPORT: (DEPOSITJ)
   -> INDIRECT: raddr(mod_potentialsolver_mp_evaluateefieldhalftime_)(P64)
      -tbp-> MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-      -> (412,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
-  -> (413,14) MOD_PARTICLEMOVER::INITIALIZEPARTICLEMOVERDATA
-  -> INLINE: (438,26) MOD_PARTICLEMOVER::PARTICLESUBSTEPPICARD
-  -> (496,18) ADDTHREADEDDOMAINARRAY
+      -> (359,14) MOD_POTENTIALSOLVER^EVALUATEEFIELDHALFTIME
+  -> (360,14) MOD_PARTICLEMOVER::INITIALIZEPARTICLEMOVERDATA
+  -> (389,30) MOD_PARTICLEMOVER::PARTICLESUBSTEPWELL
+  -> (392,30) MOD_PARTICLEMOVER::PARTICLESUBSTEPHILL
+  -> (441,18) ADDTHREADEDDOMAINARRAY
 
 
     Report from: OpenMP optimizations [openmp]
 
-OpenMP Construct at mod_particleMoverPicard.f90(416,15)
+OpenMP Construct at mod_particleMover.f90(363,15)
 remark #16201: OpenMP DEFINED REGION WAS PARALLELIZED
 
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_particleMoverPicard.f90(415,9)
+LOOP BEGIN at mod_particleMover.f90(362,9)
    remark #25408: memset generated
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(415,9)
+   LOOP BEGIN at mod_particleMover.f90(362,9)
       remark #15300: LOOP WAS VECTORIZED
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(415,9)
+   LOOP BEGIN at mod_particleMover.f90(362,9)
    <Remainder loop for vectorization>
    LOOP END
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(499,9)
+LOOP BEGIN at mod_particleMover.f90(444,9)
 <Peeled loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(499,9)
+LOOP BEGIN at mod_particleMover.f90(444,9)
    remark #15300: LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(499,9)
+LOOP BEGIN at mod_particleMover.f90(444,9)
 <Remainder loop for vectorization>
    remark #15301: REMAINDER LOOP WAS VECTORIZED
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(499,9)
+LOOP BEGIN at mod_particleMover.f90(444,9)
 <Remainder loop for vectorization>
 LOOP END
 
-LOOP BEGIN at mod_particleMoverPicard.f90(420,13)
+LOOP BEGIN at mod_particleMover.f90(367,13)
    remark #25408: memset generated
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(420,13)
+   LOOP BEGIN at mod_particleMover.f90(367,13)
       remark #25439: unrolled with remainder by 2  
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(420,13)
+   LOOP BEGIN at mod_particleMover.f90(367,13)
    <Remainder>
    LOOP END
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMoverPicard.f90(413,14):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
-mod_particleMoverPicard.f90(415,9):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMoverPicard.f90(420,13):remark #34026: call to memset implemented as a call to optimized library version
-mod_particleMoverPicard.f90(399,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_depositj_] mod_particleMoverPicard.f90:399
+mod_particleMover.f90(360,14):remark #34000: call to memcpy implemented inline with loads and stores with proven source (alignment, offset): (1, 0), and destination (alignment, offset): (1, 0)
+mod_particleMover.f90(362,9):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(367,13):remark #34026: call to memset implemented as a call to optimized library version
+mod_particleMover.f90(346,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_depositj_] mod_particleMover.f90:346
 
     Hardware registers
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   38[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm23]
+        Assigned     :   25[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm7 zmm16-zmm18]
         
     Routine temporaries
-        Total         :     454
-            Global    :     123
-            Local     :     331
-        Regenerable   :      73
-        Spilled       :      30
+        Total         :     489
+            Global    :     115
+            Local     :     374
+        Regenerable   :      90
+        Spilled       :      28
         
     Routine stack
-        Variables     :     320 bytes*
-            Reads     :      12 [2.25e-02 ~ 0.0%]
-            Writes    :      33 [4.68e-01 ~ 0.5%]
-        Spills        :     280 bytes*
-            Reads     :      54 [1.55e+00 ~ 1.5%]
-            Writes    :      46 [1.01e+00 ~ 1.0%]
+        Variables     :     384 bytes*
+            Reads     :      22 [2.78e+00 ~ 2.8%]
+            Writes    :      49 [5.92e+00 ~ 5.9%]
+        Spills        :     264 bytes*
+            Reads     :      62 [8.25e+00 ~ 8.3%]
+            Writes    :      43 [2.97e+00 ~ 3.0%]
     
     Notes
     
@@ -8826,48 +8908,49 @@ INLINE REPORT: (MOD_PARTICLEMOVER::INITIALIZEPARTICLEMOVERDATA)
     Report from: Loop nest, Vector & Auto-parallelization optimizations [loop, vec, par]
 
 
-LOOP BEGIN at mod_particleMoverPicard.f90(70,9)
+LOOP BEGIN at mod_particleMover.f90(30,9)
    remark #25460: No loop optimizations reported
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(71,13)
+   LOOP BEGIN at mod_particleMover.f90(31,13)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(71,13)
+   LOOP BEGIN at mod_particleMover.f90(31,13)
+      remark #25427: Loop Statements Reordered
       remark #15300: LOOP WAS VECTORIZED
-      remark #25456: Number of Array Refs Scalar Replaced In Loop: 1
+      remark #25456: Number of Array Refs Scalar Replaced In Loop: 3
    LOOP END
 
-   LOOP BEGIN at mod_particleMoverPicard.f90(71,13)
+   LOOP BEGIN at mod_particleMover.f90(31,13)
    <Remainder loop for vectorization>
-      remark #15301: REMAINDER LOOP WAS VECTORIZED
+      remark #25456: Number of Array Refs Scalar Replaced In Loop: 3
    LOOP END
 LOOP END
 
     Report from: Code generation optimizations [cg]
 
-mod_particleMoverPicard.f90(65,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_initializeparticlemoverdata_] mod_particleMoverPicard.f90:65
+mod_particleMover.f90(25,16):remark #34051: REGISTER ALLOCATION : [mod_particlemover_mp_initializeparticlemoverdata_] mod_particleMover.f90:25
 
     Hardware registers
         Reserved     :    2[ rsp rip]
         Available    :   63[ rax rdx rcx rbx rbp rsi rdi r8-r15 mm0-mm7 zmm0-zmm31 k0-k7]
         Callee-save  :    6[ rbx rbp r12-r15]
-        Assigned     :   33[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm17 k1]
+        Assigned     :   26[ rax rdx rcx rbx rsi rdi r8-r15 zmm0-zmm11]
         
     Routine temporaries
-        Total         :      86
-            Global    :      43
+        Total         :      82
+            Global    :      39
             Local     :      43
-        Regenerable   :       5
-        Spilled       :      12
+        Regenerable   :       1
+        Spilled       :      16
         
     Routine stack
         Variables     :       0 bytes*
             Reads     :       0 [0.00e+00 ~ 0.0%]
             Writes    :       0 [0.00e+00 ~ 0.0%]
-        Spills        :      80 bytes*
-            Reads     :      12 [2.64e+00 ~ 2.6%]
-            Writes    :      10 [5.56e-01 ~ 0.6%]
+        Spills        :     104 bytes*
+            Reads     :      17 [3.97e+00 ~ 4.0%]
+            Writes    :      13 [9.24e-01 ~ 0.9%]
     
     Notes
     
@@ -9545,8 +9628,8 @@ Profile feedback used a statically estimated profile for the following routines:
         WRITEPARTICLEINJECTIONINPUTS                     [Line   244]
 
   File: ../../SharedModules/src/mod_simulation.f90
-        MOD_SIMULATION::WRITEPHI..1                      [Line    28]
         MOD_SIMULATION::WRITEPHI..0                      [Line    28]
+        MOD_SIMULATION::WRITEPHI..1                      [Line    28]
         MOD_SIMULATION::GENERATESAVEDIRECTORY            [Line   264]
         SOLVESIMULATION                                  [Line   299]
         SOLVESIMULATIONFINALAVERAGE                      [Line   593]
@@ -9575,11 +9658,13 @@ Profile feedback used a statically estimated profile for the following routines:
         WRITEDOMAIN                                      [Line   265]
         READWORLD                                        [Line   282]
 
-  File: mod_particleMoverPicard.f90
-        ALLOCATEPARTICLEMOVERDATA                        [Line    58]
-        MOD_PARTICLEMOVER::INITIALIZEPARTICLEMOVERDATA   [Line    65]
-        DEPOSITJ                                         [Line   399]
-        MOVEPARTICLES                                    [Line   503]
+  File: mod_particleMover.f90
+        ALLOCATEPARTICLEMOVERDATA                        [Line    19]
+        MOD_PARTICLEMOVER::INITIALIZEPARTICLEMOVERDATA   [Line    25]
+        MOD_PARTICLEMOVER::PARTICLESUBSTEPWELL           [Line    42]
+        MOD_PARTICLEMOVER::PARTICLESUBSTEPHILL           [Line   113]
+        DEPOSITJ                                         [Line   346]
+        MOVEPARTICLES                                    [Line   448]
 
   File: mod_potentialSolver.f90
         MOD_POTENTIALSOLVER::POTENTIALSOLVER_CONSTRUCTOR [Line    50]
@@ -9621,10 +9706,10 @@ Profile feedback used a statically estimated profile for the following routines:
         NITTFQ                                           [Line     1]
 
 
-  0 out of 90 routine(s) used training profile data for PGO feedback
-  0 out of 90 routine(s) were unable to use training profile data for PGO feedback
-  0 out of 90 routine(s) were unable to find training profile data for PGO feedback
-  90 out of 90 routine(s) used a static estimate profile for PGO feedback
+  0 out of 92 routine(s) used training profile data for PGO feedback
+  0 out of 92 routine(s) were unable to use training profile data for PGO feedback
+  0 out of 92 routine(s) were unable to find training profile data for PGO feedback
+  92 out of 92 routine(s) used a static estimate profile for PGO feedback
 
 
 
