@@ -125,14 +125,14 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
     thmax = DFLT_THMAX
     etafixed = DFLT_ETA_FIXED
 
-   iplvl = 4 ! print level
+   iplvl = 0 ! print level
    input = 0
    input(1) = maxIter ! maximum iterations
    input(2) = 0 !ijacv
    input(3) = 0 ! krylov solver
    input(4) = m_Anderson ! maximum krylov subspace dimension
    input(5) = 0 !ipre
-   input(9) = -1 !number backtracks
+   input(9) = 10 !number backtracks
    input(6) = m_Anderson*2
    input(10) = 2 ! eta with gamma and alpha
    etamax = 0.8d0 ! eta max
@@ -2842,7 +2842,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c ------------------------------------------------------------------------
      krystat = itrmks
      avrate = (rsnrm/fcnrm)**(1.0d0/dble(nli))
-
+     ! USE avrate as additional constraint for solutions converging too slowly or stalling
      if (avrate > 0.98) then
          iterm = 5
          go to 900

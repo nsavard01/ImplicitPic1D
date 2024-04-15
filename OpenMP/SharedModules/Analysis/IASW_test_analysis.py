@@ -54,6 +54,7 @@ NGP_IAW_Chacon = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IAW_
 NGP_IASW_Chacon = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon/')
 NGP_IASW_Chacon2013 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013/')
 NGP_IASW_Chacon2013_Curv = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_Curv/')
+NGP_IASW_Chacon2013_Curv_JFNKLowRes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_Curv_JFNKLowRes/')
 
 CIC_IASW_Chacon = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon/')
 CIC_IASW_Chacon2013_Curv = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv/')

@@ -247,7 +247,6 @@ contains
         iterm = 0
         xcurSolver = globalSolver%phi_f
         rpar(1) = del_t
-        print *, 'del_t is:', del_t
         call funcNitsol(NumberXNodes, xcurSolver, fcurSolver, rpar, ipar, itrmf)
         initialNorm = SQRT(SUM(fcurSolver**2))!dnrm2(NumberXNodes, fcurSolver, 1)
         !print *, "initial norm is:", initialNorm
