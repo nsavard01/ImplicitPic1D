@@ -15,8 +15,9 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:, :), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: rho_const
+        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
+        logical :: BFieldBool
 
 
     contains
@@ -35,10 +36,12 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
+        real(real64), intent(in) :: BFieldMag, angle
+        real(real64) :: angle_rad
         allocate(self % J(NumberXNodes-1, numThread), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXNodes-1))
         call construct_diagMatrix(self, world)
@@ -62,7 +65,14 @@ contains
         CASE(2)
             self%phi(NumberXNodes) = 0.0d0
         END SELECT
-        self%phi_f = self%phi  
+        self%phi_f = self%phi 
+        self%BFieldMag = BFieldMag
+        self%BFieldBool = (BFieldMag /= 0.0d0)
+        angle_rad = angle * pi / 180.0d0
+        self%BFieldAngle = angle_rad
+        self%BField(1) = BFieldMag * COS(angle_rad)
+        self%BField(2) = BFieldMag * SIN(angle_rad)
+        self%BField(3) = 0.0d0 
         self%EField = 0.0d0
     end function potentialSolver_constructor
 

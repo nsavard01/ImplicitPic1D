@@ -1,0 +1,12 @@
+32 ! number of processors
+5.317772131794625e-06 0.0d0 ! simulation time
+1.d14 ! Initial number density (1/m^3) of electrons
+5.0d0 ! Initial electron Temperature (eV) 
+0.01d0 ! Initial ion Temperature (eV)
+50 ! number of diagnostic data dumps    
+0.1d0 1.0d0 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+5.317772131794625e-08 ! amount of time to average final Diagnostics
+../../../../ExplicitData/  !Save directory
+Exp_IASW_Chacon2013 !save file name
+no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
+END

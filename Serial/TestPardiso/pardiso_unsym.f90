@@ -3,7 +3,7 @@
 program pardiso_unsym
     use iso_fortran_env, only: int32, real64
     implicit none
-    integer(int32) :: mtype, pt(64), solver, iparm(64), mnum = 1, maxfct = 1, nrhs = 1, msglvl = 0, matDimension = 64, j, phase, idum, error, tclock1, tclock2, clock_rate,i
+    integer(int32) :: mtype, pt(64), solver, iparm(64), mnum = 1, maxfct = 1, nrhs = 1, msglvl = 0, matDimension = 64, j, phase, idum, error, tclock1, tclock2, clock_rate,i, idum
     real(real64), allocatable :: a(:), b(:), x(:), x_other(:), a_tri(:), b_tri(:), c_tri(:)
     integer(int32), allocatable :: ja(:), ia(:)
     real(real64) :: elapsed_time, cpu1, cpu2

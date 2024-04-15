@@ -10,7 +10,9 @@
       double precision xcur(n), fcur(n), fcnrm, step(n), eta, rpar(*), 
      $     vv(n,kdmaxp1), rr(kdmax,kdmax), svbig(kdmax), svsml(kdmax), 
      $     w(kdmax), rwork(n), rsnrm, dinpr, dnorm 
-      external f, jacv, dinpr, dnorm 
+      external f, jacv, dinpr, dnorm
+      external dcopy, dscal, nitjv
+      external daxpy, dlaic1
 
 c ------------------------------------------------------------------------
 c

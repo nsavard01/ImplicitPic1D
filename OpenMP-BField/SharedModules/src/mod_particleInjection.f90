@@ -4,13 +4,12 @@ module mod_particleInjection
     use mod_BasicFunctions
     use mod_domain
     use mod_particle
-    use mod_Scheme
     use omp_lib
     implicit none
-    real(real64), allocatable :: energyAddColl(:)
-    logical :: addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool
-    integer(int32) :: numFluxParticlesHigh, numFluxParticlesLow
-    real(real64) :: injectionFlux, injectionR, FractionFreqHeating
+    real(real64), allocatable, public :: energyAddColl(:)
+    logical, public, protected :: addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool
+    integer(int32), private :: numFluxParticlesHigh, numFluxParticlesLow
+    real(real64), private :: injectionFlux, injectionR, FractionFreqHeating
 
 contains
 
@@ -29,11 +28,7 @@ contains
             call getMaxwellianFluxSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
             energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread)**2) * particleList(1)%mass * particleList(1)%w_p &
             + SUM(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread)**2) * particleList(2)%mass * particleList(2)%w_p) * 0.5d0
-            if (schemeNum == 0) then
-                x_random = world%grid(1) + (world%grid(NumberXNodes) - world%grid(1)) * ran2(irand(iThread))
-            else
-                x_random = world%grid(1) - 0.5d0*world%dx_dl(1) + (world%grid(NumberXNodes) + 0.5d0*world%dx_dl(NumberXNodes) - world%grid(1) + 0.5d0 * world%dx_dl(1)) * ran2(irand(iThread))
-            end if
+            x_random = ran2(irand(iThread)) * world%L_domain + world%startX
             particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(x_random)
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do
@@ -115,23 +110,15 @@ contains
             particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed * cosAngle
             particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = -ionSoundSpeed * sinAngle
             particleList(2)%phaseSpace(4, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
-            if (world%boundaryConditions(1) == 2 .or. world%boundaryConditions(1) == 4) then
+            if (world%boundaryConditions(1) == 2) then
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
                 particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
-                if (schemeNum == 0) then
-                    particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%grid(1) + shift_rand)
-                else
-                    particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%grid(1) - 0.5d0 * world%dx_dl(1) + shift_rand)
-                end if
+                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%startX + shift_rand)
                 particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
             else
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = -ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
                 particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = -ABS(particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread))
-                if (schemeNum == 0) then
-                    particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%grid(NumberXNodes) - shift_rand)
-                else
-                    particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%grid(NumberXNodes) + 0.5d0 * world%dx_dl(NumberXNodes) - shift_rand)
-                end if
+                particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(world%endX - shift_rand)
                 particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
             end if
         end do
@@ -159,11 +146,7 @@ contains
         do i = 1, numInjected
             call getMaxwellianSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, 20.0d0 * T_e, irand(iThread))
             call getMaxwellianSample(particleList(2)%phaseSpace(2:4, particleList(2)%N_p(iThread) + i, iThread), particleList(2)%mass, T_i, irand(iThread))
-            if (schemeNum == 0) then
-                x_random = world%grid(1) + (world%grid(NumberXNodes) - world%grid(1)) * ran2(irand(iThread))
-            else
-                x_random = world%grid(1) - 0.5d0*world%dx_dl(1) + (world%grid(NumberXNodes) + 0.5d0*world%dx_dl(NumberXNodes) - world%grid(1) + 0.5d0 * world%dx_dl(1)) * ran2(irand(iThread))
-            end if
+            x_random = ran2(irand(iThread)) * world%L_domain + world%startX
             particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread) = world%getLFromX(x_random)
             particleList(2)%phaseSpace(1, particleList(2)%N_p(iThread) + i, iThread) = particleList(1)%phaseSpace(1, particleList(1)%N_p(iThread) + i, iThread)
         end do
@@ -172,11 +155,11 @@ contains
         !$OMP end parallel
     end subroutine injectUniformFlux
 
-    subroutine maxwellianHeating(species, FractionFreqHeating, irand, FracFreq, T, currDel_t, del_t)
+    subroutine maxwellianHeating(species, irand, FracFreq, T, currDel_t, del_t)
         ! Add power to all particles in domain
         type(Particle), intent(in out) :: species
         integer(int32), intent(in out) :: irand(numThread)
-        real(real64), intent(in) :: FractionFreqHeating, FracFreq, T, currDel_t, del_t
+        real(real64), intent(in) :: FracFreq, T, currDel_t, del_t
         real(real64) :: R, compValue
         integer(int32) :: i, iThread
         compValue = FracFreq * (currDel_t/del_t)/FractionFreqHeating
@@ -191,5 +174,60 @@ contains
         !$OMP end parallel
     end subroutine maxwellianHeating
 
+
+    ! -------------------- read inputs artificial collisions/particle injection ------------------------------------
+
+    subroutine readInjectionInputs(InjFilename, w_p, angleRad)
+        real(real64), intent(in) :: w_p, angleRad
+        character(len=*), intent(in) :: InjFilename
+        integer(int32) :: tempInt, io
+        real(real64) :: numFluxPart
+        print *, ""
+        print *, "Reading initial inputs for particle injection:"
+        print *, "------------------"
+        open(10,file='../InputData/'//InjFilename, IOSTAT=io)
+        read(10, *, IOSTAT = io) tempInt
+        addLostPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt
+        refluxPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt, injectionFlux
+        injectionBool = (tempInt == 1)
+        if (.not. injectionBool) then
+            read(10, *, IOSTAT = io) tempInt, injectionFlux
+            uniformInjectionBool = (tempInt == 1)
+        end if
+        read(10, *, IOSTAT = io) tempInt, FractionFreqHeating
+        heatingBool = (tempInt == 1)
+        close(10)
+        print *, "Particle lost is reinjected:", addLostPartBool
+        print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
+        print *, "Particle injection on neumann boundary", injectionBool
+        print *, "Particle injection unformly with maxwellian", uniformInjectionBool
+        print *, "Electron maxwellian heating", heatingBool
+        if (injectionBool) then
+            injectionFlux = injectionFlux * COS(angleRad)
+            print *, 'Particle injection flux:', injectionFlux
+            numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
+            numFluxParticlesLow = floor(numFluxPart)
+            numFluxParticlesHigh = numFluxParticlesLow + 1
+            print *, 'Low end of flux particles:', numFluxParticlesLow
+            print *, 'High end of flux particles:', numFluxParticlesHigh
+            injectionR = numFluxPart - real(numFluxParticlesLow)
+            print *, 'Number for selection of flux particles is:', injectionR
+        else if (uniformInjectionBool) then
+            print *, 'Particle injection flux:', injectionFlux
+            numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
+            numFluxParticlesLow = floor(numFluxPart)
+            numFluxParticlesHigh = numFluxParticlesLow + 1
+            print *, 'Low end of flux particles:', numFluxParticlesLow
+            print *, 'High end of flux particles:', numFluxParticlesHigh
+            injectionR = numFluxPart - real(numFluxParticlesLow)
+            print *, 'Number for selection of flux particles is:', injectionR
+        else if (heatingBool) then
+            print *, 'FractionFreqHeating for maxwellian heating is:', FractionFreqHeating
+        end if
+        print *, "------------------"
+        print *, ""
+    end subroutine readInjectionInputs
 
 end module mod_particleInjection

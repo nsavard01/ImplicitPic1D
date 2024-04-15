@@ -1,0 +1,22 @@
+ELECTRONS
+name	 NumParticles/thread   ArraySizeMultiplication
+-------------------------------------------
+e	  20000		2
+-------------------------------------------
+
+
+IONS
+name   massAtom(AMU)  charge 	NumParticles/thread   ArraySizeMultiplication
+--------------------------------------------------
+He+   4.002602     1. 		1    2
+--------------------------------------------------
+
+
+NEUTRALS
+name   mass(AMU)  temp(K)  density
+-------------------------------------
+He     4.002602    300.0d0     1.d21
+-------------------------------------
+
+
+ENDFILE

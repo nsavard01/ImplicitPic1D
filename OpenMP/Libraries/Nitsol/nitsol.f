@@ -6,7 +6,8 @@
       integer n, input(10), info(6), ipar(*), iterm 
       double precision x(n), ftol, stptol, rwork(*), rpar(*) 
       double precision dinpr, dnorm
-      external f, jacv, dinpr, dnorm
+      external f, jacv, dinpr, dnorm, nitbt, nitdrv, nitgm
+      external nitjv, nitstb, nittfq, daxpy, dcopy, dscal, dswap, dlaic1
 
 c
 c ------------------------------------------------------------------------
