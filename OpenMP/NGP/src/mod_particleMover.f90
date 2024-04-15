@@ -163,7 +163,7 @@ contains
                                 end if
                             end if
                         CASE(3)
-                            l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
+                            l_f = real(ABS(l_boundary - NumberXNodes- 1))
                         ! CASE default
                         !     print *, "l_sub is:", l_sub
                         !     print *, 'l_f is:', l_f
@@ -279,7 +279,7 @@ contains
                                 refluxedBool = .true.
                             end if
                         CASE(3)
-                            l_f = REAL(ABS(l_boundary - real(NumberXNodes, kind = real64) - 1))
+                            l_f = real(ABS(l_boundary - NumberXNodes- 1))
                         ! CASE default
                         !     print *, "l_sub is:", l_sub
                         !     print *, 'l_f is:', l_f

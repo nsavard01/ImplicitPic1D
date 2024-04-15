@@ -23,6 +23,7 @@ m_p = constants.m_p
 mu_0 = constants.mu_0
 k_boltz = constants.k
 e = constants.e
+m_amu = 1.66053906660e-27
 
 def debye_length(T_e, n):
     """ Distance of potential drop in plasma, T_e in V"""
@@ -48,3 +49,7 @@ def crossSectionCoulomb(T_e, n_e):
 
 def maxwellDistributionE(E, T_e):
     return 2 * np.sqrt(E/np.pi) * (T_e)**(-1.5) * np.exp(-E/T_e)
+
+def maxwellDistributionVx(v_x, T, m):
+    v_therm_sqr = 2 * e * T/m
+    return 1/np.sqrt(v_therm_sqr * np.pi) * np.exp(-v_x**2 / v_therm_sqr)

@@ -198,7 +198,7 @@ contains
         inelasticEnergyLoss = 0.0d0
         !call solver%initialVRewind(particleList, del_t)
         call loadParticleDensity(particleList, world, .true.)
-        call writeParticleDensity(particleList, world, CurrentDiagStep, .false., directoryName)  
+        call writeParticleDensity(particleList, world, 0, .false., directoryName)  
         call writePhi(solver%phi, 0, .false., directoryName)
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles

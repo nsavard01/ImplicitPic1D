@@ -168,20 +168,20 @@ contains
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes), res
+        real(real64) :: Ax(NumberXNodes), res, tiny
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         res = 0.0d0
+        tiny = EPSILON(tiny)
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + 1d-15) - 1.0d0)**2
+                res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + tiny) - 1.0d0)**2
                 !d(i) = -self%rho(i) - self%rho_const
             CASE(1,3,4)
-                res = res + ((Ax(i) + 1d-15)/(self.phi_f(i) + 1d-15) - 1.0d0)**2
+                res = res + ((Ax(i) + tiny)/(self.phi_f(i) + tiny) - 1.0d0)**2
                 !d(i) = self%phi_f(i)*eps_0
             END SELECT
         end do
-        !res = Ax*eps_0 - 
         res = SQRT(res/NumberXNodes)
 
     end function getError_tridiag_Poisson

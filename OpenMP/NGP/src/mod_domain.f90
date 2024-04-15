@@ -22,6 +22,7 @@ module mod_domain
     contains
         procedure, public, pass(self) :: constructHalfSineGrid
         procedure, public, pass(self) :: constructSineGrid
+        procedure, public, pass(self) :: constructInvSineGrid
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
@@ -29,6 +30,7 @@ module mod_domain
         procedure, public, pass(self) :: makeArraysFromGrid
         procedure, public, pass(self) :: addThreadedDomainArray
         procedure, public, pass(self) :: getLFromX
+        procedure, public, pass(self) :: getXFromL
         procedure, public, pass(self) :: writeDomain
     end type Domain
 
@@ -112,6 +114,8 @@ contains
             call self%constructExpHalfGrid(del_x, L_domain)
         CASE(4)
             call self%constructHalfEvenHalfSinusoid(del_x, L_domain)
+        CASE(5)
+            call self%constructInvSineGrid(del_x, L_domain)
         CASE default
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
@@ -137,6 +141,25 @@ contains
         end do
 
     end subroutine constructSineGrid
+
+    subroutine constructInvSineGrid(self, del_x, L_domain)
+        class(Domain), intent(in out) :: self
+        real(real64), intent(in) :: del_x, L_domain
+        integer(int32) :: i
+        real(real64) :: phase
+        if (del_x/L_domain >= 1.0d0/(real(NumberXNodes) - 1.0d0)) then
+            print *, "The debyeLength is really large, less nodes needed!"
+            print *, "debyeLength is:", del_x
+            print *, "L_domain is:", L_domain
+            stop
+        end if
+        self%grid(1) = 0.0d0
+        self%grid(NumberXNodes) = L_domain
+        do i = 2,NumberXHalfNodes
+            phase = real(i-1)/real(NumberXHalfNodes)
+            self % grid(i) = L_domain * (phase + (1.0d0 - real(NumberXNodes) * del_x/L_domain)* SIN(2.0d0 * pi * phase)/ 2.0d0 / pi )
+        end do
+    end subroutine constructInvSineGrid
 
     subroutine constructHalfSineGrid(self, del_x, L_domain)
         class(Domain), intent(in out) :: self
@@ -239,6 +262,14 @@ contains
         self%L_domain = self%endX - self%startX
     end subroutine makeArraysFromGrid
 
+    function getXFromL(self, l) result(x)
+        class(Domain), intent(in) :: self
+        real(real64), intent(in) :: l
+        real(real64) :: x
+        x = self%grid(INT(l)) + self%dx_dl(INT(l)) * (l - INT(l))
+
+    end function getXFromL
+
     function getLFromX(self, x) result(l)
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: x
@@ -331,7 +362,7 @@ contains
             deallocate(boundArray)
         end if
         NumberXHalfNodes = NumberXNodes-1
-        debyeLength = MAX(getDebyeLength(T_e, n_ave), debyeLength)
+        debyeLength = MAX(0.1d0 * getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3

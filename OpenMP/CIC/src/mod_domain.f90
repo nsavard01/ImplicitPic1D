@@ -21,11 +21,13 @@ module mod_domain
     contains
         procedure, public, pass(self) :: constructHalfSineGrid
         procedure, public, pass(self) :: constructSineGrid
+        procedure, public, pass(self) :: constructInvSineGrid
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
         procedure, public, pass(self) :: addThreadedDomainArray
         procedure, public, pass(self) :: getLFromX
+        procedure, public, pass(self) :: getXFromL
         procedure, public, pass(self) :: writeDomain
     end type Domain
 
@@ -110,6 +112,8 @@ contains
             call self%constructHalfSineGrid(del_x, L_domain)
         CASE(3)
             call self%constructExpHalfGrid(del_x, L_domain)
+        CASE(5)
+            call self%constructInvSineGrid(del_x, L_domain)
         CASE default
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
@@ -144,6 +148,31 @@ contains
         self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
 
     end subroutine constructSineGrid
+
+    subroutine constructInvSineGrid(self, del_x, L_domain)
+        class(Domain), intent(in out) :: self
+        real(real64), intent(in) :: del_x, L_domain
+        integer(int32) :: i
+        real(real64) :: gridField(NumberXHalfNodes), phase
+        if (del_x/L_domain >= 1.0d0/(real(NumberXHalfNodes) - 1.0d0)) then
+            print *, "The debyeLength is really large, less nodes needed!"
+            print *, "debyeLength is:", del_x
+            print *, "L_domain is:", L_domain
+            stop
+        end if
+        gridField(1) = 0.0d0
+        gridField(NumberXHalfNodes) = L_domain
+        do i = 2,NumberXNodes
+            phase = real(i-1)/real(NumberXNodes)
+            gridField(i) = L_domain * (phase + (1.0d0 - real(NumberXHalfNodes) * del_x/L_domain)* SIN(2.0d0 * pi * phase)/ 2.0d0 / pi )
+        end do
+        do i = 1, NumberXNodes
+            self%dx_dl(i) = gridField(i+1) - gridField(i)
+        end do
+        self%grid = 0.5d0 * (gridField(1:NumberXNodes) + gridField(2:))
+        self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
+
+    end subroutine constructInvSineGrid
 
     subroutine constructHalfSineGrid(self, del_x, L_domain)
         class(Domain), intent(in out) :: self
@@ -247,6 +276,14 @@ contains
         
     end function getLFromX
 
+    function getXFromL(self, l) result(x)
+        class(Domain), intent(in) :: self
+        real(real64), intent(in) :: l
+        real(real64) :: x
+        x = self%grid(INT(l)) + self%dx_dl(INT(l)) * (l - INT(l) - 0.5d0)
+        
+    end function getXFromL
+
     subroutine addThreadedDomainArray(self, array_add, x, N_x, N_x_array, iThread, const)
         ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp
         class(Domain), intent(in) :: self
@@ -313,7 +350,7 @@ contains
             deallocate(boundArray)
         end if
         NumberXHalfNodes = NumberXNodes + 1
-        debyeLength = MAX(getDebyeLength(T_e, n_ave), debyeLength)
+        debyeLength = MAX(0.1d0 * getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3

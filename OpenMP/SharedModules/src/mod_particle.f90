@@ -26,6 +26,8 @@ module mod_particle
     contains
         procedure, public, pass(self) :: initialize_n_ave
         procedure, public, pass(self) :: initializeRandUniform
+        procedure, public, pass(self) :: initializeRandCosine
+        procedure, public, pass(self) :: initializeRandSine
         procedure, public, pass(self) :: generate3DMaxwellian
         procedure, public, pass(self) :: getKEAve
         procedure, public, pass(self) :: getTotalKE
@@ -93,20 +95,74 @@ contains
         !$OMP end parallel
     end subroutine initializeRandUniform
 
+    subroutine initializeRandCosine(self, world, irand, alpha)
+        class(Particle), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: alpha
+        integer(int32), intent(in out) :: irand(numThread)
+        integer(int32) :: iThread, i, randNum
+        real(real64) :: Rand1, Rand2, x_pos, val
+        !$OMP parallel private(iThread, i, randNum, Rand1, Rand2, x_pos, val)
+        iThread = omp_get_thread_num() + 1
+        randNum = irand(iThread)
+        do i = 1, self%N_p(iThread)
+            Rand1 = ran2(randNum)
+            Rand2 = ran2(randNum)
+            val = (1.0d0 + alpha * COS(2 * pi * Rand2))/(1.0d0 + alpha)
+            do while (Rand1 > val)
+                Rand1 = ran2(randNum)
+                Rand2 = ran2(randNum)
+                val = (1.0d0 + alpha * COS(2 * pi * Rand2))/(1.0d0 + alpha)
+            end do
+            x_pos = Rand2 * world%L_domain + world%startX
+            self%phaseSpace(1,i, iThread) = world%getLFromX(x_pos)
+        end do
+        irand(iThread) = randNum
+        !$OMP end parallel
+    end subroutine initializeRandCosine
+
+    subroutine initializeRandSine(self, world, irand, alpha)
+        class(Particle), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: alpha
+        integer(int32), intent(in out) :: irand(numThread)
+        integer(int32) :: iThread, i, randNum
+        real(real64) :: Rand1, Rand2, x_pos, val
+        !$OMP parallel private(iThread, i, randNum, Rand1, Rand2, x_pos, val)
+        iThread = omp_get_thread_num() + 1
+        randNum = irand(iThread)
+        do i = 1, self%N_p(iThread)
+            Rand1 = ran2(randNum)
+            Rand2 = ran2(randNum)
+            val = (1.0d0 + alpha * SIN(2 * pi * Rand2))/(1.0d0 + alpha)
+            do while (Rand1 > val)
+                Rand1 = ran2(randNum)
+                Rand2 = ran2(randNum)
+                val = (1.0d0 + alpha * SIN(2 * pi * Rand2))/(1.0d0 + alpha)
+            end do
+            x_pos = Rand2 * world%L_domain + world%startX
+            self%phaseSpace(1,i, iThread) = world%getLFromX(x_pos)
+        end do
+        irand(iThread) = randNum
+        !$OMP end parallel
+    end subroutine initializeRandSine
+
     ! ------------------------ Generating and initializing velocity with Maxwellian --------------------------
 
 
-    subroutine generate3DMaxwellian(self, T, irand)
+    subroutine generate3DMaxwellian(self, T, world, irand, alpha, distType, v_drift)
         ! random velocity generator for the particle for temperature T (eV)
         ! Use box-muller method for random guassian variable, same as gwenael but doesn't have factor 2? Maybe factored into v_th
         class(Particle), intent(in out) :: self
-        real(real64), intent(in) :: T
+        class(Domain), intent(in) :: world
+        real(real64), intent(in) :: T, alpha, v_drift
+        integer(int32), intent(in) :: distType
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: iThread, i
         integer(int32) :: irand_thread
-        real(real64) :: U1, U2, U3, U4, v_therm
+        real(real64) :: U1, U2, U3, U4, v_therm, v_extra, x_pos
         v_therm = SQRT(T*e/self%mass)
-        !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4, irand_thread)
+        !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4, irand_thread, v_extra, x_pos)
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread)
         do i = 1, self%N_p(iThread)
@@ -114,9 +170,20 @@ contains
             U2 = ran2(irand_thread)
             U3 = ran2(irand_thread)
             U4 = ran2(irand_thread)
-            self%phaseSpace(2, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * COS(2.0d0 * pi * U2)
+            SELECT CASE (distType)
+            CASE(0)
+                v_extra = v_drift
+            CASE(1)
+                x_pos = world%getXFromL(self%phaseSpace(1, i, iThread))/world%L_domain
+                v_extra = v_drift * (1.0d0 + alpha * COS(2 * pi * x_pos))
+            CASE(2)
+                x_pos = world%getXFromL(self%phaseSpace(1, i, iThread))/world%L_domain
+                v_extra = v_drift * (1.0d0 - alpha * SIN(2 * pi * x_pos)) 
+            END SELECT
+            self%phaseSpace(2, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * COS(2.0d0 * pi * U2) + v_extra
             self%phaseSpace(3, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * SIN(2.0d0 * pi * U2)
             self%phaseSpace(4, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U3)) * SIN(2.0d0 * pi * U4)
+            
         end do
         irand(iThread) = irand_thread
         !$OMP END PARALLEL
@@ -222,10 +289,10 @@ contains
         integer(int32), intent(in) :: numThread
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
-        integer(int32) :: j, io, numSpecies = 0, numParticles(100), particleIdxFactor(100), i, tempInt
+        integer(int32) :: j, io, numSpecies = 0, numParticles(100), particleIdxFactor(100), i, tempInt, distType(100)
         character(len=15) :: name
         character(len=8) :: particleNames(100)
-        real(real64) :: mass(100), charge(100), Ti(100), tempReal
+        real(real64) :: mass(100), charge(100), Ti(100), tempReal, alpha(100), v_drift(100)
         logical :: boolVal
 
         print *, "Reading particle inputs:"
@@ -239,7 +306,7 @@ contains
                     read(10,*) name
                     read(10,'(A4)', ADVANCE = 'NO') name(1:2)
                     numSpecies = numSpecies + 1
-                    read(10,*) numParticles(numSpecies), particleIdxFactor(numSpecies)
+                    read(10,*) numParticles(numSpecies), particleIdxFactor(numSpecies), alpha(numSpecies), distType(numSpecies), v_drift(numSpecies)
                     Ti(numSpecies) = T_e
                     mass(numSpecies) = m_e
                     charge(numSpecies) = -1.0
@@ -256,7 +323,7 @@ contains
                     read(10,'(A6)', ADVANCE = 'NO') name
                     do while (name(1:4).ne.'----')
                         numSpecies = numSpecies + 1
-                        read(10,*) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                        read(10,*) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies), alpha(numSpecies), distType(numSpecies), v_drift(numSpecies)
                         Ti(numSpecies) = T_i
                         mass(numSpecies) = mass(numSpecies) * m_amu - charge(numSpecies) * m_e
                         particleNames(numSpecies) = trim(name)
@@ -309,8 +376,22 @@ contains
                 if (.not. restartBool) then
                     particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
                     call particleList(j) % initialize_n_ave(n_ave, world%L_domain)
-                    call particleList(j) % generate3DMaxwellian(Ti(j), irand)
-                    call particleList(j)% initializeRandUniform(world, irand)
+                    SELECT CASE(distType(j))
+                    CASE(0)
+                        call particleList(j)% initializeRandUniform(world, irand)
+                    CASE(1)
+                        call particleList(j)% initializeRandCosine(world, irand, alpha(j))
+                    CASE(2)
+                        call particleList(j)% initializeRandSine(world, irand, alpha(j))
+                    CASE default
+                        print *, 'Distribution type should be between 0 and 2!'
+                        stop
+                    END SELECT
+                    if (j == 1) then
+                        call particleList(j) % generate3DMaxwellian(Ti(j), world, irand, alpha(j), distType(j), v_drift(j))
+                    else
+                        call particleList(j) % generate3DMaxwellian(Ti(j), world, irand, 1.236d0, distType(j), v_drift(j))
+                    end if
                 else
                     particleList(j) = Particle(mass(j), charge(j), Ti(j), numParticles(j), particleIdxFactor(j), trim(particleNames(j)), numThread)
                     numParticles(j) = numParticles(j)/numThread
@@ -337,13 +418,14 @@ contains
                 print *, "Particle charge is:", particleList(j)%q
                 print *, "Particle weight is:", particleList(j)%w_p
                 print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
+                print *, 'Distribution type:', distType(j)
+                print *, 'Drift velocity:', v_drift(j)
             end do
         end if
 
         
         print *, "---------------"
         print *, ""
-
 
 
     end subroutine readChargedParticleInputs

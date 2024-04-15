@@ -43,14 +43,20 @@ def root(omega, k):
     return a
 
 
-alpha = 0.5
-count = 0
-totNum = 100000
-x_array = np.zeros(totNum)
-while (count < totNum):
-    R_1 = np.random.uniform(0,1)
-    R_2 = np.random.uniform(0,1)
-    val = (1 + alpha * np.cos(np.pi * 2 * R_2))/(1 + alpha)
-    if (R_1 < val):
-        count = count + 1
-        x_array[count-1] = R_2
+Exp_IAW_Chacon = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IAW_Chacon/')
+Exp_IASW_Chacon = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon/')
+Exp_IASW_Chacon2013 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013/')
+Exp_IASW_Chacon2013_HalfPart = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_HalfPart/')
+Exp_IASW_Chacon2013_1024Cells_halfTime = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_1024Cells/')
+
+NGP_IAW_Chacon = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IAW_Chacon/')
+
+NGP_IASW_Chacon = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon/')
+NGP_IASW_Chacon2013 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013/')
+NGP_IASW_Chacon2013_Curv = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_Curv/')
+
+CIC_IASW_Chacon = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon/')
+CIC_IASW_Chacon2013_Curv = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv/')
+CIC_IASW_Chacon2013_Curv_1eneg3Res = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_1e-3Res/')
+
+CIC_IASW_Chacon_2delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon_2delT/')

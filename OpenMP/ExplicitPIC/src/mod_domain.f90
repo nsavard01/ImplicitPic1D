@@ -21,6 +21,7 @@ module mod_domain
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: writeDomain
         procedure, public, pass(self) :: getLFromX
+        procedure, public, pass(self) :: getXFromL
         procedure, public, pass(self) :: addThreadedDomainArray
     end type Domain
 
@@ -82,6 +83,14 @@ contains
         l = x/self%delX + 1.0d0
         
     end function getLFromX
+
+    function getXFromL(self, l) result(x)
+        class(Domain), intent(in) :: self
+        real(real64), intent(in) :: l
+        real(real64) :: x
+        x = (l-1) * self%delX + self%startX
+        
+    end function getXFromL
 
     subroutine addThreadedDomainArray(self, array_add, x, iThread, const)
         ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp

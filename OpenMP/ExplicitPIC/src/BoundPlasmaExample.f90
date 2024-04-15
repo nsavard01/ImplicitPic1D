@@ -17,6 +17,9 @@ program BoundPlasmaExample
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
+    real(real64), allocatable :: temp(:)
+    integer(int32), allocatable :: numTemp(:)
+    real(real64) :: l_temp, v_temp
     
    
     call readInitialInputs('InitialConditions.inp')
@@ -33,7 +36,23 @@ program BoundPlasmaExample
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
     call solver%depositRho(particleList, world)
     call solver%solve_tridiag_Poisson(world, 0.0d0)
-    
+    ! print *, 'mass ratio:', particleList(2)%mass / particleList(1)%mass
+    ! print *, SUM(particleList(2)%workSpace, DIM = 2)
+    ! print *, ""
+    ! allocate(temp(NumberXNodes-1), numTemp(NumberXNodes-1))
+    ! temp = 0.0
+    ! numTemp = 0
+    ! do i = 1, numThread
+    !     do j = 1, particleList(2)%N_p(i)
+    !         l_temp = particleList(2)%phaseSpace(1, j, i)
+    !         v_temp = particleList(2)%phaseSpace(2, j, i)
+    !         temp(INT(l_temp)) = temp(INT(l_temp)) + v_temp
+    !         numTemp(INT(l_temp)) = numTemp(INT(l_temp)) + 1
+    !     end do
+    ! end do
+
+    ! print *, temp/numTemp
+    ! stop
     ! do j = 1, numberChargedParticles
     !     print *, "--------------"
     !     print *, 'particle is:', particleList(j)%name

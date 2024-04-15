@@ -132,7 +132,7 @@ contains
             inputJFNK = 0
             inputJFNK(1) = maxIter ! maximum iterations
             inputJFNK(2) = 0 !ijacv
-            inputJFNK(3) = 2 ! krylov solver
+            inputJFNK(3) = 0 ! krylov solver
             inputJFNK(4) = m_Anderson ! maximum krylov subspace dimension
             inputJFNK(5) = 0 !ipre
             inputJFNK(9) = -1 !number backtracks
@@ -302,10 +302,9 @@ contains
         real(real64), intent(in) ::  xcur(n)
         real(real64), intent(in out) :: z(n)
         if (ijob == 0) then
-            print *, "in analytical jacobian if block"
+            continue
         else if (ijob == 1) then
             call solve_tridiag(n, globalSolver%a_tri, globalSolver%c_tri, globalSolver%b_tri, v, z)
-            print *, 'In solve tridiag?'
         end if
         itrmjv = 0
     end subroutine jacNitsol
@@ -334,7 +333,6 @@ contains
             print *, "Nitsol error with iterm == ", iterm
             stop
         END SELECT
-        print *, 'iterNumPicard is:', iterNumPicard
     end subroutine solveJFNK
 
     subroutine adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, maxIter, eps_r, timeCurrent)
