@@ -88,7 +88,6 @@ program BoundPlasmaExample
         Momentum_f = Momentum_f + globalParticleList(j)%getTotalMomentum()
     end do
 
-    
     print *, 'Time step:', currDel_t
     print *, 'Energy error is:', ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
     print *, 'took', iterNumPicard, 'iterations'
