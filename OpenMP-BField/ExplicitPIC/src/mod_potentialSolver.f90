@@ -12,7 +12,7 @@ module mod_potentialSolver
     ! Will contain particle to mesh gathers (J, rho) and potential which comes from them (phi)
     ! Will also contain particle mover, since needed to store to J, and cannot be separate
     ! Assume dirichlet boundaries at ends for now, so matrix solver can go down by two dimensions
-    public :: potentialSolver
+    public :: potentialSolver, readSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), rho(:, :), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
@@ -284,28 +284,24 @@ contains
         type(Domain), intent(in) :: world
         self%EField(2:NumberXNodes-1) = (self%phi(1:NumberXNodes-2) - self%phi(3:NumberXNodes))/2.0d0/world%delX
         SELECT CASE (world%boundaryConditions(1))
-        CASE(1)
+        CASE(1,4)
             self%EField(1) = 0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
         CASE(2)
             self%EField(1) = 0.0d0
         CASE(3)
             self%EField(1) = (self%phi(NumberXNodes-1) - self%phi(2))/2.0d0/world%delX
-        CASE(4)
-            self%EField(1) = 0.0d0
         CASE default
             print *, "No case makeEField"
             stop
         END SELECT
 
         SELECT CASE (world%boundaryConditions(NumberXNodes))
-        CASE(1)
+        CASE(1,4)
             self%EField(NumberXNodes) = 0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
         CASE(2)
             self%EField(NumberXNodes) = 0.0d0
         CASE(3)
             self%EField(NumberXNodes) = (self%phi(NumberXNodes-1) - self%phi(2))/2.0d0/world%delX
-        CASE(4)
-            self%EField(NumberXNodes) = 0.0d0
         CASE default
             print *, "No case makeEField"
             stop
@@ -371,81 +367,88 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        integer(int32) :: j, i, delIdx, iThread
-        real(real64) :: v_minus(3), v_plus(3), coeffField, tBoris(3), v_prime(3), sBoris(3)
+        integer(int32) :: j, i, delIdx, refIdx, iThread, wallLoss(2)
+        real(real64) :: v_minus(3), v_plus(3), coeffField, tBoris(3), v_prime(3), sBoris(3), q_over_m, partLoc, energyLoss(2)
         loopSpecies: do j = 1, numberChargedParticles
-            !$OMP parallel private(iThread, i, delIdx, v_minus, v_plus, coeffField, tBoris, v_prime, sBoris)
+            q_over_m = particleList(j)%q/particleList(j)%mass
+            energyLoss = 0.0d0
+            wallLoss = 0
+            !$OMP parallel private(iThread, i, delIdx, v_minus, v_plus, coeffField, tBoris, v_prime, sBoris, partLoc, refIdx) reduction(+:energyLoss, wallLoss)
             iThread = omp_get_thread_num() + 1
             delIdx = 0
-            particleList(j)%refIdx(iThread) = 0
-            particleList(j)%energyLoss(:, iThread) = 0.0d0
-            particleList(j)%wallLoss(:, iThread) = 0.0d0
+            refIdx = 0
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
                 ! First half step acceleration
                 if (self%BFieldBool) then
-                    coeffField = 0.5d0 * (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                    coeffField = 0.5d0 * q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                     ! First half step acceleration
                     v_minus(1) =  particleList(j)%phaseSpace(2, i, iThread) + coeffField
                     v_minus(2:3) = particleList(j)%phaseSpace(3:4, i, iThread)
 
                     !v_prime, first half rotation
-                    tBoris = 0.5d0 * (particleList(j)%q/particleList(j)%mass) * self%BField * del_t
+                    tBoris = 0.5d0 * q_over_m * self%BField * del_t
                     v_prime = v_minus + crossProduct(v_minus, tBoris)
 
                     !v_plus, second half rotation
                     sBoris = 2.0d0 * tBoris / (1.0d0 + SUM(tBoris**2))
                     v_plus = v_minus + crossProduct(v_prime, sBoris)
 
-                    particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_plus(1) + coeffField
-                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = v_plus(2:3)
+                    v_prime(1) = v_plus(1) + coeffField
+                    v_prime(2:3) = v_plus(2:3)
 
                 else    
-                    particleList(j)%phaseSpace(2, i-delIdx, iThread) = particleList(j)%phaseSpace(2, i, iThread) + (particleList(j)%q/particleList(j)%mass) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
-                    particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
+                    v_prime(1) = particleList(j)%phaseSpace(2, i, iThread) + q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                    v_prime(2:3) = particleList(j)%phaseSpace(3:4, i, iThread)
                 end if
                 ! Get new position
-                particleList(j)%phaseSpace(1, i-delIdx, iThread) = particleList(j)%phaseSpace(1, i, iThread) + particleList(j)%phaseSpace(2, i-delIdx, iThread) * del_t/world%delX
-                if (particleList(j)%phaseSpace(1, i-delIdx, iThread) <= 1) then
+                partLoc = particleList(j)%phaseSpace(1, i, iThread) + v_prime(1) * del_t/world%delX
+                if (partLoc <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1,4)
-                        particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2)
-                        particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                        energyLoss(1) = energyLoss(1) + SUM(v_prime**2)
+                        wallLoss(1) = wallLoss(1) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - particleList(j)%phaseSpace(1, i-delIdx, iThread)
-                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -particleList(j)%phaseSpace(2:4, i-delIdx, iThread)
-                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
+                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -v_prime
+                        refIdx = refIdx + 1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(particleList(j)%phaseSpace(1, i-delIdx, iThread) - 2.0d0, real(NumberXNodes, kind = real64)) + 1
-                    CASE default
-                        print *, 'no case, moveParticles'
-                        stop
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc - 2.0d0, real(NumberXNodes, kind = real64)) + 1
+                    ! CASE default
+                    !     print *, 'no case, moveParticles'
+                    !     stop
                     END SELECT
-                else if ((particleList(j)%phaseSpace(1, i-delIdx, iThread) >= NumberXNodes)) then
+                else if ((partLoc >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
                     CASE(1,4)
-                        particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + SUM(particleList(j)%phaseSpace(2:4, i-delIdx, iThread)**2)
-                        particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                        energyLoss(2) = energyLoss(2) + SUM(v_prime**2)
+                        wallLoss(2) = wallLoss(2) + 1 !C/m^2 in 1D
                         delIdx = delIdx + 1
                     CASE(2)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - particleList(j)%phaseSpace(1, i-delIdx, iThread)
-                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -particleList(j)%phaseSpace(2:4, i-delIdx, iThread)
-                        particleList(j)%refIdx(iThread) = particleList(j)%refIdx(iThread) + 1
-                        particleList(j)%refRecordIdx(particleList(j)%refIdx(iThread), iThread) = i - delIdx
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
+                        particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = -v_prime
+                        refIdx = refIdx + 1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(particleList(j)%phaseSpace(1, i-delIdx, iThread), real(NumberXNodes, kind = real64)) + 1
-                    CASE default
-                        print *, 'no case, moveParticles'
-                        stop
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc, real(NumberXNodes, kind = real64)) + 1
+                    ! CASE default
+                    !     print *, 'no case, moveParticles'
+                    !     stop
                     END SELECT
+                else
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = partLoc
+                    particleList(j)%phaseSpace(2:4, i-delIdx, iThread) = v_prime
                 end if
             end do loopParticles
             particleList(j)%N_p(iThread) = particleList(j)%N_p(iThread) - delIdx
             particleList(j)%delIdx(iThread) = delIdx
+            particleList(j)%refIdx(iThread) = refIdx
             !$OMP end parallel
-            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
-            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM = 2)
+            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + energyLoss
+            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + wallLoss
+            particleList(j)%energyLoss = energyLoss
+            particleList(j)%wallLoss = wallLoss
         end do loopSpecies
     end subroutine moveParticles
 
@@ -462,6 +465,41 @@ contains
         ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)
     end subroutine solvePotential
+
+
+    ! ---------------- read Solver parameters --------------------------------------
+
+    subroutine readSolver(GeomFilename,solver,world)
+        type(Domain), intent(in) :: world
+        type(potentialSolver), intent(in out) :: solver
+        character(len=*), intent(in) :: GeomFilename
+        integer(int32) :: io
+        real(real64) :: leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency
+
+        print *, ""
+        print *, "Reading solver inputs:"
+        print *, "------------------"
+        open(10,file='../InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) leftVoltage, rightVoltage
+        read(10, *, IOSTAT = io) 
+        read(10, *, IOSTAT = io) BFieldMag, angle
+        read(10, *, IOSTAT = io) RF_frequency
+        close(10)
+        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        print *, "Left voltage:", solver%phi(1)
+        print *, "Right  voltage:", solver%phi(NumberXNodes)
+        print *, 'BField magnitude:', solver%BFieldMag
+        print *, 'BField angle:', solver%BFieldAngle
+        print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
+        print *, "BField vector:", solver%BField
+        print *, "------------------"
+        print *, ""
+        call solver%construct_diagMatrix(world)
+
+    end subroutine readSolver
 
 
 end module mod_potentialSolver

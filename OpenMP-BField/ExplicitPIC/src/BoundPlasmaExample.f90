@@ -7,22 +7,31 @@ program BoundPlasmaExample
     use mod_particle
     use mod_particleInjection
     use mod_potentialSolver
-    ! use mod_collisions
-    use mod_readInputs
+    use mod_NullCollision
     use mod_simulation
     implicit none
 
     integer(int32) :: i,j, iThread!, tclock1, tclock2, clock_rate
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
+    type(targetParticle), allocatable :: targetParticleList(:)
+    type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
-    call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
-    call readGeometry(world, solver, 'Geometry.inp')
-    particleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, world)
+    character(:), allocatable :: saveFolderName !name of the particle
+    
+   
+    saveFolderName = '../../../../ExplicitData-BField/'
+    call readInitialInputs('InitialConditions.inp', saveFolderName)
+    call initializeRandomGenerators(numThread, stateRan0, stateRanNew)
+    call readWorld('Geometry.inp', world, T_e, n_ave)
+    call readSolver('Geometry.inp', solver, world)
+    call readChargedParticleInputs('BoundExample.inp', stateRan0, T_e, T_i, numThread, world, particleList)
+    call readNeutralParticleInputs('BoundExample.inp', targetParticleList)
+    call readNullCollisionInputs('collision.inp', nullCollisionList, particleList, targetParticleList)
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
     ! end do
-    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, particleList(1)%w_p, solver%BFieldAngle, FractionFreqHeating)
+    call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p, solver%BFieldAngle)
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
     call solver%depositRho(particleList)
     call solver%solve_tridiag_Poisson(world, 0.0d0)
@@ -43,10 +52,10 @@ program BoundPlasmaExample
     call solver%makeEField(world)
     call solver%initialVRewind(particleList, del_t)
     
-    call solveSimulation(solver, particleList, world, del_t, irand, simulationTime)
+    call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, stateRan0, simulationTime)
     if (averagingTime /= 0.0d0) then
         print *, "Averaging over", averagingTime, "seconds"
-        call solveSimulationFinalAverage(solver, particleList, world, del_t, irand, averagingTime, 100)
+        call solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, stateRan0, averagingTime, 100)
     end if
 
 

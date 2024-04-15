@@ -1,0 +1,7 @@
+ELECTRONS
+name	T_e(eV)	 NumParticles   ArraySizeMultiplication
+-------------------------------------------
+[e]		2.3d-5		5000		3
+-------------------------------------------
+
+ENDFILE

@@ -5,7 +5,7 @@ c  Purpose- Initialize nitparam common block with default values.
       include 'nitdflts.h'
       include 'nitparam.h'
       include 'nitprint.h'
-  
+      
       data choice1_exp  /DFLT_CHOICE1_EXP/
       data choice2_exp  /DFLT_CHOICE2_EXP/
       data choice2_coef /DFLT_CHOICE2_COEF/

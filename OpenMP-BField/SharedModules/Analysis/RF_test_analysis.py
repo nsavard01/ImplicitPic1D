@@ -13,16 +13,43 @@ print('Loaded modules')
 
 print('Loading data')
 
+def readBenchmarkResults():
+    firstIndx = 0
+    data = np.loadtxt('TurnerBenchmark/turner_benchmark_results.dat')
+    case1 = data[0:129,:]
+    firstIndx = firstIndx + 129
+    case2 = data[firstIndx:firstIndx+257,:]
+    firstIndx = firstIndx + 257
+    case3 = data[firstIndx:firstIndx+513, :]
+    firstIndx = firstIndx+513
+    case4 = data[firstIndx:firstIndx+513]
+    return case1,case2,case3,case4
+
+def readBenchmarkResultsRefined():
+    data = np.loadtxt('TurnerBenchmark/turner_benchmark_refined_results.dat')
+    indx = np.where(data[:,0] == 0)[0]
+    case1 = data[indx[0]:indx[1], :]
+    case2 = data[indx[1]:indx[2], :]
+    case3 = data[indx[2]:indx[3], :]
+    case4 = data[indx[3]:,:]
+    return case1, case2, case3, case4
+
+case1, case2, case3, case4 = readBenchmarkResults()
+case1_refined, case2_refined, case3_refined, case4_refined = readBenchmarkResultsRefined()
 
 #--------------------- Explicit ---------------------------------------------
-Exp_test_RF = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_test_RF/')
-Exp_test_typical = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_test_typical/')
 
-NGP_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_RF/')
-NGP_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_test_typical/')
+Exp_RFBenchmark_case2 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_case2/')
+Exp_RFBenchmark_test2_PnullExp_noRepeats_PCG = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_test2_PnullExp_noRepeats_PCG/')
+#Eremin case
 
-CIC_test_RF = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_test_RF/')
-CIC_test_typical = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/CIC_test_typical/')
+NGP_RFBenchmark_test2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData-BField/NGP_RFBenchmark_test2/')
+NGP_RFBenchmark_case2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_case2/')
+
+Exp_RFBenchmark_EreminCase_resolved = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_resolved/')
+Exp_RFBenchmark_EreminCase_eighthNumPart_quadTime_p75Cells = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData-BField/Exp_RFBenchmark_EreminCase_eighthNumPart_quadTime_p75Cells/')
+
+
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
 

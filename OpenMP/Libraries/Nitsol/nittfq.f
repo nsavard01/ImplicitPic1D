@@ -335,7 +335,7 @@ c  Start iterations.
       itfq = itfq + 1
       nli = nli + 1
       sigma = dinpr( n, rtil, 1, v, 1 )
-
+      
 c  If sigma = 0 we have a serious breakdown.  We check this condition
 c  by trying to detect whether division by sigma causes an overflow.
 
@@ -345,7 +345,7 @@ c  by trying to detect whether division by sigma causes an overflow.
       else
          alpha = rho/sigma
       endif
-
+      
 c  Need Pv for calculation of q.  First store result in q, then
 c  swap some vectors to cast calculation of q as a SAXPY.
 

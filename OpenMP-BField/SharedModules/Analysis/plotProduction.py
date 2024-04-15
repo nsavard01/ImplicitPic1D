@@ -56,7 +56,7 @@ def plotAveEVDF(dataSet):
     
 #-------------------------- Time Dependent ---------------------
     
-def update_plot_Phi(i, dataSet, ax):
+def update_plot_Phi(i, dataSet, ax, ylim):
 
     ax.clear()
     phi = dataSet.getPhi(i)
@@ -65,10 +65,11 @@ def update_plot_Phi(i, dataSet, ax):
     ax.set_xlabel('Distance (m)')
     ax.set_ylabel('Potential (V)')
     ax.set_xlim([dataSet.x_min, dataSet.x_max])
-    #ax.set_ylim([-20, 40])
+    if (ylim[0] != 0 and ylim[1] != 0):
+        ax.set_ylim(ylim)
 
     
-def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPlasmaPhi.gif", pauseTime = 0.05):
+def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPlasmaPhi.gif", pauseTime = 0.05, ylim = [0,0]):
 
     if boolMakeAnimation:
         numframes = dataSet.numDiag
@@ -79,8 +80,9 @@ def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPl
         ax.set_xlabel('Distance (m)')
         ax.set_ylabel('Potential (V)')
         ax.set_xlim([dataSet.x_min, dataSet.x_max])
-        #ax.set_ylim([-20, 40])
-        ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(dataSet, ax))
+        if (ylim[0] != 0 and ylim[1] != 0):
+            ax.set_ylim(ylim)
+        ani = animation.FuncAnimation(fig, update_plot_Phi, frames=range(numframes), interval = 100,fargs=(dataSet, ax, ylim))
         
         ani.save(savePath)
         plt.show()
@@ -97,6 +99,8 @@ def phiAnimation(dataSet, boolMakeAnimation = False, savePath = "Figures/BoundPl
             plt.xlabel('Distance (m)')
             plt.ylabel('Potential (V)')
             plt.xlim([dataSet.x_min, dataSet.x_max])
+            if (ylim[0] != 0 and ylim[1] != 0):
+                plt.ylim(ylim)
             plt.pause(pauseTime)
 
 def update_plot_Density(i, dataSet, ax, nameList):
@@ -141,6 +145,7 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
             plt.xlabel('Distance (m)')
             plt.ylabel(r'Density (m$^{-3}$)')
             plt.xlim([dataSet.x_min, dataSet.x_max])
+            plt.legend(loc='lower center')
             plt.pause(pauseTime)
             
             

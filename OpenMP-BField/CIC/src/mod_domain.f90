@@ -1,16 +1,19 @@
 module mod_domain
     use iso_fortran_env, only: int32, real64
+    use mod_BasicFunctions
     use constants
     implicit none
 
     private
-    public :: Domain
+    public :: Domain, readWorld
+    integer(int32), public, protected :: NumberXNodes = 10
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
         real(real64), allocatable :: grid(:) !array representing values at grid in m
         real(real64), allocatable :: dx_dl(:), centerDiff(:) !ratio of grid differences from physical to logical, assume logical separated by 1
         integer(int32), allocatable :: boundaryConditions(:) ! Boundary condition flags for fields and particles
+        real(real64) :: L_domain, startX, endX
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
@@ -52,6 +55,7 @@ contains
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32), intent(in) :: gridType
+        self%L_domain = L_domain
         SELECT CASE (gridType)
         CASE(0)
             call self%constructUniformGrid(L_domain)
@@ -65,6 +69,8 @@ contains
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
         END SELECT
+        self%startX = self%grid(1) - 0.5d0 * self%dx_dl(1)
+        self%endX = self%grid(NumberXNodes) + 0.5d0 * self%dx_dl(NumberXNodes)
     end subroutine constructGrid
 
     subroutine constructSineGrid(self, del_x, L_domain)
@@ -211,7 +217,43 @@ contains
         close(41)
     end subroutine writeDomain
 
+    ! ------------------------ read world inputs ---------------------------------
 
+    subroutine readWorld(GeomFilename, world, T_e, n_ave)
+        type(Domain), intent(in out) :: world
+        character(len=*), intent(in) :: GeomFilename
+        real(real64), intent(in) :: T_e, n_ave
+        integer(int32) :: io, leftBoundary, rightBoundary, gridType
+        real(real64) :: debyeLength, L_domain
+
+        print *, ""
+        print *, "Reading domain inputs:"
+        print *, "------------------"
+        open(10,file='../InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io) NumberXNodes
+        read(10, *, IOSTAT = io) L_domain
+        read(10, *, IOSTAT = io) gridType
+        read(10, *, IOSTAT = io) leftBoundary, rightBoundary
+        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io)
+        close(10)
+        debyeLength = getDebyeLength(T_e, n_ave)
+        if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
+            leftBoundary = 3
+            rightBoundary = 3
+        end if
+        world = Domain(leftBoundary, rightBoundary)
+        call world % constructGrid(debyeLength, L_domain, gridType)
+        print *, "Number of nodes:", NumberXNodes
+        print *, "Grid length:", world%L_domain
+        print *, 'gridType:', gridType
+        print *, "Left boundary type:", leftBoundary
+        print *, "Right boundary type:", rightBoundary
+        print *, "------------------"
+        print *, ""
+
+    end subroutine readWorld
 
 
 

@@ -3,9 +3,10 @@ program BoundPlasmaExample
     use constants
     use mod_BasicFunctions
     use mod_particle
+    use mod_targetParticle
+    use mod_NullCollision
     use mod_domain
     use mod_potentialSolver
-    use mod_readInputs
     use mod_Scheme
     use mod_particleInjection
     use mod_particleMover
@@ -15,18 +16,29 @@ program BoundPlasmaExample
     use omp_lib
     implicit none
     
-    integer(int32) :: i, j, iThread
+    integer(int32) :: i, j, iThread, startTime, endTime
     real(real64) :: remainDel_t, currDel_t, PE_i, KE_i, PE_f, KE_f
     real(real64), allocatable :: rho_i(:)
-    call initializeScheme(schemeNum)
-    call readInitialInputs('InitialConditions.inp', simulationTime, n_ave, T_e, T_i, numDiagnosticSteps, fractionFreq, averagingTime, numThread, irand)
-    call readGeometry(globalWorld, globalSolver, 'Geometry.inp')
-    globalParticleList = readParticleInputs('BoundExample.inp', numberChargedParticles, irand, T_e, T_i, numThread, globalWorld)
+    character(:), allocatable :: saveFolderName !name of the particle
+    type(targetParticle), allocatable :: targetParticleList(:)
+    type(nullCollision), allocatable :: nullCollisionList(:)
+
+    saveFolderName = '../../../../ImplicitData-BField/'
+    call initializeScheme()
+    call readInitialInputs('InitialConditions.inp', saveFolderName)
+    call initializeRandomGenerators(numThread, stateRan0, stateRanNew)
+    print *, stateRan0
+    call readWorld('Geometry.inp', globalWorld, T_e, n_ave)
+    call readSolver('Geometry.inp', globalSolver, globalWorld)
+    call readChargedParticleInputs('BoundExample.inp', stateRan0, T_e, T_i, numThread, globalWorld, globalParticleList)
+    call readNeutralParticleInputs('BoundExample.inp', targetParticleList)
+    call readNullCollisionInputs('collision.inp', nullCollisionList, globalParticleList, targetParticleList)
+    
     ! do i = 1, numberChargedParticles
     !     globalParticleList(i)%N_p = 0
     ! end do
-    call readInjectionInputs('ParticleInjection.inp', addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, globalParticleList(1)%w_p, globalSolver%BFieldAngle, FractionFreqHeating)
-    call initializeSolver(eps_r, solverType, m_Anderson, Beta_k, maxIter)
+    call readInjectionInputs('ParticleInjection.inp', globalParticleList(1)%w_p, globalSolver%BFieldAngle)
+    call initializeSolver()
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld, 0.0d0)
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
@@ -44,17 +56,19 @@ program BoundPlasmaExample
     ! end do
     ! print *, ABS((E_i - E_f)/(E_i))
     ! stop
+  
     allocate(rho_i(NumberXNodes))
     rho_i = globalSolver%rho
-    PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     KE_i = 0.0d0
     do j=1, numberChargedParticles
         KE_i = KE_i + globalParticleList(j)%getTotalKE()
     end do
     remainDel_t = del_t
     currDel_t = del_t
-    call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r)
-    print *, 'J is:', SUM(globalSolver%J, DIM=2)
+    call system_clock(startTime)
+    call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r, 0.0d0)
+    call system_clock(endTime)
+    PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     KE_f = 0.0d0
     do i = 1, numberChargedParticles
         print *, 'Particle:', globalParticleList(i)%name
@@ -65,16 +79,27 @@ program BoundPlasmaExample
         print *, 'Lost KE', SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
         KE_f = KE_f + globalParticleList(i)%getTotalKE() + SUM(globalParticleList(i)%energyLoss) * globalParticleList(i)%mass * globalParticleList(i)%w_p * 0.5d0
     end do
-    PE_f = globalSolver%getTotalPE(globalWorld, .false.)
+    PE_f = globalSolver%getTotalPE(globalWorld, .true.) - globalSolver%getEnergyFromBoundary(globalWorld, currDel_t) 
     print *, 'PE_f:', PE_f
+
     
     print *, 'Time step:', currDel_t
     print *, 'Energy error is:', ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
     print *, 'took', iterNumPicard, 'iterations'
+    print *, 'took amount of integer time:', endTime - startTime
+
+    do j = 1, numberBinaryCollisions
+        KE_i = globalParticleList(j)%getTotalKE()
+        call nullCollisionList(j)%generateCollision(globalParticleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, stateRan0, del_t)
+        KE_f = globalParticleList(j)%getTotalKE()
+        print *, 'energy loss for collision', j
+        print *, nullCollisionList(j)%totalEnergyLoss * e * globalParticleList(j)%w_p
+        print *, 'energy loss from particles:', KE_f - KE_i
+    end do
     call depositRho(globalSolver%rho, globalParticleList, globalWorld)
     print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
-    print *, 'charge error is:', getChargeContinuityError(rho_i, globalSolver%rho, globalSolver%J, globalWorld, currDel_t)
+    print *, 'charge error is:', globalSolver%getChargeContinuityError(rho_i, globalWorld, currDel_t)
     stop
-    call solveSimulation(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, simulationTime)
-    call solveSimulationFinalAverage(globalSolver, globalParticleList, globalWorld, del_t, maxIter, eps_r, irand, averagingTime, 100)
+    call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, simulationTime)
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, averagingTime, 100)
 end program BoundPlasmaExample

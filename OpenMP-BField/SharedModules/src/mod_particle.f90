@@ -3,11 +3,13 @@ module mod_particle
     use iso_fortran_env, only: int32, real64, output_unit
     use constants
     use mod_BasicFunctions
+    use mod_domain
     use omp_lib
     implicit none
 
     private
-    public :: Particle
+    public :: Particle, readChargedParticleInputs
+    integer(int32), public, protected :: numberChargedParticles = 0
 
     ! Particle contains particle properties and stored values in phase space df
     type :: Particle
@@ -16,7 +18,7 @@ module mod_particle
         integer(int32) :: finalIdx, accumWallLoss(2)
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
-        real(real64), allocatable :: wallLoss(:, :), energyLoss(:, :)
+        real(real64), allocatable :: wallLoss(:), energyLoss(:)
         real(real64), allocatable :: densities(:, :)
         real(real64) :: numFuncEvalAve, numSubStepsAve
         real(real64) :: accumEnergyLoss(2)
@@ -55,7 +57,7 @@ contains
         self%numFuncEvalAve = 0.0d0
         self%numSubStepsAve = 0.0d0
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
-            self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), self%densities(NumberXNodes, numThread))
+            self%delIdx(numThread), self%wallLoss(2), self%energyLoss(2), self%refIdx(numThread), self%densities(NumberXNodes, numThread))
         self%refIdx = 0
         self%delIdx = 0
         self%N_p = N_p
@@ -70,14 +72,17 @@ contains
         self % w_p = n_ave * L_domain / SUM(self % N_p)
     end subroutine initialize_n_ave
 
-    subroutine initializeRandUniform(self, irand)
+    subroutine initializeRandUniform(self, world, irand)
         class(Particle), intent(in out) :: self
+        type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: iThread, i
-        !$OMP parallel private(iThread, i)
+        real(real64) :: x_pos
+        !$OMP parallel private(iThread, i, x_pos)
         iThread = omp_get_thread_num() + 1
         do i = 1, self%N_p(iThread)
-            self%phaseSpace(1, i, iThread) = ran2(irand(iThread)) * real(NumberXNodes-1) + 1.0d0
+            x_pos = ran2(irand(iThread)) * world%L_domain + world%startX
+            self%phaseSpace(1,i, iThread) = world%getLFromX(x_pos)
         end do
         !$OMP end parallel
     end subroutine initializeRandUniform
@@ -92,18 +97,23 @@ contains
         real(real64), intent(in) :: T
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: iThread, i
-        real(real64) :: U1, U2, U3, U4
-        !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4)
+        integer(int32) :: irand_thread
+        real(real64) :: U1, U2, U3, U4, v_therm
+        v_therm = SQRT(T*e/self%mass)
+        !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4, irand_thread)
         iThread = omp_get_thread_num() + 1
+        irand_thread = irand(iThread)
+        print *, irand_thread
         do i = 1, self%N_p(iThread)
-            U1 = ran2(irand(iThread))
-            U2 = ran2(irand(iThread))
-            U3 = ran2(irand(iThread))
-            U4 = ran2(irand(iThread))
-            self%phaseSpace(2, i, iThread) = SQRT(T*e/ self%mass) * SQRT(-2.0d0 * LOG(U1)) * COS(2.0d0 * pi * U2)
-            self%phaseSpace(3, i, iThread) = SQRT(T*e/ self%mass) * SQRT(-2.0d0 * LOG(U1)) * SIN(2.0d0 * pi * U2)
-            self%phaseSpace(4, i, iThread) = SQRT(T*e/ self%mass) * SQRT(-2.0d0 * LOG(U3)) * SIN(2.0d0 * pi * U4)
+            U1 = ran2(irand_thread)
+            U2 = ran2(irand_thread)
+            U3 = ran2(irand_thread)
+            U4 = ran2(irand_thread)
+            self%phaseSpace(2, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * COS(2.0d0 * pi * U2)
+            self%phaseSpace(3, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U1)) * SIN(2.0d0 * pi * U2)
+            self%phaseSpace(4, i, iThread) = v_therm * SQRT(-2.0d0 * LOG(U3)) * SIN(2.0d0 * pi * U4)
         end do
+        irand(iThread) = irand_thread
         !$OMP END PARALLEL
     end subroutine generate3DMaxwellian
 
@@ -196,5 +206,88 @@ contains
         close(10)
         
     end subroutine writeLocalTemperature
+
+
+    ! ------------------- read and initialize particles using world type ---------------------------------
+
+    subroutine readChargedParticleInputs(filename, irand, T_e, T_i, numThread, world, particleList)
+        type(Particle), allocatable, intent(out) :: particleList(:)
+        type(Domain) :: world
+        character(len=*), intent(in) :: filename
+        integer(int32), intent(in) :: numThread
+        integer(int32), intent(in out) :: irand(numThread)
+        real(real64), intent(in) :: T_e, T_i
+        integer(int32) :: j, numSpecies = 0, numParticles(100), particleIdxFactor(100)
+        character(len=15) :: name
+        character(len=8) :: particleNames(100)
+        real(real64) :: mass(100), charge(100), Ti(100)
+
+        print *, "Reading particle inputs:"
+        open(10,file='../InputData/'//filename, action = 'read')
+        do j=1, 10000
+            read(10,*) name
+
+            if( name(1:9).eq.'ELECTRONS') then
+                read(10,*) name
+                read(10,*) name
+                read(10,'(A4)', ADVANCE = 'NO') name(1:2)
+                numSpecies = numSpecies + 1
+                read(10,*) numParticles(numSpecies), particleIdxFactor(numSpecies)
+                Ti(numSpecies) = T_e
+                mass(numSpecies) = m_e
+                charge(numSpecies) = -1.0
+                particleNames(numSpecies) = 'e'
+                read(10,*) name
+                read(10,*) name
+            endif
+
+
+            if(name(1:4).eq.'IONS' .or. name(1:4).eq.'Ions' .or. name(1:4).eq.'ions' ) then
+                do while(name(1:4).ne.'----')
+                    read(10,*) name
+                end do
+                read(10,'(A6)', ADVANCE = 'NO') name
+                do while (name(1:4).ne.'----')
+                    numSpecies = numSpecies + 1
+                    read(10,*) mass(numSpecies),charge(numSpecies), numParticles(numSpecies), particleIdxFactor(numSpecies)
+                    Ti(numSpecies) = T_i
+                    mass(numSpecies) = mass(numSpecies) * m_amu - charge(numSpecies) * m_e
+                    particleNames(numSpecies) = trim(name)
+                    read(10,'(A6)', ADVANCE = 'NO') name
+                end do
+            endif      
+
+            if (name(1:7) == 'ENDFILE') then
+                close(10)
+                exit
+            end if
+
+        end do
+
+        numberChargedParticles = numSpecies
+        print *, 'Amount charged particles:', numberChargedParticles
+        if (numberChargedParticles > 0) then
+            allocate(particleList(numberChargedParticles))
+            do j=1, numberChargedParticles
+                particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
+                call particleList(j) % initialize_n_ave(n_ave, world%L_domain)
+                call particleList(j) % generate3DMaxwellian(Ti(j), irand)
+                call particleList(j)% initializeRandUniform(world, irand)
+                print *, 'Initializing ', particleList(j) % name
+                print *, 'Amount of macroparticles is:', SUM(particleList(j) % N_p)
+                print *, "Particle mass is:", particleList(j)%mass
+                print *, "Particle charge is:", particleList(j)%q
+                print *, "Particle weight is:", particleList(j)%w_p
+                print *, "Particle mean KE is:", particleList(j)%getKEAve(), ", should be", Ti(j) * 1.5
+            end do
+        end if
+
+        
+        print *, "---------------"
+        print *, ""
+
+
+
+    end subroutine readChargedParticleInputs
 
 end module mod_particle

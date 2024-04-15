@@ -6,33 +6,17 @@ module mod_Scheme
     use mod_domain
     use omp_lib
     implicit none
+    integer(int32), protected ::schemeNum
     ! Scheme module for CIC
 contains
 
-    subroutine initializeScheme(schemeNum)
-        integer(int32), intent(in out) :: schemeNum
+    subroutine initializeScheme()
         schemeNum = 1
         print *, "--Scheme---"
         print *, "CIC constant grid size between Field/J nodes"
         print *, '----------'
     end subroutine initializeScheme
 
-    subroutine initialize_randUniform(part, world, irand)
-        ! place particles randomly in each dx_dl based on portion of volume it take up
-        type(Particle), intent(in out) :: part
-        type(Domain), intent(in) :: world
-        integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, iThread
-        real(real64) :: L_domain
-        L_domain = SUM(world%dx_dl)
-        !$OMP parallel private(iThread, i)
-        iThread = omp_get_thread_num() + 1
-        do i=1, part%N_p(iThread)
-            part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1) - 0.5d0 * world%dx_dl(1)
-            part%phaseSpace(1,i, iThread) = world%getLFromX(part%phaseSpace(1,i, iThread))
-        end do
-        !$OMP end parallel    
-    end subroutine initialize_randUniform
 
     subroutine interpolateParticleToNodes(part, world, iThread)
         ! Interpolate particles to logical grid for a single thread
@@ -103,33 +87,6 @@ contains
             rho = rho + SUM(particleList(i)%densities, DIM = 2) * particleList(i)%w_p * particleList(i)%q
         end do
     end subroutine depositRho
-
-    function getChargeContinuityError(rho_i, rho_f, J_total, world, del_t) result(chargeError)
-        real(real64), intent(in) :: del_t, rho_i(NumberXNodes), rho_f(NumberXNodes), J_total(NumberXNodes+1, numThread)
-        type(Domain), intent(in) :: world
-        integer(int32) :: i
-        real(real64) :: chargeError, J(NumberXNodes+1), del_Rho
-        J = SUM(J_total, DIM=2)
-        chargeError = 0.0d0
-        do i = 1, NumberXNodes
-            del_Rho = rho_f(i) - rho_i(i)
-            if (del_Rho /= 0) then
-                SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
-                CASE(0)
-                    chargeError = chargeError + (1.0d0 + del_t * (J(i+1) - J(i))/(del_Rho))**2
-                CASE(-1,-4)
-                    chargeError = chargeError + (1.0d0 + del_t * (J(i+1) - 2.0d0 * J(i))/(del_Rho))**2
-                CASE(1,4)
-                    chargeError = chargeError + (1.0d0 + del_t * (2.0d0 * J(i+1) - J(i))/del_Rho)**2
-                CASE(2)
-                    chargeError = chargeError + (1.0d0 + del_t * (-J(i))/del_Rho)**2 
-                CASE(-2)
-                    chargeError = chargeError + (1.0d0 + del_t * (J(i+1))/del_Rho)**2
-                END SELECT
-            end if
-        end do
-        chargeError = SQRT(chargeError/NumberXNodes)
-    end function getChargeContinuityError
 
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
