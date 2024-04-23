@@ -125,15 +125,15 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
     thmax = DFLT_THMAX
     etafixed = DFLT_ETA_FIXED
 
-   iplvl = 0 ! print level
+   iplvl = 1 ! print level
    input = 0
-   input(1) = maxIter ! maximum iterations
+   input(1) = maxIter ! maximum outer newton iterations
    input(2) = 0 !ijacv
-   input(3) = 0 ! krylov solver
+   input(3) = 0 ! krylov solver (0 == GMRES)
    input(4) = m_Anderson ! maximum krylov subspace dimension
    input(5) = 0 !ipre
-   input(9) = 10 !number backtracks
-   input(6) = m_Anderson*2
+   input(9) = m_Anderson !number backtracks
+   input(6) = m_Anderson*2 ! maximum iterations to kyrlov routine
    input(10) = 2 ! eta with gamma and alpha
    etamax = 0.8d0 ! eta max
    choice2_exp = 1.5d0 ! alpha
@@ -2302,12 +2302,12 @@ subroutine nitbt(n, xcur, fcnrm, step, eta, xpls, fpls, fpnrm, oftjs, redfac, nf
 
 end subroutine nitbt
 
-subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, stptol, &
+subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, abstol, reltol, stptol, &
    iterm, nfe, njve, nrpre, nli, nni, nbt, rwork)
 
    integer, intent(in) :: n
    integer, intent(in out) :: ipar(*), nfe, njve, nrpre, nli, nni, nbt, iterm
-   double precision, intent(in) :: ftol, stptol
+   double precision, intent(in) :: abstol, stptol, reltol
    double precision, intent(in out) :: xcur(n), fcur(n), xpls(n), fpls(n), step(n), rpar(*), rwork(*)
    procedure(funcInterface) :: f
    procedure(jacvInterface) :: jacv
@@ -2688,7 +2688,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
     ! c NOTE: In nitinfo.h, instep, newstep, krystat are declared integer, 
     ! c and avrate and fcurnrm are declared double precision. 
     ! c 
-     double precision eta, etamin, fcnrm, flmnrm, fpnrm, oftjs, oftlm, redfac, rsnrm, stpnrm, temp, alpha, gamma
+     double precision eta, etamin, fcnrm, flmnrm, fpnrm, oftjs, oftlm, redfac, rsnrm, stpnrm, temp, alpha, gamma, ftol
      integer ibt, itrmbt, itrmf, itrmks, lrr, lsvbig, lsvsml, lvv, lw, lr, ld, lrcgs, lrtil, lp, lphat, lq, lu, lv, lt, lrwork, ly, kdmaxp1
 
 
@@ -2723,6 +2723,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
      endif
      nfe = nfe + 1
      fcnrm = SQRT(SUM(fcur**2))!dnrm2(n, fcur, 1) 
+     ftol = abstol + reltol*fcnrm
      
     ! c ------------------------------------------------------------------------ 
     ! c For printing:
@@ -2960,13 +2961,13 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, ftol, st
      endif
 end subroutine nitdrv
 
-subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rpar, ipar, iterm)
+subroutine nitsol(n, x, f, jacv, abstol, reltol, stptol, info, rpar, ipar, iterm)
 
 
    integer, intent(in) :: n
    integer, intent(in out) :: info(6), ipar(*), iterm
-   double precision, intent(in) :: ftol, stptol
-   double precision, intent(in out) :: x(n), rpar(*) 
+   double precision, intent(in) :: abstol, stptol, reltol
+   double precision, intent(in out) :: x(n), rpar(*)
    procedure(funcInterface) :: f
    procedure(jacvInterface) :: jacv
 
@@ -3423,7 +3424,7 @@ subroutine nitsol(n, x, f, jacv, ftol, stptol, info, rpar, ipar, iterm)
     ! c ------------------------------------------------------------------------
     ! c Call nitdrv. 
     ! c ------------------------------------------------------------------------
-     call nitdrv(n, x, rworkNitsol(lfcur), rworkNitsol(lxpls), rworkNitsol(lfpls), rworkNitsol(lstep), f, jacv, rpar, ipar, ftol, stptol, &
+     call nitdrv(n, x, rworkNitsol(lfcur), rworkNitsol(lxpls), rworkNitsol(lfpls), rworkNitsol(lstep), f, jacv, rpar, ipar, abstol, reltol, stptol, &
       iterm, nfe, njve, nrpre, nli, nni, nbt, rworkNitsol(lrwork))
     ! c ------------------------------------------------------------------------
     ! c Set output for return. 

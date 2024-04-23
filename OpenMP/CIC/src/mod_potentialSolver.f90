@@ -310,25 +310,34 @@ contains
     ! end subroutine solve_CG_Ampere
 
     function getError_tridiag_Ampere(self, world, del_t) result(res)
-        class(potentialSolver), intent(in) :: self
+        class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res(NumberXNodes)
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
+        call self%evaluateEFieldCurrTime(world)
         do i =1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
+            SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
             CASE(0)
-                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
-            CASE(1,3)
-                d(i) = self%phi_f(i)
+                d(i) = (self%J(i+1) - self%J(i)) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
+            CASE(-1,-4)
+                d(i) = (self%J(i+1) - 2.0d0 * self%J(i)) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
+            CASE(1,4)
+                d(i) = (2.0d0 * self%J(i+1) - self%J(i)) * del_t / eps_0 - self%EField(i+1) + self%EField(i)
+            CASE(-2)
+                d(i) = self%J(i+1) * del_t / eps_0 - self%EField(i+1)
             CASE(2)
-                if (i == 1) then
-                    d(i) = -(del_t / eps_0) * (-self%J(i) + (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
-                else if (i == NumberXNodes) then
-                    d(i) = -(del_t / eps_0) * (-self%J(i-1) + (self%phi(i-1) - self%phi(i))/world%dx_dl(i-1))
-                end if
+                d(i) = -self%J(i) * del_t / eps_0 + self%EField(i)
+            CASE(-3)
+                d(i) = (self%J(2) - self%J(1) - self%J(NumberXHalfNodes)) * del_t / eps_0 - self%EField(2) + self%EField(1)
+            CASE(3)
+                d(i) = (self%J(1) + self%J(NumberXHalfNodes) - self%J(NumberXNodes)) * del_t / eps_0 - self%EField(NumberXHalfNodes) + self%EField(NumberXNodes)
             END SELECT
+        end do
+
+        do i=1, self%numDirichletNodes
+            d(self%dirichletIndx(i)) = d(self%dirichletIndx(i)) + self%sourceTermVals(i)
         end do
         res = Ax- d
 

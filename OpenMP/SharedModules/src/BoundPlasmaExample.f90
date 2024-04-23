@@ -18,7 +18,7 @@ program BoundPlasmaExample
     
     integer(int32) :: i, j, iThread, startTime, endTime
     real(real64) :: remainDel_t, currDel_t, PE_i, KE_i, PE_f, KE_f, Momentum_i(3), Momentum_f(3)
-    real(real64), allocatable :: rho_i(:)
+    real(real64), allocatable :: rho_i(:), EField_i(:)
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
 
@@ -55,7 +55,7 @@ program BoundPlasmaExample
     ! print *, ABS((E_i - E_f)/(E_i))
     ! stop
     
-    ! allocate(rho_i(NumberXNodes))
+    ! allocate(rho_i(NumberXNodes), EField_i(NumberXHalfNodes))
     ! rho_i = globalSolver%rho
     ! KE_i = 0.0d0
     ! do j=1, numberChargedParticles
@@ -67,9 +67,14 @@ program BoundPlasmaExample
     ! do j = 1, numberChargedParticles
     !     Momentum_i = Momentum_i + globalParticleList(j)%getTotalMomentum()
     ! end do
+    
     ! call system_clock(startTime)
-    ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, maxIter, eps_r, startSimulationTime)
+    ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, startSimulationTime)
     ! call system_clock(endTime)
+    ! EField_i = (globalSolver%phi(1:NumberXHalfNodes) - globalSolver%phi(2:NumberXNodes)) / globalWorld%dx_dl
+    ! globalSolver%EField = (globalSolver%phi_f(1:NumberXHalfNodes) - globalSolver%phi_f(2:NumberXNodes)) / globalWorld%dx_dl
+    ! print *, SUM(globalSolver%J * globalWorld%dx_dl)/globalWorld%L_domain
+    ! print *, eps_0 * (globalSolver%EField - EField_i)/currDel_t + globalSolver%J
     ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0
     ! do i = 1, numberChargedParticles
@@ -106,6 +111,6 @@ program BoundPlasmaExample
     ! print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
     ! print *, 'charge error is:', globalSolver%getChargeContinuityError(rho_i, globalWorld, currDel_t)
     ! stop
-    call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, simulationTime)
-    call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, maxIter, eps_r, stateRan0, averagingTime, 100)
+    call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, simulationTime)
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, averagingTime, 100)
 end program BoundPlasmaExample

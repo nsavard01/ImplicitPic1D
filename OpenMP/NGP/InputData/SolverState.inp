@@ -1,6 +1,7 @@
-1.d-3 ! relative tolerance for non-linear residual
-1 ! type of solver. 0 is anderson acceleration, 1 is JFNK
-20 ! Number of past solutions to store for anderson acceleration, also used for JFNK max krylov subspace
+1.d-10 ! Absolute tolerance
+0.0 ! relative tolerance for non-linear residual
+0 ! type of solver. 0 is anderson acceleration, 1 is JFNK
+10 ! Number of past solutions to store for anderson acceleration, also used for JFNK max krylov subspace
 0.5 ! Beta_k relaxation parameter for anderson acceleration
-100 ! Maximum number of outer iterations for picard potential solver for newton steps
+50 ! Maximum number of outer iterations for picard potential solver for newton steps
 END

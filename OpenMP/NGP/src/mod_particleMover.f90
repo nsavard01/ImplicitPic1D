@@ -92,7 +92,7 @@ contains
                 FutureAtBoundaryBool = .true.
                 l_boundary = 1-l_boundary
                 l_f = real(l_boundary)
-                diff_PE = 2.0d0 * a * (real(l_boundary) - l_sub) * dx_dl
+                diff_PE = 2.0d0 * a * (l_f - l_sub) * dx_dl
                 v_f = -SIGN(1.0d0, v_sub) * SQRT(diff_PE + v_i_sqr)
                 del_tau = (v_f - v_sub)/a
             end if
