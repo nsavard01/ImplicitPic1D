@@ -91,6 +91,7 @@ CIC_RF_Benchmark_case1_picard = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Implic
 CIC_RF_Benchmark_case1_picardHalf = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_picardHalf/')
 
 CIC_RFBenchmark_highDensity_halfPart_1000nodes_10xtime = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_halfPart_1000nodes_10xtime/')
+CIC_RFBenchmark_highDensity_200PPC_1024Cells = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_200PPC_1024Cells/')
 #vac convergenceDataExp = [Exp_128PPC_0p5Deb_0p2delT_2p5e16, NGP_2048PPC_64nodes_2p0delT_2p5e16]
 # convergenceLabelExp = [r'Explicit', 'Implicit']
 

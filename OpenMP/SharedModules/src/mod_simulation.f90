@@ -257,7 +257,6 @@ contains
                     nullCollisionList(j)%totalEnergyLoss = 0
                     nullCollisionList(j)%totalAmountCollisions = 0
                 end do
-                print *, 'Particle <j>:', SUM(solver%J * world%dx_dl)/world%L_domain
                 print *, 'Total wall power loss:', energyLoss/(currentTime + currDel_t - pastDiagTime)
                 print *, 'Total collision energy loss:', inelasticEnergyLoss/(currentTime + currDel_t - pastDiagTime)
                 CurrentDiagStep = CurrentDiagStep + 1

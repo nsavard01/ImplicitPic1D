@@ -2844,10 +2844,10 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, abstol, 
      krystat = itrmks
      avrate = (rsnrm/fcnrm)**(1.0d0/dble(nli))
      ! USE avrate as additional constraint for solutions converging too slowly or stalling
-     if (avrate > 0.98) then
-         iterm = 5
-         go to 900
-     end if
+   !   if (avrate > 0.98) then
+   !       iterm = 5
+   !       go to 900
+   !   end if
      
     ! c ------------------------------------------------------------------------
     ! c Check itrmks and decide whether to terminate or continue: 
