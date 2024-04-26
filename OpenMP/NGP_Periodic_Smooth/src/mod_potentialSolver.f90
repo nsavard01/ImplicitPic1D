@@ -163,7 +163,7 @@ contains
         do i = NumberXHalfNodes, 1, -1
             self%phi(i) = dp(i)-cp(i)*self%phi(i+1)
         end do
-        self%EField = (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes)) / world%dx_dl
+        self%EField = (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes))
         self%EField_f = self%EField
     end subroutine solve_tridiag_Poisson
 
@@ -172,9 +172,9 @@ contains
         type(Domain), intent(in) :: world
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), res
-        res = (eps_0 * (self%EField_f(1) - self%EField_f(NumberXHalfNodes))/(self%rho(1)) - 1.0d0)**2
+        res = (eps_0 * (self%EField_f(1)/world%dx_dl(1) - self%EField_f(NumberXHalfNodes)/world%dx_dl(NumberXHalfNodes))/(self%rho(1)) - 1.0d0)**2
         do i = 2, NumberXHalfNodes
-            res = res + (eps_0 * (self%EField_f(i) - self%EField_f(i-1))/(self%rho(i)) - 1.0d0)**2
+            res = res + (eps_0 * (self%EField_f(i)/world%dx_dl(i) - self%EField_f(i-1)/world%dx_dl(i-1))/(self%rho(i)) - 1.0d0)**2
         end do
         res = SQRT(res/NumberXHalfNodes)
 
@@ -186,7 +186,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         if (.not. self%globJBool) self%aveJ = (SUM(self%J * world%dx_dl)/world%L_domain)
-        self%EField_f = (self%aveJ - self%J) * del_t / eps_0 + self%EField
+        self%EField_f = (self%aveJ - self%J) * world%dx_dl * del_t / eps_0 + self%EField
         !self%EField = 0.5d0 * (self%phi(1:NumberXHalfNodes) + self%phi_f(1:NumberXHalfNodes) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
 
@@ -242,7 +242,7 @@ contains
         real(real64), intent(in) :: del_t
         integer(int32) :: i
         real(real64) :: res(NumberXHalfNodes)
-        res = eps_0 * (self%EField_f - self%EField)/del_t + self%J - SUM(self%J * world%dx_dl)/world%L_domain
+        res = eps_0 * (self%EField_f - self%EField)/world%dx_dl/del_t + self%J - SUM(self%J * world%dx_dl)/world%L_domain
 
     end function getError_tridiag_Ampere
 
@@ -288,9 +288,9 @@ contains
         logical :: future
         real(real64) :: res
         if (future) then
-            res = 0.5 * eps_0 * SUM(self%EField_f**2 * world%dx_dl)
+            res = 0.5 * eps_0 * SUM(self%EField_f**2 / world%dx_dl)
         else
-            res = 0.5 * eps_0 * SUM(self%EField**2 * world%dx_dl)
+            res = 0.5 * eps_0 * SUM(self%EField**2 / world%dx_dl)
         end if
     end function getTotalPE
 

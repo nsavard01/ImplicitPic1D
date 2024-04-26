@@ -80,6 +80,7 @@ contains
         end do
         solver%EField_half(NumberXHalfNodes) = (solver%EField(NumberXHalfNodes-1) + solver%EField_f(NumberXHalfNodes-1) + &
             2.0d0 * solver%EField(NumberXHalfNodes) + 2.0d0 * solver%EField_f(NumberXHalfNodes) + solver%EField(1) + solver%EField_f(1))/8.0d0
+        solver%EField_half = solver%EField_half/world%dx_dl
         solver%J = 0.0d0
         f_tol = del_t * 1e-12
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, AtBoundaryBool, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
@@ -188,6 +189,7 @@ contains
         end do
         solver%EField_half(NumberXHalfNodes) = (solver%EField(NumberXHalfNodes-1) + solver%EField_f(NumberXHalfNodes-1) + &
             2.0d0 * solver%EField(NumberXHalfNodes) + 2.0d0 * solver%EField_f(NumberXHalfNodes) + solver%EField(1) + solver%EField_f(1))/8.0d0
+        solver%EField_half = solver%EField_half/world%dx_dl
         numSubStepAve = 0
         funcEvalCounter = 0
         f_tol = del_t * 1e-12

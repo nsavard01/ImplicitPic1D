@@ -4,7 +4,7 @@
 5.0d0 ! T_e (eV)
 0.01d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-2.0d0  1.0d0 ! Fraction of initial 1/w_p for initial time step, second is actual written out time step, choose smallest
+10.0d0  1.0d0 ! Fraction of initial 1/w_p for initial time step, second is actual written out time step, choose smallest
 5.317772131794626e-08 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
 NGP_IASW_Chacon2013_curv !filename
