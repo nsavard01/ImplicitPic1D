@@ -254,7 +254,6 @@ contains
         SELECT CASE (iterm)
         CASE(0)
             iterNumPicard = info(4)
-            call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
             call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
         CASE(1,5,6)
             iterNumPicard = maxIter

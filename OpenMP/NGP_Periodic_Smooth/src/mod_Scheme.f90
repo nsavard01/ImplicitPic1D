@@ -85,28 +85,35 @@ contains
         real(real64), intent(in out) :: rho(NumberXNodes)
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
-        real(real64) :: temp(NumberXNodes)
         integer(int32) :: i, iThread
         rho = 0.0d0
         !$OMP parallel private(iThread, i)
+        iThread = omp_get_thread_num() + 1 
         do i = 1, numberChargedParticles
-            iThread = omp_get_thread_num() + 1 
             particleList(i)%densities(:,iThread) = 0.0d0
-            call interpolateParticleToNodes(particleList(i), world, iThread) 
+            call interpolateParticleToNodes(particleList(i), world, iThread)
+            if (world%boundaryConditions(1) == 3) then
+                particleList(i)%densities(1, iThread) = particleList(i)%densities(1, iThread) + particleList(i)%densities(NumberXNodes, iThread)
+                particleList(i)%densities(NumberXNodes, iThread) = particleList(i)%densities(1, iThread)
+            end if
         end do
         !$OMP barrier
-        do i = 1, numberChargedParticles
-            call world%addThreadedDomainArray(rho, particleList(i)%densities, NumberXNodes, iThread, particleList(i)%q_times_wp)
+        particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = SUM(particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
+        do i = 2, numberChargedParticles
+            particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) &
+                + SUM(particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(i)%q_times_wp
+        end do
+        !$OMP barrier
+        do i = world%threadNodeIndx(1, iThread), world%threadNodeIndx(2, iThread)
+            SELECT CASE(world%boundaryConditions(i))
+            CASE(0)
+                rho(i) = 0.25d0 * (particleList(1)%densities(i-1, 1) + 2.0d0 * particleList(1)%densities(i, 1) + particleList(1)%densities(i+1, 1))
+            CASE(3)
+                rho(i) = 0.25d0 * (particleList(1)%densities(NumberXHalfNodes, 1) + 2.0d0 * particleList(1)%densities(1, 1) + particleList(1)%densities(2, 1))
+            END SELECT
         end do
         !$OMP end parallel
-        temp = rho
-        temp(1) = temp(1) + temp(NumberXNodes)
-        temp(NumberXNodes) = temp(1)
-        rho(1) = (temp(NumberXHalfNodes) + 2.0d0 * temp(1) + temp(2))/4.0d0
-        do i = 2, NumberXHalfNodes
-            rho(i) = (temp(i-1) + 2.0d0 * temp(i) + temp(i+1))/4.0d0
-        end do
-        rho(NumberXNodes) = rho(1)
+        
     end subroutine depositRho
 
 

@@ -14,7 +14,7 @@ module mod_potentialSolver
     public :: potentialSolver, readSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), J(:), rho(:), EField(:), EField_f(:), EField_half(:), J_smooth(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64), allocatable :: phi(:), J(:), rho(:), EField(:), EField_f(:), EField_half(:)!phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude, aveJ
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
         logical :: BFieldBool, RF_bool, globJBool
@@ -48,7 +48,7 @@ contains
         real(real64), intent(in) :: BFieldMag, angle, RF_frequency
         real(real64) :: angle_rad
         allocate(self % J(NumberXHalfNodes), self%rho(NumberXNodes), self % phi(NumberXNodes), self % EField_f(NumberXHalfNodes), self%EField_half(NumberXHalfNodes), self%a_tri(NumberXHalfNodes), &
-        self%b_tri(NumberXNodes), self%c_tri(NumberXHalfNodes), self%EField(NumberXHalfNodes), self%J_smooth(NumberXHalfNodes))
+        self%b_tri(NumberXNodes), self%c_tri(NumberXHalfNodes), self%EField(NumberXHalfNodes))
         call construct_diagMatrix(self, world)
         self % rho = 0.0d0
         self % J = 0.0d0

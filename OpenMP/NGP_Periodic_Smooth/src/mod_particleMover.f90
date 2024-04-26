@@ -154,18 +154,25 @@ contains
             !J_temp = J_temp + particleList(j)%J_particle(:, iThread)* particleList(j)%q_times_wp
         end do loopSpecies
         !$OMP barrier
-        do j = 1, numberChargedParticles
-            call world%addThreadedDomainArray(solver%J, particleList(j)%workSpace, NumberXHalfNodes, iThread, particleList(j)%q_times_wp)
+        ! concatenate J to particleList(1)%workSpace(1:NumberXHalfNodes, 1) array
+        particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) = SUM(particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
+        do j = 2, numberChargedParticles
+            particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) = particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) &
+                + SUM(particleList(j)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), :), DIM=2) * particleList(j)%q_times_wp
+        end do
+        !$OMP barrier
+        ! Binomial smoothing
+        do j = world%threadHalfNodeIndx(1, iThread), world%threadHalfNodeIndx(2, iThread)
+            SELECT CASE(world%boundaryConditions(j+1) - world%boundaryConditions(j))
+            CASE(0)
+                solver%J(j) = 0.25d0 * (particleList(1)%workSpace(j-1, 1) + 2.0d0 * particleList(1)%workSpace(j, 1) + particleList(1)%workSpace(j+1, 1))/del_t
+            CASE(3)
+                solver%J(NumberXHalfNodes) = 0.25d0 * (particleList(1)%workSpace(NumberXHalfNodes-1, 1) + 2.0d0 * particleList(1)%workSpace(NumberXHalfNodes, 1) + particleList(1)%workSpace(1, 1))/del_t
+            CASE(-3)
+                solver%J(1) = 0.25d0 * (particleList(1)%workSpace(NumberXHalfNodes, 1) + 2.0d0 * particleList(1)%workSpace(1, 1) + particleList(1)%workSpace(2, 1))/del_t
+            END SELECT
         end do
         !$OMP end parallel
-        solver%J = solver%J/del_t
-
-        solver%J_smooth(1) = (solver%J(NumberXHalfNodes) + 2.0d0 * solver%J(1) + solver%J(2))/4.0d0
-        do j = 2, NumberXHalfNodes-1
-            solver%J_smooth(j) = (solver%J(j-1) + 2.0d0 * solver%J(j) + solver%J(j+1))/4.0d0
-        end do
-        solver%J_smooth(NumberXHalfNodes) = (solver%J(NumberXHalfNodes-1) + 2.0d0 * solver%J(NumberXHalfNodes) + solver%J(1))/4.0d0
-        solver%J = solver%J_smooth
     end subroutine depositJ
 
 
