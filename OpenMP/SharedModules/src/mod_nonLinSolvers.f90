@@ -100,7 +100,7 @@ contains
         real(real64) :: normResidual(m_Anderson+1), alpha(m_Anderson+1)
         integer(int32) :: i, j, index, m_k
         
-        
+        solver%phi_f = solver%phi
         phi_k(:,1) = solver%phi_f
         call depositJ(solver, particleList, world, del_t)
         call solver%solve_tridiag_Ampere(world, del_t)
@@ -123,10 +123,10 @@ contains
                 exit
             end if
             if (i > m_Anderson) then
-                if (m_Anderson > 1) then
+                if (m_Anderson > 3) then
                     sumPastResiduals = normResidual(MODULO(i-1, m_Anderson+1) + 1) &
-                    + normResidual(MODULO(i-2, m_Anderson+1) + 1)
-                    sumPastResiduals = sumPastResiduals/2.0d0
+                    + normResidual(MODULO(i-2, m_Anderson+1) + 1) + normResidual(MODULO(i-3, m_Anderson+1) + 1)
+                    sumPastResiduals = sumPastResiduals/3.0d0
                 else
                     sumPastResiduals = normResidual(MODULO(i-1, m_Anderson+1) + 1)
                 end if
@@ -244,6 +244,7 @@ contains
 
         ! Set Nitsol parameters
         iterm = 0
+        globalSolver%phi_f = globalSolver%phi
         xcurSolver = globalSolver%phi_f
         rpar(1) = del_t
         !dnrm2(NumberXNodes, fcurSolver, 1)

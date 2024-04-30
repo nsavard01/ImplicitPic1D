@@ -114,12 +114,26 @@ contains
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
         logical :: AtBoundaryBool, FutureAtBoundaryBool, timeNotConvergedBool
-        solver%EField = 0.5d0 * (solver%phi(1:NumberXHalfNodes) + solver%phi_f(1:NumberXHalfNodes) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         f_tol = del_t * 1.d-10
         solver%J = 0.0d0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, AtBoundaryBool, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
                 numIter, timeNotConvergedBool)
         iThread = omp_get_thread_num() + 1 
+        ! Place temporary field into particle workspace
+        particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1) = 0.5d0 * (solver%phi_f(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) &
+        + solver%phi(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) - solver%phi_f(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1) - &
+        solver%phi(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1))
+        !$OMP barrier
+        ! Now apply smoothing if on
+        if (world%gridSmoothBool) then
+            call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%EField, iThread)
+            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))&
+                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+        else
+            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1)&
+                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+        end if
+        !$OMP barrier
         loopSpecies: do j = 1, numberChargedParticles
         
             particleList(j)%workSpace(1:NumberXHalfNodes,iThread) = 0.0d0
@@ -188,11 +202,19 @@ contains
             !J_temp = J_temp + particleList(j)%J_particle(:, iThread)* particleList(j)%q_times_wp
         end do loopSpecies
         !$OMP barrier
-        do j = 1, numberChargedParticles
-            call world%addThreadedDomainArray(solver%J, particleList(j)%workSpace, NumberXHalfNodes, iThread, particleList(j)%q_times_wp)
+        particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) = SUM(particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
+        do j = 2, numberChargedParticles
+            particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) = particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) &
+                + SUM(particleList(j)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), :), DIM=2) * particleList(j)%q_times_wp
         end do
+        !$OMP barrier
+        if (world%gridSmoothBool) then
+            call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%J, iThread)
+            solver%J(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = solver%J(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))/del_t
+        else
+            solver%J(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread),1)/del_t
+        end if
         !$OMP end parallel
-        solver%J = solver%J/del_t
     end subroutine depositJ
 
 
@@ -208,13 +230,27 @@ contains
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p
         logical :: AtBoundaryBool, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool
-        solver%EField = 0.5d0 * (solver%phi(1:NumberXHalfNodes) + solver%phi_f(1:NumberXHalfNodes) - solver%phi(2:NumberXNodes) - solver%phi_f(2:NumberXNodes)) / world%dx_dl
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, AtBoundaryBool, delIdx, dx_dl, E_x, l_boundary, numIter, &
                 refIdx, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool, N_p) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
+        ! Place temporary field into particle workspace
+        particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1) = 0.5d0 * (solver%phi_f(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) &
+        + solver%phi(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) - solver%phi_f(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1) - &
+        solver%phi(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1))
+        !$OMP barrier
+        ! Now apply smoothing if on
+        if (world%gridSmoothBool) then
+            call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%EField, iThread)
+            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))&
+                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+        else
+            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1)&
+                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+        end if
+        !$OMP barrier
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
             refIdx = 0

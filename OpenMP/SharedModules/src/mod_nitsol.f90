@@ -132,7 +132,7 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
    input(3) = 0 ! krylov solver (0 == GMRES)
    input(4) = m_Anderson ! maximum krylov subspace dimension
    input(5) = 0 !ipre
-   input(9) = m_Anderson !number backtracks
+   input(9) = -1 !number backtracks
    input(6) = m_Anderson*2 ! maximum iterations to kyrlov routine
    input(10) = 2 ! eta with gamma and alpha
    etamax = 0.8d0 ! eta max

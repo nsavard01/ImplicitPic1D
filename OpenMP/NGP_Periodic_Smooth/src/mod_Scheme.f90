@@ -92,10 +92,6 @@ contains
         do i = 1, numberChargedParticles
             particleList(i)%densities(:,iThread) = 0.0d0
             call interpolateParticleToNodes(particleList(i), world, iThread)
-            if (world%boundaryConditions(1) == 3) then
-                particleList(i)%densities(1, iThread) = particleList(i)%densities(1, iThread) + particleList(i)%densities(NumberXNodes, iThread)
-                particleList(i)%densities(NumberXNodes, iThread) = particleList(i)%densities(1, iThread)
-            end if
         end do
         !$OMP barrier
         particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = SUM(particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
@@ -104,6 +100,10 @@ contains
                 + SUM(particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(i)%q_times_wp
         end do
         !$OMP barrier
+        !$OMP single
+        particleList(1)%densities(1,1) = particleList(1)%densities(1,1) + particleList(1)%densities(NumberXNodes,1)
+        particleList(1)%densities(NumberXNodes,1) = particleList(1)%densities(1,1)
+        !$OMP end single
         do i = world%threadNodeIndx(1, iThread), world%threadNodeIndx(2, iThread)
             SELECT CASE(world%boundaryConditions(i))
             CASE(0)

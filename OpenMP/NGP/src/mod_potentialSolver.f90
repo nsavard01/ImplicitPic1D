@@ -29,6 +29,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: aveRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
+        ! procedure, public, pass(self) :: updateEField
         ! procedure, public, pass(self) :: solve_CG_Ampere
         procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: getError_tridiag_Poisson
@@ -105,13 +106,13 @@ contains
                 self%b_tri(i) = 1.0d0
             CASE(2)
                 if (i == 1) then
-                    self % c_tri(i) = 1.0d0/world%dx_dl(i)
+                    self % c_tri(i) = 2.0d0/world%dx_dl(i)
                     !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
-                    self%b_tri(i) = - (1.0d0/world%dx_dl(i))
+                    self%b_tri(i) = - (2.0d0/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    self % a_tri(i-1) = 1.0d0/ world%dx_dl(i-1)
+                    self % a_tri(i-1) = 2.0d0/ world%dx_dl(i-1)
                     !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
-                    self%b_tri(i) = - (1.0d0/world%dx_dl(i-1))
+                    self%b_tri(i) = - (2.0d0/world%dx_dl(i-1))
                 else
                     print *, "Neumann boundary not on left or right most index!"
                     stop
@@ -171,15 +172,20 @@ contains
         real(real64) :: Ax(NumberXNodes), res, tiny
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         res = 0.0d0
-        tiny = EPSILON(tiny)
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + tiny) - 1.0d0)**2
-                !d(i) = -self%rho(i) - self%rho_const
+                if (self%rho(i) + self%rho_const /= 0) then
+                    res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const) - 1.0d0)**2
+                else
+                    res = res + (Ax(i)*eps_0)**2
+                end if
             CASE(1,3,4)
-                res = res + ((Ax(i) + tiny)/(self.phi_f(i) + tiny) - 1.0d0)**2
-                !d(i) = self%phi_f(i)*eps_0
+                if (self%phi_f(i) /= 0) then
+                    res = res + ((Ax(i))/(self.phi_f(i)) - 1.0d0)**2
+                else
+                    res = res + (Ax(i))**2
+                end if
             END SELECT
         end do
         res = SQRT(res/NumberXNodes)
@@ -201,9 +207,9 @@ contains
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do
@@ -290,9 +296,9 @@ contains
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do
@@ -315,18 +321,17 @@ contains
                 CASE(0)
                     chargeError = chargeError + (1.0d0 + del_t * (self%J(i) - self%J(i-1))/del_Rho)**2
                     k = k + 1
-                CASE(1)
+                CASE(1,4)
                     continue
                 CASE(2)
                     if (i == 1) then
-                        chargeError = chargeError + (1.0d0 + del_t * self%J(1)/del_Rho)**2
+                        chargeError = chargeError + (1.0d0 + 2.0d0 * del_t * self%J(1)/del_Rho)**2
                     else
-                        chargeError = chargeError + (1.0d0 - del_t * self%J(NumberXHalfNodes)/del_Rho)**2
+                        chargeError = chargeError + (1.0d0 - 2.0d0 * del_t * self%J(NumberXHalfNodes)/del_Rho)**2
                     end if
                     k = k + 1
                 CASE(3)
                     if (i == 1) then
-                        del_Rho = del_Rho + self%rho(NumberXNodes) - rho_i(NumberXNodes)
                         chargeError = chargeError + (1.0d0 + del_t * (self%J(1) - self%J(NumberXHalfNodes))/del_Rho)**2
                     end if
                 END SELECT
@@ -334,6 +339,73 @@ contains
         end do
         chargeError = SQRT(chargeError/k)
     end function getChargeContinuityError
+
+    ! subroutine updateEField(self, world, iThread)
+    !     class(potentialSolver), intent(in out) :: self
+    !     type(Domain), intent(in) :: world
+    !     integer(int32), intent(in) :: iThread
+    !     integer(int32) :: i, boundVal
+    !     real(real64) :: fieldMinus, fieldCenter, fieldPlus
+
+    !     do i = world%threadHalfNodeIndx(1, iThread), world%threadHalfNodeIndx(2, iThread)
+    !         boundVal = world%boundaryConditions(i+1) - world%boundaryConditions(i)
+    !         if (boundVal == 0) then
+    !             fieldMinus = 0.5d0 * (self%phi_f(i-1) + self%phi(i-1) - self%phi_f(i) - self%phi(i))
+    !             fieldCenter = 0.5d0 * (self%phi_f(i) + self%phi(i) - self%phi_f(i+1) - self%phi(i+1))
+    !             fieldPlus = 0.5d0 * (self%phi_f(i+1) + self%phi(i+1) - self%phi_f(i+2) - self%phi(i+2))
+    !             self%EField(i) = 0.25d0 * (fieldMinus + 2.0d0 * fieldCenter + fieldPlus)
+    !         else if (boundVal > 0) then
+    !             fieldMinus = 0.5d0 * (self%phi_f(NumberXHalfNodes-1) + self%phi(NumberXHalfNodes-1) - self%phi_f(NumberXHalfNodes) - self%phi(NumberXHalfNodes))
+    !             fieldCenter = 0.5d0 * (self%phi_f(NumberXHalfNodes) + self%phi(NumberXHalfNodes) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes))
+    !             SELECT CASE (boundVal)
+    !             CASE(1,4)
+    !                 self%EField(NumberXHalfNodes) = 0.25d0 * (3.0d0 * fieldCenter + fieldMinus)
+    !             CASE(2)
+    !                 solver%EField(NumberXHalfNodes) = 0.25d0 * (fieldCenter + fieldMinus)
+    !             CASE(3)
+    !                 fieldPlus = 0.5d0 * (self%phi_f(1) + self%phi(1) - self%phi_f(2) - self%phi(2))
+    !                 solver%J(NumberXHalfNodes) = 0.25d0 * (particleList(1)%workSpace(NumberXHalfNodes-1, 1) + 2.0d0 * particleList(1)%workSpace(NumberXHalfNodes, 1) + particleList(1)%workSpace(1, 1))
+    !             END SELECT
+    !         else
+    !             fieldCenter = 0.5d0 * (self%phi_f(1) + self%phi(1) - self%phi_f(2) - self%phi(2))
+    !             fieldPlus = 0.5d0 * (self%phi_f(2) + self%phi(2) - self%phi_f(3) - self%phi(3))
+    !         end if
+    !     end do
+
+    !     fieldCenter = 0.5d0 * (self%phi_f(1) + self%phi(1) - self%phi_f(2) - self%phi(2))
+    !     fieldPlus = 0.5d0 * (self%phi_f(2) + self%phi(2) - self%phi_f(3) - self%phi(3))
+    !     SELECT CASE (world%boundaryConditions(1))
+    !     CASE(1,4)
+    !         self%EField(1) = 0.25d0 * (3.0d0 * fieldCenter + fieldPlus)
+    !     CASE(2)
+    !         self%EField(1) = 0.25d0 * (fieldCenter + fieldPlus)
+    !     CASE(3)
+    !         fieldMinus = 0.5d0 * (self%phi_f(NumberXHalfNodes) + self%phi(NumberXHalfNodes) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes))
+    !         self%EField(1) = 0.25d0 * (fieldMinus + 2.0d0 * fieldCenter + fieldPlus)
+    !     END SELECT
+    !     self%EField(1) = self%EField(1)/world%dx_dl(1)
+
+    !     do i = 2, NumberXHalfNodes-1
+    !         fieldMinus = 0.5d0 * (self%phi_f(i-1) + self%phi(i-1) - self%phi_f(i) - self%phi(i))
+    !         fieldCenter = 0.5d0 * (self%phi_f(i) + self%phi(i) - self%phi_f(i+1) - self%phi(i+1))
+    !         fieldPlus = 0.5d0 * (self%phi_f(i+1) + self%phi(i+1) - self%phi_f(i+2) - self%phi(i+2))
+    !         self%EField(i) = 0.25d0 * (fieldMinus + 2.0d0 * fieldCenter + fieldPlus) / world%dx_dl(i)
+    !     end do
+
+    !     fieldMinus = 0.5d0 * (self%phi_f(NumberXHalfNodes-1) + self%phi(NumberXHalfNodes-1) - self%phi_f(NumberXHalfNodes) - self%phi(NumberXHalfNodes))
+    !     fieldCenter = 0.5d0 * (self%phi_f(NumberXHalfNodes) + self%phi(NumberXHalfNodes) - self%phi_f(NumberXNodes) - self%phi(NumberXNodes))
+    !     SELECT CASE (world%boundaryConditions(NumberXNodes))
+    !     CASE(1,4)
+    !         self%EField(NumberXHalfNodes) = 0.25d0 * (3.0d0 * fieldCenter + fieldMinus)
+    !     CASE(2)
+    !         self%EField(NumberXHalfNodes) = 0.25d0 * (fieldCenter + fieldMinus)
+    !     CASE(3)
+    !         fieldPlus = 0.5d0 * (self%phi_f(1) + self%phi(1) - self%phi_f(2) - self%phi(2))
+    !         self%EField(NumberXHalfNodes) = 0.25d0 * (fieldMinus + 2.0d0 * fieldCenter + fieldPlus)
+    !     END SELECT
+    !     self%EField(NumberXHalfNodes) = self%EField(NumberXHalfNodes)/world%dx_dl(NumberXHalfNodes)
+
+    ! end subroutine updateEField
 
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
@@ -417,6 +489,7 @@ contains
         print *, "Reading solver inputs:"
         print *, "------------------"
         open(10,file='../InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)

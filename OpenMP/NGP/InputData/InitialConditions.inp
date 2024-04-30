@@ -7,6 +7,6 @@
 10.0d0  1.0d0 ! Fraction of initial 1/w_p for initial time step, second is actual written out time step, choose smallest
 5.317772131794626e-08 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-NGP_IASW_Chacon2013_curv !filename
+NGP_IASW_Chen2013_curv_lowRes !filename
 no NGP_RFBenchmark_highDenity_halfPart_513nodes_10xtime ! Restart(yes/no) and directory to take from
 END

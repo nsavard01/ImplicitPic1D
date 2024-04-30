@@ -94,9 +94,50 @@ contains
             call interpolateParticleToNodes(particleList(i), world, iThread) 
         end do
         !$OMP barrier
-        do i = 1, numberChargedParticles
-            call world%addThreadedDomainArray(rho, particleList(i)%densities, NumberXNodes, iThread, particleList(i)%q_times_wp)
+        particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = SUM(particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
+        do i = 2, numberChargedParticles
+            particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) &
+                + SUM(particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(i)%q_times_wp
         end do
+        !$OMP barrier
+        !$OMP single
+        SELECT CASE (world%boundaryConditions(1))
+        CASE(1,4)
+            particleList(1)%densities(1, 1) = 0.0d0
+        CASE(2)
+            particleList(1)%densities(1,1) = 2.0d0 * particleList(1)%densities(1,1)
+        CASE(3)
+            particleList(1)%densities(1,1) = particleList(1)%densities(1,1) + particleList(1)%densities(NumberXNodes, 1)
+        END SELECT
+        SELECT CASE (world%boundaryConditions(NumberXNodes))
+        CASE(1,4)
+            particleList(1)%densities(NumberXNodes, 1) = 0.0d0
+        CASE(2)
+            particleList(1)%densities(NumberXNodes,1) = 2.0d0 * particleList(1)%densities(NumberXNodes,1)
+        CASE(3)
+            particleList(1)%densities(NumberXNodes,1) = particleList(1)%densities(1,1)
+        END SELECT
+        !$OMP end single
+        if (world%gridSmoothBool) then
+            do i = world%threadNodeIndx(1, iThread), world%threadNodeIndx(2, iThread)
+                SELECT CASE(world%boundaryConditions(i))
+                CASE(0)
+                    rho(i) = 0.25d0 * (particleList(1)%densities(i-1, 1) + 2.0d0 * particleList(1)%densities(i, 1) + particleList(1)%densities(i+1, 1))
+                CASE(1,4)
+                    rho(i) = 0.0d0
+                CASE(2)
+                    if (i ==1) then
+                        rho(i) = 0.25d0 * (2.0d0 * particleList(1)%densities(1,1) + 2.0d0 * particleList(1)%densities(2,1))
+                    else    
+                        rho(i) = 0.25d0 * (2.0d0 * particleList(1)%densities(NumberXNodes,1) + 2.0d0 * particleList(1)%densities(NumberXHalfNodes,1))
+                    end if
+                CASE(3)
+                    rho(i) = 0.25d0 * (particleList(1)%densities(NumberXHalfNodes, 1) + 2.0d0 * particleList(1)%densities(1, 1) + particleList(1)%densities(2, 1))
+                END SELECT
+            end do
+        else
+            rho(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = particleList(1)%densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread), 1)
+        end if
         !$OMP end parallel  
     end subroutine depositRho
 
@@ -114,11 +155,14 @@ contains
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            densities = 0.0d0
             !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1
-            call world%addThreadedDomainArray(densities, particleList(i)%densities, NumberXNodes, iThread, particleList(i)%w_p)
+            densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread)) = SUM(particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(i)%w_p
             !$OMP end parallel
+            if (world%boundaryConditions(1) == 3) then
+                densities(1) = (densities(1) + densities(NumberXNodes)) * 0.5d0
+                densities(NumberXNodes) = densities(1)
+            end if
             densities = densities/world%nodeVol
             write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then
