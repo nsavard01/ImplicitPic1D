@@ -90,7 +90,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, simulationTime
         integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, j, CurrentDiagStep
+        integer(int32) :: i, j, CurrentDiagStep, smoothInt
         integer(int64) :: startTimer, endTimer, startTotal, endTotal, timingRate
         real(real64) :: diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime, energyLoss
         real(real64) :: currDel_t, remainDel_t
@@ -102,9 +102,11 @@ contains
         unitPart1 = 100
         call generateSaveDirectory(directoryName)
         !Wrtie Initial conditions
+        smoothInt = 0
+        if (world%gridSmoothBool) smoothInt = 1
         open(15,file=directoryName//'/InitialConditions.dat')
-        write(15,'("Scheme, Number Grid Nodes, T_e, T_i, n_ave, Final Expected Time(s), Delta t(s), FractionFreq, Power(W/m^2), heatSteps, nu_h, numDiag, numThread, RF_rad_frequency, RF_half_amplitude")')
-        write(15,"(2(I6, 1x), 7(es16.8,1x), (I6, 1x), (es16.8,1x), 2(I6, 1x), 2(es16.8,1x))") schemeNum, NumberXNodes, T_e, T_i, n_ave, simulationTime, del_t, FractionFreq, Power, heatSkipSteps, nu_h, numDiagnosticSteps, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude
+        write(15,'("Scheme, Number Grid Nodes, T_e, T_i, n_ave, Final Expected Time(s), Delta t(s), FractionFreq, Power(W/m^2), smoothInt, nu_h, numDiag, numThread, RF_rad_frequency, RF_half_amplitude")')
+        write(15,"(2(I6, 1x), 7(es16.8,1x), (I6, 1x), (es16.8,1x), 2(I6, 1x), 2(es16.8,1x))") schemeNum, NumberXNodes, T_e, T_i, n_ave, simulationTime, del_t, FractionFreq, Power, smoothInt, nu_h, numDiagnosticSteps, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude
         close(15)
 
         call writeSolverState(directoryName)

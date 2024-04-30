@@ -12,7 +12,6 @@ program BoundPlasmaExample
     use mod_particleMover
     ! use mod_collisions
     use mod_nonLinSolvers
-    use mod_simulation
     use omp_lib
     implicit none
     
@@ -38,6 +37,7 @@ program BoundPlasmaExample
     call initializeSolver()
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
     call solveInitialPotential(globalSolver, globalParticleList, globalWorld, startSimulationTime)
+    
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
     ! E_i = globalSolver%getTotalPE(globalWorld, .false.)
@@ -54,7 +54,7 @@ program BoundPlasmaExample
     ! print *, ABS((E_i - E_f)/(E_i))
     ! stop
     
-    allocate(rho_i(NumberXNodes), J_total(NumberXHalfNodes))
+    allocate(rho_i(NumberXNodes))
     rho_i = globalSolver%rho
     KE_i = 0.0d0
     do j=1, numberChargedParticles
@@ -70,14 +70,7 @@ program BoundPlasmaExample
     call system_clock(startTime)
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, startSimulationTime)
     call system_clock(endTime)
-    ! do i = 1, NumberXHalfNodes
-    !     J_total(i) = eps_0 * (((globalSolver%phi_f(i) - globalSolver%phi_f(i+1)) -(globalSolver%phi(i) - globalSolver%phi(i+1))) /globalWorld%dx_dl(i)) / currDel_t + globalSolver%J(i)
-    ! end do
-    ! print *, J_total
-    ! print *, ''
-    ! print *, 'S is:', (SUM(globalSolver%J * globalWorld%dx_dl) + (eps_0/currDel_t) * &
-    !     (globalSolver%phi_f(NumberXNodes) - globalSolver%phi_f(1) - globalSolver%phi(NumberXNodes) + globalSolver%phi(1)))/globalWorld%L_domain
-   
+    
     PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     KE_f = 0.0d0
     do i = 1, numberChargedParticles
@@ -96,9 +89,10 @@ program BoundPlasmaExample
         Momentum_f = Momentum_f + globalParticleList(j)%getTotalMomentum()
     end do
     print *, 'Time step:', currDel_t
+    print *, 'Total KE:', KE_f - KE_i
+    print *, 'SUm(J*E):', SUM(globalSolver%J * globalSolver%EField_half * globalWorld%dx_dl) * currDel_t
+    print *, 'Edge phi_f:', -SUM(globalSolver%EField_f), 'should be:', globalSolver%phi_right_f
     print *, 'Energy error is:', ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
-    print *, 'Total KE loss:', KE_f - KE_i
-    print *, 'SUM(J*E):', SUM(globalSolver%EField * globalSolver%J * globalWorld%dx_dl) * currDel_t
     print *, 'took', iterNumPicard, 'iterations'
     print *, 'took amount of integer time:', endTime - startTime
     print *, 'Momentum percent diff:', 100 * ABS((Momentum_i(1) - Momentum_f(1))/Momentum_i(1))
@@ -115,6 +109,4 @@ program BoundPlasmaExample
     print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
     print *, 'charge error is:', globalSolver%getChargeContinuityError(rho_i, globalWorld, currDel_t)
     stop
-    call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, simulationTime)
-    call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, averagingTime, 100)
 end program BoundPlasmaExample
