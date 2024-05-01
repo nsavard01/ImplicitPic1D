@@ -182,7 +182,8 @@ contains
                 do j=1, numberChargedParticles
                     KE_i = KE_i + particleList(j)%getTotalKE()
                 end do
-                call depositRho(rho_i, particleList, world)
+                call solver%depositRho(particleList, world)
+                rho_i = solver%rho
                 call system_clock(startTimer)
                 call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
                 call system_clock(endTimer)
@@ -210,7 +211,7 @@ contains
                 call loadParticleDensity(particleList, world, .true.)
                 call writeParticleDensity(particleList, world, CurrentDiagStep, .false., directoryName) 
                 call writePhi(solver%phi_f, CurrentDiagStep, .false., directoryName)
-                call depositRho(solver%rho, particleList, world)
+                call solver%depositRho(particleList, world)
 
                 !charge conservation directly
                 chargeError = solver%getChargeContinuityError(rho_i, world, currDel_t)
@@ -281,7 +282,8 @@ contains
         do j=1, numberChargedParticles
             KE_i = KE_i + particleList(j)%getTotalKE()
         end do
-        call depositRho(rho_i, particleList, world)
+        call solver%depositRho(particleList, world)
+        rho_i = solver%rho
         call system_clock(startTimer)
         call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
         call system_clock(endTimer)
@@ -309,7 +311,7 @@ contains
         call loadParticleDensity(particleList, world, .true.)
         call writeParticleDensity(particleList, world, CurrentDiagStep, .false., directoryName) 
         call writePhi(solver%phi_f, CurrentDiagStep, .false., directoryName)
-        call depositRho(solver%rho, particleList, world)
+        call solver%depositRho(particleList, world)
 
         chargeError = solver%getChargeContinuityError(rho_i, world, currDel_t)
 

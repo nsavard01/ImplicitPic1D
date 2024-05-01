@@ -35,20 +35,6 @@ module mod_nonLinSolvers
 
 contains
 
-    ! ---------------- Initial Poisson Solver -------------------------------------------------
-
-    subroutine solveInitialPotential(solver, particleList, world, timeCurrent)
-        ! Solve for initial potential
-        class(potentialSolver), intent(in out) :: solver
-        type(Particle), intent(in out) :: particleList(numberChargedParticles)
-        type(Domain), intent(in) :: world
-        real(real64), intent(in) :: timeCurrent
-        call depositRho(solver%rho, particleList, world)
-        call solver%solve_tridiag_Poisson(world, timeCurrent)
-        ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
-
-    end subroutine solveInitialPotential
-
     ! Non-linear solver stuff -------------------------------------------------------------
 
     subroutine initializeSolver()

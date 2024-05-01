@@ -81,66 +81,6 @@ contains
         !$OMP end parallel
     end subroutine
 
-    subroutine depositRho(rho, particleList, world) 
-        real(real64), intent(in out) :: rho(NumberXNodes)
-        type(Particle), intent(in out) :: particleList(numberChargedParticles)
-        type(Domain), intent(in) :: world
-        integer(int32) :: i, iThread
-        rho = 0.0d0
-        !$OMP parallel private(iThread, i)
-        do i = 1, numberChargedParticles
-            iThread = omp_get_thread_num() + 1 
-            particleList(i)%densities(:,iThread) = 0.0d0
-            call interpolateParticleToNodes(particleList(i), world, iThread) 
-        end do
-        !$OMP barrier
-        particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = SUM(particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
-        do i = 2, numberChargedParticles
-            particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) &
-                + SUM(particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(i)%q_times_wp
-        end do
-        !$OMP barrier
-        !$OMP single
-        SELECT CASE (world%boundaryConditions(1))
-        CASE(1,4)
-            particleList(1)%densities(1, 1) = 0.0d0
-        CASE(2)
-            particleList(1)%densities(1,1) = 2.0d0 * particleList(1)%densities(1,1)
-        CASE(3)
-            particleList(1)%densities(1,1) = particleList(1)%densities(1,1) + particleList(1)%densities(NumberXNodes, 1)
-        END SELECT
-        SELECT CASE (world%boundaryConditions(NumberXNodes))
-        CASE(1,4)
-            particleList(1)%densities(NumberXNodes, 1) = 0.0d0
-        CASE(2)
-            particleList(1)%densities(NumberXNodes,1) = 2.0d0 * particleList(1)%densities(NumberXNodes,1)
-        CASE(3)
-            particleList(1)%densities(NumberXNodes,1) = particleList(1)%densities(1,1)
-        END SELECT
-        !$OMP end single
-        if (world%gridSmoothBool) then
-            do i = world%threadNodeIndx(1, iThread), world%threadNodeIndx(2, iThread)
-                SELECT CASE(world%boundaryConditions(i))
-                CASE(0)
-                    rho(i) = 0.25d0 * (particleList(1)%densities(i-1, 1) + 2.0d0 * particleList(1)%densities(i, 1) + particleList(1)%densities(i+1, 1))
-                CASE(1,4)
-                    rho(i) = 0.0d0
-                CASE(2)
-                    if (i ==1) then
-                        rho(i) = 0.25d0 * (2.0d0 * particleList(1)%densities(1,1) + 2.0d0 * particleList(1)%densities(2,1))
-                    else    
-                        rho(i) = 0.25d0 * (2.0d0 * particleList(1)%densities(NumberXNodes,1) + 2.0d0 * particleList(1)%densities(NumberXHalfNodes,1))
-                    end if
-                CASE(3)
-                    rho(i) = 0.25d0 * (particleList(1)%densities(NumberXHalfNodes, 1) + 2.0d0 * particleList(1)%densities(1, 1) + particleList(1)%densities(2, 1))
-                END SELECT
-            end do
-        else
-            rho(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = particleList(1)%densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread), 1)
-        end if
-        !$OMP end parallel  
-    end subroutine depositRho
-
 
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
@@ -161,33 +101,33 @@ contains
             !$OMP barrier
             !$OMP single
             if (world%boundaryConditions(1) == 3) then
-                particleList(1)%densities(1,1) = 0.5d0 * (particleList(1)%densities(1,1) + particleList(1)%densities(NumberXNodes,1))
-                particleList(1)%densities(NumberXNodes,1) = particleList(1)%densities(1,1)
+                particleList(i)%densities(1,1) = 0.5d0 * (particleList(i)%densities(1,1) + particleList(i)%densities(NumberXNodes,1))
+                particleList(i)%densities(NumberXNodes,1) = particleList(i)%densities(1,1)
             end if
             !$OMP end single
             if (world%gridSmoothBool) then
                 do j = world%threadNodeIndx(1, iThread), world%threadNodeIndx(2, iThread)
                     SELECT CASE(world%boundaryConditions(j))
                     CASE(0)
-                        densities(j) = 0.25d0 * (particleList(1)%densities(j-1, 1) + 2.0d0 * particleList(1)%densities(j, 1) + particleList(1)%densities(j+1, 1))
+                        densities(j) = 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
                     CASE(1,4)
                         if (j == 1) then
-                            densities(j) = 0.25d0 * (particleList(1)%densities(1,1) + 0.5d0 * particleList(1)%densities(2,1))
+                            densities(j) = 0.25d0 * (particleList(i)%densities(1,1) + 0.5d0 * particleList(i)%densities(2,1))
                         else
-                            densities(j) = 0.25d0 * (particleList(1)%densities(NumberXNodes,1) + 0.5d0 * particleList(1)%densities(NumberXHalfNodes,1))
+                            densities(j) = 0.25d0 * (particleList(i)%densities(NumberXNodes,1) + 0.5d0 * particleList(i)%densities(NumberXHalfNodes,1))
                         end if
                     CASE(2)
                         if (j ==1) then
-                            densities(j) = 0.25d0 * (particleList(1)%densities(1,1) + particleList(1)%densities(2,1))
+                            densities(j) = 0.25d0 * (particleList(i)%densities(1,1) + particleList(i)%densities(2,1))
                         else    
-                            densities(j) = 0.25d0 * (particleList(1)%densities(NumberXNodes,1) + particleList(1)%densities(NumberXHalfNodes,1))
+                            densities(j) = 0.25d0 * (particleList(i)%densities(NumberXNodes,1) + particleList(i)%densities(NumberXHalfNodes,1))
                         end if
                     CASE(3)
-                        densities(j) = 0.25d0 * (0.5d0 * particleList(1)%densities(NumberXHalfNodes, 1) + particleList(1)%densities(1, 1) + 0.5d0 * particleList(1)%densities(2, 1))
+                        densities(j) = 0.25d0 * (0.5d0 * particleList(i)%densities(NumberXHalfNodes, 1) + particleList(i)%densities(1, 1) + 0.5d0 * particleList(i)%densities(2, 1))
                     END SELECT
                 end do
             else
-                densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = particleList(1)%densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread), 1)
+                densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = particleList(i)%densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread), 1)
             end if
             densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread))/world%nodeVol(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread))
             !$OMP end parallel
