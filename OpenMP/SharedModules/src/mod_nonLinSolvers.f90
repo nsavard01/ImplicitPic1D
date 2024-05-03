@@ -86,7 +86,7 @@ contains
         real(real64) :: normResidual(m_Anderson+1), alpha(m_Anderson+1)
         integer(int32) :: i, j, index, m_k
         
-        solver%phi_f = solver%phi
+        call solver%makeConstSourceTerm(world)
         phi_k(:,1) = solver%phi_f
         call depositJ(solver, particleList, world, del_t)
         call solver%solve_tridiag_Ampere(world, del_t)
@@ -230,7 +230,7 @@ contains
 
         ! Set Nitsol parameters
         iterm = 0
-        globalSolver%phi_f = globalSolver%phi
+        call globalSolver%makeConstSourceTerm(globalWorld)
         xcurSolver = globalSolver%phi_f
         rpar(1) = del_t
         !dnrm2(NumberXNodes, fcurSolver, 1)

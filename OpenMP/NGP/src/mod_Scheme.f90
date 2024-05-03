@@ -71,8 +71,8 @@ contains
         logical, intent(in) :: reset
         integer(int32) :: i, iThread
         !$OMP parallel private(iThread, i)
+        iThread = omp_get_thread_num() + 1 
         do i = 1, numberChargedParticles  
-            iThread = omp_get_thread_num() + 1 
             if (reset) then
                 particleList(i)%densities(:,iThread) = 0.0d0
             end if
@@ -91,13 +91,15 @@ contains
         character(*), intent(in) :: dirName
         logical, intent(in) :: boolAverage
         real(real64) :: densities(NumberXNodes)
-        integer(int32) :: i, iThread, j
+        integer(int32) :: i, iThread, j, leftThreadIndx, rightThreadIndx
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
-            !$OMP parallel private(iThread, j)
+            !$OMP parallel private(iThread, j, leftThreadIndx, rightThreadIndx)
             iThread = omp_get_thread_num() + 1
-            particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = SUM(particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(i)%w_p
+            leftThreadIndx = world%threadNodeIndx(1,iThread)
+            rightThreadIndx = world%threadNodeIndx(2,iThread)
+            particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
             !$OMP barrier
             !$OMP single
             if (world%boundaryConditions(1) == 3) then
@@ -106,7 +108,7 @@ contains
             end if
             !$OMP end single
             if (world%gridSmoothBool) then
-                do j = world%threadNodeIndx(1, iThread), world%threadNodeIndx(2, iThread)
+                do j = leftThreadIndx, rightThreadIndx
                     SELECT CASE(world%boundaryConditions(j))
                     CASE(0)
                         densities(j) = 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
@@ -127,9 +129,9 @@ contains
                     END SELECT
                 end do
             else
-                densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = particleList(i)%densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread), 1)
+                densities(leftThreadIndx:rightThreadIndx) = particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1)
             end if
-            densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread))/world%nodeVol(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread))
+            densities(leftThreadIndx:rightThreadIndx) = densities(leftThreadIndx:rightThreadIndx)/world%nodeVol(leftThreadIndx:rightThreadIndx)
             !$OMP end parallel
             write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then

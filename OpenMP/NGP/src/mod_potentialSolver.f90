@@ -31,6 +31,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: depositRho
+        procedure, public, pass(self) :: makeConstSourceTerm
         procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: getError_tridiag_Poisson
@@ -131,18 +132,20 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
-        integer(int32) :: i, iThread
-        !$OMP parallel private(iThread, i)
+        integer(int32) :: i, iThread, rightThreadIndx, leftThreadIndx
+        !$OMP parallel private(iThread, i, rightThreadIndx, leftThreadIndx)
+        iThread = omp_get_thread_num() + 1 
+        leftThreadIndx = world%threadNodeIndx(1,iThread)
+        rightThreadIndx = world%threadNodeIndx(2,iThread)
         do i = 1, numberChargedParticles
-            iThread = omp_get_thread_num() + 1 
             particleList(i)%densities(:,iThread) = 0.0d0
             call interpolateParticleToNodes(particleList(i), world, iThread) 
         end do
         !$OMP barrier
-        particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = SUM(particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
+        particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(1)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
         do i = 2, numberChargedParticles
-            particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) = particleList(1)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), 1) &
-                + SUM(particleList(i)%densities(world%threadNodeIndx(1,iThread):world%threadNodeIndx(2,iThread), :), DIM=2) * particleList(i)%q_times_wp
+            particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) &
+                + SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
         end do
         !$OMP barrier
         !$OMP single
@@ -164,7 +167,7 @@ contains
         END SELECT
         !$OMP end single
         if (world%gridSmoothBool) then
-            do i = world%threadNodeIndx(1, iThread), world%threadNodeIndx(2, iThread)
+            do i = leftThreadIndx, rightThreadIndx
                 SELECT CASE(world%boundaryConditions(i))
                 CASE(0)
                     self%rho(i) = 0.25d0 * (particleList(1)%densities(i-1, 1) + 2.0d0 * particleList(1)%densities(i, 1) + particleList(1)%densities(i+1, 1))
@@ -181,7 +184,7 @@ contains
                 END SELECT
             end do
         else
-            self%rho(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread)) = particleList(1)%densities(world%threadNodeIndx(1, iThread):world%threadNodeIndx(2, iThread), 1)
+            self%rho(leftThreadIndx:rightThreadIndx) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1)
         end if
         !$OMP end parallel  
     end subroutine depositRho
@@ -264,6 +267,27 @@ contains
 
     end function getError_tridiag_Poisson
 
+    subroutine makeConstSourceTerm(self, world)
+        ! Store constant source term for ampere into rho array
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        integer(int32) :: i
+        do i =1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0)
+                self%rho(i) = - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+            CASE(1,3,4)
+                self%rho(i) = self%phi_f(i)
+            CASE(2)
+                if (i == 1) then
+                    self%rho(i) = -2.0d0 * (self%phi(i) - self%phi(i+1))/world%dx_dl(i)
+                else if (i == NumberXNodes) then
+                    self%rho(i) = -2.0d0 * (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1)
+                end if
+            END SELECT
+        end do
+    end subroutine makeConstSourceTerm
+
     subroutine solve_tridiag_Ampere(self, world, del_t)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
         class(potentialSolver), intent(in out) :: self
@@ -274,16 +298,17 @@ contains
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
-                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0
             CASE(1,3,4)
-                d(i) = self%phi_f(i)
+                d(i) = 0.0d0
             CASE(2)
                 if (i == 1) then
-                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0)
                 else if (i == NumberXNodes) then
-                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0)
                 end if
             END SELECT
+            d(i) = d(i) + self%rho(i)
         end do
     ! initialize c-prime and d-prime
         cp(1) = self%c_tri(1)/self%b_tri(1)

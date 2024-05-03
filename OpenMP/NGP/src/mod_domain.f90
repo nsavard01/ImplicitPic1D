@@ -29,7 +29,6 @@ module mod_domain
         procedure, public, pass(self) :: constructExpHalfGrid
         procedure, public, pass(self) :: constructHalfEvenHalfSinusoid
         procedure, public, pass(self) :: makeArraysFromGrid
-        procedure, public, pass(self) :: addThreadedDomainArray
         procedure, public, pass(self) :: smoothField
         procedure, public, pass(self) :: getLFromX
         procedure, public, pass(self) :: getXFromL
@@ -301,7 +300,7 @@ contains
         real(real64), intent(in) :: rawField(NumberXHalfNodes)
         real(real64), intent(in out) :: newField(NumberXHalfNodes)
         integer(int32), intent(in) :: iThread
-        integer(int32) :: i, boundVal, firstIndex
+        integer(int32) :: i, boundVal
         ! threaded smoothing of fields
         do i = self%threadHalfNodeIndx(1, iThread), self%threadHalfNodeIndx(2, iThread)
             boundVal = self%boundaryConditions(i+1) - self%boundaryConditions(i)
@@ -324,21 +323,6 @@ contains
         end do
 
     end subroutine smoothField
-
-    subroutine addThreadedDomainArray(self, array_add, x, N_x, iThread, const)
-        ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp
-        class(Domain), intent(in) :: self
-        real(real64), intent(in out) :: array_add(N_x)
-        real(real64), intent(in) :: x(NumberXNodes, numThread), const
-        integer(int32), intent(in) :: iThread, N_x
-        if (N_x == NumberXNodes .and. iThread <= self%numThreadNodeIndx) then
-            array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) = array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) &
-            + SUM(x(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread), :), DIM=2) * const
-        else if (N_x == NumberXHalfNodes .and. iThread <= self%numThreadHalfNodeIndx) then
-            array_add(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread)) = array_add(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread)) &
-            + SUM(x(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread), :), DIM=2) * const
-        end if
-    end subroutine addThreadedDomainArray
 
 
     subroutine writeDomain(self, dirName)

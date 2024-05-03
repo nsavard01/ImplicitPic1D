@@ -112,26 +112,27 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
-        logical :: AtBoundaryBool, FutureAtBoundaryBool, timeNotConvergedBool
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, leftThreadIndx, rightThreadIndx
+        logical :: FutureAtBoundaryBool
         f_tol = del_t * 1.d-10
-        solver%J = 0.0d0
-        !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, AtBoundaryBool, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
-                numIter, timeNotConvergedBool)
+        !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
+                numIter, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1 
+        leftThreadIndx = world%threadHalfNodeIndx(1, iThread)
+        rightThreadIndx = world%threadHalfNodeIndx(2, iThread)
         ! Place temporary field into particle workspace
-        particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1) = 0.5d0 * (solver%phi_f(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) &
-        + solver%phi(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) - solver%phi_f(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1) - &
-        solver%phi(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1))
+        particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1) = 0.5d0 * (solver%phi_f(leftThreadIndx:rightThreadIndx) &
+        + solver%phi(leftThreadIndx:rightThreadIndx) - solver%phi_f(leftThreadIndx+1:rightThreadIndx+1) - &
+        solver%phi(leftThreadIndx+1:rightThreadIndx+1))
         !$OMP barrier
         ! Now apply smoothing if on
         if (world%gridSmoothBool) then
             call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%EField, iThread)
-            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))&
-                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+            solver%EField(leftThreadIndx:rightThreadIndx) = solver%EField(leftThreadIndx:rightThreadIndx)&
+                /world%dx_dl(leftThreadIndx:rightThreadIndx)
         else
-            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1)&
-                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+            solver%EField(leftThreadIndx:rightThreadIndx) = particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1)&
+                /world%dx_dl(leftThreadIndx:rightThreadIndx)
         end if
         !$OMP barrier
         loopSpecies: do j = 1, numberChargedParticles
@@ -141,15 +142,13 @@ contains
                 v_sub = particleList(j)%phaseSpace(2,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
-                AtBoundaryBool = MOD(l_sub, 1.0d0) == 0.0d0
-                timeNotConvergedBool = .true.
-                do while(timeNotConvergedBool)
-                    if (.not. AtBoundaryBool) then
-                        l_cell = INT(l_sub)
-                    else
-                        l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
-                    end if
-                   
+                if (MOD(l_sub, 1.0d0) /= 0.0d0) then
+                    l_cell = INT(l_sub)
+                else
+                    l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
+                end if
+                do while(del_t - timePassed > f_tol)
+                    
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
@@ -163,7 +162,7 @@ contains
                         l_boundary = l_boundary + l_cell
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
-                            continue
+                            l_cell = l_cell + INT(SIGN(1.0d0, v_f))
                         CASE(1,4)
                             exit
                         CASE(2)
@@ -178,6 +177,7 @@ contains
                             end if
                         CASE(3)
                             l_f = real(ABS(l_boundary - NumberXNodes- 1))
+                            l_cell = ABS(l_cell - NumberXNodes)
                         ! CASE default
                         !     print *, "l_sub is:", l_sub
                         !     print *, 'l_f is:', l_f
@@ -191,11 +191,9 @@ contains
                     !     stop "Have particles travelling outside the domain in depositJ!"
                     ! end if
                     timePassed = timePassed + del_tau
-                    timeNotConvergedBool = (del_t - timePassed > f_tol)
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
-                    AtBoundaryBool = FutureAtBoundaryBool
                     
                 end do
             end do loopParticles
@@ -210,9 +208,9 @@ contains
         !$OMP barrier
         if (world%gridSmoothBool) then
             call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%J, iThread)
-            solver%J(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = solver%J(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))/del_t
+            solver%J(leftThreadIndx:rightThreadIndx) = solver%J(leftThreadIndx:rightThreadIndx)/del_t
         else
-            solver%J(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread),1)/del_t
+            solver%J(leftThreadIndx:rightThreadIndx) = particleList(1)%workSpace(leftThreadIndx:rightThreadIndx,1)/del_t
         end if
         !$OMP end parallel
     end subroutine depositJ
@@ -228,27 +226,29 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
-        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p
-        logical :: AtBoundaryBool, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool
+        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p, leftThreadIndx, rightThreadIndx
+        logical :: refluxedBool, FutureAtBoundaryBool
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0
-        !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, AtBoundaryBool, delIdx, dx_dl, E_x, l_boundary, numIter, &
-                refIdx, refluxedBool, FutureAtBoundaryBool, timeNotConvergedBool, N_p) reduction(+:numSubStepAve, funcEvalCounter)
+        !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, delIdx, dx_dl, E_x, l_boundary, numIter, &
+                refIdx, refluxedBool, FutureAtBoundaryBool, N_p, leftThreadIndx, rightThreadIndx) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
+        leftThreadIndx = world%threadHalfNodeIndx(1, iThread)
+        rightThreadIndx = world%threadHalfNodeIndx(2, iThread)
         ! Place temporary field into particle workspace
-        particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1) = 0.5d0 * (solver%phi_f(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) &
-        + solver%phi(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) - solver%phi_f(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1) - &
-        solver%phi(world%threadHalfNodeIndx(1, iThread)+1:world%threadHalfNodeIndx(2, iThread)+1))
+        particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1) = 0.5d0 * (solver%phi_f(leftThreadIndx:rightThreadIndx) &
+        + solver%phi(leftThreadIndx:rightThreadIndx) - solver%phi_f(leftThreadIndx+1:rightThreadIndx+1) - &
+        solver%phi(leftThreadIndx+1:rightThreadIndx+1))
         !$OMP barrier
         ! Now apply smoothing if on
         if (world%gridSmoothBool) then
             call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%EField, iThread)
-            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))&
-                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+            solver%EField(leftThreadIndx:rightThreadIndx) = solver%EField(leftThreadIndx:rightThreadIndx)&
+                /world%dx_dl(leftThreadIndx:rightThreadIndx)
         else
-            solver%EField(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread)) = particleList(1)%workSpace(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread), 1)&
-                /world%dx_dl(world%threadHalfNodeIndx(1, iThread):world%threadHalfNodeIndx(2, iThread))
+            solver%EField(leftThreadIndx:rightThreadIndx) = particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1)&
+                /world%dx_dl(leftThreadIndx:rightThreadIndx)
         end if
         !$OMP barrier
         loopSpecies: do j = 1, numberChargedParticles
@@ -262,16 +262,14 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 refluxedBool = .false.
-                AtBoundaryBool = MOD(l_sub, 1.0d0) == 0.0d0
-                timeNotConvergedBool = .true.
-                do while(timeNotConvergedBool)
+                if (MOD(l_sub, 1.0d0) /= 0.0d0) then
+                    l_cell = INT(l_sub)
+                else
+                    l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
+                end if
+                do while(del_t - timePassed > f_tol)
                     numSubStepAve(j) = numSubStepAve(j) + 1
-                    if (.not. AtBoundaryBool) then
-                        l_cell = INT(l_sub)
-                    else
-                        l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
-                    end if
-                
+                    
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
                     del_tau = del_t - timePassed
@@ -284,7 +282,7 @@ contains
                         l_boundary = l_boundary + l_cell
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
-                            continue
+                            l_cell = l_cell + INT(SIGN(1.0d0, v_f))
                         CASE(1,4)
                             delIdx = delIdx + 1
                             if (l_boundary == 1) then
@@ -316,6 +314,7 @@ contains
                             end if
                         CASE(3)
                             l_f = real(ABS(l_boundary - NumberXNodes- 1))
+                            l_cell = ABS(l_cell - NumberXNodes)
                         ! CASE default
                         !     print *, "l_sub is:", l_sub
                         !     print *, 'l_f is:', l_f
@@ -326,15 +325,13 @@ contains
                     end if
                     
                     timePassed = timePassed + del_tau
-                    timeNotConvergedBool = (del_t - timePassed > f_tol)
                     
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
-                    AtBoundaryBool = FutureAtBoundaryBool
                     
                 end do
-                if (.not. timeNotConvergedBool) then
+                if (del_t - timePassed <= f_tol) then
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
                     particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)
