@@ -96,12 +96,11 @@ contains
                 else
                     l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
                 end if
-                del_tau = del_t
-                do while(del_tau > f_tol)
+                do while(del_t - timePassed > f_tol)
                     
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
-                    del_tau = MIN(del_tau, particleTimeStep(l_cell,j))
+                    del_tau = MIN(del_t - timePassed, particleTimeStep(l_cell,j))
                     call particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, solver%EField(l_cell), solver%EField(l_cell+1), dx_dl, &
                         particleList(j)%q_over_m, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
                     
@@ -151,7 +150,6 @@ contains
                     !     stop "Have particles travelling outside local cell!"
                     ! end if
                     timePassed = timePassed + del_tau
-                    del_tau = del_t - timePassed
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
@@ -228,13 +226,12 @@ contains
                     l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
                 end if
                 refluxedBool = .false.
-                del_tau = del_t
-                do while(del_tau > f_tol)
+                do while(del_t - timePassed > f_tol)
                     numSubStepAve(j) = numSubStepAve(j) + 1
                     
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
-                    del_tau = MIN(del_tau, particleTimeStep(l_cell, j))
+                    del_tau = MIN(del_t - timePassed, particleTimeStep(l_cell, j))
                     call particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, solver%EField(l_cell), solver%EField(l_cell+1), dx_dl, &
                         particleList(j)%q_over_m, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
                     funcEvalCounter(j) = funcEvalCounter(j) + numIter
@@ -291,12 +288,11 @@ contains
                     !     stop "Have particles travelling outside local cell!"
                     ! end if
                     timePassed = timePassed + del_tau
-                    del_tau = del_t - timePassed
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
                 end do
-                if (del_tau <= f_tol) then
+                if (del_t - timePassed <= f_tol) then
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
                     particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)

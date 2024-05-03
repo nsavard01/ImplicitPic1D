@@ -135,13 +135,13 @@ contains
         integer(int32) :: i, iThread, leftThreadIndx, rightThreadIndx
         !$OMP parallel private(iThread, i, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1 
-        leftThreadIndx = world%threadNodeIndx(1,iThread)
-        rightThreadIndx = world%threadNodeIndx(2,iThread)
         do i = 1, numberChargedParticles
             particleList(i)%densities(:,iThread) = 0.0d0
             call interpolateParticleToNodes(particleList(i), world, iThread)
         end do
         !$OMP barrier
+        leftThreadIndx = world%threadNodeIndx(1,iThread)
+        rightThreadIndx = world%threadNodeIndx(2,iThread)
         particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(1)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
         do i = 2, numberChargedParticles
             particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) &

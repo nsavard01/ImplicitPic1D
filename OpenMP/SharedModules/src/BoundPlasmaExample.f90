@@ -70,6 +70,7 @@ program BoundPlasmaExample
     call system_clock(startTime)
     call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, startSimulationTime)
     call system_clock(endTime)
+    
     ! do i = 1, NumberXHalfNodes
     !     J_total(i) = eps_0 * (((globalSolver%phi_f(i) - globalSolver%phi_f(i+1)) -(globalSolver%phi(i) - globalSolver%phi(i+1))) /globalWorld%dx_dl(i)) / currDel_t + globalSolver%J(i)
     ! end do
