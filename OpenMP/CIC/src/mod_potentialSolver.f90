@@ -281,7 +281,7 @@ contains
         real(real64), intent(in) :: del_t
         integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
         real(real64) :: d(NumberXNodes),dp(NumberXNodes), cp(NumberXNodes-1), m
-
+    
         d = (self%J(2:NumberXHalfNodes) - self%J(1:NumberXNodes)) * del_t/eps_0 + self%rho
         
     ! initialize c-prime and d-prime
@@ -506,6 +506,7 @@ contains
         solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
         print *, 'Left Voltage val:', solver%boundPhi(1)
         print *, 'Right Voltage val:', solver%boundPhi(2)
+        print *, 'RF_bool:', solver%RF_bool
         print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
         print *, 'RF_half_amplitude:', solver%RF_half_amplitude
         print *, 'RF_rad_frequency:', solver%RF_rad_frequency

@@ -98,7 +98,6 @@ program BoundPlasmaExample
     print *, 'Time step:', currDel_t
     print *, 'Energy error is:', ABS((PE_i + KE_i - PE_f - KE_f)/(PE_i + KE_i))
     print *, 'Total KE loss:', KE_f - KE_i
-    print *, 'SUM(J*E):', SUM(globalSolver%EField * globalSolver%J * globalWorld%dx_dl) * currDel_t
     print *, 'took', iterNumPicard, 'iterations'
     print *, 'took amount of integer time:', endTime - startTime
     print *, 'Momentum percent diff:', 100 * ABS((Momentum_i(1) - Momentum_f(1))/Momentum_i(1))

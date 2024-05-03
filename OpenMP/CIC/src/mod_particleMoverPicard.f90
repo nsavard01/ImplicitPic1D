@@ -94,7 +94,6 @@ contains
         logical :: FutureAtBoundaryBool
 
         f_tol = del_t * 1.d-10
-        solver%J = 0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
                 dx_dl, l_boundary, numIter, J_part, d_half, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1 
