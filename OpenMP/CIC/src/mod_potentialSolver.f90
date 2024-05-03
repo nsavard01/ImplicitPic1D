@@ -34,6 +34,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: makeConstSourceTerm
+        procedure, public, pass(self) :: makeHalfTimeEField
         procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
@@ -146,9 +147,9 @@ contains
             particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) &
                 + SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
         end do
-        !$OMP barrier
+        !$OMP end parallel
         if (world%gridSmoothBool) then
-            do i = leftThreadIndx, rightThreadIndx
+            do i = 1, NumberXNodes
                 SELECT CASE(world%boundaryConditions(i+1) - world%boundaryConditions(i))
                 CASE(0)
                     self%rho(i) = 0.25d0 * (particleList(1)%densities(i-1, 1) + 2.0d0 * particleList(1)%densities(i, 1) + particleList(1)%densities(i+1, 1))
@@ -173,9 +174,9 @@ contains
                 END SELECT
             end do
         else
-            self%rho(leftThreadIndx:rightThreadIndx) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1)
+            self%rho = particleList(1)%densities(:, 1)
         end if
-        !$OMP end parallel
+        
         
     end subroutine depositRho
 
@@ -310,7 +311,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res(NumberXNodes), extraTerm
+        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res(NumberXNodes)
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         d = (self%J(2:NumberXHalfNodes) - self%J(1:NumberXNodes)) * del_t/eps_0 + self%rho
         res = Ax- d
@@ -334,6 +335,41 @@ contains
         end do
         chargeError = SQRT(chargeError/k)
     end function getChargeContinuityError
+
+    subroutine makeHalfTimeEField(self, workArray, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in out) :: workArray(NumberXHalfNodes)
+        SELECT CASE (world%boundaryConditions(1))
+        CASE(1)
+            workArray(1) = (2.0d0 * self%boundPhi(1) - self%phi(1) - self%phi_f(1))  
+        CASE(2)
+            workArray(1) = 0.0d0
+        CASE(3)
+            workArray(1) = 0.5d0 * (self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - self%phi(1) - self%phi_f(1))
+        CASE(4)
+            workArray(1) = (self%boundPhi(1) + self%RF_voltage - self%phi(1) - self%phi_f(1))
+        END SELECT
+        SELECT CASE (world%boundaryConditions(NumberXHalfNodes))
+        CASE(1)
+            workArray(NumberXHalfNodes) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - 2.0d0 * self%boundPhi(2) 
+        CASE(2)
+            workArray(NumberXHalfNodes) = 0.0d0
+        CASE(3)
+            workArray(NumberXHalfNodes) = workArray(1)
+        CASE(4)
+            workArray(NumberXHalfNodes) = self%phi(NumberXNodes) + self%phi_f(NumberXNodes) - self%boundPhi(2) - self%RF_voltage
+        END SELECT
+        ! Place temporary field into particle workspace
+        workArray(2:NumberXNodes) = 0.5d0 * (self%phi_f(1:NumberXNodes-1) + self%phi(1:NumberXNodes-1) - &
+            self%phi_f(2:NumberXNodes) - self%phi(2:NumberXNodes))
+        ! Now apply smoothing if on
+        if (world%gridSmoothBool) then
+            call world%smoothField(workArray, self%EField)
+        else
+            self%EField = workArray
+        end if
+    end subroutine makeHalfTimeEField
 
 
     function getTotalPE(self, world, future) result(res)

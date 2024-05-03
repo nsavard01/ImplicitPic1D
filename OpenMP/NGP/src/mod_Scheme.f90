@@ -100,15 +100,13 @@ contains
             leftThreadIndx = world%threadNodeIndx(1,iThread)
             rightThreadIndx = world%threadNodeIndx(2,iThread)
             particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
-            !$OMP barrier
-            !$OMP single
+            !$OMP end parallel
             if (world%boundaryConditions(1) == 3) then
                 particleList(i)%densities(1,1) = 0.5d0 * (particleList(i)%densities(1,1) + particleList(i)%densities(NumberXNodes,1))
                 particleList(i)%densities(NumberXNodes,1) = particleList(i)%densities(1,1)
             end if
-            !$OMP end single
             if (world%gridSmoothBool) then
-                do j = leftThreadIndx, rightThreadIndx
+                do j = 1, NumberXNodes
                     SELECT CASE(world%boundaryConditions(j))
                     CASE(0)
                         densities(j) = 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
@@ -129,10 +127,10 @@ contains
                     END SELECT
                 end do
             else
-                densities(leftThreadIndx:rightThreadIndx) = particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1)
+                densities = particleList(i)%densities(:, 1)
             end if
-            densities(leftThreadIndx:rightThreadIndx) = densities(leftThreadIndx:rightThreadIndx)/world%nodeVol(leftThreadIndx:rightThreadIndx)
-            !$OMP end parallel
+            densities = densities/world%nodeVol
+            
             write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
