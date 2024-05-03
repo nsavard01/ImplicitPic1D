@@ -33,6 +33,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: depositRho
+        procedure, public, pass(self) :: makeConstSourceTerm
         procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
@@ -72,6 +73,7 @@ contains
 
         if (world%boundaryConditions(1)== 1) then
             self%boundPhi(1) = leftVoltage
+            self%sourceTermVals(1) = -self%boundPhi(1) * 2.0d0 / world%dx_dl(1)
         else if (world%boundaryConditions(1) == 4) then
             self%RF_half_amplitude = leftVoltage
             self%RF_indx = 1
@@ -79,6 +81,7 @@ contains
 
         if (world%boundaryConditions(NumberXHalfNodes) == 1) then
             self%boundPhi(2) = rightVoltage
+            self%sourceTermVals(2) = -self%boundPhi(2) * 2.0d0 / world%dx_dl(NumberXNodes)
         else if (world%boundaryConditions(NumberXHalfNodes) == 4) then
             self%RF_half_amplitude = rightVoltage
             self%RF_indx = 2
@@ -245,35 +248,42 @@ contains
 
     end function getError_tridiag_Poisson
 
+    subroutine makeConstSourceTerm(self, world)
+        ! Store constant source term for ampere into rho array
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        integer(int32) :: i
+
+        do i =1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
+            CASE(0)
+                self%rho(i) = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
+            CASE(-1,-4)     
+                self%rho(i) = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + 2.0d0 * (self%boundPhi(1) - self%phi(1))/world%dx_dl(1) + self%sourceTermVals(1)
+            CASE(1,4)
+                self%rho(i) = -2.0d0 * (self%phi(NumberXNodes) - self%boundPhi(2))/world%dx_dl(NumberXNodes) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1)) + self%sourceTermVals(2)
+            CASE(-2)
+                self%rho(i) = - (self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i))
+            CASE(2)
+                self%rho(i) = (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
+            CASE(-3)
+                self%rho(i) = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + 2.0d0 * (self%phi(NumberXNodes) - self%phi(1))/(world%dx_dl(1) + world%dx_dl(NumberXNodes))
+            CASE(3)
+                self%rho(i) = -2.0d0 * (self%phi(NumberXNodes) - self%phi(1))/(world%dx_dl(1) + world%dx_dl(NumberXNodes)) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
+            END SELECT
+        end do
+    end subroutine makeConstSourceTerm
+
     subroutine solve_tridiag_Ampere(self, world, del_t)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         integer(int32) :: i !n size dependent on how many points are boundary conditions and thus moved to rhs equation
-        real(real64) :: d(NumberXNodes), extraTerm, dp(NumberXNodes), cp(NumberXNodes-1), m
+        real(real64) :: d(NumberXNodes),dp(NumberXNodes), cp(NumberXNodes-1), m
 
-        do i =1, NumberXNodes
-            d(i) = (self%J(i+1) - self%J(i)) * del_t / eps_0
-            SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
-            CASE(0)
-                extraTerm = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
-            CASE(-1,-4)     
-                extraTerm = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + 2.0d0 * (self%boundPhi(1) - self%phi(1))/world%dx_dl(1) + self%sourceTermVals(1)
-            CASE(1,4)
-                extraTerm = -2.0d0 * (self%phi(NumberXNodes) - self%boundPhi(2))/world%dx_dl(NumberXNodes) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1)) + self%sourceTermVals(2)
-            CASE(-2)
-                extraTerm = - (self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i))
-            CASE(2)
-                extraTerm = (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
-            CASE(-3)
-                extraTerm = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + 2.0d0 * (self%phi(NumberXNodes) - self%phi(1))/(world%dx_dl(1) + world%dx_dl(NumberXNodes))
-            CASE(3)
-                extraTerm = -2.0d0 * (self%phi(NumberXNodes) - self%phi(1))/(world%dx_dl(1) + world%dx_dl(NumberXNodes)) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
-            END SELECT
-            d(i) = d(i) + extraTerm
-        end do
-
+        d = (self%J(2:NumberXHalfNodes) - self%J(1:NumberXNodes)) * del_t/eps_0 + self%rho
+        
     ! initialize c-prime and d-prime
         cp(1) = self%c_tri(1)/self%b_tri(1)
         dp(1) = d(1)/self%b_tri(1)
@@ -295,6 +305,7 @@ contains
         !self%EField = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
 
+
     function getError_tridiag_Ampere(self, world, del_t) result(res)
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
@@ -302,27 +313,7 @@ contains
         integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res(NumberXNodes), extraTerm
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
-        do i =1, NumberXNodes
-            d(i) = (self%J(i+1) - self%J(i)) * del_t / eps_0
-            SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
-            CASE(0)
-                extraTerm = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
-            CASE(-1,-4)     
-                extraTerm = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + 2.0d0 * (self%boundPhi(1) - self%phi(1))/world%dx_dl(1) + self%sourceTermVals(1)
-            CASE(1,4)
-                extraTerm = -2.0d0 * (self%phi(NumberXNodes) - self%boundPhi(2))/world%dx_dl(NumberXNodes) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1)) + self%sourceTermVals(2)
-            CASE(-2)
-                extraTerm = - (self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i))
-            CASE(2)
-                extraTerm = (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
-            CASE(-3)
-                extraTerm = -(self%phi(i) - self%phi(i+1))/(world%grid(i+1) - world%grid(i)) + 2.0d0 * (self%phi(NumberXNodes) - self%phi(1))/(world%dx_dl(1) + world%dx_dl(NumberXNodes))
-            CASE(3)
-                extraTerm = -2.0d0 * (self%phi(NumberXNodes) - self%phi(1))/(world%dx_dl(1) + world%dx_dl(NumberXNodes)) + (self%phi(i-1) - self%phi(i))/(world%grid(i) - world%grid(i-1))
-            END SELECT
-            d(i) = d(i) + extraTerm
-        end do
-
+        d = (self%J(2:NumberXHalfNodes) - self%J(1:NumberXNodes)) * del_t/eps_0 + self%rho
         res = Ax- d
 
     end function getError_tridiag_Ampere
