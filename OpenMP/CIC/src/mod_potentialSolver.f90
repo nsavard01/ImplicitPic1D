@@ -34,6 +34,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: makeConstSourceTerm
+        procedure, public, pass(self) :: evaluateEFieldCurrTime
         procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
@@ -304,6 +305,27 @@ contains
         end do
         !self%EField = 0.5d0 * (self%phi(1:NumberXNodes-1) + self%phi_f(1:NumberXNodes-1) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
+
+    subroutine evaluateEFieldCurrTime(self, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        ! used as source term in divergence ampere solver
+        self%EField(2:NumberXNodes) = (self%phi(1:NumberXNodes-1) - self%phi(2:NumberXNodes)) &
+            /world%centerDiff
+
+        if (world%boundaryConditions(1) == 1 .or. world%boundaryConditions(1) == 4) then
+            self%EField(1) = 2.0d0 * (self%boundPhi(1) - self%phi(1))/world%dx_dl(1)
+        end if
+        if (world%boundaryConditions(NumberXHalfNodes) == 1 .or. world%boundaryConditions(NumberXHalfNodes) == 4) then
+            self%EField(NumberXHalfNodes) = 2.0d0 * (self%phi(NumberXNodes) - self%boundPhi(2))/world%dx_dl(NumberXNodes)
+        end if
+        
+
+        if (world%boundaryConditions(1) == 3) then
+            self%EField(1) = (self%phi(NumberXNodes) - self%phi(1)) / (0.5d0 * (world%dx_dl(1) + world%dx_dl(NumberXNodes)))
+            self%EField(NumberXHalfNodes) = self%EField(1)
+        end if
+    end subroutine evaluateEFieldCurrTime
 
 
     function getError_tridiag_Ampere(self, world, del_t) result(res)
