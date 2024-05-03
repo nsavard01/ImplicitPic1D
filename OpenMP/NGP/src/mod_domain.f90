@@ -295,14 +295,13 @@ contains
         
     end function getLFromX
 
-    subroutine smoothField(self, rawField, newField, iThread)
+    subroutine smoothField(self, rawField, newField)
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: rawField(NumberXHalfNodes)
         real(real64), intent(in out) :: newField(NumberXHalfNodes)
-        integer(int32), intent(in) :: iThread
         integer(int32) :: i, boundVal
         ! threaded smoothing of fields
-        do i = self%threadHalfNodeIndx(1, iThread), self%threadHalfNodeIndx(2, iThread)
+        do i = 1, NumberXHalfNodes
             boundVal = self%boundaryConditions(i+1) - self%boundaryConditions(i)
             SELECT CASE(boundVal)
             CASE(0)

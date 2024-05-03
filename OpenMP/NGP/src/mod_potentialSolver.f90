@@ -32,6 +32,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: getError_tridiag_Ampere
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: makeConstSourceTerm
+        procedure, public, pass(self) :: makeHalfTimeEField
         procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: getError_tridiag_Poisson
@@ -142,13 +143,13 @@ contains
             call interpolateParticleToNodes(particleList(i), world, iThread) 
         end do
         !$OMP barrier
+        ! Concatenate density array among threads
         particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(1)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
         do i = 2, numberChargedParticles
             particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) &
                 + SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
         end do
-        !$OMP barrier
-        !$OMP single
+        !$OMP end parallel
         SELECT CASE (world%boundaryConditions(1))
         CASE(1,4)
             particleList(1)%densities(1, 1) = 0.0d0
@@ -165,9 +166,8 @@ contains
         CASE(3)
             particleList(1)%densities(NumberXNodes,1) = particleList(1)%densities(1,1)
         END SELECT
-        !$OMP end single
         if (world%gridSmoothBool) then
-            do i = leftThreadIndx, rightThreadIndx
+            do i = 1, NumberXNodes
                 SELECT CASE(world%boundaryConditions(i))
                 CASE(0)
                     self%rho(i) = 0.25d0 * (particleList(1)%densities(i-1, 1) + 2.0d0 * particleList(1)%densities(i, 1) + particleList(1)%densities(i+1, 1))
@@ -184,9 +184,8 @@ contains
                 END SELECT
             end do
         else
-            self%rho(leftThreadIndx:rightThreadIndx) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1)
+            self%rho = particleList(1)%densities(:, 1)
         end if
-        !$OMP end parallel  
     end subroutine depositRho
 
     subroutine solve_tridiag_Poisson(self, world, timeCurrent)
@@ -391,6 +390,22 @@ contains
         end do
         chargeError = SQRT(chargeError/k)
     end function getChargeContinuityError
+
+    subroutine makeHalfTimeEField(self, workArray, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in out) :: workArray(NumberXHalfNodes)
+        ! Place temporary field into particle workspace
+        workArray = 0.5d0 * (self%phi_f(1:NumberXHalfNodes) + self%phi(1:NumberXHalfNodes) - &
+            self%phi_f(2:NumberXNodes) - self%phi(2:NumberXNodes))
+        ! Now apply smoothing if on
+        if (world%gridSmoothBool) then
+            call world%smoothField(workArray, self%EField)
+            self%EField = self%EField/world%dx_dl
+        else
+            self%EField = workArray/world%dx_dl
+        end if
+    end subroutine makeHalfTimeEField
 
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi

@@ -115,26 +115,12 @@ contains
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, leftThreadIndx, rightThreadIndx
         logical :: FutureAtBoundaryBool
         f_tol = del_t * 1.d-10
+        call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
                 numIter, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1 
         leftThreadIndx = world%threadHalfNodeIndx(1, iThread)
         rightThreadIndx = world%threadHalfNodeIndx(2, iThread)
-        ! Place temporary field into particle workspace
-        particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1) = 0.5d0 * (solver%phi_f(leftThreadIndx:rightThreadIndx) &
-        + solver%phi(leftThreadIndx:rightThreadIndx) - solver%phi_f(leftThreadIndx+1:rightThreadIndx+1) - &
-        solver%phi(leftThreadIndx+1:rightThreadIndx+1))
-        !$OMP barrier
-        ! Now apply smoothing if on
-        if (world%gridSmoothBool) then
-            call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%EField, iThread)
-            solver%EField(leftThreadIndx:rightThreadIndx) = solver%EField(leftThreadIndx:rightThreadIndx)&
-                /world%dx_dl(leftThreadIndx:rightThreadIndx)
-        else
-            solver%EField(leftThreadIndx:rightThreadIndx) = particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1)&
-                /world%dx_dl(leftThreadIndx:rightThreadIndx)
-        end if
-        !$OMP barrier
         loopSpecies: do j = 1, numberChargedParticles
         
             particleList(j)%workSpace(1:NumberXHalfNodes,iThread) = 0.0d0
@@ -205,14 +191,14 @@ contains
             particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) = particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) &
                 + SUM(particleList(j)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), :), DIM=2) * particleList(j)%q_times_wp
         end do
+        !$OMP end parallel
         !$OMP barrier
         if (world%gridSmoothBool) then
-            call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%J, iThread)
-            solver%J(leftThreadIndx:rightThreadIndx) = solver%J(leftThreadIndx:rightThreadIndx)/del_t
+            call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%J)
+            solver%J = solver%J/del_t
         else
-            solver%J(leftThreadIndx:rightThreadIndx) = particleList(1)%workSpace(leftThreadIndx:rightThreadIndx,1)/del_t
+            solver%J = particleList(1)%workSpace(1:NumberXHalfNodes,1)/del_t
         end if
-        !$OMP end parallel
     end subroutine depositJ
 
 
@@ -231,26 +217,12 @@ contains
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0
+        call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, delIdx, dx_dl, E_x, l_boundary, numIter, &
                 refIdx, refluxedBool, FutureAtBoundaryBool, N_p, leftThreadIndx, rightThreadIndx) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         leftThreadIndx = world%threadHalfNodeIndx(1, iThread)
         rightThreadIndx = world%threadHalfNodeIndx(2, iThread)
-        ! Place temporary field into particle workspace
-        particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1) = 0.5d0 * (solver%phi_f(leftThreadIndx:rightThreadIndx) &
-        + solver%phi(leftThreadIndx:rightThreadIndx) - solver%phi_f(leftThreadIndx+1:rightThreadIndx+1) - &
-        solver%phi(leftThreadIndx+1:rightThreadIndx+1))
-        !$OMP barrier
-        ! Now apply smoothing if on
-        if (world%gridSmoothBool) then
-            call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%EField, iThread)
-            solver%EField(leftThreadIndx:rightThreadIndx) = solver%EField(leftThreadIndx:rightThreadIndx)&
-                /world%dx_dl(leftThreadIndx:rightThreadIndx)
-        else
-            solver%EField(leftThreadIndx:rightThreadIndx) = particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1)&
-                /world%dx_dl(leftThreadIndx:rightThreadIndx)
-        end if
-        !$OMP barrier
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
             refIdx = 0
