@@ -27,6 +27,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getChargeContinuityError
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: getJdotE
         procedure, public, pass(self) :: setRFVoltage
         procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: aveRFVoltage
@@ -387,16 +388,14 @@ contains
             CASE(2)
                 continue
             CASE(3)
-                res = res + eps_0 * (self%phi_f(NumberXNodes) - self%phi_f(1))**2 / ((world%dx_dl(1) + world%dx_dl(NumberXNodes)))
+                res = res + eps_0 * (self%phi_f(NumberXNodes) - self%phi_f(1))**2 / (world%dx_dl(1) + world%dx_dl(NumberXNodes))
             CASE(4)
                 res = res + eps_0 * (self%RF_voltage - self%phi_f(1))**2 / world%dx_dl(1)
             END SELECT
             SELECT CASE (world%boundaryConditions(numberXHalfNodes))
             CASE(1)
                 res = res + eps_0 * (self%boundPhi(2) - self%phi_f(NumberXNodes))**2 / world%dx_dl(NumberXNodes)
-            CASE(2)
-                continue
-            CASE(3)
+            CASE(2,3)
                 continue
             CASE(4)
                 res = res + eps_0 * (self%RF_voltage - self%phi_f(NumberXNodes))**2 / world%dx_dl(NumberXNodes)
@@ -419,6 +418,19 @@ contains
             END SELECT
         end if
     end function getTotalPE
+
+    function getJdotE(self, world, del_t) result(res)
+        ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
+        ! In 1D is J/m^2
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) ::del_t
+        real(real64) :: res
+        
+        res = SUM(self%J(2:NumberXNodes) * self%EField(2:NumberXNodes))
+        res = res + 0.5d0 * self%J(1) * self%EField(1) + self%J(NumberXHalfNodes) * self%EField(NumberXHalfNodes) * 0.5d0
+        res = res * del_t
+    end function getJdotE
 
     function getEnergyFromBoundary(self, world, del_t) result(res)
         ! Get energy input into domain from dirichlet boundary

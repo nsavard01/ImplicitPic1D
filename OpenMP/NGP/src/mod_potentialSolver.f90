@@ -26,6 +26,7 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getChargeContinuityError
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: getJdotE
         procedure, public, pass(self) :: setRFVoltage
         procedure, public, pass(self) :: aveRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
@@ -420,6 +421,16 @@ contains
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%dx_dl)
         end if
     end function getTotalPE
+
+    function getJdotE(self, world, del_t) result(res)
+        ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
+        ! In 1D is J/m^2
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t
+        real(real64) :: res
+        res = SUM(self%EField * world%dx_dl * self%J) * del_t
+    end function getJdotE
 
     function getEnergyFromBoundary(self, world, del_t) result(res)
         ! Get energy input into domain from dirichlet boundary
