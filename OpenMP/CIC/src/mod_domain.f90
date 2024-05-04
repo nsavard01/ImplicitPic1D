@@ -291,24 +291,24 @@ contains
         real(real64), intent(in) :: rawField(NumberXHalfNodes)
         real(real64), intent(in out) :: newField(NumberXHalfNodes)
         integer(int32) :: i, boundVal
-        ! threaded smoothing of fields
-        do i = 1, NumberXHalfNodes
-            boundVal = self%boundaryConditions(i+1) - self%boundaryConditions(i)
-            SELECT CASE(boundVal)
-            CASE(0)
-                newField(i) = 0.25d0 * (rawField(i-1) + 2.0d0 * rawField(i) + rawField(i+1))
-            CASE(-1,-4)
-                newField(i) = 0.25d0 * (2.0d0 * rawField(1) + 2.0d0 * rawField(2))
-            CASE(1,4)
-                newField(i) = 0.25d0 * (2.0d0 * rawField(NumberXHalfNodes) + 2.0d0 * rawField(NumberXHalfNodes-1))
-            CASE(-2)
-                newField(i) = 0.0d0
-            CASE(2)
-                newField(i) = 0.0d0
-            CASE(-3,3)
-                newField(i) = 0.25d0 * (rawField(NumberXHalfNodes-1) + 2.0d0 * rawField(1) + rawField(2))
-            END SELECT
-        end do
+        ! smoothing of fields
+        SELECT CASE (self%boundaryConditions(1))
+        CASE(1,4)
+            newField(1) = 0.25d0 * (2.0d0 * rawField(1) + 2.0d0 * rawField(2))
+        CASE(2)
+            newField(1) = 0.0d0
+        CASE(3)
+            newField(1) = 0.25d0 * (rawField(NumberXHalfNodes-1) + 2.0d0 * rawField(1) + rawField(2))
+        END SELECT
+        SELECT CASE (self%boundaryConditions(NumberXHalfNodes))
+        CASE(1,4)
+            newField(NumberXHalfNodes) = 0.25d0 * (2.0d0 * rawField(NumberXHalfNodes) + 2.0d0 * rawField(NumberXHalfNodes-1))
+        CASE(2)
+            newField(NumberXHalfNodes) = 0.0d0
+        CASE(3)
+            newField(NumberXHalfNodes) = newField(1)
+        END SELECT
+        newField(2:NumberXNodes) = 0.25d0 * (rawField(1:NumberXNodes-1) + 2.0d0 * rawField(2:NumberXNodes) + rawField(3:NumberXHalfNodes))
 
     end subroutine smoothField
 
