@@ -408,7 +408,7 @@ contains
             CASE(2)
                 continue
             CASE(3)
-                res = res + eps_0 * (self%phi_f(NumberXNodes) - self%phi(1))**2 / ((world%dx_dl(1) + world%dx_dl(NumberXNodes)))
+                res = res + eps_0 * (self%phi(NumberXNodes) - self%phi(1))**2 / ((world%dx_dl(1) + world%dx_dl(NumberXNodes)))
             END SELECT
             SELECT CASE (world%boundaryConditions(numberXHalfNodes))
             CASE(1,4)
