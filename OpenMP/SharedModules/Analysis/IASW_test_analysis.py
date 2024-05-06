@@ -43,35 +43,8 @@ def root(omega, k):
     return a
 
 
-Exp_IAW_Chacon = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IAW_Chacon/')
-Exp_IASW_Chacon = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon/')
-Exp_IASW_Chacon2013 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013/')
-Exp_IASW_Chacon2013_10thPart = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_10thPart/')
-Exp_IASW_Chacon2013_HalfPart = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_HalfPart/')
-Exp_IASW_Chacon2013_1024Cells_halfTime = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_1024Cells/')
-
-NGP_IASW_Chacon2013_Curv = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_curv/')
-NGP_IASW_Chacon2013_Curv_nonSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_curv_nonSmooth/')
 NGP_IASW_Chacon2013_Curv_Smooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_curv_Smooth/')
-NGP_IASW_Chacon2013_uniform_nonSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_uniform_nonSmooth/')
-NGP_IASW_Chacon2013_uniform_Smooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_uniform_Smooth/')
+NGP_IASW_Chacon2013_Curv_noSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_curv_noSmooth/')
 
 
-CIC_IASW_Chacon = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon/')
-CIC_IASW_Chacon2013_Curv = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv/')
-CIC_IASW_Chacon2013_Curv_2delT_10thPart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_2delT_10thPart/')
-CIC_IASW_Chacon2013_Curv_2delT_JFNK_1e3Res = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_2delT_JFNK_1e3Res/')
-CIC_IASW_Chacon2013_Curv_2delT_JFNK_1e1Res = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_2delT_JFNK_1e1Res/')
-CIC_IASW_Chacon2013_Curv_5delT_JFNK_1e1Res = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_5delT_JFNK_1e1Res/')
 
-
-CIC_IASW_Chacon2013_Curv_1delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_1delT/')
-CIC_IASW_Chacon2013_Curv_1delT_neg1Error = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_1delT_neg1Error/')
-CIC_IASW_Chacon2013_Curv_1delT_changeMove = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_1delT_changeMove/')
-CIC_IASW_Chacon2013_Curv_1delT_neg1Error_changeMove = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_1delT_neg1Error_changeMove/')
-CIC_IASW_Chacon2013_Curv_1delT_pos1Error_changeMove = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_1delT_pos1Error_changeMove/')
-CIC_IASW_Chacon2013_Curv_1delT_pos1Error = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_1delT_pos1Error/')
-CIC_IASW_Chacon2013_Curv_test = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_test/')
-
-
-CIC_IASW_Chacon_2delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon_2delT/')

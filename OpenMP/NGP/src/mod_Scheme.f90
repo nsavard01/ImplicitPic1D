@@ -102,7 +102,7 @@ contains
             particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
             !$OMP end parallel
             if (world%boundaryConditions(1) == 3) then
-                particleList(i)%densities(1,1) = 0.5d0 * (particleList(i)%densities(1,1) + particleList(i)%densities(NumberXNodes,1))
+                particleList(i)%densities(1,1) = (particleList(i)%densities(1,1) + particleList(i)%densities(NumberXNodes,1))
                 particleList(i)%densities(NumberXNodes,1) = particleList(i)%densities(1,1)
             end if
             if (world%gridSmoothBool) then
@@ -112,25 +112,38 @@ contains
                         densities(j) = 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
                     CASE(1,4)
                         if (j == 1) then
-                            densities(j) = 0.25d0 * (particleList(i)%densities(1,1) + 0.5d0 * particleList(i)%densities(2,1))
+                            densities(j) = 0.25d0 * (2.0d0 * particleList(i)%densities(1,1) + particleList(i)%densities(2,1))
                         else
-                            densities(j) = 0.25d0 * (particleList(i)%densities(NumberXNodes,1) + 0.5d0 * particleList(i)%densities(NumberXHalfNodes,1))
+                            densities(j) = 0.25d0 * (2.0d0 * particleList(i)%densities(NumberXNodes,1) + particleList(i)%densities(NumberXHalfNodes,1))
                         end if
                     CASE(2)
                         if (j ==1) then
-                            densities(j) = 0.25d0 * (particleList(i)%densities(1,1) + particleList(i)%densities(2,1))
+                            densities(j) = 0.5d0 * (particleList(i)%densities(1,1) + particleList(i)%densities(2,1))
                         else    
-                            densities(j) = 0.25d0 * (particleList(i)%densities(NumberXNodes,1) + particleList(i)%densities(NumberXHalfNodes,1))
+                            densities(j) = 0.5d0 * (particleList(i)%densities(NumberXNodes,1) + particleList(i)%densities(NumberXHalfNodes,1))
                         end if
                     CASE(3)
-                        densities(j) = 0.25d0 * (0.5d0 * particleList(i)%densities(NumberXHalfNodes, 1) + particleList(i)%densities(1, 1) + 0.5d0 * particleList(i)%densities(2, 1))
+                        densities(j) = 0.25d0 * (particleList(i)%densities(NumberXHalfNodes, 1) + 2.0d0 * particleList(i)%densities(1, 1) + particleList(i)%densities(2, 1))
                     END SELECT
                 end do
-            else
-                densities = particleList(i)%densities(:, 1)
+                particleList(i)%densities(:, 1) = densities
             end if
-            densities = densities/world%nodeVol
-            
+            SELECT CASE (world%boundaryConditions(1))
+            CASE(1,2)
+                densities(1) = particleList(i)%densities(1, 1)/world%dx_dl(1)
+            CASE(3)
+                densities(1) = 2.0d0 * particleList(i)%densities(1, 1)/(world%dx_dl(1) + world%dx_dl(NumberXHalfNodes))
+            END SELECT 
+            do j = 2, NumberXHalfNodes
+                densities(j) = 2.0d0 * particleList(i)%densities(j, 1) / (world%dx_dl(j-1) + world%dx_dl(j))
+            end do
+            SELECT CASE (world%boundaryConditions(NumberXNodes))
+            CASE(1,2)
+                densities(NumberXNodes) = particleList(i)%densities(NumberXNodes, 1)/world%dx_dl(NumberXHalfNodes)
+            CASE(3)
+                densities(NumberXNodes) = densities(1)
+            END SELECT
+
             write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

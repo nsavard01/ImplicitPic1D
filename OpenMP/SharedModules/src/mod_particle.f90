@@ -18,7 +18,7 @@ module mod_particle
         integer(int32) :: finalIdx, accumWallLoss(2)
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p, q_over_m, q_times_wp ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
-        real(real64), allocatable :: wallLoss(:,:), energyLoss(:,:)
+        real(real64), allocatable :: wallLoss(:,:), energyLoss(:,:), momentumLoss(:,:)
         real(real64), allocatable :: densities(:, :), workSpace(:,:)
         real(real64) :: numFuncEvalAve, numSubStepsAve
         real(real64) :: accumEnergyLoss(2)
@@ -64,12 +64,13 @@ contains
         maxNumNodes = MAX(NumberXNodes, NumberXHalfNodes)
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
-            self%densities(NumberXNodes, numThread), self%workSpace(maxNumNodes, numThread), self%numToCollide(numThread))
+            self%densities(NumberXNodes, numThread), self%workSpace(maxNumNodes, numThread), self%numToCollide(numThread), self%momentumLoss(2, numThread))
         self%refIdx = 0
         self%delIdx = 0
         self%N_p = N_p
         self%energyLoss = 0.0d0
         self%wallLoss = 0
+        self%momentumLoss = 0.0d0
     end function particle_constructor
 
     pure subroutine initialize_n_ave(self, n_ave, L_domain)

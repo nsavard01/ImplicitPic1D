@@ -79,7 +79,7 @@ contains
             call interpolateParticleToNodes(particleList(i), world, iThread)
         end do
         !$OMP end parallel
-    end subroutine
+    end subroutine loadParticleDensity
 
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
@@ -99,8 +99,7 @@ contains
             iThread = omp_get_thread_num() + 1
             leftThreadIndx = world%threadNodeIndx(1,iThread)
             rightThreadIndx = world%threadNodeIndx(2,iThread)
-            particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1) = &
-                SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
+            particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
             !$OMP end parallel
             if (world%gridSmoothBool) then
                 do j = 1, NumberXNodes
@@ -127,10 +126,9 @@ contains
                         densities(j) = 0.25d0 * (particleList(i)%densities(1, 1) + 2.0d0 * particleList(i)%densities(NumberXNodes, 1) + particleList(i)%densities(NumberXNodes-1, 1))
                     END SELECT
                 end do
-            else
-                densities = particleList(i)%densities(:, 1)
+                particleList(i)%densities(:, 1) = densities
             end if
-            densities = densities/world%dx_dl
+            densities = particleList(i)%densities(:, 1)/world%dx_dl
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

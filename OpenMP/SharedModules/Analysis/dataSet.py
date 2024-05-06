@@ -21,7 +21,9 @@ class dataSet:
             self.path = path + '/'
         else:
             self.path = filename
-        
+        dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows = 1)
+        self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' +\
+            str(dateTime[1])[0:2] + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[4:6]
         initialCond = np.loadtxt(self.path + 'InitialConditions.dat', skiprows = 1)
         if int(initialCond[0])== 0:
             self.scheme = 'NGP'
@@ -36,6 +38,7 @@ class dataSet:
         self.simTimeTotal = initialCond[5]
         self.delT = initialCond[6]
         self.fracTime = initialCond[7]
+        self.smooth = (initialCond[9] == 1)
         self.numDiag = int(initialCond[11]) + 1
         self.numThreads = int(initialCond[12])
         self.RF_rad_frequency = initialCond[13]
@@ -82,7 +85,7 @@ class dataSet:
         else:
             self.x_min = self.grid[0] - 0.5 * self.dx_dl[0]
             self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
-        diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
+        diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'TotalMomentum(kg/m/s)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):

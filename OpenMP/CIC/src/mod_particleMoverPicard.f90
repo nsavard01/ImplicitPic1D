@@ -246,9 +246,11 @@ contains
                             if (l_boundary == 1) then
                                 particleList(j)%energyLoss(1,iThread) = particleList(j)%energyLoss(1,iThread) + v_f**2 + (SUM(particleList(j)%phaseSpace(3:4,i,iThread)**2))!J/m^2 in 1D
                                 particleList(j)%wallLoss(1,iThread) = particleList(j)%wallLoss(1,iThread) + 1 !C/m^2 in 1D
+                                particleList(j)%momentumLoss(1,iThread) = particleList(j)%momentumLoss(1,iThread) + v_f
                             else if (l_boundary == NumberXHalfNodes) then
                                 particleList(j)%energyLoss(2,iThread) = particleList(j)%energyLoss(2,iThread) + v_f**2 + (SUM(particleList(j)%phaseSpace(3:4,i,iThread)**2)) !J/m^2 in 1D
                                 particleList(j)%wallLoss(2,iThread) = particleList(j)%wallLoss(2,iThread) + 1 !C/m^2 in 1D
+                                particleList(j)%momentumLoss(2,iThread) = particleList(j)%momentumLoss(2,iThread) + v_f
                             end if
                             exit
                         CASE(2)
