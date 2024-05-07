@@ -353,15 +353,14 @@ end subroutine particleSubStepHill
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, v_sign
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, v_sign, leftThreadIndx, rightThreadIndx
         logical :: FutureAtBoundaryBool, AtBoundaryBool, timeNotConvergedBool
 
-        call solver%evaluateEFieldHalfTime(world%boundaryConditions(1))
+        call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         call initializeParticleMoverData(solver%EField, world%dx_dl, particleList)
         f_tol = del_t * 1.d-10
-        solver%J = 0
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, AtBoundaryBool, &
-                dx_dl, l_boundary, numIter, timeNotConvergedBool, J_part, v_sign)
+                dx_dl, l_boundary, numIter, timeNotConvergedBool, J_part, v_sign, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles 
             particleList(j)%workSpace(1:numberXHalfNodes, iThread) = 0.0d0
@@ -370,15 +369,15 @@ end subroutine particleSubStepHill
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 AtBoundaryBool = MOD(l_sub, 1.0d0) == 0.0d0
+                if (.not. AtBoundaryBool) then
+                    l_cell = INT(l_sub)
+                else
+                    l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
+                end if
                 timeNotConvergedBool = .true.
                 del_tau = del_t
                 do while(timeNotConvergedBool)
                     v_sign = INT(SIGN(1.0d0, v_sub))
-                    if (.not. AtBoundaryBool) then
-                        l_cell = INT(l_sub)
-                    else
-                        l_cell = INT(l_sub) + (v_sign - 1)/2
-                    end if
 
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
@@ -402,7 +401,7 @@ end subroutine particleSubStepHill
                         l_boundary = l_cell + l_boundary
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
-                            continue
+                            l_cell = l_cell + INT(SIGN(1.0d0, v_f))
                         CASE(1,4)
                             exit
                         CASE(2)
@@ -417,6 +416,7 @@ end subroutine particleSubStepHill
                             end if
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXHalfNodes, kind = real64) - 1))
+                            l_cell = ABS(l_cell - NumberXHalfNodes)
                         ! CASE default
                         !     print *, "l_sub is:", l_sub
                         !     print *, 'l_f is:', l_f
@@ -437,11 +437,36 @@ end subroutine particleSubStepHill
             end do loopParticles
         end do loopSpecies
         !$OMP barrier
-        do j = 1, numberChargedParticles
-            call world%addThreadedDomainArray(solver%J, particleList(j)%workSpace, NumberXHalfNodes, NumberXHalfNodes, iThread, particleList(j)%q_times_wp)
+        leftThreadIndx = world%threadHalfNodeIndx(1,iThread)
+        rightThreadIndx = world%threadHalfNodeIndx(2,iThread)
+        particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
+        do j = 2, numberChargedParticles
+            particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1) = particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, 1) &
+                + SUM(particleList(j)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(j)%q_times_wp
         end do
         !$OMP end parallel
-        solver%J = solver%J/del_t
+        SELECT CASE (world%boundaryConditions(1))
+        CASE(1,4)
+            particleList(1)%workSpace(1,1) = 2.0d0 * particleList(1)%workSpace(1,1)
+        CASE(2)
+            particleList(1)%workSpace(1,1) = 0.0d0
+        CASE(3)
+            particleList(1)%workSpace(1,1) = particleList(1)%workSpace(1,1) + particleList(1)%workSpace(NumberXHalfNodes,1)
+        END SELECT
+        SELECT CASE (world%boundaryConditions(NumberXHalfNodes))
+        CASE(1,4)
+            particleList(1)%workSpace(NumberXHalfNodes,1) = 2.0d0 * particleList(1)%workSpace(NumberXHalfNodes,1)
+        CASE(2)
+            particleList(1)%workSpace(NumberXHalfNodes,1) = 0.0d0
+        CASE(3)
+            particleList(1)%workSpace(NumberXHalfNodes,1) = particleList(1)%workSpace(1,1)
+        END SELECT
+        if (world%gridSmoothBool) then
+            call world%smoothField(particleList(1)%workSpace(:,1), solver%J)
+            solver%J = solver%J/del_t
+        else
+            solver%J = particleList(1)%workSpace(:,1)/del_t
+        end if
     end subroutine depositJ
 
 
@@ -455,7 +480,8 @@ end subroutine particleSubStepHill
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, v_half, dx_dl
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numSubStepAve(numberChargedParticles), numIter, funcEvalCounter(numberChargedParticles), delIdx, refIdx, N_p, v_sign
         logical :: FutureAtBoundaryBool, AtBoundaryBool, refluxedBool, timeNotConvergedBool
-        call solver%evaluateEFieldHalfTime(world%boundaryConditions(1))
+
+        call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         call initializeParticleMoverData(solver%EField, world%dx_dl, particleList)
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
@@ -474,17 +500,17 @@ end subroutine particleSubStepHill
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 AtBoundaryBool = MOD(l_sub, 1.0d0) == 0.0d0
+                if (.not. AtBoundaryBool) then
+                    l_cell = INT(l_sub)
+                else
+                    l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
+                end if
                 refluxedBool = .false.
                 timeNotConvergedBool = .true.
                 del_tau = del_t
                 do while(timeNotConvergedBool)
                     v_sign = INT(SIGN(1.0d0, v_sub))
                     numSubStepAve(j) = numSubStepAve(j) + 1
-                    if (.not. AtBoundaryBool) then
-                        l_cell = INT(l_sub)
-                    else
-                        l_cell = INT(l_sub) + (v_sign - 1)/2
-                    end if
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
 
@@ -503,7 +529,7 @@ end subroutine particleSubStepHill
                         l_boundary = l_cell + l_boundary
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
-                            continue
+                            l_cell = l_cell + INT(SIGN(1.0d0, v_f))
                         CASE(1,4)
                             delIdx = delIdx + 1
                             if (l_boundary == 1) then
@@ -531,6 +557,7 @@ end subroutine particleSubStepHill
                             end if
                         CASE(3)
                             l_f = REAL(ABS(l_boundary - real(NumberXHalfNodes, kind = real64) - 1))
+                            l_cell = ABS(l_cell - NumberXHalfNodes)
                         ! CASE default
                         !     print *, "l_sub is:", l_sub
                         !     print *, 'l_f is:', l_f

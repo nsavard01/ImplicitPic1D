@@ -4,9 +4,9 @@
 5.0d0 ! T_e (eV)
 0.01d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-1.0d0 1.0d0 ! Fraction of initial 1/w_p for initial time step 1.8436578171091448e-10
+2.0d0 1.0d0 ! Fraction of initial 1/w_p for initial time step 1.8436578171091448e-10
 5.317772131794626e-08 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-CIC_IASW_Chacon2013_1delT_noSmooth !filename
+CIC_IASW_Chacon2013_curv_Smooth_2delT_lowRes !filename
 no NGP_RFBenchmark_highDenity_halfPart_513nodes_10xtime ! Restart(yes/no) and directory to take from
 END

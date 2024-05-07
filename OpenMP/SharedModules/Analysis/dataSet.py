@@ -22,8 +22,8 @@ class dataSet:
         else:
             self.path = filename
         dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows = 1)
-        self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' +\
-            str(dateTime[1])[0:2] + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[4:6]
+        self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' + \
+                        str(int(str(dateTime[1])[0:2]) - 7) + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[4:6]
         initialCond = np.loadtxt(self.path + 'InitialConditions.dat', skiprows = 1)
         if int(initialCond[0])== 0:
             self.scheme = 'NGP'
@@ -105,11 +105,11 @@ class dataSet:
             self.solverType = 'AAc'
         else:
             self.solverType = 'JFNK'
-        # self.eps_a = solver[1]
-        # self.eps_r = solver[2]
-        # self.m_And = int(solver[3])
-        # self.beta_k = solver[4]
-        # self.maxIter = int(solver[5])
+        self.eps_a = solver[1]
+        self.eps_r = solver[2]
+        self.m_And = int(solver[3])
+        self.beta_k = solver[4]
+        self.maxIter = int(solver[5])
             
             
     def getPhaseSpace(self, name):

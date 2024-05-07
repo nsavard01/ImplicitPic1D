@@ -135,7 +135,7 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
    input(6) = m_Anderson*2 ! maximum iterations to kyrlov routine
    input(9) = m_Anderson !number backtracks
    input(10) = 2 ! eta with gamma and alpha
-   etamax = 0.8d0 ! eta max
+   etamax = 0.5d0 ! eta max
    choice2_exp = 1.5d0 ! alpha
    choice2_coef = 0.9d0 ! gamma 
 
