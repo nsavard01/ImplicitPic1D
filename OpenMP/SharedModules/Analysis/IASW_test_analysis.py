@@ -43,6 +43,9 @@ def root(omega, k):
     return a
 
 
+Exp_IASW_Chacon2013 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013/')
+
+
 NGP_IASW_Chacon2013_Curv_Smooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_curv_Smooth/')
 NGP_IASW_Chacon2013_Curv_noSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_curv_noSmooth/')
 

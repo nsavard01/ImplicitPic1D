@@ -7,6 +7,6 @@
 0.1d0 1.0d0 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 5.317772131794625e-08 ! amount of time to average final Diagnostics
 ../../../../ExplicitData/  !Save directory
-Exp_IASW_Chacon2013_10thPart !save file name
+Exp_IASW_Chacon2013 !save file name
 no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
 END

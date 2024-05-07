@@ -78,14 +78,16 @@ contains
         integer(int32), intent(in) :: CurrentDiagStep
         logical, intent(in) :: boolAverage
         real(real64) :: densities(NumberXNodes)
-        integer(int32) :: i, iThread
+        integer(int32) :: i, iThread, leftThreadIndx, rightThreadIndx
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
             densities = 0.0d0
-            !$OMP parallel private(iThread)
+            !$OMP parallel private(iThread, leftThreadIndx, rightThreadIndx)
             iThread = omp_get_thread_num() + 1
-            call world%addThreadedDomainArray(densities, particleList(i)%densities, iThread, particleList(i)%w_p)
+            leftThreadIndx = world%threadNodeIndx(1,iThread)
+            rightThreadIndx = world%threadNodeIndx(2,iThread)
+            densities(leftThreadIndx:rightThreadIndx) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
             !$OMP end parallel
             densities = densities/world%delX
             densities(1) = 2.0d0 * densities(1)
@@ -153,13 +155,20 @@ contains
         real(real64), intent(in) :: del_t, simulationTime
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
-        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time
+        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3)
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
+        character(len=8) :: date_char
+        character(len=10) :: time_char
         allocate(energyAddColl(numThread))
         CurrentDiagStep = 1
         unitPart1 = 100
         call generateSaveDirectory(directoryName)
         !Wrtie Initial conditions
+        call date_and_time(DATE=date_char, TIME = time_char)
+        open(15,file=directoryName//'/DateTime.dat')
+        write(15,'("UTC Date, UTC Time")')
+        write(15,"(2(A,1x))") date_char, time_char 
+        close(15)
         open(15,file=directoryName//'/InitialConditions.dat')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, n_ave, T_e, T_i, numDiag, NumChargedPart, numThread, RF_frequency, RF_half_amplitude")')
         write(15,"((I6, 1x), 7(es16.8,1x), 3(I6, 1x), 2(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps, numberChargedParticles, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude
@@ -191,7 +200,7 @@ contains
         diagTime = diagTimeDivision
         101 format(20(1x,es16.8))
         open(22,file=directoryName//'/GlobalDiagnosticData.dat')
-        write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
+        write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), TotalMomentum(kg/m/s), TotalEnergy(J/m^2)")')
         
         !Save initial particle/field data, along with domain
         energyAddColl = 0.0d0
@@ -202,6 +211,7 @@ contains
         call writePhi(solver%phi, 0, .false., directoryName)
         call world%writeDomain(directoryName)
         do j=1, numberChargedParticles
+            particleList(j)%momentumLoss = 0.0d0
             call particleList(j)%writeLocalTemperature(0, directoryName, NumberXHalfNodes)
             !call particleList(j)%writePhaseSpace(0, directoryName)
         end do
@@ -262,11 +272,14 @@ contains
                 call writePhi(solver%phi, CurrentDiagStep, .false., directoryName)
                 chargeTotal = 0.0d0
                 energyLoss = 0.0d0
+                momentum_total = 0.0d0
                 do j=1, numberChargedParticles
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName, NumberXHalfNodes)
                     !call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
                     energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
+                    momentum_total = momentum_total + particleList(j)%getTotalMomentum()
+                    momentum_total(1) = momentum_total(1) + SUM(particleList(j)%momentumLoss(:,:)) * particleList(j)%mass * particleList(j)%w_p
                     write(unitPart1+j,"(5(es16.8,1x), (I10,1x), (es16.8,1x))") currentTime, &
                         particleList(j)%accumWallLoss(1) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, particleList(j)%accumWallLoss(2) * particleList(j)%q * particleList(j)%w_p/del_t/diagStepDiff, &
                         particleList(j)%accumEnergyLoss(1)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/del_t/diagStepDiff, particleList(j)%accumEnergyLoss(2)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/del_t/diagStepDiff, &
@@ -277,8 +290,8 @@ contains
                 do j = 1, numberBinaryCollisions
                     inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
                 end do
-                write(22,"(4(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
-                chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff
+                write(22,"(6(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
+                chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff, momentum_total(1), solver%getTotalE(particleList, world)
                 do j = 1, numberBinaryCollisions
                     nullCollisionList(j)%totalEnergyLoss = 0
                     nullCollisionList(j)%totalAmountCollisions = 0
