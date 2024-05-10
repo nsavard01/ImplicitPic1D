@@ -125,7 +125,7 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
     thmax = DFLT_THMAX
     etafixed = DFLT_ETA_FIXED
 
-   iplvl = 0 ! print level
+   iplvl = 1 ! print level
    input = 0
    input(1) = maxIter ! maximum outer newton iterations
    input(2) = 0 !ijacv
@@ -133,7 +133,7 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
    input(4) = m_Anderson ! maximum krylov subspace dimension
    input(5) = 0 !ipre
    input(6) = m_Anderson*2 ! maximum iterations to kyrlov routine
-   input(9) = m_Anderson !number backtracks
+   input(9) = 10 !number backtracks
    input(10) = 2 ! eta with gamma and alpha
    etamax = 0.5d0 ! eta max
    choice2_exp = 1.5d0 ! alpha

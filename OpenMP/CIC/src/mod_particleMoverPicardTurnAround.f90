@@ -14,48 +14,136 @@ module mod_particleMover
 
 contains
 
+    ! subroutine particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, E_left, E_right, dx_dl, q_over_m, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
+    !     real(real64), intent(in) :: dx_dl, l_sub, v_sub, f_tol, E_left, E_right, q_over_m
+    !     real(real64), intent(in out) :: l_f, del_tau, v_f, d_half
+    !     logical, intent(in out) :: FutureAtBoundaryBool
+    !     integer(int32), intent(in out) :: l_boundary, numIter
+    !     integer(int32) :: i
+    !     real(real64) :: accel, del_tau_temp, l_f_prev, v_half
+    !     ! get index cell where field and dx_dl is evaluated
+    !     l_f_prev = l_sub
+    !     del_tau = MIN(del_tau, 0.1d0 * dx_dl / SQRT(ABS(q_over_m * (E_left - E_right))))
+    !     do i = 1, maxPartIter
+    !         d_half = (l_sub + l_f_prev) * 0.5d0
+    !         accel = q_over_m * (E_left * (1.0d0 - d_half) + E_right * d_half)
+    !         v_half = v_sub + 0.5d0 * accel * del_tau/dx_dl
+    !         l_f = l_sub + v_half * del_tau / dx_dl
+    !         if (v_half < 0) then
+    !             FutureAtBoundaryBool = (l_f < 0)
+    !             if (FutureAtBoundaryBool) l_f = 0.0d0
+    !         else
+    !             FutureAtBoundaryBool = (l_f > 1)
+    !             if (FutureAtBoundaryBool) l_f = 1.0d0
+    !         end if
+    !         if (ABS(l_f - l_f_prev) < 1.d-10) exit
+    !         l_f_prev = l_f
+    !     end do
+    !     numIter = i
+    !     if (.not. FutureAtBoundaryBool) then
+    !         v_f = 2.0d0 * v_half - v_sub
+    !     else
+    !         if (l_f /= l_sub) then
+    !             v_f = SIGN(1.0d0, v_half) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
+    !             del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_f + v_sub)
+    !             numIter = numIter + 1
+    !         else
+    !             del_tau = -2.0d0 * v_sub * dx_dl/accel
+    !             v_f = -v_sub
+    !         end if
+    !         l_boundary = INT(l_f)
+    !     end if
+    ! end subroutine particleSubStepPicard
     subroutine particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, E_left, E_right, dx_dl, q_over_m, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
         real(real64), intent(in) :: dx_dl, l_sub, v_sub, f_tol, E_left, E_right, q_over_m
         real(real64), intent(in out) :: l_f, del_tau, v_f, d_half
         logical, intent(in out) :: FutureAtBoundaryBool
         integer(int32), intent(in out) :: l_boundary, numIter
         integer(int32) :: i
-        real(real64) :: accel, del_tau_temp, l_f_prev, v_half
+        real(real64) :: accel, del_tau_temp, l_f_prev, temp_var, del_tau_prev, v_f_test, l_turnAround
+        logical :: vForwardBool, reverseBool
         ! get index cell where field and dx_dl is evaluated
         l_f_prev = l_sub
+        del_tau_temp = del_tau
+        vForwardBool = (v_sub>0)
+        l_boundary = (INT(SIGN(1.0d0, v_sub)) + 1)/2
+        l_turnAround = l_sub + 0.5d0 * v_sub * del_tau/dx_dl
+        if (INT(l_turnAround + 1)/=1) then
+            del_tau = (real(l_boundary) - l_sub) * dx_dl / v_sub
+        end if
         do i = 1, maxPartIter
             d_half = (l_sub + l_f_prev) * 0.5d0
             accel = q_over_m * (E_left * (1.0d0 - d_half) + E_right * d_half)
-            v_half = v_sub + 0.5d0 * accel * del_tau/dx_dl
-            l_f = l_sub + v_half * del_tau / dx_dl
-            if (v_half < 0) then
-                FutureAtBoundaryBool = (l_f < 0)
-                if (FutureAtBoundaryBool) l_f = 0.0d0
-            else
-                FutureAtBoundaryBool = (l_f > 1)
-                if (FutureAtBoundaryBool) l_f = 1.0d0
-            end if
+            v_f = v_sub + accel * del_tau/dx_dl
+            reverseBool = (v_f > 0) .ne. vForwardBool
+            if (reverseBool) v_f = 0.0d0
+            l_f = l_sub + 0.5d0 * (v_f + v_sub) * del_tau / dx_dl
+            FutureAtBoundaryBool = ((l_f - real(l_boundary) > 0) .eq. vForwardBool)
+            if (FutureAtBoundaryBool) l_f = real(l_boundary)
             if (ABS(l_f - l_f_prev) < 1.d-10) exit
             l_f_prev = l_f
         end do
         numIter = i
-        if (.not. FutureAtBoundaryBool) then
-            v_f = 2.0d0 * v_half - v_sub
-        else
-            if (l_f /= l_sub) then
-                v_f = SIGN(1.0d0, v_half) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
-                del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_f + v_sub)
-                numIter = numIter + 1
-            else
-                del_tau = -2.0d0 * v_sub * dx_dl/accel
-                v_f = -v_sub
+        if (.not. reverseBool .and. FutureAtBoundaryBool) then
+            v_f = SIGN(1.0d0, v_sub) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
+            del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_f + v_sub)
+            numIter = numIter + 1
+        else if (reverseBool) then
+            del_tau_prev = 0.0d0
+            do i = 1, maxPartIter
+                l_f = l_sub + 0.5d0 * v_sub * del_tau_prev / dx_dl
+                d_half = (l_sub + l_f) * 0.5d0
+                accel = q_over_m * (E_left * (1.0d0 - d_half) + E_right * d_half)
+                del_tau = MAX(-v_sub * dx_dl/accel, 0.0)
+                if (ABS(del_tau - del_tau_prev) < f_tol) exit
+                del_tau_prev = del_tau
+            end do
+            v_f = -1.d-15 * SIGN(1.0d0, v_sub)
+            if (i >= maxPartIter) then
+                print *, 'issue converge reverseBool'
+                stop
             end if
-            l_boundary = INT(l_f)
+            numIter = numIter + i
         end if
+        v_f_test = v_sub + accel * del_tau/dx_dl
+        l_f_prev = l_sub + 0.5d0 * (v_f_test + v_sub) * del_tau / dx_dl
+        if ((l_f - l_sub > 0) .ne. vForwardBool) then
+            print *, 'final direction not correct'
+            stop
+        end if
+        if (ABS(v_f_test - v_f) > SQRT(e*T_e/m_e) * 1.d-8) then
+            print *, 'issue with v_f'
+            stop
+        end if
+        if (reverseBool .and. (.not. FutureAtBoundaryBool) .and. ABS(v_f) > 1.d-8) then
+            print *, 'issue with v_f'
+            print *, 'v_f:', v_f
+            stop
+        end if
+        if (ABS(l_f_prev - l_f) > 1.d-8) then
+            print *, 'issue with l_f'
+            stop
+        end if
+        if (del_tau <= f_tol .or. del_tau > del_tau_temp) then
+            print *, 'del_tau off'
+            stop
+        end if
+        if (del_tau <= f_tol) then
+            print *, 'del_tau is super small'
+            stop
+        end if
+        ! if (((v_f > 0) .ne. vForwardBool) .and. ABS(v_f) > 1.d-14) then
+        !     print *, 'reversed velocity'
+        !     stop
+        ! end if
+        ! if (l_f < 0 .or. l_f > 1) then
+        !     print *, 'l_f outside cell'
+        !     stop
+        ! end if
+        
     end subroutine particleSubStepPicard
 
     subroutine allocateParticleMoverData()
-        allocate(particleTimeStep(NumberXNodes,numberChargedParticles))
 
     end subroutine allocateParticleMoverData
 
@@ -79,9 +167,6 @@ contains
 
         f_tol = del_t * 1.d-10
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
-        do j = 1, numberChargedParticles
-            particleTimeStep(:, j) = 0.1d0 * world%dx_dl / SQRT(ABS(particleList(j)%q_over_m * (solver%EField(1:NumberXNodes) - solver%EField(2:NumberXHalfNodes))))
-        end do
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
                 dx_dl, l_boundary, numIter, J_part, d_half, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1 
@@ -97,7 +182,6 @@ contains
                     
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
-                    del_tau = MIN(del_tau, particleTimeStep(l_cell,j))
                     call particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, solver%EField(l_cell), solver%EField(l_cell+1), dx_dl, &
                         particleList(j)%q_over_m, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
                     
@@ -202,9 +286,6 @@ contains
         numSubStepAve = 0
         funcEvalCounter = 0
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
-        do j = 1, numberChargedParticles
-            particleTimeStep(:, j) = 0.1d0 * world%dx_dl / SQRT(ABS(particleList(j)%q_over_m * (solver%EField(1:NumberXNodes) - solver%EField(2:NumberXHalfNodes))))
-        end do
         !$OMP parallel private(iThread, i, j,l_f, l_sub, v_sub, v_f, d_half, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
             dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, N_p) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
@@ -226,7 +307,6 @@ contains
                     
                     dx_dl = world%dx_dl(l_cell)
                     l_sub = l_sub - real(l_cell)
-                    del_tau = MIN(del_tau, particleTimeStep(l_cell, j))
                     call particleSubStepPicard(l_sub, v_sub, l_f, v_f, d_half, del_tau, solver%EField(l_cell), solver%EField(l_cell+1), dx_dl, &
                         particleList(j)%q_over_m, f_tol, FutureAtBoundaryBool, l_boundary, numIter)
                     funcEvalCounter(j) = funcEvalCounter(j) + numIter

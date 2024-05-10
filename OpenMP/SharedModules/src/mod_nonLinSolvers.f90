@@ -94,7 +94,7 @@ contains
         Residual_k(:,1) = phi_k(:,2) - phi_k(:,1)
         normResidual(1) = SQRT(SUM(Residual_k(:,1)**2))
         eps_tol = eps_r * normResidual(1) + eps_a * SQRT(real(NumberXNodes))
-        !print *, "Initial norm is:", initialR
+        ! print *, "Initial norm is:", initialR
         do i = 1, maxIter
             index = MODULO(i, m_Anderson+1) + 1
             m_k = MIN(i, m_Anderson)
@@ -102,10 +102,9 @@ contains
             call solver%solve_tridiag_Ampere(world, del_t)
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
-            ! print *, normResidual(index)
             if (normResidual(index) < eps_tol) then
                 call moveParticles(solver,particleList, world, del_t)
-                iterNumPicard = i
+                iterNumPicard = i+1
                 exit
             end if
             if (i > m_Anderson) then
@@ -206,7 +205,7 @@ contains
         fcur = xcur - globalSolver%phi_f
         ! fcur = globalSolver%getError_tridiag_Ampere(globalWorld, rpar(1))
         itrmf = 0
-
+        
     end subroutine funcNitsol
 
     subroutine jacNitsol(n, xcur, fcur, ijob, v, z, rpar, ipar, itrmjv) 
@@ -239,7 +238,8 @@ contains
         call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_a, eps_r, 1.d-12, info, rpar, ipar, iterm)
         SELECT CASE (iterm)
         CASE(0)
-            iterNumPicard = info(4)
+            iterNumPicard = info(1)
+            call depositJ(globalSolver, globalParticleList, globalWorld, del_t)
             call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
         CASE(1,5,6)
             iterNumPicard = maxIter
