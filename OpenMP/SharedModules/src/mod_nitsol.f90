@@ -125,7 +125,7 @@ subroutine initializeNitsol(maxIter, m_Anderson, n_size)
     thmax = DFLT_THMAX
     etafixed = DFLT_ETA_FIXED
 
-   iplvl = 1 ! print level
+   iplvl = 0 ! print level
    input = 0
    input(1) = maxIter ! maximum outer newton iterations
    input(2) = 0 !ijacv

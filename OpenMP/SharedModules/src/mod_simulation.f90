@@ -243,7 +243,7 @@ contains
                     ! call solver%solve_tridiag_Poisson(world)
                 end if
                 
-                Etotal = solver%getTotalPE(world, .false.)
+                Etotal = solver%getTotalPE(world, .true.)
                 chargeTotal = 0.0d0
                 energyLoss = 0.0d0
                 momentum_total = 0.0d0

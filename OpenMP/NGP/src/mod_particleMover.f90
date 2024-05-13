@@ -17,45 +17,6 @@ contains
     subroutine allocateParticleMoverData()
 
     end subroutine allocateParticleMoverData
-
-    subroutine particleSubStepPicard(l_sub, v_sub, l_f, v_half, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
-        integer(int32), intent(in) :: l_cell
-        real(real64), intent(in) :: q_over_m, dx_dl, l_sub, v_sub, E_x
-        real(real64), intent(in out) :: l_f, v_half, del_tau
-        logical, intent(in out) :: FutureAtBoundaryBool
-        integer(int32), intent(in out) :: l_boundary
-        real(real64) :: c, b, a, del_tau_temp
-        
-        a = 0.5d0 * q_over_m * E_x
-        v_half = v_sub + a * del_tau
-        l_f = l_sub + v_half * del_tau / dx_dl
-        FutureAtBoundaryBool = (INT(l_f) /= l_cell)
-        if (FutureAtBoundaryBool) then
-            if (v_half > 0) then
-                l_boundary = l_cell + 1
-            else
-                l_boundary = l_cell
-            end if
-            l_f = real(l_boundary)
-            c = (l_sub - l_f) * dx_dl
-            b = v_sub**2 - 4.0d0 * a * c
-            if (v_sub * v_half > 0) then
-                del_tau_temp= 2.0d0 * ABS(c)/(ABS(v_sub) + SQRT(b))
-            else
-                if (l_sub /= l_f) then
-                    del_tau_temp = 2.0d0 * ABS(c)/(SQRT(b) - ABS(v_sub))
-                else
-                ! v and a opposite direction, reverses back to initial position
-                    del_tau_temp = ABS(v_sub)/ABS(a)
-                end if
-            end if
-            del_tau = del_tau_temp
-            v_half = v_sub + a * del_tau
-        end if
-
-
-
-    end subroutine particleSubStepPicard
     
     subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
         ! Do initial substep, where particles start between nodes
@@ -126,16 +87,12 @@ contains
                 v_sub = particleList(j)%phaseSpace(2,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
-                if (MOD(l_sub, 1.0d0) /= 0.0d0) then
-                    l_cell = INT(l_sub)
-                else
-                    l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
-                end if
-                do while(del_t - timePassed > f_tol)
+                l_cell = INT(l_sub)
+                del_tau = del_t
+                do while(del_tau > f_tol)
                     
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    del_tau = del_t - timePassed
                     l_sub = l_sub - real(l_cell)
                     call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
                     
@@ -175,6 +132,7 @@ contains
                     !     stop "Have particles travelling outside the domain in depositJ!"
                     ! end if
                     timePassed = timePassed + del_tau
+                    del_tau = del_t - timePassed
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
@@ -229,17 +187,13 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 refluxedBool = .false.
-                if (MOD(l_sub, 1.0d0) /= 0.0d0) then
-                    l_cell = INT(l_sub)
-                else
-                    l_cell = INT(l_sub) + (INT(SIGN(1.0d0, v_sub)) - 1)/2
-                end if
-                do while(del_t - timePassed > f_tol)
+                l_cell = INT(l_sub)
+                del_tau = del_t
+                do while(del_tau > f_tol)
                     numSubStepAve(j) = numSubStepAve(j) + 1
                     
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    del_tau = del_t - timePassed
                     l_sub = l_sub - real(l_cell)
                     
                     call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
@@ -290,13 +244,14 @@ contains
                     end if
                     
                     timePassed = timePassed + del_tau
+                    del_tau = del_t - timePassed
                     
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
                     
                 end do
-                if (del_t - timePassed <= f_tol) then
+                if (.not. FutureAtBoundaryBool) then
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
                     particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)
