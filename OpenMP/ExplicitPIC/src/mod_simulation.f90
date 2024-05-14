@@ -350,6 +350,7 @@ contains
         do i = 1, numberChargedParticles
             particleList(i)%accumEnergyLoss = 0.0d0
             particleList(i)%accumWallLoss = 0
+            particleList(i)%densities = 0
         end do
         inelasticEnergyLoss = 0.0d0
         energyAddColl = 0.0d0
@@ -417,6 +418,12 @@ contains
         write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')
         write(22,"((I10, 1x), 3(es16.8,1x))") stepsAverage, inelasticEnergyLoss/(currentTime-startTime), chargeTotal/(currentTime-startTime), energyLoss/(currentTime-startTime)
         close(22)
+        if (world%boundaryConditions(1) == 4) then
+            print *, 'Final RF boundary values:', solver%phi(1)
+        else if (world%boundaryConditions(NumberXNodes) == 4) then
+            print *, 'Final RF boundary values:', solver%phi(NumberXNodes)
+        end if
+        
         print *, 'Power loss to wall is:', energyLoss/(currentTime-startTime)
         print *, 'Power loss to inelastic collisions:', inelasticEnergyLoss/(currentTime-startTime)
         print *, "Electron average wall loss (A/m^2):", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p * particleList(1)%q/(currentTime-startTime)

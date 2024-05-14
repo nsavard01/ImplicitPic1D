@@ -97,22 +97,22 @@ contains
         !$OMP parallel private(iThread, j, i, l_left, l_right, d, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1
         do i=1, numberChargedParticles
-            particleList(i)%densities(:, iThread) = 0.0d0   
+            particleList(i)%workSpace(:, iThread) = 0.0d0   
             do j = 1, particleList(i)%N_p(iThread)
                 l_left = INT(particleList(i)%phaseSpace(1, j, iThread))
                 l_right = l_left + 1
                 d = particleList(i)%phaseSpace(1, j, iThread) - real(l_left)
-                particleList(i)%densities(l_left, iThread) = particleList(i)%densities(l_left, iThread) + (1.0d0-d)
-                particleList(i)%densities(l_right, iThread) = particleList(i)%densities(l_right, iThread) + d
+                particleList(i)%workSpace(l_left, iThread) = particleList(i)%workSpace(l_left, iThread) + (1.0d0-d)
+                particleList(i)%workSpace(l_right, iThread) = particleList(i)%workSpace(l_right, iThread) + d
             end do        
         end do
         !$OMP barrier
         leftThreadIndx = world%threadNodeIndx(1,iThread)
         rightThreadIndx = world%threadNodeIndx(2,iThread)
-        self%rho(leftThreadIndx:rightThreadIndx) = SUM(particleList(1)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
+        self%rho(leftThreadIndx:rightThreadIndx) = SUM(particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
         do i = 2, numberChargedParticles
             self%rho(leftThreadIndx:rightThreadIndx) = self%rho(leftThreadIndx:rightThreadIndx) &
-                + SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
+                + SUM(particleList(i)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
         end do
         !$OMP end parallel
     end subroutine depositRho
@@ -295,7 +295,7 @@ contains
         self%EField(2:NumberXNodes-1) = (self%phi(1:NumberXNodes-2) - self%phi(3:NumberXNodes))/2.0d0/world%delX
         SELECT CASE (world%boundaryConditions(1))
         CASE(1,4)
-            self%EField(1) = 0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
+            self%EField(1) = (self%phi(1) - self%phi(2))/world%delX !0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
         CASE(2)
             self%EField(1) = 0.0d0
         CASE(3)
@@ -307,7 +307,7 @@ contains
 
         SELECT CASE (world%boundaryConditions(NumberXNodes))
         CASE(1,4)
-            self%EField(NumberXNodes) = 0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
+            self%EField(NumberXNodes) = (self%phi(NumberXNodes-1) - self%phi(NumberXNodes))/world%delX !0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
         CASE(2)
             self%EField(NumberXNodes) = 0.0d0
         CASE(3)
