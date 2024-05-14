@@ -100,6 +100,7 @@ contains
             leftThreadIndx = world%threadNodeIndx(1,iThread)
             rightThreadIndx = world%threadNodeIndx(2,iThread)
             particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
+            densities(leftThreadIndx:rightThreadIndx) = 0.0d0
             !$OMP end parallel
             if (world%boundaryConditions(1) == 3) then
                 particleList(i)%densities(1,1) = (particleList(i)%densities(1,1) + particleList(i)%densities(NumberXNodes,1))
@@ -109,37 +110,34 @@ contains
                 do j = 1, NumberXNodes
                     SELECT CASE(world%boundaryConditions(j))
                     CASE(0)
-                        densities(j) = 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
-                    CASE(1,4)
+                        densities(j) = densities(j) + 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
+                    CASE(1,4,2)
                         if (j == 1) then
-                            densities(j) = 0.25d0 * (2.0d0 * particleList(i)%densities(1,1) + particleList(i)%densities(2,1))
+                            densities(j) = densities(j) + 0.25d0 * (2.0d0 * particleList(i)%densities(1,1) + particleList(i)%densities(2,1))
+                            densities(j+1) = densities(j+1) + 0.25d0 * particleList(i)%densities(1,1)
                         else
-                            densities(j) = 0.25d0 * (2.0d0 * particleList(i)%densities(NumberXNodes,1) + particleList(i)%densities(NumberXHalfNodes,1))
-                        end if
-                    CASE(2)
-                        if (j ==1) then
-                            densities(j) = 0.5d0 * (particleList(i)%densities(1,1) + particleList(i)%densities(2,1))
-                        else    
-                            densities(j) = 0.5d0 * (particleList(i)%densities(NumberXNodes,1) + particleList(i)%densities(NumberXHalfNodes,1))
+                            densities(j) = densities(j) + 0.25d0 * (2.0d0 * particleList(i)%densities(NumberXNodes,1) + particleList(i)%densities(NumberXHalfNodes,1))
+                            densities(j-1) = densities(j-1) + 0.25d0 * particleList(i)%densities(NumberXNodes,1)
                         end if
                     CASE(3)
-                        densities(j) = 0.25d0 * (particleList(i)%densities(NumberXHalfNodes, 1) + 2.0d0 * particleList(i)%densities(1, 1) + particleList(i)%densities(2, 1))
+                        densities(j) = densities(j) + 0.25d0 * (particleList(i)%densities(NumberXHalfNodes, 1) + 2.0d0 * particleList(i)%densities(1, 1) + particleList(i)%densities(2, 1))
                     END SELECT
                 end do
-                particleList(i)%densities(:, 1) = densities
+            else
+                densities = particleList(i)%densities(:,1)
             end if
             SELECT CASE (world%boundaryConditions(1))
-            CASE(1,2)
-                densities(1) = particleList(i)%densities(1, 1)/world%dx_dl(1)
+            CASE(1,2,4)
+                densities(1) = 2.0d0 * densities(1)/world%dx_dl(1)
             CASE(3)
-                densities(1) = 2.0d0 * particleList(i)%densities(1, 1)/(world%dx_dl(1) + world%dx_dl(NumberXHalfNodes))
+                densities(1) = 2.0d0 * densities(1)/(world%dx_dl(1) + world%dx_dl(NumberXHalfNodes))
             END SELECT 
             do j = 2, NumberXHalfNodes
-                densities(j) = 2.0d0 * particleList(i)%densities(j, 1) / (world%dx_dl(j-1) + world%dx_dl(j))
+                densities(j) = 2.0d0 * densities(j) / (world%dx_dl(j-1) + world%dx_dl(j))
             end do
             SELECT CASE (world%boundaryConditions(NumberXNodes))
-            CASE(1,2)
-                densities(NumberXNodes) = particleList(i)%densities(NumberXNodes, 1)/world%dx_dl(NumberXHalfNodes)
+            CASE(1,2,4)
+                densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)/world%dx_dl(NumberXHalfNodes)
             CASE(3)
                 densities(NumberXNodes) = densities(1)
             END SELECT
