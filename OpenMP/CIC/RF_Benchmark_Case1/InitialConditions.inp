@@ -7,6 +7,6 @@
 1.5d0 1.8436578171091448e-10 ! Fraction of initial 1/w_p for initial time step
 7.374631268436579e-06 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-CIC_RF_Benchmark_case1_10xParticles !filename
+NGP_RF_Benchmark_case1_lowerRes !filename
 no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
 END

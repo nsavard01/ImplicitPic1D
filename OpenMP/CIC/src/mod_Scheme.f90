@@ -25,7 +25,7 @@ contains
         integer(int32), intent(in) :: iThread
         integer(int32) :: j, l_center, l_left, l_right
         real(real64) :: d
-
+        ! For Rho calculation
         do j = 1, part%N_p(iThread)
             l_center = INT(part%phaseSpace(1, j, iThread))
             d = part%phaseSpace(1, j, iThread) - real(l_center)
@@ -65,6 +65,45 @@ contains
         end do
     end subroutine interpolateParticleToNodes
 
+    subroutine interpolateParticleToNodesDensity(part, world, iThread)
+        ! Interpolate particles to logical grid for a single thread
+        type(Particle), intent(in out) :: part
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in) :: iThread
+        integer(int32) :: j, l_center, l_left, l_right
+        real(real64) :: d
+        ! For Density Calculation
+        do j = 1, part%N_p(iThread)
+            l_center = INT(part%phaseSpace(1, j, iThread))
+            d = part%phaseSpace(1, j, iThread) - real(l_center)
+            part%densities(l_center, iThread) = part%densities(l_center, iThread) + (-d**2 + d + 0.5d0)
+            l_right = l_center + 1
+            l_left = l_center - 1
+            SELECT CASE (world%boundaryConditions(l_right) - world%boundaryConditions(l_center))
+            CASE(0)
+                ! No Boundary either side
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            CASE(-2,-1,-4)
+                !Neumann to left
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            CASE(2,1,4)
+                !Neumann to right
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * d**2
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+            CASE(-3)
+                !periodic to left
+                part%densities(NumberXNodes, iThread) = part%densities(NumberXNodes, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            CASE(3)
+                !periodic to right
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(1, iThread) = part%densities(1, iThread) + 0.5d0 * d**2
+            END SELECT
+        end do
+    end subroutine interpolateParticleToNodesDensity
+
     subroutine loadParticleDensity(particleList, world, reset)
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
@@ -76,7 +115,7 @@ contains
             if (reset) then
                 particleList(i)%densities(:,iThread) = 0.0d0
             end if
-            call interpolateParticleToNodes(particleList(i), world, iThread)
+            call interpolateParticleToNodesDensity(particleList(i), world, iThread)
         end do
         !$OMP end parallel
     end subroutine loadParticleDensity
@@ -106,16 +145,10 @@ contains
                     SELECT CASE(world%boundaryConditions(j+1) - world%boundaryConditions(j))
                     CASE(0)
                         densities(j) = 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
-                    CASE(-1,-4)
-                        !Dirichlet to left
-                        densities(j) = 0.25d0 * (2.0d0 * particleList(i)%densities(1, 1) + particleList(i)%densities(2, 1))
-                    CASE(1,4)
-                        ! Dirichlet to right
-                        densities(j) = 0.25d0 * (2.0d0 * particleList(i)%densities(NumberXNodes, 1) + particleList(i)%densities(NumberXNodes-1, 1))
-                    CASE(-2)
+                    CASE(-2,-1,-4)
                         !Neumann to left
                         densities(j) = 0.25d0 * (particleList(i)%densities(2, 1) + 3.0d0 * particleList(i)%densities(1, 1))
-                    CASE(2)
+                    CASE(2,1,4)
                         !Neumann to right
                         densities(j) = 0.25d0 * (particleList(i)%densities(NumberXNodes-1, 1) + 3.0d0 * particleList(i)%densities(NumberXNodes, 1))
                     CASE(-3)
