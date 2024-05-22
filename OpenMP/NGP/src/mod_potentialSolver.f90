@@ -3,6 +3,7 @@ module mod_potentialSolver
     use constants
     use mod_BasicFunctions
     use mod_domain
+    use mod_Scheme
     implicit none
 
     ! This module will be for the potential solver
@@ -25,11 +26,15 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Ampere
         procedure, public, pass(self) :: getChargeContinuityError
         procedure, public, pass(self) :: getTotalPE
+        procedure, public, pass(self) :: getJdotE
         procedure, public, pass(self) :: setRFVoltage
         procedure, public, pass(self) :: aveRFVoltage
         procedure, public, pass(self) :: getEnergyFromBoundary
         procedure, public, pass(self) :: getError_tridiag_Ampere
-        ! procedure, public, pass(self) :: solve_CG_Ampere
+        procedure, public, pass(self) :: depositRho
+        procedure, public, pass(self) :: makeConstSourceTerm
+        procedure, public, pass(self) :: makeHalfTimeEField
+        procedure, public, pass(self) :: solveInitialPotential
         procedure, public, pass(self) :: resetVoltage
         procedure, public, pass(self) :: getError_tridiag_Poisson
         procedure, public, pass(self) :: construct_diagMatrix
@@ -105,13 +110,13 @@ contains
                 self%b_tri(i) = 1.0d0
             CASE(2)
                 if (i == 1) then
-                    self % c_tri(i) = 1.0d0/world%dx_dl(i)
+                    self % c_tri(i) = 2.0d0/world%dx_dl(i)
                     !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
-                    self%b_tri(i) = - (1.0d0/world%dx_dl(i))
+                    self%b_tri(i) = - (2.0d0/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    self % a_tri(i-1) = 1.0d0/ world%dx_dl(i-1)
+                    self % a_tri(i-1) = 2.0d0/ world%dx_dl(i-1)
                     !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
-                    self%b_tri(i) = - (1.0d0/world%dx_dl(i-1))
+                    self%b_tri(i) = - (2.0d0/world%dx_dl(i-1))
                 else
                     print *, "Neumann boundary not on left or right most index!"
                     stop
@@ -124,6 +129,65 @@ contains
         end do
 
     end subroutine construct_diagMatrix
+
+    subroutine depositRho(self, particleList, world) 
+        class(potentialSolver), intent(in out) :: self
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
+        type(Domain), intent(in) :: world
+        integer(int32) :: i, iThread, rightThreadIndx, leftThreadIndx
+        !$OMP parallel private(iThread, i, rightThreadIndx, leftThreadIndx)
+        iThread = omp_get_thread_num() + 1 
+        leftThreadIndx = world%threadNodeIndx(1,iThread)
+        rightThreadIndx = world%threadNodeIndx(2,iThread)
+        do i = 1, numberChargedParticles
+            particleList(i)%densities(:,iThread) = 0.0d0
+            call interpolateParticleToNodes(particleList(i), world, iThread) 
+        end do
+        !$OMP barrier
+        ! Concatenate density array among threads
+        particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(1)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
+        do i = 2, numberChargedParticles
+            particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) = particleList(1)%densities(leftThreadIndx:rightThreadIndx, 1) &
+                + SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
+        end do
+        !$OMP end parallel
+        SELECT CASE (world%boundaryConditions(1))
+        CASE(1,4)
+            particleList(1)%densities(1, 1) = 0.0d0
+        CASE(2)
+            particleList(1)%densities(1,1) = 2.0d0 * particleList(1)%densities(1,1)
+        CASE(3)
+            particleList(1)%densities(1,1) = particleList(1)%densities(1,1) + particleList(1)%densities(NumberXNodes, 1)
+        END SELECT
+        SELECT CASE (world%boundaryConditions(NumberXNodes))
+        CASE(1,4)
+            particleList(1)%densities(NumberXNodes, 1) = 0.0d0
+        CASE(2)
+            particleList(1)%densities(NumberXNodes,1) = 2.0d0 * particleList(1)%densities(NumberXNodes,1)
+        CASE(3)
+            particleList(1)%densities(NumberXNodes,1) = particleList(1)%densities(1,1)
+        END SELECT
+        if (world%gridSmoothBool) then
+            do i = 1, NumberXNodes
+                SELECT CASE(world%boundaryConditions(i))
+                CASE(0)
+                    self%rho(i) = 0.25d0 * (particleList(1)%densities(i-1, 1) + 2.0d0 * particleList(1)%densities(i, 1) + particleList(1)%densities(i+1, 1))
+                CASE(1,4)
+                    self%rho(i) = 0.0d0
+                CASE(2)
+                    if (i ==1) then
+                        self%rho(i) = 0.25d0 * (2.0d0 * particleList(1)%densities(1,1) + 2.0d0 * particleList(1)%densities(2,1))
+                    else    
+                        self%rho(i) = 0.25d0 * (2.0d0 * particleList(1)%densities(NumberXNodes,1) + 2.0d0 * particleList(1)%densities(NumberXHalfNodes,1))
+                    end if
+                CASE(3)
+                    self%rho(i) = 0.25d0 * (particleList(1)%densities(NumberXHalfNodes, 1) + 2.0d0 * particleList(1)%densities(1, 1) + particleList(1)%densities(2, 1))
+                END SELECT
+            end do
+        else
+            self%rho = particleList(1)%densities(:, 1)
+        end if
+    end subroutine depositRho
 
     subroutine solve_tridiag_Poisson(self, world, timeCurrent)
         ! Tridiagonal (Thomas algorithm) solver for initial Poisson
@@ -164,6 +228,18 @@ contains
         !self%EField = (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Poisson
 
+    subroutine solveInitialPotential(self, particleList, world, timeCurrent)
+        ! Solve for initial potential
+        class(potentialSolver), intent(in out) :: self
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: timeCurrent
+        call self%depositRho(particleList, world)
+        call self%solve_tridiag_Poisson(world, timeCurrent)
+        ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
+
+    end subroutine solveInitialPotential
+
     function getError_tridiag_Poisson(self, world) result(res)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
@@ -171,20 +247,46 @@ contains
         real(real64) :: Ax(NumberXNodes), res, tiny
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         res = 0.0d0
-        tiny = EPSILON(tiny)
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0,2)
-                res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const + tiny) - 1.0d0)**2
-                !d(i) = -self%rho(i) - self%rho_const
+                if (self%rho(i) + self%rho_const /= 0) then
+                    res = res + (Ax(i)*eps_0/(-self%rho(i) - self%rho_const) - 1.0d0)**2
+                else
+                    res = res + (Ax(i)*eps_0)**2
+                end if
             CASE(1,3,4)
-                res = res + ((Ax(i) + tiny)/(self.phi_f(i) + tiny) - 1.0d0)**2
-                !d(i) = self%phi_f(i)*eps_0
+                if (self%phi_f(i) /= 0) then
+                    res = res + ((Ax(i))/(self.phi_f(i)) - 1.0d0)**2
+                else
+                    res = res + (Ax(i))**2
+                end if
             END SELECT
         end do
         res = SQRT(res/NumberXNodes)
 
     end function getError_tridiag_Poisson
+
+    subroutine makeConstSourceTerm(self, world)
+        ! Store constant source term for ampere into rho array
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        integer(int32) :: i
+        do i =1, NumberXNodes
+            SELECT CASE (world%boundaryConditions(i))
+            CASE(0)
+                self%rho(i) = - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+            CASE(1,3,4)
+                self%rho(i) = self%phi_f(i)
+            CASE(2)
+                if (i == 1) then
+                    self%rho(i) = -2.0d0 * (self%phi(i) - self%phi(i+1))/world%dx_dl(i)
+                else if (i == NumberXNodes) then
+                    self%rho(i) = -2.0d0 * (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1)
+                end if
+            END SELECT
+        end do
+    end subroutine makeConstSourceTerm
 
     subroutine solve_tridiag_Ampere(self, world, del_t)
         ! Tridiagonal (Thomas algorithm) solver for Ampere
@@ -196,16 +298,17 @@ contains
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
-                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0
             CASE(1,3,4)
-                d(i) = self%phi_f(i)
+                d(i) = 0.0d0
             CASE(2)
                 if (i == 1) then
-                    d(i) = (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0)
                 else if (i == NumberXNodes) then
-                    d(i) = (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0)
                 end if
             END SELECT
+            d(i) = d(i) + self%rho(i)
         end do
     ! initialize c-prime and d-prime
         cp(1) = self%c_tri(1)/self%b_tri(1)
@@ -229,51 +332,6 @@ contains
         !self%EField = 0.5d0 * (self%phi(1:NumberXHalfNodes) + self%phi_f(1:NumberXHalfNodes) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
 
-    ! subroutine solve_CG_Ampere(self, world, del_t)
-    !     ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-    !     class(potentialSolver), intent(in out) :: self
-    !     type(Domain), intent(in) :: world
-    !     real(real64), intent(in) :: del_t
-    !     integer(int32) :: i
-    !     real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
-    !     logical :: converge
-    !     converge = .false.
-    !     do i =1, NumberXNodes
-    !         SELECT CASE (world%boundaryConditions(i))
-    !         CASE(0)
-    !             b(i) = (SUM(self%J(i, :)) - SUM(self%J(i-1, :))) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
-    !         CASE(1,3)
-    !             b(i) = self%phi_f(i)
-    !         CASE(2)
-    !             if (i == 1) then
-    !                 b(i) = (del_t * SUM(self%J(i, :))/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
-    !             else if (i == NumberXNodes) then
-    !                 b(i) = (-del_t * SUM(self%J(i-1, :))/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
-    !             end if
-    !         END SELECT
-    !     end do
-    !     RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
-    !     resPast = SQRT(SUM(RPast**2))
-    !     D = RPast
-    !     do i = 1, 1000
-    !         alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
-    !         self%phi_f = self%phi_f + alpha * D
-    !         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
-    !         RFuture = b - Ax
-    !         resFuture = SQRT(SUM(RFuture**2))
-    !         if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < eps_r * 1.d-2) then
-    !             converge = .true.
-    !             exit
-    !         end if
-    !         beta = (resFuture**2)/(resPast**2)
-    !         D = RFuture + beta * D
-    !         RPast = RFuture
-    !         resPast = resFuture
-    !     end do
-    !     if (.not. converge) then
-    !         stop 'Max iterations reached CG solver!'
-    !     end if
-    ! end subroutine solve_CG_Ampere
 
     function getError_tridiag_Ampere(self, world, del_t) result(res)
         class(potentialSolver), intent(in) :: self
@@ -290,9 +348,9 @@ contains
                 d(i) = self%phi_f(i)
             CASE(2)
                 if (i == 1) then
-                    d(i) = (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
                 else if (i == NumberXNodes) then
-                    d(i) = (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
                 end if
             END SELECT
         end do
@@ -315,18 +373,17 @@ contains
                 CASE(0)
                     chargeError = chargeError + (1.0d0 + del_t * (self%J(i) - self%J(i-1))/del_Rho)**2
                     k = k + 1
-                CASE(1)
+                CASE(1,4)
                     continue
                 CASE(2)
                     if (i == 1) then
-                        chargeError = chargeError + (1.0d0 + del_t * self%J(1)/del_Rho)**2
+                        chargeError = chargeError + (1.0d0 + 2.0d0 * del_t * self%J(1)/del_Rho)**2
                     else
-                        chargeError = chargeError + (1.0d0 - del_t * self%J(NumberXHalfNodes)/del_Rho)**2
+                        chargeError = chargeError + (1.0d0 - 2.0d0 * del_t * self%J(NumberXHalfNodes)/del_Rho)**2
                     end if
                     k = k + 1
                 CASE(3)
                     if (i == 1) then
-                        del_Rho = del_Rho + self%rho(NumberXNodes) - rho_i(NumberXNodes)
                         chargeError = chargeError + (1.0d0 + del_t * (self%J(1) - self%J(NumberXHalfNodes))/del_Rho)**2
                     end if
                 END SELECT
@@ -334,6 +391,22 @@ contains
         end do
         chargeError = SQRT(chargeError/k)
     end function getChargeContinuityError
+
+    subroutine makeHalfTimeEField(self, workArray, world)
+        class(potentialSolver), intent(in out) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in out) :: workArray(NumberXHalfNodes)
+        ! Place temporary field into particle workspace
+        workArray = 0.5d0 * (self%phi_f(1:NumberXHalfNodes) + self%phi(1:NumberXHalfNodes) - &
+            self%phi_f(2:NumberXNodes) - self%phi(2:NumberXNodes))
+        ! Now apply smoothing if on
+        if (world%gridSmoothBool) then
+            call world%smoothField(workArray, self%EField)
+            self%EField = self%EField/world%dx_dl
+        else
+            self%EField = workArray/world%dx_dl
+        end if
+    end subroutine makeHalfTimeEField
 
     function getTotalPE(self, world, future) result(res)
         ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
@@ -348,6 +421,16 @@ contains
             res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2 / world%dx_dl)
         end if
     end function getTotalPE
+
+    function getJdotE(self, world, del_t) result(res)
+        ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
+        ! In 1D is J/m^2
+        class(potentialSolver), intent(in) :: self
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: del_t
+        real(real64) :: res
+        res = SUM(self%EField * world%dx_dl * self%J) * del_t
+    end function getJdotE
 
     function getEnergyFromBoundary(self, world, del_t) result(res)
         ! Get energy input into domain from dirichlet boundary
@@ -417,6 +500,7 @@ contains
         print *, "Reading solver inputs:"
         print *, "------------------"
         open(10,file='../InputData/'//GeomFilename)
+        read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)

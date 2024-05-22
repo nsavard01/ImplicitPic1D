@@ -18,9 +18,7 @@ program BoundPlasmaExample
     type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
     real(real64), allocatable :: temp(:)
-    integer(int32), allocatable :: numTemp(:)
-    real(real64) :: l_temp, v_temp
-    
+    integer(int32), allocatable :: numTemp(:)    
    
     call readInitialInputs('InitialConditions.inp')
     call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)

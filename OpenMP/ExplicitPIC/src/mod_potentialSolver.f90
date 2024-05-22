@@ -91,10 +91,10 @@ contains
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
-        integer(int32) :: i, j, l_left, l_right, iThread
+        integer(int32) :: i, j, l_left, l_right, iThread, leftThreadIndx, rightThreadIndx
         real(real64) :: d
         self % rho = self%rho_const
-        !$OMP parallel private(iThread, j, i, l_left, l_right, d)
+        !$OMP parallel private(iThread, j, i, l_left, l_right, d, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1
         do i=1, numberChargedParticles
             particleList(i)%workSpace(:, iThread) = 0.0d0   
@@ -107,8 +107,12 @@ contains
             end do        
         end do
         !$OMP barrier
-        do i = 1, numberChargedParticles
-            call world%addThreadedDomainArray(self%rho, particleList(i)%workSpace, iThread, particleList(i)%q_times_wp)
+        leftThreadIndx = world%threadNodeIndx(1,iThread)
+        rightThreadIndx = world%threadNodeIndx(2,iThread)
+        self%rho(leftThreadIndx:rightThreadIndx) = SUM(particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
+        do i = 2, numberChargedParticles
+            self%rho(leftThreadIndx:rightThreadIndx) = self%rho(leftThreadIndx:rightThreadIndx) &
+                + SUM(particleList(i)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
         end do
         !$OMP end parallel
     end subroutine depositRho
@@ -274,7 +278,7 @@ contains
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64) :: res
-        res = 0.5 * eps_0 * SUM(arrayDiff(self%phi, NumberXNodes)**2) / world%delX
+        res = eps_0 * world%delX * (0.5d0 * (self%EField(1)**2 + self%EField(NumberXNodes)**2) + SUM(self%EField(2:NumberXNodes-1)**2))
         
     end function getTotalPE
 
@@ -291,7 +295,7 @@ contains
         self%EField(2:NumberXNodes-1) = (self%phi(1:NumberXNodes-2) - self%phi(3:NumberXNodes))/2.0d0/world%delX
         SELECT CASE (world%boundaryConditions(1))
         CASE(1,4)
-            self%EField(1) = 0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
+            self%EField(1) = (self%phi(1) - self%phi(2))/world%delX !0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
         CASE(2)
             self%EField(1) = 0.0d0
         CASE(3)
@@ -303,7 +307,7 @@ contains
 
         SELECT CASE (world%boundaryConditions(NumberXNodes))
         CASE(1,4)
-            self%EField(NumberXNodes) = 0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
+            self%EField(NumberXNodes) = (self%phi(NumberXNodes-1) - self%phi(NumberXNodes))/world%delX !0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
         CASE(2)
             self%EField(NumberXNodes) = 0.0d0
         CASE(3)
@@ -354,11 +358,10 @@ contains
         temp = 0.0d0
         res = 0.0d0
         do j = 1, numberChargedParticles
-            q_m_ratio = particleList(j)%q/particleList(j)%mass
             !$OMP parallel private(iThread, i, v)
             iThread = omp_get_thread_num() + 1
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
-                v = particleList(j)%phaseSpace(2, i, iThread) + 0.5d0 * (q_m_ratio) * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+                v = particleList(j)%phaseSpace(2, i, iThread) + 0.5d0 * particleList(j)%q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                 temp(iThread) = temp(iThread) + (v**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)) * particleList(j)%w_p * particleList(j)%mass * 0.5d0
             end do loopParticles
             !$OMP end parallel
@@ -393,6 +396,7 @@ contains
                     CASE(1,4)
                         particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
                         particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                        particleList(j)%momentumLoss(1,iThread) = particleList(j)%momentumLoss(1,iThread) + v_prime
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
@@ -410,6 +414,7 @@ contains
                     CASE(1,4)
                         particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
                         particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                        particleList(j)%momentumLoss(2,iThread) = particleList(j)%momentumLoss(2,iThread) + v_prime
                         delIdx = delIdx + 1
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc

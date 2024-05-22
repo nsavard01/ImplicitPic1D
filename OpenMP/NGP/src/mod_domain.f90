@@ -17,6 +17,7 @@ module mod_domain
         integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary condition flags for fields and particles
         real(real64) :: L_domain, startX, endX
         integer(int32) :: numThreadNodeIndx, numThreadHalfNodeIndx
+        logical :: gridSmoothBool
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
@@ -28,7 +29,7 @@ module mod_domain
         procedure, public, pass(self) :: constructExpHalfGrid
         procedure, public, pass(self) :: constructHalfEvenHalfSinusoid
         procedure, public, pass(self) :: makeArraysFromGrid
-        procedure, public, pass(self) :: addThreadedDomainArray
+        procedure, public, pass(self) :: smoothField
         procedure, public, pass(self) :: getLFromX
         procedure, public, pass(self) :: getXFromL
         procedure, public, pass(self) :: writeDomain
@@ -48,6 +49,7 @@ contains
         integer(int32) :: i, k, spacingThread, modThread
         allocate(self % grid(NumberXNodes), self % dx_dl(NumberXHalfNodes), self % nodeVol(NumberXNodes), self%boundaryConditions(NumberXNodes))
         self % grid = (/(i, i=1, NumberXNodes)/)
+        self%gridSmoothBool = .false.
         self % dx_dl = 1.0d0
         self % nodeVol = 1.0d0
         self % boundaryConditions = 0
@@ -293,20 +295,33 @@ contains
         
     end function getLFromX
 
-    subroutine addThreadedDomainArray(self, array_add, x, N_x, iThread, const)
-        ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp
+    subroutine smoothField(self, rawField, newField)
         class(Domain), intent(in) :: self
-        real(real64), intent(in out) :: array_add(N_x)
-        real(real64), intent(in) :: x(NumberXNodes, numThread), const
-        integer(int32), intent(in) :: iThread, N_x
-        if (N_x == NumberXNodes .and. iThread <= self%numThreadNodeIndx) then
-            array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) = array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) &
-            + SUM(x(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread), :), DIM=2) * const
-        else if (N_x == NumberXHalfNodes .and. iThread <= self%numThreadHalfNodeIndx) then
-            array_add(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread)) = array_add(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread)) &
-            + SUM(x(self%threadHalfNodeIndx(1,iThread):self%threadHalfNodeIndx(2,iThread), :), DIM=2) * const
-        end if
-    end subroutine addThreadedDomainArray
+        real(real64), intent(in) :: rawField(NumberXHalfNodes)
+        real(real64), intent(in out) :: newField(NumberXHalfNodes)
+        integer(int32) :: i, boundVal
+        ! threaded smoothing of fields
+        do i = 1, NumberXHalfNodes
+            boundVal = self%boundaryConditions(i+1) - self%boundaryConditions(i)
+            SELECT CASE(boundVal)
+            CASE(0)
+                newField(i) = 0.25d0 * (rawField(i-1) + 2.0d0 * rawField(i) + rawField(i+1))
+            CASE(-1,-4)
+                newField(i) = 0.25d0 * (3.0d0 * rawField(1) + rawField(2))
+            CASE(1,4)
+                newField(i) = 0.25d0 * (3.0d0 * rawField(NumberXHalfNodes) + rawField(NumberXHalfNodes-1))
+            CASE(-2)
+                newField(i) = 0.25d0 * (rawField(1) + rawField(2))
+            CASE(2)
+                newField(i) = 0.25d0 * (rawField(NumberXHalfNodes) + rawField(NumberXHalfNodes-1))
+            CASE(-3)
+                newField(i) = 0.25d0 * (rawField(NumberXHalfNodes) + 2.0d0 * rawField(1) + rawField(2))
+            CASE(3)
+                newField(i) = 0.25d0 * (rawField(NumberXHalfNodes-1) + 2.0d0 * rawField(NumberXHalfNodes) + rawField(1))
+            END SELECT
+        end do
+
+    end subroutine smoothField
 
 
     subroutine writeDomain(self, dirName)
@@ -333,7 +348,7 @@ contains
         type(Domain), intent(in out) :: world
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave
-        integer(int32) :: io, leftBoundary, rightBoundary, gridType, intArray(20), i
+        integer(int32) :: io, leftBoundary, rightBoundary, gridType, intArray(20), i, smoothInt
         real(real64) :: debyeLength, L_domain
         integer(int32), allocatable :: boundArray(:)
         print *, ""
@@ -344,7 +359,7 @@ contains
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) gridType, debyeLength
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
-        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io) smoothInt
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         close(10)
@@ -376,6 +391,7 @@ contains
             close(10)
             call world%makeArraysFromGrid()
         end if
+        if (smoothInt /= 0) world%gridSmoothBool = .true.
         print *, "Number of nodes:", NumberXNodes
         print *, "Number of half nodes:", NumberXHalfNodes
         print *, "Grid length:", world%L_domain
@@ -383,6 +399,7 @@ contains
         print *, "Left boundary type:", world%boundaryConditions(1)
         print *, "Right boundary type:", world%boundaryConditions(NumberXNodes)
         print *, 'smallest delX:', MINVAL(world%dx_dl)
+        print *, 'Binomial smoothing:', world%gridSmoothBool
         print *, "------------------"
         print *, ""
 

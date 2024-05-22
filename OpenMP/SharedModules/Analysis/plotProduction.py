@@ -15,7 +15,7 @@ def plotAveDensity(dataSet, name = "", label = ""):
         colors = ['b', 'r', 'g', 'k', 'c', 'm', 'yAve']
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = '-', marker = 'o', color = colors[i], label = r'$n_{' + name +  '}$')
+            plt.plot(dataSet.grid, n,  linestyle = '--', marker = 'o', markersize = 4,color = colors[i], label = r'$n_{' + name +  '}$')
         plt.xlabel('Distance (m)')
         plt.ylabel('Particle Density (1/m^3)')
         plt.xlim([dataSet.x_min, dataSet.x_max])
@@ -25,7 +25,7 @@ def plotAveDensity(dataSet, name = "", label = ""):
             raise Warning("For average density, particle", name, "does not exist in the dataSet!")
         else:
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = '-', marker = 'o', label = label)
+            plt.plot(dataSet.grid, n,  linestyle = '--', marker = 'o', markersize = 4, label = label)
             plt.xlabel('Distance (m)')
             plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([dataSet.x_min, dataSet.x_max])

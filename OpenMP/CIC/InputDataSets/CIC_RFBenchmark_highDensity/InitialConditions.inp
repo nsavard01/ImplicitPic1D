@@ -1,0 +1,12 @@
+32 ! number of threads
+1.5d-4  0.0d0 ! simulation time
+1.6d18 ! Initial number density (1/m^3) of particles
+4.0d0 ! T_e (eV)
+0.025d0 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+5.0d0 3.125d-11 ! Fraction of initial 1/w_p for initial time step, second is actual written out time step, choose smallest
+1.4d-6 ! amount of time to average final Diagnostics
+../../../../ImplicitData/  !Save directory
+CIC_RFBenchmark_highDensity_fourthPart_1000Nodes_10xtime !filename
+no NGP_RFBenchmark_highDenity_halfPart_513nodes_10xtime ! Restart(yes/no) and directory to take from
+END

@@ -14,7 +14,9 @@ class dataSetExplicit:
             self.path = path + '/'
         else:
             self.path = filename
-        
+        dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows=1)
+        self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' + \
+                        str(int(str(dateTime[1])[0:2]) - 7) + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[4:6]
         initialCond = np.loadtxt(self.path + 'InitialConditions.dat', skiprows = 1)
         self.scheme = 'Explicit'
         self.Nx = int(initialCond[0])
@@ -72,7 +74,7 @@ class dataSetExplicit:
         self.totPotTime = endDiag[1]
         self.totCollTime = endDiag[2]
         self.totTimeSteps = int(endDiag[3])
-        diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
+        diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalMomentum(kg/m/s)', 'TotalEnergy(J/m^2)']
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):

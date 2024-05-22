@@ -110,4 +110,9 @@ contains
         print *, ""
     end subroutine readInitialInputs
 
+    subroutine changeDelT(dt)
+        real(real64), intent(in) :: dt
+        del_t = dt
+    end subroutine changeDelT
+
 end module constants

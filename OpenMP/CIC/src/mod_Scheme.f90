@@ -25,44 +25,84 @@ contains
         integer(int32), intent(in) :: iThread
         integer(int32) :: j, l_center, l_left, l_right
         real(real64) :: d
-
+        ! For Rho calculation
         do j = 1, part%N_p(iThread)
             l_center = INT(part%phaseSpace(1, j, iThread))
             d = part%phaseSpace(1, j, iThread) - real(l_center)
             part%densities(l_center, iThread) = part%densities(l_center, iThread) + (-d**2 + d + 0.5d0)
             l_right = l_center + 1
             l_left = l_center - 1
-            if (world%boundaryConditions(l_center) == 0 .and. world%boundaryConditions(l_right) == 0) then
+            SELECT CASE (world%boundaryConditions(l_right) - world%boundaryConditions(l_center))
+            CASE(0)
                 ! No Boundary either side
                 part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
-            else if (world%boundaryConditions(l_right) == 1 .or. world%boundaryConditions(l_right) == 4) then
-                ! Dirichlet to right
-                part%densities(l_center, iThread) = part%densities(l_center, iThread) - 0.5d0 * d**2
-                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-            else if (world%boundaryConditions(l_center) == 1 .or. world%boundaryConditions(l_center) == 4) then
+            CASE(-1,-4)
                 !Dirichlet to left
                 part%densities(l_center, iThread) = part%densities(l_center, iThread) - 0.5d0 * (1.0d0 - d)**2
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
-            else if (world%boundaryConditions(l_right) == 2) then
-                !Neumann to right
-                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * d**2
+            CASE(1,4)
+                ! Dirichlet to right
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) - 0.5d0 * d**2
                 part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
-            else if (world%boundaryConditions(l_center) == 2) then
+            CASE(-2)
                 !Neumann to left
                 part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
-            else if (world%boundaryConditions(l_center) == 3) then
+            CASE(2)
+                !Neumann to right
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * d**2
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+            CASE(-3)
                 !periodic to left
                 part%densities(NumberXNodes, iThread) = part%densities(NumberXNodes, iThread) + 0.5d0 * (1.0d0 - d)**2
                 part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
-            else if (world%boundaryConditions(l_right) == 3) then
+            CASE(3)
                 !periodic to right
                 part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
                 part%densities(1, iThread) = part%densities(1, iThread) + 0.5d0 * d**2
-            end if
+            END SELECT
         end do
     end subroutine interpolateParticleToNodes
+
+    subroutine interpolateParticleToNodesDensity(part, world, iThread)
+        ! Interpolate particles to logical grid for a single thread
+        type(Particle), intent(in out) :: part
+        type(Domain), intent(in) :: world
+        integer(int32), intent(in) :: iThread
+        integer(int32) :: j, l_center, l_left, l_right
+        real(real64) :: d
+        ! For Density Calculation
+        do j = 1, part%N_p(iThread)
+            l_center = INT(part%phaseSpace(1, j, iThread))
+            d = part%phaseSpace(1, j, iThread) - real(l_center)
+            part%densities(l_center, iThread) = part%densities(l_center, iThread) + (-d**2 + d + 0.5d0)
+            l_right = l_center + 1
+            l_left = l_center - 1
+            SELECT CASE (world%boundaryConditions(l_right) - world%boundaryConditions(l_center))
+            CASE(0)
+                ! No Boundary either side
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            CASE(-2,-1,-4)
+                !Neumann to left
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            CASE(2,1,4)
+                !Neumann to right
+                part%densities(l_center, iThread) = part%densities(l_center, iThread) + 0.5d0 * d**2
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+            CASE(-3)
+                !periodic to left
+                part%densities(NumberXNodes, iThread) = part%densities(NumberXNodes, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(l_right, iThread) = part%densities(l_right, iThread) + 0.5d0 * d**2
+            CASE(3)
+                !periodic to right
+                part%densities(l_left, iThread) = part%densities(l_left, iThread) + 0.5d0 * (1.0d0 - d)**2
+                part%densities(1, iThread) = part%densities(1, iThread) + 0.5d0 * d**2
+            END SELECT
+        end do
+    end subroutine interpolateParticleToNodesDensity
 
     subroutine loadParticleDensity(particleList, world, reset)
         type(Particle), intent(in out) :: particleList(:)
@@ -70,62 +110,58 @@ contains
         logical, intent(in) :: reset
         integer(int32) :: i, iThread
         !$OMP parallel private(iThread, i)
+        iThread = omp_get_thread_num() + 1 
         do i = 1, numberChargedParticles
-            iThread = omp_get_thread_num() + 1 
             if (reset) then
                 particleList(i)%densities(:,iThread) = 0.0d0
             end if
-            call interpolateParticleToNodes(particleList(i), world, iThread)
+            call interpolateParticleToNodesDensity(particleList(i), world, iThread)
         end do
         !$OMP end parallel
-    end subroutine
-
-    subroutine depositRho(rho, particleList, world) 
-        real(real64), intent(in out) :: rho(NumberXNodes)
-        type(Particle), intent(in out) :: particleList(numberChargedParticles)
-        type(Domain), intent(in) :: world
-        integer(int32) :: i, iThread
-        rho = 0.0d0
-        !$OMP parallel private(iThread, i)
-        do i = 1, numberChargedParticles
-            iThread = omp_get_thread_num() + 1 
-            particleList(i)%densities(:,iThread) = 0.0d0
-            call interpolateParticleToNodes(particleList(i), world, iThread)
-        end do
-        !$OMP barrier
-        do i = 1, numberChargedParticles
-            call world%addThreadedDomainArray(rho, particleList(i)%densities, NumberXNodes, NumberXNodes, iThread, particleList(i)%q_times_wp)
-        end do
-        !$OMP end parallel
-        ! print *, rho
-        ! print *, ''
-        ! rho = 0.0d0
-        ! do i = 1, numberChargedParticles
-        !     rho = rho + SUM(particleList(i)%densities, DIM=2) * particleList(i)%q_times_wp
-        ! end do
-        ! print *, rho
-        ! stop
-    end subroutine depositRho
+    end subroutine loadParticleDensity
 
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
         ! Re-use rho array since it doesn't get used after first Poisson
-        type(Particle), intent(in) :: particleList(:)
+        type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
         real(real64) :: densities(NumberXNodes)
-        integer(int32) :: i, iThread
+        integer(int32) :: i, iThread, j, leftThreadIndx, rightThreadIndx
         logical, intent(in) :: boolAverage
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
             densities = 0.0d0
-            !$OMP parallel private(iThread)
+            !$OMP parallel private(iThread, j, leftThreadIndx, rightThreadIndx)
             iThread = omp_get_thread_num() + 1
-            call world%addThreadedDomainArray(densities, particleList(i)%densities, NumberXNodes,NumberXNodes, iThread, particleList(i)%w_p)
+            leftThreadIndx = world%threadNodeIndx(1,iThread)
+            rightThreadIndx = world%threadNodeIndx(2,iThread)
+            particleList(i)%densities(leftThreadIndx:rightThreadIndx, 1) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
             !$OMP end parallel
-            densities = densities/world%dx_dl
+            if (world%gridSmoothBool) then
+                do j = 1, NumberXNodes
+                    SELECT CASE(world%boundaryConditions(j+1) - world%boundaryConditions(j))
+                    CASE(0)
+                        densities(j) = 0.25d0 * (particleList(i)%densities(j-1, 1) + 2.0d0 * particleList(i)%densities(j, 1) + particleList(i)%densities(j+1, 1))
+                    CASE(-2,-1,-4)
+                        !Neumann to left
+                        densities(j) = 0.25d0 * (particleList(i)%densities(2, 1) + 3.0d0 * particleList(i)%densities(1, 1))
+                    CASE(2,1,4)
+                        !Neumann to right
+                        densities(j) = 0.25d0 * (particleList(i)%densities(NumberXNodes-1, 1) + 3.0d0 * particleList(i)%densities(NumberXNodes, 1))
+                    CASE(-3)
+                        !periodic to left
+                        densities(j) = 0.25d0 * (particleList(i)%densities(NumberXNodes, 1) + 2.0d0 * particleList(i)%densities(1, 1) + particleList(i)%densities(2, 1))
+                    CASE(3)
+                        !periodic to right
+                        densities(j) = 0.25d0 * (particleList(i)%densities(1, 1) + 2.0d0 * particleList(i)%densities(NumberXNodes, 1) + particleList(i)%densities(NumberXNodes-1, 1))
+                    END SELECT
+                end do
+                particleList(i)%densities(:, 1) = densities
+            end if
+            densities = particleList(i)%densities(:, 1)/world%dx_dl
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

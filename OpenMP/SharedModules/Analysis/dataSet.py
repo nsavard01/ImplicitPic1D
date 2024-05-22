@@ -21,7 +21,9 @@ class dataSet:
             self.path = path + '/'
         else:
             self.path = filename
-        
+        dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows = 1)
+        self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' + \
+                        str(int(str(dateTime[1])[0:2]) - 7) + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[4:6]
         initialCond = np.loadtxt(self.path + 'InitialConditions.dat', skiprows = 1)
         if int(initialCond[0])== 0:
             self.scheme = 'NGP'
@@ -36,6 +38,7 @@ class dataSet:
         self.simTimeTotal = initialCond[5]
         self.delT = initialCond[6]
         self.fracTime = initialCond[7]
+        self.smooth = (initialCond[9] == 1)
         self.numDiag = int(initialCond[11]) + 1
         self.numThreads = int(initialCond[12])
         self.RF_rad_frequency = initialCond[13]
@@ -82,18 +85,18 @@ class dataSet:
         else:
             self.x_min = self.grid[0] - 0.5 * self.dx_dl[0]
             self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
-        endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
-        self.totTime = endDiag[0]
-        self.totPotTime = endDiag[1]
-        self.totCollTime = endDiag[2]
-        self.totTimeSteps = int(endDiag[3])
-        self.totSplitSteps = int(endDiag[4])
-        diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
+        diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'TotalMomentum(kg/m/s)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):
             diagAverageList = ['steps', 'time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'gaussError']
             self.aveGlobDiag = pd.read_csv(self.path + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
+            endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
+            self.totTime = endDiag[0]
+            self.totPotTime = endDiag[1]
+            self.totCollTime = endDiag[2]
+            self.totTimeSteps = int(endDiag[3])
+            self.totSplitSteps = int(endDiag[4])
         else:
             self.aveGlobDiag = None
             print("No averaging done for this simulation!")
@@ -102,10 +105,11 @@ class dataSet:
             self.solverType = 'AAc'
         else:
             self.solverType = 'JFNK'
-        self.eps_r = solver[1]
-        self.m_And = int(solver[2])
-        self.beta_k = solver[3]
-        self.maxIter = int(solver[4])
+        self.eps_a = solver[1]
+        self.eps_r = solver[2]
+        self.m_And = int(solver[3])
+        self.beta_k = solver[4]
+        self.maxIter = int(solver[5])
             
             
     def getPhaseSpace(self, name):
