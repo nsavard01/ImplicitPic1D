@@ -3,22 +3,22 @@ CC=mpiifort
 BASE= -qopenmp -qmkl -O3 -ipo -no-prec-div -m64 -auto -fp-model fast=2 -unroll-aggressive -mtune=skylake -heap-arrays 8192 -xHost  #-xCORE-AVX512 -mt_mpi -qopt-report=1
 DEBUG = -qmkl -g -traceback -check all -fp-stack-check -warn all #-traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
 OPT= $(BASE)
-OBJ= BoundPlasmaExample.o mod_simulation.o mod_nonLinSolvers.o mod_nitsol.o mod_particleMover.o mod_potentialSolver.o mod_particleInjection.o mod_Scheme.o mod_NullCollision.o mod_targetParticle.o mod_particle.o mod_domain.o mod_BasicFunctions.o constants.o 
+OBJ= main.o mod_simulation.o mod_nonLinSolvers.o mod_nitsol.o mod_particleMover.o mod_potentialSolver.o mod_particleInjection.o mod_Scheme.o mod_NullCollision.o mod_targetParticle.o mod_particle.o mod_domain.o mod_BasicFunctions.o constants.o 
 RM = rm -f
 
-all: clean cleanNitsol BoundPlasmaExample
+all: clean cleanNitsol main
 
-debug: clean cleanNitsol setDebug BoundPlasmaExample
+debug: clean cleanNitsol setDebug main
 
 setDebug: 
 	@echo "Setting up Debug flags"
 	$(eval BASE = -qmkl -qopenmp -g -heap-arrays 8192 -traceback -check all -fp-stack-check -warn all)
 	
 
-BoundPlasmaExample: $(OBJ)
+main: $(OBJ)
 	$(FC) $(BASE) -o $@ $(OBJ)
 
-BoundPlasmaExample.o: ../../SharedModules/src/BoundPlasmaExample.f90 constants.o mod_BasicFunctions.o mod_domain.o mod_particle.o mod_targetParticle.o mod_NullCollision.o mod_particleInjection.o mod_Scheme.o mod_potentialSolver.o mod_particleMover.o mod_nitsol.o mod_nonLinSolvers.o mod_simulation.o
+main.o: ../../SharedModules/src/main.f90 constants.o mod_BasicFunctions.o mod_domain.o mod_particle.o mod_targetParticle.o mod_NullCollision.o mod_particleInjection.o mod_Scheme.o mod_potentialSolver.o mod_particleMover.o mod_nitsol.o mod_nonLinSolvers.o mod_simulation.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_simulation.o: ../../SharedModules/src/mod_simulation.f90 constants.o mod_BasicFunctions.o mod_domain.o mod_particle.o mod_targetParticle.o mod_NullCollision.o mod_Scheme.o mod_particleInjection.o mod_potentialSolver.o mod_particleMover.o mod_nitsol.o mod_nonLinSolvers.o
@@ -64,7 +64,7 @@ cleanNitsol:
 	cd ../../Libraries/Nitsol; $(MAKE) clean
 
 clean:
-	$(RM) BoundPlasmaExample *.o *.mod
+	$(RM) main *.o *.mod
 
 
 
