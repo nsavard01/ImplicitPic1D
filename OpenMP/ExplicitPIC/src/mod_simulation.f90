@@ -108,6 +108,7 @@ contains
     subroutine generateSaveDirectory(dirName)
         character(*), intent(in) :: dirName
         logical :: bool
+        integer(int32) :: io
         character(len=10) :: buf
         bool = makedirqq(dirName)
         if (.not. bool) then
@@ -141,6 +142,10 @@ contains
             if (.not. bool) then
                 stop "Save directory not successfully created!"
             end if
+        end if
+        call execute_command_line("cp -Tr ../InputData "//dirName//"/InputData", EXITSTAT = io)
+        if (io /= 0) then
+            stop 'Issue copying input data deck'
         end if
     end subroutine generateSaveDirectory
 

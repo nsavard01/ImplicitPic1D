@@ -1,9 +1,0 @@
-0.7d-6 ! simulation time
-0.5d12 ! Initial number density (1/m^3) of particles
-25 ! number of diagnostic data dumps    
-0.2 ! Fraction of initial 1/w_p for initial time step
-0.0d0 ! Amount of steps to average for final diagnostics
-0.0d0 ! Power input, W/m^2
-10 ! number of steps to skip for heating
-1.0d8 ! heating frequency Hz
-END
