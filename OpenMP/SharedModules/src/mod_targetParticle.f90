@@ -29,7 +29,7 @@ contains
         ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
         real(real64), intent(in) :: mass, density, temperature
         character(*), intent(in) :: particleName
-        self % name = particleName
+        self % name = trim(particleName)
         self % mass = mass
         self % density = density ! #N/m^3
         self % temperature = temperature !temperature

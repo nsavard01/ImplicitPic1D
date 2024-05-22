@@ -142,6 +142,10 @@ contains
             if (.not. bool) then
                 stop "Save directory not successfully created!"
             end if
+            bool = makedirqq(dirName//'/BinaryCollisions')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
         end if
         call execute_command_line("cp -Tr ../InputData "//dirName//"/InputData", EXITSTAT = io)
         if (io /= 0) then
@@ -193,7 +197,7 @@ contains
             write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p, Temp")')
         end do
         do i = 1, numberBinaryCollisions
-            call nullCollisionList(i)%writeCollisionCrossSection(particleList(nullCollisionList(i)%reactantsIndx(1)), directoryName)
+            call nullCollisionList(i)%writeCollisionProperties(particleList, targetParticleList, directoryName)
         end do
         collisionTime = 0
         potentialTime = 0

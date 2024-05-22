@@ -24,7 +24,7 @@ module mod_NullCollision
         ! procedure, public, pass(self) :: generateCollisionTotal
         procedure, public, pass(self) :: elasticExcitCollisionIsotropic
         procedure, public, pass(self) :: ionizationCollisionIsotropic
-        ! procedure, public, pass(self) :: ionizationCollisionIsotropicNanbul
+        procedure, public, pass(self) :: writeCollisionProperties
         procedure, public, pass(self) :: writeCollisionCrossSection
 
     end type nullCollision
@@ -566,6 +566,23 @@ contains
         close(10)
 
     end subroutine writeCollisionCrossSection
+
+    subroutine writeCollisionProperties(self, particleList, targetParticleList, dirName)
+        class(nullCollision), intent(in) :: self
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
+        type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
+        character(*), intent(in) :: dirName
+        integer(int32) :: i, maxIndx(1)
+
+        open(10,file=dirName//'/BinaryCollisions/BinaryColl_'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//".dat")
+        write(10, '("Coll #, collType, E_thres (eV), maxSigma (m^2), EatMaxSigma (eV)")')
+        do i = 1, self%numberCollisions
+            maxIndx = MAXLOC(self%sigmaArray(:, i))
+            write(10,"(2(I3, 1x), 3(es16.8,1x))") i, self%collisionType(i), self%energyThreshold(i), self%sigmaArray(maxIndx(1), i), self%energyArray(maxIndx(1))
+        end do
+        close(10)
+
+    end subroutine writeCollisionProperties
 
     subroutine scatterVector(u,e,costheta,phi)
         !     ===================================================================
