@@ -285,7 +285,7 @@ contains
                 momentum_total = 0.0d0
                 do j=1, numberChargedParticles
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName, NumberXHalfNodes)
-                    !call particleList(j)%writePhaseSpace(CurrentDiagStep, directoryName)
+                    call particleList(j)%writePhaseSpace(directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
                     energyLoss = energyLoss + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
                     momentum_total = momentum_total + particleList(j)%getTotalMomentum()
