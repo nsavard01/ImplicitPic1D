@@ -501,7 +501,7 @@ contains
         end do
         do j = 1, numberBinaryCollisions
             inelasticEnergyLoss = inelasticEnergyLoss + SUM(nullCollisionList(j)%totalEnergyLoss) * 0.5d0 * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
-            open(22,file=directoryName//'/BinaryCollisions/'//'BinaryCollAve_'//particleList(nullCollisionList(j)%reactantsIndx(1))%name//"_on_"//targetParticleList(nullCollisionList(j)%reactantsIndx(2))%name//".dat")
+            open(22,file=directoryName//'/BinaryCollisions/'//particleList(nullCollisionList(j)%reactantsIndx(1))%name//"_on_"//targetParticleList(nullCollisionList(j)%reactantsIndx(2))%name//"/AveCollisionDiag.dat")
             write(22, '("Coll #, CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2)")')
             do i = 1, nullCollisionList(j)%numberCollisions
                 write(22,"((I3, 1x), 5(es16.8,1x))") i, real(nullCollisionList(j)%totalAmountCollisions(i))/real(nullCollisionList(j)%totalNumberCollidableParticles), &

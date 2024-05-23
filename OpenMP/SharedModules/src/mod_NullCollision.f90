@@ -6,6 +6,7 @@ module mod_NullCollision
     use mod_particle
     use mod_targetParticle
     use omp_lib
+    use ifport, only: makedirqq
     implicit none
 
     private
@@ -580,10 +581,15 @@ contains
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
         character(*), intent(in) :: dirName
+        logical :: bool
         integer(int32) :: i, maxIndx(1)
         character(len=5) :: char_i
 
-        open(10,file=dirName//'/BinaryCollisions/BinaryColl_'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//".dat")
+        bool = makedirqq(dirName//'/BinaryCollisions/'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name)
+        if (.not. bool) then
+            stop "Save directory binary collision not successfully created!"
+        end if
+        open(10,file=dirName//'/BinaryCollisions/'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"/CollisionProperties.dat")
         write(10, '("Coll #, collType, E_thres (eV), maxSigma (m^2), EatMaxSigma (eV)")')
         do i = 1, self%numberCollisions
             maxIndx = MAXLOC(self%sigmaArray(:, i))
@@ -594,7 +600,7 @@ contains
         ! For each collision create diagnostic file
         do i = 1, self%numberCollisions
             write(char_i, '(I3)'), i
-            open(10,file=dirName//'/BinaryCollisions/BinaryCollDiag_'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"_"//trim(adjustl(char_i))//".dat")
+            open(10,file=dirName//'/BinaryCollisions/'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"/CollisionDiag_"//trim(adjustl(char_i))//".dat")
             write(10, '("CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2)")')
             close(10)
         end do
@@ -613,7 +619,7 @@ contains
         ! For each collision add to diag file
         do i = 1, self%numberCollisions
             write(char_i, '(I3)'), i
-            open(10,file=dirName//'/BinaryCollisions/BinaryCollDiag_'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"_"//trim(adjustl(char_i))//".dat", &
+            open(10,file=dirName//'/BinaryCollisions/'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"/CollisionDiag_"//trim(adjustl(char_i))//".dat", &
                 STATUS = 'OLD', ACCESS = 'APPEND')
             write(10,"(5(es16.8,1x))") real(self%totalAmountCollisions(i))/real(self%totalNumberCollidableParticles), self%totalEnergyLoss(i) * 0.5d0 / e/ real(self%totalAmountCollisions(i)), &
             self%totalIncidentEnergy(i) * particleList(self%reactantsIndx(1))%mass * 0.5d0 / e/ real(self%totalAmountCollisions(i)), &

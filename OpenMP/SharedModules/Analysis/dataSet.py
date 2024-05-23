@@ -9,6 +9,7 @@ from import_libraries_constants import *
 
 import tkinter
 from tkinter import filedialog
+import re
 
 
 
@@ -100,6 +101,41 @@ class dataSet:
         else:
             self.aveGlobDiag = None
             print("No averaging done for this simulation!")
+        if (os.path.isdir(self.path + 'BinaryCollisions')):
+            self.binaryColl = {}
+            pattern = '(.*)_on_(.*)'
+            for filename in os.listdir(self.path + 'BinaryCollisions'):
+                test = re.search(pattern, filename)
+                primary = test.group(1)
+                target = test.group(2)
+                react = primary + '->' + target
+                prop = np.loadtxt(self.path + 'BinaryCollisions/' + filename + '/CollisionProperties.dat', skiprows = 1)
+                self.binaryColl[react] = list(range(prop.shape[0]))
+                collDiag = ['ratio', 'aveEnergyLoss', 'aveIncEnergy', 'P_loss(W/m^2)', 'aveFreq(Hz/m^2)']
+                for i in range(prop.shape[0]):
+                    self.binaryColl[react][i] = {}
+                    type = int(prop[i, 1])
+                    if (type == 1):
+                        self.binaryColl[react][i]['type'] = 'Elastic'
+                    elif (type == 2):
+                        self.binaryColl[react][i]['type'] = 'Ionization'
+                    elif (type == 3):
+                        self.binaryColl[react][i]['type'] = 'Excitation'
+                    elif (type == 4):
+                        self.binaryColl[react][i]['type'] = 'ChargeExchange'
+                    self.binaryColl[react][i]['E_thres'] = prop[i,2]
+                    self.binaryColl[react][i]['maxSigma'] = prop[i, 3]
+                    self.binaryColl[react][i]['EatMaxSigma'] = prop[i, 4]
+                    self.binaryColl[react][i]['diag'] = pd.read_csv(self.path + 'BinaryCollisions/' + filename + '/CollisionDiag_' + str(i+1) + '.dat', skiprows = 1, delim_whitespace=True, names = collDiag)
+                if (self.boolAverageFile):
+                    prop = np.loadtxt(self.path + 'BinaryCollisions/' + filename + '/AveCollisionDiag.dat', skiprows = 1)
+                    for i,coll in enumerate(self.binaryColl[react]):
+                        coll['aveDiag'] = {}
+                        coll['aveDiag']['ratio'] = prop[i,1]
+                        coll['aveDiag']['aveEnergyLoss'] = prop[i,2]
+                        coll['aveDiag']['aveIncEnergy'] = prop[i, 3]
+                        coll['aveDiag']['P_loss(W/m^2)'] = prop[i, 4]
+                        coll['aveDiag']['aveFreq(Hz/m^2)'] = prop[i, 5]
         solver = np.loadtxt(self.path + 'SolverState.dat', skiprows = 1)
         if (int(solver[0]) == 0):
             self.solverType = 'AAc'
