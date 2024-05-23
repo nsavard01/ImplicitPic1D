@@ -117,35 +117,38 @@ contains
             if (buf(1:3) /= 'yes') then
                 stop "You have decided to create a new directory for the save files I suppose"
             end if
-        else
-            bool = makedirqq(dirName//'/Density')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
+            call execute_command_line("rm -r "//dirName//"/*", EXITSTAT = io)
+            if (io /= 0) then
+                stop 'Issue removing old data'
             end if
-            bool = makedirqq(dirName//'/ElectronTemperature')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/PhaseSpace')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/Phi')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/Temperature')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/CrossSections')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/BinaryCollisions')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
+        end if
+        bool = makedirqq(dirName//'/Density')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/ElectronTemperature')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/PhaseSpace')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/Phi')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/Temperature')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/CrossSections')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/BinaryCollisions')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
         end if
         call execute_command_line("cp -Tr ../InputData "//dirName//"/InputData", EXITSTAT = io)
         if (io /= 0) then
@@ -297,13 +300,16 @@ contains
                     particleList(j)%accumWallLoss = 0
                 end do
                 do j = 1, numberBinaryCollisions
-                    inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+                    inelasticEnergyLoss = inelasticEnergyLoss + 0.5d0 * SUM(nullCollisionList(j)%totalEnergyLoss) * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+                    call nullCollisionList(j)%writeCollisionDiag(particleList, targetParticleList, directoryName, del_t * diagStepDiff)
                 end do
                 write(22,"(6(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
                 chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff, momentum_total(1), solver%getTotalE(particleList, world)
                 do j = 1, numberBinaryCollisions
+                    nullCollisionList(j)%totalNumberCollidableParticles = 0
                     nullCollisionList(j)%totalEnergyLoss = 0
                     nullCollisionList(j)%totalAmountCollisions = 0
+                    nullCollisionList(j)%totalIncidentEnergy = 0
                 end do
                 CurrentDiagStep = CurrentDiagStep + 1
                 print *, "Number of electrons is:", SUM(particleList(1)%N_p)
@@ -369,6 +375,8 @@ contains
         do j = 1, numberBinaryCollisions
             nullCollisionList(j)%totalEnergyLoss = 0
             nullCollisionList(j)%totalAmountCollisions = 0
+            nullCollisionList(j)%totalIncidentEnergy = 0
+            nullCollisionList(j)%totalNumberCollidableParticles = 0
         end do
         windowDivision = INT(200.0d0 / fractionFreq)
         allocate(wallLoss(2 * windowDivision))
@@ -421,7 +429,7 @@ contains
         end do
         call writeParticleDensity(particleList, world, 0, .true., directoryName) 
         do j = 1, numberBinaryCollisions
-            inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+            inelasticEnergyLoss = inelasticEnergyLoss + SUM(nullCollisionList(j)%totalEnergyLoss) * 0.5d0 * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
         end do
         open(22,file=directoryName//'/GlobalDiagnosticDataAveraged.dat')
         write(22,'("Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2)")')

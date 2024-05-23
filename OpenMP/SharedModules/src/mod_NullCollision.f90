@@ -15,10 +15,12 @@ module mod_NullCollision
 
     ! Particle contains particle properties and stored values in phase space df
     type :: nullCollision
-        integer(int32) :: numberCollisions, numberReactants, lengthArrays, totalAmountCollisions
-        real(real64), allocatable :: energyArray(:), sigmaArray(:, :), energyThreshold(:)
-        real(real64) :: sigmaVMax, reducedMass, minEnergy, maxEnergy, sumMass, reducedMassIonization, totalEnergyLoss
+        integer(int32) :: numberCollisions, numberReactants, lengthArrays
+        real(real64), allocatable :: energyArray(:), sigmaArray(:, :), energyThreshold(:), totalIncidentEnergy(:), totalEnergyLoss(:)
+        real(real64) :: sigmaVMax, reducedMass, minEnergy, maxEnergy, sumMass, reducedMassIonization
         integer(int32), allocatable :: collisionType(:), reactantsIndx(:), numberProducts(:), productsIndx(:,:)
+        integer(int64), allocatable :: totalAmountCollisions(:)
+        integer(int64) :: totalNumberCollidableParticles
     contains
         procedure, public, pass(self) :: generateCollision
         ! procedure, public, pass(self) :: generateCollisionTotal
@@ -26,6 +28,8 @@ module mod_NullCollision
         procedure, public, pass(self) :: ionizationCollisionIsotropic
         procedure, public, pass(self) :: writeCollisionProperties
         procedure, public, pass(self) :: writeCollisionCrossSection
+        procedure, public, pass(self) :: writeCollisionDiag
+
 
     end type nullCollision
 
@@ -50,8 +54,6 @@ contains
         self%sumMass = sumMass
         self%reducedMass = red_mass
         self%reducedMassIonization = redMassTripleProducts
-        self%totalEnergyLoss = 0.0d0
-        self%totalAmountCollisions = 0
 
         ! order collisions by maximum sigma_v in each collision
         do i = 1, numberCollisions
@@ -71,7 +73,8 @@ contains
 
         
         allocate(self%energyArray(lengthArrays), self%sigmaArray(lengthArrays, numberCollisions), self%energyThreshold(numberCollisions), self%collisionType(numberCollisions), &
-            self%reactantsIndx(numberReactants), self%numberProducts(numberCollisions), self%productsIndx(3, numberCollisions))
+            self%reactantsIndx(numberReactants), self%numberProducts(numberCollisions), self%productsIndx(3, numberCollisions), self%totalAmountCollisions(numberCollisions), &
+            self%totalIncidentEnergy(numberCollisions), self%totalEnergyLoss(numberCollisions))
         self%energyArray = energyArray
         self%reactantsIndx = reactantsIndx
         do i = 1, numberCollisions
@@ -94,7 +97,10 @@ contains
             end do
             self%sigmaVMax = MAX(self%sigmaVMax, sum_sigma * v_r)
         end do
-        
+        self%totalAmountCollisions = 0.0d0
+        self%totalNumberCollidableParticles = 0
+        self%totalIncidentEnergy = 0.0d0
+        self%totalEnergyLoss = 0.0d0
         self%minEnergy = MINVAL(self%energyArray)
         self%maxEnergy = MAXVAL(self%energyArray)
     
@@ -108,8 +114,10 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: del_t
         logical :: collisionBool
-        real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, sigma_v_low, speedCM, particleLocation, energyLoss, primary_mass, target_mass
-        integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx, totalCollisions
+        real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, &
+        sigma_v_low, speedCM, particleLocation, energyLoss(self%numberCollisions), primary_mass, target_mass, IncidentEnergy, totIncidentEnergy(self%numberCollisions)
+        integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx
+        integer(int64) :: totalCollisions(self%numberCollisions)
         integer(int32) :: irand_thread
 
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
@@ -120,10 +128,13 @@ contains
         end if
         energyLoss = 0
         totalCollisions = 0
+        totIncidentEnergy = 0
         primary_mass = particleList(self%reactantsIndx(1))%mass
         target_mass = targetParticleList(self%reactantsIndx(2))%mass
+        self%totalNumberCollidableParticles = self%totalNumberCollidableParticles + SUM(particleList(self%reactantsIndx(1))%numToCollide)
         !$OMP parallel private(iThread, i,numberSelected, numberSelectedReal, Rand, particleIndx, numberTotalParticles, targetVelocity, incidentVelocity, &
-            velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, addIonizationIndx, particleLocation, irand_thread) reduction(+:energyLoss,totalCollisions)
+            velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, &
+            addIonizationIndx, particleLocation, irand_thread, IncidentEnergy) reduction(+:energyLoss,totalCollisions, totIncidentEnergy)
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread)
         numberTotalParticles = particleList(self%reactantsIndx(1))%numToCollide(iThread)
@@ -173,15 +184,14 @@ contains
                     !sigma_v = sigma_v_low + 1.0d0 - EXP(-sigma_v * targetParticleList(self%reactantsIndx(2))%density * del_t) 
                     collisionBool = (Rand <= sigma_v/self%sigmaVMax) !P_null
                     if (collisionBool) then
-                        totalCollisions = totalCollisions + 1
+                        totalCollisions(collIdx) = totalCollisions(collIdx) + 1
+                        IncidentEnergy = SUM(incidentVelocity**2)
+                        totIncidentEnergy(collIdx) = totIncidentEnergy(collIdx) + IncidentEnergy
                         SELECT CASE (self%collisionType(collIdx))
                         CASE(1)
-                            velocity_CM = incidentVelocity
                             call self%elasticExcitCollisionIsotropic(primary_mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
-                            energyLoss = energyLoss + primary_mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
                         CASE(2)
-                            energyLoss = energyLoss - SUM(targetVelocity**2) * target_mass * 0.5d0 / e
                             call self%ionizationCollisionIsotropic(primary_mass, particleList(self%productsIndx(2, collIdx))%mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity, velocity_CM)
                             !Update total particle count
@@ -193,19 +203,16 @@ contains
                             ! set new ion velocity and position
                             particleList(self%productsIndx(2, collIdx))%phaseSpace(2:4, particleList(self%productsIndx(2, collIdx))%N_p(iThread), iThread) = targetVelocity
                             particleList(self%productsIndx(2, collIdx))%phaseSpace(1, particleList(self%productsIndx(2, collIdx))%N_p(iThread), iThread) = particleLocation
-                            energyLoss = energyLoss + self%energyThreshold(collIdx)
+                            energyLoss(collIdx) = energyLoss(collIdx) - SUM(targetVelocity**2) * target_mass - SUM(velocity_CM**2) * primary_mass
                         CASE(3)
-                            velocity_CM = incidentVelocity
                             call self%elasticExcitCollisionIsotropic(primary_mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
-                            energyLoss = energyLoss + primary_mass * 0.5d0 * (SUM(velocity_CM**2) - SUM(incidentVelocity**2)) / e
-                            !energyLoss = energyLoss + self%energyThreshold(collIdx)
                         CASE(4)
-                            energyLoss = energyLoss + primary_mass * 0.5d0 * (SUM(incidentVelocity**2) - SUM(targetVelocity**2)) / e
                             incidentVelocity = targetVelocity
                         CASE(5)
                             print *, 'dissociation'
                         END SELECT
+                        energyLoss(collIdx) = energyLoss(collIdx) + primary_mass * (IncidentEnergy - SUM(incidentVelocity**2))
                         exit
                     end if
                     sigma_v_low = sigma_v
@@ -221,8 +228,9 @@ contains
         irand(iThread) = irand_thread
         particleList(self%reactantsIndx(1))%numToCollide(iThread) = numberTotalParticles
         !$OMP end parallel
-        self%totalEnergyLoss = self%totalEnergyLoss + energyLoss
         self%totalAmountCollisions = self%totalAmountCollisions + totalCollisions
+        self%totalEnergyLoss = self%totalEnergyLoss + energyLoss
+        self%totalIncidentEnergy = self%totalIncidentEnergy + totIncidentEnergy
         
 
     end subroutine generateCollision
@@ -573,6 +581,7 @@ contains
         type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
         character(*), intent(in) :: dirName
         integer(int32) :: i, maxIndx(1)
+        character(len=5) :: char_i
 
         open(10,file=dirName//'/BinaryCollisions/BinaryColl_'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//".dat")
         write(10, '("Coll #, collType, E_thres (eV), maxSigma (m^2), EatMaxSigma (eV)")')
@@ -582,7 +591,38 @@ contains
         end do
         close(10)
 
+        ! For each collision create diagnostic file
+        do i = 1, self%numberCollisions
+            write(char_i, '(I3)'), i
+            open(10,file=dirName//'/BinaryCollisions/BinaryCollDiag_'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"_"//trim(adjustl(char_i))//".dat")
+            write(10, '("CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2)")')
+            close(10)
+        end do
+
     end subroutine writeCollisionProperties
+
+    subroutine writeCollisionDiag(self, particleList, targetParticleList, dirName, timeInterval)
+        class(nullCollision), intent(in) :: self
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
+        type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
+        character(*), intent(in) :: dirName
+        real(real64), intent(in) :: timeInterval
+        integer(int32) :: i, maxIndx(1)
+        character(len=5) :: char_i
+
+        ! For each collision add to diag file
+        do i = 1, self%numberCollisions
+            write(char_i, '(I3)'), i
+            open(10,file=dirName//'/BinaryCollisions/BinaryCollDiag_'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"_"//trim(adjustl(char_i))//".dat", &
+                STATUS = 'OLD', ACCESS = 'APPEND')
+            write(10,"(5(es16.8,1x))") real(self%totalAmountCollisions(i))/real(self%totalNumberCollidableParticles), self%totalEnergyLoss(i) * 0.5d0 / e/ real(self%totalAmountCollisions(i)), &
+            self%totalIncidentEnergy(i) * particleList(self%reactantsIndx(1))%mass * 0.5d0 / e/ real(self%totalAmountCollisions(i)), &
+            self%totalEnergyLoss(i) * 0.5d0 * particleList(self%reactantsIndx(1))%w_p / timeInterval, &
+            real(self%totalAmountCollisions(i)) * particleList(self%reactantsIndx(1))%w_p / timeInterval
+            close(10)
+        end do
+
+    end subroutine writeCollisionDiag
 
     subroutine scatterVector(u,e,costheta,phi)
         !     ===================================================================

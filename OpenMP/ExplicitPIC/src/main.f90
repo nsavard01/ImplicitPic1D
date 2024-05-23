@@ -18,7 +18,7 @@ program BoundPlasmaExample
     type(nullCollision), allocatable :: nullCollisionList(:)
     type(potentialSolver) :: solver
     real(real64), allocatable :: temp(:)
-    integer(int32), allocatable :: numTemp(:)    
+    integer(int32), allocatable :: numTemp(:)   
    
     call readInitialInputs('InitialConditions.inp')
     call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)
@@ -34,35 +34,7 @@ program BoundPlasmaExample
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
     call solver%depositRho(particleList, world)
     call solver%solve_tridiag_Poisson(world, 0.0d0)
-    ! print *, 'mass ratio:', particleList(2)%mass / particleList(1)%mass
-    ! print *, SUM(particleList(2)%workSpace, DIM = 2)
-    ! print *, ""
-    ! allocate(temp(NumberXNodes-1), numTemp(NumberXNodes-1))
-    ! temp = 0.0
-    ! numTemp = 0
-    ! do i = 1, numThread
-    !     do j = 1, particleList(2)%N_p(i)
-    !         l_temp = particleList(2)%phaseSpace(1, j, i)
-    !         v_temp = particleList(2)%phaseSpace(2, j, i)
-    !         temp(INT(l_temp)) = temp(INT(l_temp)) + v_temp
-    !         numTemp(INT(l_temp)) = numTemp(INT(l_temp)) + 1
-    !     end do
-    ! end do
-
-    ! print *, temp/numTemp
-    ! stop
-    ! do j = 1, numberChargedParticles
-    !     print *, "--------------"
-    !     print *, 'particle is:', particleList(j)%name
-    !     print *, "--------------"
-    !     do iThread = 1, numThread
-    !         if (particleList(j)%N_p(iThread) > 0) then
-    !             print *, 'l is:', particleList(j)%phaseSpace(1, particleList(j)%N_p(iThread), iThread)
-    !             print *, 'v_x is:', particleList(j)%phaseSpace(2, particleList(j)%N_p(iThread), iThread)
-    !         end if
-    !     end do
-    ! end do
-    ! stop
+    
     ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
     call solver%makeEField(world)
     call solver%initialVRewind(particleList, del_t)

@@ -56,7 +56,6 @@ Exp_RFBenchmark_case2_10xParticles = dataSetExplicit('Y:/scratch/nsavard/Implici
 Exp_RFBenchmark_case2_40amu = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_case2_40amu/')
 Exp_RFBenchmark_case2_40amu_10xParticles = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_case2_40amu_10xParticles/')
 
-
 Exp_VassBenchmark_Ar = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_VassBenchmark_Ar/')
 Exp_VassBenchmark_Ar_noRam = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_VassBenchmark_Ar_noRam/')
 Exp_VassBenchmark_Ar_noRam_10xParticles = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_VassBenchmark_Ar_noRam_10xParticles/')
