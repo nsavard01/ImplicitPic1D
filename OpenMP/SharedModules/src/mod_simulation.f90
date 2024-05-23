@@ -57,27 +57,32 @@ contains
             if (buf(1:3) /= 'yes') then
                 stop "You have decided to create a new directory for the save files I suppose"
             end if
-        else
-            bool = makedirqq(dirName//'/Density')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
+            call execute_command_line("rm -r "//dirName//"/*", EXITSTAT = io)
+            if (io /= 0) then
+                stop 'Issue removing old data'
             end if
-            bool = makedirqq(dirName//'/ElectronTemperature')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/PhaseSpace')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/Phi')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-            bool = makedirqq(dirName//'/Temperature')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
+        end if
+        bool = makedirqq(dirName//'/Density')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/ElectronTemperature')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/PhaseSpace')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/Phi')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/Temperature')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        if (numberBinaryCollisions > 0) then
             bool = makedirqq(dirName//'/BinaryCollisions')
             if (.not. bool) then
                 stop "Save directory not successfully created!"
@@ -276,14 +281,17 @@ contains
                     particleList(j)%accumWallLoss = 0.0d0
                 end do
                 do j = 1, numberBinaryCollisions
-                    inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+                    inelasticEnergyLoss = inelasticEnergyLoss + 0.5d0 * SUM(nullCollisionList(j)%totalEnergyLoss) * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+                    call nullCollisionList(j)%writeCollisionDiag(particleList, targetParticleList, directoryName, (currentTime + currDel_t - pastDiagTime))
                 end do
                 write(22,"(9(es16.8,1x), 1(I4, 1x))") currentTime + currDel_t, inelasticEnergyLoss/(currentTime + currDel_t - pastDiagTime), &
                 chargeTotal/(currentTime + currDel_t - pastDiagTime), energyLoss/(currentTime + currDel_t - pastDiagTime), Etotal, momentum_total(1), &
                 gaussError, chargeError, energyError, iterNumPicard
                 do j = 1, numberBinaryCollisions
+                    nullCollisionList(j)%totalNumberCollidableParticles = 0
                     nullCollisionList(j)%totalEnergyLoss = 0
                     nullCollisionList(j)%totalAmountCollisions = 0
+                    nullCollisionList(j)%totalIncidentEnergy = 0
                 end do
                 print *, 'Total wall power loss:', energyLoss/(currentTime + currDel_t - pastDiagTime)
                 print *, 'Total collision energy loss:', inelasticEnergyLoss/(currentTime + currDel_t - pastDiagTime)
@@ -378,7 +386,8 @@ contains
             close(unitPart1+j)
         end do
         do j = 1, numberBinaryCollisions
-            inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+            inelasticEnergyLoss = inelasticEnergyLoss + 0.5d0 * SUM(nullCollisionList(j)%totalEnergyLoss) * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+            call nullCollisionList(j)%writeCollisionDiag(particleList, targetParticleList, directoryName, (currentTime + currDel_t - pastDiagTime))
         end do
         write(22,"(9(es16.8,1x), 1(I4, 1x))") currentTime + currDel_t, inelasticEnergyLoss/(currentTime + currDel_t - pastDiagTime), &
         chargeTotal/(currentTime + currDel_t - pastDiagTime), energyLoss/(currentTime + currDel_t - pastDiagTime), &
@@ -428,6 +437,8 @@ contains
         do j = 1, numberBinaryCollisions
             nullCollisionList(j)%totalEnergyLoss = 0
             nullCollisionList(j)%totalAmountCollisions = 0
+            nullCollisionList(j)%totalIncidentEnergy = 0
+            nullCollisionList(j)%totalNumberCollidableParticles = 0
         end do
         phi_average = 0.0d0
         i = 0
@@ -489,7 +500,17 @@ contains
             ELossTotal = ELossTotal + SUM(particleList(j)%accumEnergyLoss) * particleList(j)%mass * particleList(j)%w_p * 0.5d0
         end do
         do j = 1, numberBinaryCollisions
-            inelasticEnergyLoss = inelasticEnergyLoss + nullCollisionList(j)%totalEnergyLoss * e * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+            inelasticEnergyLoss = inelasticEnergyLoss + SUM(nullCollisionList(j)%totalEnergyLoss) * 0.5d0 * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
+            open(22,file=directoryName//'/BinaryCollisions/'//'BinaryCollAve_'//particleList(nullCollisionList(j)%reactantsIndx(1))%name//"_on_"//targetParticleList(nullCollisionList(j)%reactantsIndx(2))%name//".dat")
+            write(22, '("Coll #, CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2)")')
+            do i = 1, nullCollisionList(j)%numberCollisions
+                write(22,"((I3, 1x), 5(es16.8,1x))") i, real(nullCollisionList(j)%totalAmountCollisions(i))/real(nullCollisionList(j)%totalNumberCollidableParticles), &
+                nullCollisionList(j)%totalEnergyLoss(i) * 0.5d0 / e/ real(nullCollisionList(j)%totalAmountCollisions(i)), &
+                nullCollisionList(j)%totalIncidentEnergy(i) * particleList(nullCollisionList(j)%reactantsIndx(1))%mass * 0.5d0 / e/ real(nullCollisionList(j)%totalAmountCollisions(i)), &
+                nullCollisionList(j)%totalEnergyLoss(i) * 0.5d0 * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p / (currentTime-startTime), &
+                real(nullCollisionList(j)%totalAmountCollisions(i)) * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p / (currentTime-startTime)
+            end do
+            close(22)
         end do
         call writeParticleDensity(particleList, world, 0, .true., directoryName) 
         solver%rho = 0.0d0

@@ -142,10 +142,6 @@ contains
         if (.not. bool) then
             stop "Save directory not successfully created!"
         end if
-        bool = makedirqq(dirName//'/CrossSections')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
         if (numberBinaryCollisions > 0) then
             bool = makedirqq(dirName//'/BinaryCollisions')
             if (.not. bool) then
