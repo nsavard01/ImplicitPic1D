@@ -237,13 +237,15 @@ contains
         class(Particle), intent(in) :: self
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
-        integer(int32) :: i
+        integer(int32) :: iThread
         !write(char_i, '(I3)'), CurrentDiagStep
-        open(10,file=dirName//'/PhaseSpace/phaseSpace_'//self%name//".dat", form='UNFORMATTED', access = 'STREAM', status = 'REPLACE')
-        do i = 1, numThread
-            write(10) self%phaseSpace(:, 1:self%N_p(i), i)
-        end do
-        close(10)
+        !$OMP parallel private(iThread, char_i)
+        iThread = omp_get_thread_num() + 1
+        write(char_i, '(I3)'), iThread
+        open(iThread,file=dirName//'/PhaseSpace/phaseSpace_'//self%name//"_thread"//trim(adjustl(char_i))//".dat", form='UNFORMATTED', access = 'STREAM', status = 'REPLACE')
+        write(iThread) self%phaseSpace(:, 1:self%N_p(iThread), iThread)
+        close(ithread)
+        !$OMP end parallel
     end subroutine writePhaseSpace
 
     subroutine writeLocalTemperature(self, CurrentDiagStep, dirName, numCells)
