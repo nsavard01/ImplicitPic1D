@@ -12,7 +12,6 @@ module mod_simulation
     use mod_NullCollision
     !use mod_collisions
     use omp_lib
-    use ifport, only: makedirqq
     implicit none
 
     real(real64) :: inelasticEnergyLoss, currentTime
@@ -105,55 +104,6 @@ contains
     end subroutine WriteParticleDensity
 
 
-    subroutine generateSaveDirectory(dirName)
-        character(*), intent(in) :: dirName
-        logical :: bool
-        integer(int32) :: io
-        character(len=10) :: buf
-        bool = makedirqq(dirName)
-        if (.not. bool) then
-            print *, "Save directory ", dirName, " already exists. Are you sure you want to continue(yes/no)?"
-            read *, buf
-            if (buf(1:3) /= 'yes') then
-                stop "You have decided to create a new directory for the save files I suppose"
-            end if
-            call execute_command_line("rm -r "//dirName//"/*", EXITSTAT = io)
-            if (io /= 0) then
-                stop 'Issue removing old data'
-            end if
-        end if
-        bool = makedirqq(dirName//'/Density')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq(dirName//'/ElectronTemperature')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq(dirName//'/PhaseSpace')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq(dirName//'/Phi')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        bool = makedirqq(dirName//'/Temperature')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
-        if (numberBinaryCollisions > 0) then
-            bool = makedirqq(dirName//'/BinaryCollisions')
-            if (.not. bool) then
-                stop "Save directory not successfully created!"
-            end if
-        end if
-        call execute_command_line("cp -Tr ../InputData "//dirName//"/InputData", EXITSTAT = io)
-        if (io /= 0) then
-            stop 'Issue copying input data deck'
-        end if
-    end subroutine generateSaveDirectory
-
     subroutine solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, irand, simulationTime)
         ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
         ! Impliment averaging for final select amount of timeSteps, this will be last data dump
@@ -172,7 +122,7 @@ contains
         allocate(energyAddColl(numThread))
         CurrentDiagStep = oldDiagStep
         unitPart1 = 100
-        if (.not. restartBool) call generateSaveDirectory(directoryName)
+        if (.not. restartBool) call generateSaveDirectory(directoryName, numberBinaryCollisions)
         !Wrtie Initial conditions
         call date_and_time(DATE=date_char, TIME = time_char)
         open(15,file=directoryName//'/DateTime.dat')

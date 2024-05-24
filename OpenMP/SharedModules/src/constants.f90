@@ -1,5 +1,6 @@
 module constants
     use iso_fortran_env, only: real64, int32
+    use ifport, only: makedirqq
     implicit none
 
     ! physical constants and global variables used among all modules
@@ -121,6 +122,56 @@ contains
         print *, "------------------"
         print *, ""
     end subroutine readInitialInputs
+
+    subroutine generateSaveDirectory(dirName, collNumber)
+        character(*), intent(in) :: dirName
+        integer(int32), intent(in) :: collNumber
+        logical :: bool
+        integer(int32) :: io
+        character(len=10) :: buf
+        bool = makedirqq(dirName)
+        if (.not. bool) then
+            print *, "Save directory ", dirName, " already exists. Are you sure you want to continue(yes/no)?"
+            read *, buf
+            if (buf(1:3) /= 'yes') then
+                stop "You have decided to create a new directory for the save files I suppose"
+            end if
+            call execute_command_line("rm -r "//dirName//"/*", EXITSTAT = io)
+            if (io /= 0) then
+                stop 'Issue removing old data'
+            end if
+        end if
+        bool = makedirqq(dirName//'/Density')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/ElectronTemperature')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/PhaseSpace')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/Phi')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        bool = makedirqq(dirName//'/Temperature')
+        if (.not. bool) then
+            stop "Save directory not successfully created!"
+        end if
+        if (collNumber > 0) then
+            bool = makedirqq(dirName//'/BinaryCollisions')
+            if (.not. bool) then
+                stop "Save directory not successfully created!"
+            end if
+        end if
+        call execute_command_line("cp -Tr ../InputData "//dirName//"/InputData", EXITSTAT = io)
+        if (io /= 0) then
+            stop 'Issue copying input data deck'
+        end if
+    end subroutine generateSaveDirectory
 
     subroutine changeDelT(dt)
         real(real64), intent(in) :: dt
