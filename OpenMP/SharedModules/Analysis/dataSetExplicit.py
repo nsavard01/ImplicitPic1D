@@ -72,10 +72,15 @@ class dataSetExplicit:
         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
         self.totTime = endDiag[0]
         self.totPotTime = endDiag[1]
-        self.totCollTime = endDiag[2]
-        self.totTimeSteps = int(endDiag[3])
+        self.totMoveTime = endDiag[2]
+        self.totCollTime = endDiag[3]
+        self.totTimeSteps = int(endDiag[4])
         diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalMomentum(kg/m/s)', 'TotalEnergy(J/m^2)']
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+        diagList = ['Time', 'PotTime', 'MoverTime', 'CollTime', 'Step']
+        self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+        if (self.globDiag.shape[0] > self.numDiag):
+            self.numDiag = self.globDiag.shape[0]
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):
             diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']

@@ -30,14 +30,14 @@ program BoundPlasmaExample
     ! do i = 1, numberChargedParticles
     !     particleList(i)%N_p = 0
     ! end do
-    call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p, solver%BFieldAngle)
+    call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p)
     ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
     call solver%depositRho(particleList, world)
-    call solver%solve_tridiag_Poisson(world, 0.0d0)
-    
+    call solver%solve_tridiag_Poisson(world, startSimulationTime)
+
     ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
     call solver%makeEField(world)
-    call solver%initialVRewind(particleList, del_t)
+    if (.not. restartBool) call solver%initialVRewind(particleList, del_t)
     
     call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, stateRan0, simulationTime)
     if (averagingTime /= 0.0d0) then

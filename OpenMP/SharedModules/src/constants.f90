@@ -15,6 +15,7 @@ module constants
     ! Essential parameters set that is important for entire simulation state
     integer(int32), protected :: numDiagnosticSteps, numThread
     logical, protected :: restartBool = .false.
+    integer(int32), protected :: oldDiagStep
     real(real64), protected :: fractionFreq, n_ave, T_e, T_i
     real(real64), protected :: del_t, simulationTime, averagingTime
     character(len=:), allocatable, protected :: directoryName, restartDirectory ! Name of save directory
@@ -46,6 +47,7 @@ contains
         read(10, *, IOSTAT = io) tempName
         read(10, *, IOSTAT = io) restartName, otherTemp
         close(10)
+        oldDiagStep = 1
         do k = 1, len(saveFolderName)
             if (saveFolderName(k:k) == ' ') then
                 exit
@@ -56,36 +58,45 @@ contains
             restartDirectory = trim(otherTemp)
             restartDirectory = saveFolderName(1:k-1)//restartDirectory
             print *, 'Restart directory is:', restartDirectory
+            print *, ""
+            print *, "Reading restart inputs:"
+            print *, "------------------"
+            open(10,file=restartDirectory//'/InputData/'//InitFilename, IOSTAT=io)
+            read(10, *, IOSTAT = io) numThread
+            read(10, *, IOSTAT = io) tempReal, startSimulationTime
+            read(10, *, IOSTAT = io) n_ave
+            read(10, *, IOSTAT = io) T_e
+            read(10, *, IOSTAT = io) T_i
+            read(10, *, IOSTAT = io) u
+            read(10, *, IOSTAT = io) fractionFreq, del_t
+            read(10, *, IOSTAT = io) tempReal
+            read(10, '(A)', IOSTAT = io) saveFolderName
+            read(10, *, IOSTAT = io) tempName
+            close(10)
             INQUIRE( file=restartDirectory//"/"//"GlobalDiagnosticData.dat", EXIST=fileExists) 
             if (fileExists) then
                 open(10,file=restartDirectory//"/"//"GlobalDiagnosticData.dat", IOSTAT=io)
                 io = 0
                 read(10, *, IOSTAT = io)
+                k = 0
                 do while (io == 0)
+                    k = k + 1
                     read(10, *, IOSTAT = io) tempReal
                 end do
                 close(10)
-                startSimulationTime = tempReal      
+                oldDiagStep = k
+                startSimulationTime = tempReal 
             else
                 print *, 'Restart global Diagnostic file does not exist!'
                 stop
             end if
-
-            INQUIRE( file=restartDirectory//"/"//"InitialConditions.dat", EXIST=fileExists) 
-            if (fileExists) then
-                open(10,file=restartDirectory//"/"//"InitialConditions.dat", IOSTAT=io)
-                read(10, *, IOSTAT = io)
-                read(10, *, IOSTAT = io) u,u, T_e, T_i, n_ave, tempReal, del_t, FractionFreq
-                close(10)    
-            else
-                print *, 'Restart initial conditions file does not exist!'
-                stop
+            directoryName = restartDirectory
+        else
+            if (len(trim(tempName)) < 2) then
+                stop "Directory name length less than 2 characters!"
             end if
+            directoryName = saveFolderName(1:k-1)//trim(tempName)
         end if
-        if (len(trim(tempName)) < 2) then
-            stop "Directory name length less than 2 characters!"
-        end if
-        directoryName = saveFolderName(1:k-1)//trim(tempName)
         if (numThread > omp_get_num_procs()) then
             print *, "Number of threads set is larger than the maximum number of threads which is", omp_get_num_procs()
             stop
@@ -95,6 +106,7 @@ contains
         del_t = MIN(fractionFreq * 1.0d0 / plasmaFreqTemp, del_t)
         simulationTime = simulationTime + startSimulationTime
         print *, "Save data folder: ", directoryName
+        print *, 'Restart Bool:', restartBool
         print *, "Number of threads is:", omp_get_max_threads()
         print *, 'Total allowable threads:', omp_get_num_procs()
         print *, "Average initial electron density:", n_ave

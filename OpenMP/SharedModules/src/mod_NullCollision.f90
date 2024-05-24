@@ -683,7 +683,11 @@ contains
         print *, '---------------------------'
         numberBinaryCollisions = 0
         numberCollisions = 0
-        open(10,file='../InputData/'//filename, action = 'read')
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//filename, action = 'read')
+        else
+            open(10,file=restartDirectory//'/InputData/'//filename, action = 'read')
+        end if
         read(10,*) string
         do while (.not. (string(1:3) == 'END' .or. string(1:3) == 'end'))
             collFileName = trim(string)

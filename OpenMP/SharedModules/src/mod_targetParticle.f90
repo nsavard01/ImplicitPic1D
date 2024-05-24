@@ -68,49 +68,33 @@ contains
         print *, "Reading particle inputs:"
         if (.not. restartBool) then
             open(10,file='../InputData/'//filename, action = 'read')
-            do j=1, 10000
-                read(10,*) name
-
-
-                if( name(1:4).eq.'NEUT' .or. name(1:4).eq.'Neut' .or. name(1:4).eq.'neut' ) then
-                    do while(name(1:4).ne.'----')
-                        read(10,*) name
-                    end do
-                    read(10,'(A6)', ADVANCE = 'NO') name
-                    do while (name(1:4).ne.'----')
-                        numNeutral = numNeutral + 1
-                        read(10,*) mass_neutral(numNeutral), Temp_neutral(numNeutral), density_neutral(numNeutral)
-                        mass_neutral(numNeutral) = mass_neutral(numNeutral) * m_amu
-                        neutralName(numNeutral) = trim(name)
-                        read(10,'(A6)', ADVANCE = 'NO') name
-                    end do
-                endif       
-
-                if (name(1:7) == 'ENDFILE') then
-                    close(10)
-                    exit
-                end if
-
-            end do
         else
-            open(10,file=restartDirectory//"/TargetProperties.dat", IOSTAT=io)
-            read(10, *, IOSTAT = io)
-            read(10, '(A)', Advance = 'NO', IOSTAT = io) name
-            do while (io == 0)    
-                do j = 1, len(name)
-                    if (name(j:j) == ' ') then
-                        exit
-                    end if
-                end do
-                backspace(10)
-                numNeutral = numNeutral + 1
-                read(10, *, IOSTAT = io) name(1:j-1), mass_neutral(numNeutral), density_neutral(numNeutral), Temp_neutral(numNeutral)
-                neutralName(numNeutral) = name(1:j-1)
-                read(10, '(A)', Advance = 'NO', IOSTAT = io) name
-            end do
-            close(10)
+            open(10,file=restartDirectory//'/InputData/'//filename, action = 'read') 
         end if
+        do j=1, 10000
+            read(10,*) name
 
+
+            if( name(1:4).eq.'NEUT' .or. name(1:4).eq.'Neut' .or. name(1:4).eq.'neut' ) then
+                do while(name(1:4).ne.'----')
+                    read(10,*) name
+                end do
+                read(10,'(A6)', ADVANCE = 'NO') name
+                do while (name(1:4).ne.'----')
+                    numNeutral = numNeutral + 1
+                    read(10,*) mass_neutral(numNeutral), Temp_neutral(numNeutral), density_neutral(numNeutral)
+                    mass_neutral(numNeutral) = mass_neutral(numNeutral) * m_amu
+                    neutralName(numNeutral) = trim(name)
+                    read(10,'(A6)', ADVANCE = 'NO') name
+                end do
+            endif       
+
+            if (name(1:7) == 'ENDFILE') then
+                exit
+            end if
+
+        end do
+        close(10)
 
         numberNeutralParticles = numNeutral
         if (numberNeutralParticles > 0) then

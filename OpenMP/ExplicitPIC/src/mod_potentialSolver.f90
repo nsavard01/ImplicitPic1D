@@ -16,16 +16,13 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), rho(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: energyError, rho_const, siedelIter, siedelEps, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude
+        real(real64) :: rho_const, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
-        logical :: BFieldBool
 
 
     contains
         procedure, public, pass(self) :: depositRho
         procedure, public, pass(self) :: solve_tridiag_Poisson
-        procedure, public, pass(self) :: solve_gaussSiedel_Poisson
-        procedure, public, pass(self) :: solve_CG_Poisson
         procedure, public, pass(self) :: getEField
         procedure, public, pass(self) :: makeEField
         procedure, public, pass(self) :: solvePotential
@@ -42,11 +39,11 @@ module mod_potentialSolver
    
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, RF_frequency) result(self)
         ! Construct domain object, initialize grid, dx_dl, and dx_dl.
         real(real64), intent(in) :: leftVoltage, rightVoltage
         type(Domain), intent(in) :: world
-        real(real64), intent(in) :: BFieldMag, angle, RF_frequency
+        real(real64), intent(in) :: RF_frequency
         real(real64) :: angle_rad
         allocate(self % rho(NumberXNodes), self % phi(NumberXNodes), self%EField(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1))
@@ -57,16 +54,6 @@ contains
         self % rho_const = 0.0d0
         self % phi = 0.0d0
         self % EField = 0.0d0
-        self%energyError = 0.0d0
-        self%siedelIter = 100000
-        self%BFieldMag = BFieldMag
-        self%BFieldBool = (BFieldMag /= 0.0d0)
-        angle_rad = angle * pi / 180.0d0
-        self%BFieldAngle = angle_rad
-        self%BField(1) = BFieldMag * COS(angle_rad)
-        self%BField(2) = BFieldMag * SIN(angle_rad)
-        self%BField(3) = 0.0d0
-        self%siedelEps = 1d-6
         self%RF_half_amplitude = 0.0d0
         if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
         if (world%boundaryConditions(1) == 4) self%RF_half_amplitude = leftVoltage
@@ -194,82 +181,82 @@ contains
 
     end subroutine solve_tridiag_Poisson
 
-    subroutine solve_gaussSiedel_Poisson(self, world)
-        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-        class(potentialSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
-        integer(int32) :: i, j
-        real(real64) :: b(NumberXNodes), sigma(NumberXNodes), Ax(NumberXNodes), res
+    ! subroutine solve_gaussSiedel_Poisson(self, world)
+    !     ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+    !     class(potentialSolver), intent(in out) :: self
+    !     type(Domain), intent(in) :: world
+    !     integer(int32) :: i, j
+    !     real(real64) :: b(NumberXNodes), sigma(NumberXNodes), Ax(NumberXNodes), res
 
-        do i=1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
-            CASE(0,2)
-                b(i) = -self%rho(i) / eps_0
-            CASE(1,3)
-                b(i) = self%phi(i)
-            END SELECT
-        end do
-        do i = 1, self%siedelIter
-            sigma(1) = self%c_tri(1)*self%phi(2)
-            self%phi(1) = self%phi(1) + 1.4d0*((b(1) - sigma(1))/self%b_tri(1) - self%phi(1))
-            do j = 2, NumberXNodes-1
-                sigma(j) = self%c_tri(j)*self%phi(j+1) + self%a_tri(j-1) * self%phi(j-1)    
-                self%phi(j) = self%phi(j) + 1.4d0*((b(j) - sigma(j))/self%b_tri(j) - self%phi(j))
-            end do
-            sigma(NumberXNodes) = self%a_tri(NumberXNodes-1) * self%phi(NumberXNodes-1)
-            self%phi(NumberXNodes) = self%phi(NumberXNodes) + 1.4d0 * ((b(NumberXNodes) - sigma(NumberXNodes))/self%b_tri(NumberXNodes) - self%phi(NumberXNodes))
-            if (MOD(i, 100) == 0) then
-                Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-                res = SUM(((Ax + 1d-15)/(b + 1d-15) - 1.0d0)**2)
-                res = SQRT(res/NumberXNodes)
-                if (res < self%siedelEps) then
-                    exit
-                end if
-            end if
-        end do
-        if (i == self%siedelIter+1) then
-            stop 'Max iterations reached Gauss-siedel solver!'
-        end if
-    end subroutine solve_gaussSiedel_Poisson
+    !     do i=1, NumberXNodes
+    !         SELECT CASE (world%boundaryConditions(i))
+    !         CASE(0,2)
+    !             b(i) = -self%rho(i) / eps_0
+    !         CASE(1,3)
+    !             b(i) = self%phi(i)
+    !         END SELECT
+    !     end do
+    !     do i = 1, self%siedelIter
+    !         sigma(1) = self%c_tri(1)*self%phi(2)
+    !         self%phi(1) = self%phi(1) + 1.4d0*((b(1) - sigma(1))/self%b_tri(1) - self%phi(1))
+    !         do j = 2, NumberXNodes-1
+    !             sigma(j) = self%c_tri(j)*self%phi(j+1) + self%a_tri(j-1) * self%phi(j-1)    
+    !             self%phi(j) = self%phi(j) + 1.4d0*((b(j) - sigma(j))/self%b_tri(j) - self%phi(j))
+    !         end do
+    !         sigma(NumberXNodes) = self%a_tri(NumberXNodes-1) * self%phi(NumberXNodes-1)
+    !         self%phi(NumberXNodes) = self%phi(NumberXNodes) + 1.4d0 * ((b(NumberXNodes) - sigma(NumberXNodes))/self%b_tri(NumberXNodes) - self%phi(NumberXNodes))
+    !         if (MOD(i, 100) == 0) then
+    !             Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+    !             res = SUM(((Ax + 1d-15)/(b + 1d-15) - 1.0d0)**2)
+    !             res = SQRT(res/NumberXNodes)
+    !             if (res < self%siedelEps) then
+    !                 exit
+    !             end if
+    !         end if
+    !     end do
+    !     if (i == self%siedelIter+1) then
+    !         stop 'Max iterations reached Gauss-siedel solver!'
+    !     end if
+    ! end subroutine solve_gaussSiedel_Poisson
 
-    subroutine solve_CG_Poisson(self, world)
-        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-        class(potentialSolver), intent(in out) :: self
-        type(Domain), intent(in) :: world
-        integer(int32) :: i
-        real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
-        logical :: converge
-        converge = .false.
-        do i=1, NumberXNodes
-            SELECT CASE (world%boundaryConditions(i))
-            CASE(0,2)
-                b(i) = -self%rho(i) / eps_0
-            CASE(1,3)
-                b(i) = self%phi(i)
-            END SELECT
-        end do
-        RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-        resPast = SQRT(SUM(RPast**2))
-        D = RPast
-        do i = 1, 1000
-            alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
-            self%phi = self%phi + alpha * D
-            Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-            RFuture = b - Ax
-            resFuture = SQRT(SUM(RFuture**2))
-            if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-8) then
-                converge = .true.
-                exit
-            end if
-            beta = (resFuture**2)/(resPast**2)
-            D = RFuture + beta * D
-            RPast = RFuture
-            resPast = resFuture
-        end do
-        if (.not. converge) then
-            stop 'Max iterations reached CG solver!'
-        end if
-    end subroutine solve_CG_Poisson
+    ! subroutine solve_CG_Poisson(self, world)
+    !     ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+    !     class(potentialSolver), intent(in out) :: self
+    !     type(Domain), intent(in) :: world
+    !     integer(int32) :: i
+    !     real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
+    !     logical :: converge
+    !     converge = .false.
+    !     do i=1, NumberXNodes
+    !         SELECT CASE (world%boundaryConditions(i))
+    !         CASE(0,2)
+    !             b(i) = -self%rho(i) / eps_0
+    !         CASE(1,3)
+    !             b(i) = self%phi(i)
+    !         END SELECT
+    !     end do
+    !     RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+    !     resPast = SQRT(SUM(RPast**2))
+    !     D = RPast
+    !     do i = 1, 1000
+    !         alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
+    !         self%phi = self%phi + alpha * D
+    !         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
+    !         RFuture = b - Ax
+    !         resFuture = SQRT(SUM(RFuture**2))
+    !         if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-8) then
+    !             converge = .true.
+    !             exit
+    !         end if
+    !         beta = (resFuture**2)/(resPast**2)
+    !         D = RFuture + beta * D
+    !         RPast = RFuture
+    !         resPast = resFuture
+    !     end do
+    !     if (.not. converge) then
+    !         stop 'Max iterations reached CG solver!'
+    !     end if
+    ! end subroutine solve_CG_Poisson
 
 
     function getTotalPE(self, world) result(res)
@@ -472,7 +459,11 @@ contains
         print *, ""
         print *, "Reading solver inputs:"
         print *, "------------------"
-        open(10,file='../InputData/'//GeomFilename)
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//GeomFilename)
+        else
+            open(10,file=restartDirectory//'/InputData/'//GeomFilename)
+        end if
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) 
@@ -480,14 +471,11 @@ contains
         read(10, *, IOSTAT = io) 
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
-        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        solver = potentialSolver(world, leftVoltage, rightVoltage, RF_frequency)
         print *, "Left voltage:", solver%phi(1)
         print *, "Right  voltage:", solver%phi(NumberXNodes)
-        print *, 'BField magnitude:', solver%BFieldMag
-        print *, 'BField angle:', solver%BFieldAngle
         print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
         print *, 'RF half amplitude:', solver%RF_half_amplitude
-        print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""
         call solver%construct_diagMatrix(world)

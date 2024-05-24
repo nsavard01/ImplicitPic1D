@@ -165,14 +165,14 @@ contains
         real(real64), intent(in) :: del_t, simulationTime
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
-        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3)
+        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3), totMoverTime, totPotTime, totCollTime
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
         character(len=8) :: date_char
         character(len=10) :: time_char
         allocate(energyAddColl(numThread))
-        CurrentDiagStep = 1
+        CurrentDiagStep = oldDiagStep
         unitPart1 = 100
-        call generateSaveDirectory(directoryName)
+        if (.not. restartBool) call generateSaveDirectory(directoryName)
         !Wrtie Initial conditions
         call date_and_time(DATE=date_char, TIME = time_char)
         open(15,file=directoryName//'/DateTime.dat')
@@ -194,23 +194,42 @@ contains
         do i = 1, numberChargedParticles
             particleList(i)%accumEnergyLoss = 0.0d0
             particleList(i)%accumWallLoss = 0
-            open(unitPart1+i,file=directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat')
-            write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p, Temp")')
+            open(unitPart1+i,file=directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat', access = 'APPEND')
+            if (.not. restartBool) write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p, Temp")')
         end do
         do i = 1, numberBinaryCollisions
-            call nullCollisionList(i)%writeCollisionProperties(particleList, targetParticleList, directoryName)
+            if (.not. restartBool) call nullCollisionList(i)%writeCollisionProperties(particleList, targetParticleList, directoryName)
         end do
+
+        if (restartBool) then
+            open(303,file=directoryName//'/SimulationTimeData.dat')
+            read(303, *, IOSTAT = j)
+            do while (j == 0)
+                read(303, *, IOSTAT = j) elapsed_time, totPotTime, totMoverTime, totCollTime, i
+            end do
+            close(303)
+            open(303,file=directoryName//'/SimulationTimeData.dat', access = 'APPEND')
+        else
+            elapsed_time = 0
+            totPotTime = 0
+            totMoverTime = 0
+            totCollTime = 0
+            i = 0
+            open(303,file=directoryName//'/SimulationTimeData.dat')  
+            write(303,'("Elapsed Times(s), Potential Time (s), Mover Time (s), Collision Time (s), Total Steps")')
+        end if
         collisionTime = 0
         potentialTime = 0
         moverTime = 0
-        i = 0
+        currentTime = startSimulationTime
         elapsedTime = 0.0d0
         diagStepDiff = 1
-        diagTimeDivision = simulationTime/real(numDiagnosticSteps)
-        diagTime = diagTimeDivision
-        101 format(20(1x,es16.8))
-        open(22,file=directoryName//'/GlobalDiagnosticData.dat')
-        write(22,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), TotalMomentum(kg/m/s), TotalEnergy(J/m^2)")')
+        diagTimeDivision = (simulationTime-currentTime)/real(numDiagnosticSteps)
+        diagTime = diagTimeDivision + currentTime
+        open(202,file=directoryName//'/GlobalDiagnosticData.dat', access = 'APPEND')
+        if (.not. restartBool) write(202,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), TotalMomentum(kg/m/s), TotalEnergy(J/m^2)")')
+
+        
         
         !Save initial particle/field data, along with domain
         energyAddColl = 0.0d0
@@ -225,7 +244,6 @@ contains
             call particleList(j)%writeLocalTemperature(0, directoryName, NumberXHalfNodes)
             !call particleList(j)%writePhaseSpace(0, directoryName)
         end do
-        currentTime = 0.0d0
         call system_clock(startTotal)
         do while(currentTime < simulationTime)
             currentTime = currentTime + del_t
@@ -245,7 +263,7 @@ contains
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
                 do j = 1, numberBinaryCollisions
                     call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
@@ -270,7 +288,7 @@ contains
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
                 do j = 1, numberBinaryCollisions
                     call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
@@ -301,8 +319,14 @@ contains
                     inelasticEnergyLoss = inelasticEnergyLoss + 0.5d0 * SUM(nullCollisionList(j)%totalEnergyLoss) * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
                     call nullCollisionList(j)%writeCollisionDiag(particleList, targetParticleList, directoryName, del_t * diagStepDiff)
                 end do
-                write(22,"(6(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
+                write(202,"(6(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
                 chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff, momentum_total(1), solver%getTotalE(particleList, world)
+                call system_clock(endTotal)
+                write(303,"(4(es16.8,1x), 1(I8, 1x))") elapsed_time + real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64), &
+                totPotTime + real(potentialTime, kind = real64) / real(timingRate, kind = real64), &
+                totMoverTime + real(moverTime, kind = real64) / real(timingRate, kind = real64), &
+                totCollTime + real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1
+
                 do j = 1, numberBinaryCollisions
                     nullCollisionList(j)%totalNumberCollidableParticles = 0
                     nullCollisionList(j)%totalEnergyLoss = 0
@@ -324,18 +348,24 @@ contains
             diagStepDiff = diagStepDiff + 1
         end do
         
-        close(22)
+        close(202)
+        close(303)
         call system_clock(endTotal)
-        elapsed_time = real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
+        
+        
         ! Write Final Data
+        elapsed_time = elapsed_time + real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
+        totPotTime = totPotTime + real(potentialTime, kind = real64) / real(timingRate, kind = real64)
+        totMoverTime = totMoverTime + real(moverTime, kind = real64) / real(timingRate, kind = real64)
+        totCollTime = totCollTime + real(collisionTime, kind = real64) / real(timingRate, kind = real64)
         open(9,file=directoryName//'/SimulationFinalData.dat')
-        write(9,'("Elapsed Times(s), Potential Time (s), Collision Time (s), Total Steps")')
-        write(9,"(3(es16.8,1x), 1(I8, 1x))") elapsed_time, real(potentialTime + moverTime, kind = real64) / real(timingRate, kind = real64), real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1
+        write(9,'("Elapsed Times(s), Potential Time (s), Mover Time (s), Collision Time (s), Total Steps")')
+        write(9,"(4(es16.8,1x), 1(I8, 1x))") elapsed_time, totPotTime, totMoverTime, totCollTime, i+1
         close(9)
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
-        print *, 'moverTime is:', real(moverTime, kind = real64)/real(timingRate, kind = real64)
-        print *, 'potentialTime is:', real(potentialTime, kind = real64)/real(timingRate, kind = real64)
-        print *, 'collision time is:', real(collisionTime, kind=real64)/real(timingRate, kind = real64)
+        print *, 'moverTime is:', totMoverTime
+        print *, 'potentialTime is:', totPotTime
+        print *, 'collision time is:', totCollTime
 
     end subroutine solveSimulation
 
@@ -387,7 +417,7 @@ contains
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
             if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
@@ -465,7 +495,7 @@ contains
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, solver%BFieldAngle)
+            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do

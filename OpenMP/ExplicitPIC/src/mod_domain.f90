@@ -130,7 +130,11 @@ contains
         print *, ""
         print *, "Reading domain inputs:"
         print *, "------------------"
-        open(10,file='../InputData/'//GeomFilename)
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//GeomFilename)
+        else
+            open(10,file=restartDirectory//'/InputData/'//GeomFilename)
+        end if
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary

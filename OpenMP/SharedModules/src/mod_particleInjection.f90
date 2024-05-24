@@ -68,15 +68,13 @@ contains
         end do
     end subroutine refluxParticles
 
-    subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t, BFieldAngle)
+    subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
         type(Particle), intent(in out) :: particleList(2)
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
-        real(real64), intent(in) :: T_e, T_i, del_t, BFieldAngle
+        real(real64), intent(in) :: T_e, T_i, del_t
         integer(int32) :: i,j, iThread, numInjected
-        real(real64) :: ionSoundSpeed, shift_rand, cosAngle, sinAngle
-        cosAngle = COS(BFieldAngle)
-        sinAngle = SIN(BFieldAngle)
+        real(real64) :: ionSoundSpeed, shift_rand
         ionSoundSpeed = SQRT(T_e * e / particleList(2)%mass)
         do j = 1, 2
             !$OMP parallel private(iThread, i)
@@ -86,8 +84,8 @@ contains
                 if (j == 1) then
                     call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread), particleList(j)%mass, T_e, irand(iThread))
                 else
-                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed * cosAngle
-                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = -ionSoundSpeed * sinAngle
+                    particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ionSoundSpeed
+                    particleList(j)%phaseSpace(3, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
                     particleList(j)%phaseSpace(4, particleList(j)%refRecordIdx(i, iThread), iThread) = 0.0d0
                 end if
                 if (world%boundaryConditions(1) == 2) then
@@ -109,10 +107,10 @@ contains
             numInjected = numFluxParticlesHigh
         end if
         do i = 1, numInjected
-            shift_rand = del_t * ran2(irand(iThread)) * ionSoundSpeed * cosAngle
+            shift_rand = del_t * ran2(irand(iThread)) * ionSoundSpeed
             call getMaxwellianFluxSample(particleList(1)%phaseSpace(2:4, particleList(1)%N_p(iThread) + i, iThread), particleList(1)%mass, T_e, irand(iThread))
-            particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed * cosAngle
-            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = -ionSoundSpeed * sinAngle
+            particleList(2)%phaseSpace(2, particleList(2)%N_p(iThread) + i, iThread) = ionSoundSpeed
+            particleList(2)%phaseSpace(3, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
             particleList(2)%phaseSpace(4, particleList(2)%N_p(iThread) + i, iThread) = 0.0d0
             if (world%boundaryConditions(1) == 2) then
                 particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread) = ABS(particleList(1)%phaseSpace(2, particleList(1)%N_p(iThread) + i, iThread))
@@ -181,8 +179,8 @@ contains
 
     ! -------------------- read inputs artificial collisions/particle injection ------------------------------------
 
-    subroutine readInjectionInputs(InjFilename, w_p, angleRad)
-        real(real64), intent(in) :: w_p, angleRad
+    subroutine readInjectionInputs(InjFilename, w_p)
+        real(real64), intent(in) :: w_p
         character(len=*), intent(in) :: InjFilename
         integer(int32) :: tempInt, io
         real(real64) :: numFluxPart
@@ -191,32 +189,29 @@ contains
         print *, "------------------"
         if (.not. restartBool) then
             open(10,file='../InputData/'//InjFilename, IOSTAT=io)
-            read(10, *, IOSTAT = io) tempInt
-            addLostPartBool = (tempInt == 1)
-            read(10, *, IOSTAT = io) tempInt
-            refluxPartBool = (tempInt == 1)
-            read(10, *, IOSTAT = io) tempInt, injectionFlux
-            injectionBool = (tempInt == 1)
-            if (.not. injectionBool) then
-                read(10, *, IOSTAT = io) tempInt, injectionFlux
-                uniformInjectionBool = (tempInt == 1)
-            end if
-            read(10, *, IOSTAT = io) tempInt, FractionFreqHeating
-            heatingBool = (tempInt == 1)
-            close(10)
         else
-            open(10,file=restartDirectory//"/"//"ParticleInjectionInput.dat", IOSTAT=io)
-            read(10, *, IOSTAT = io)
-            read(10, *, IOSTAT = io) addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, injectionFlux, FractionFreqHeating
-            close(10)
+            open(10,file=restartDirectory//"/InputData/"//InjFilename, IOSTAT=io)
         end if
+        read(10, *, IOSTAT = io) tempInt
+        addLostPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt
+        refluxPartBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) tempInt, injectionFlux
+        injectionBool = (tempInt == 1)
+        if (.not. injectionBool) then
+            read(10, *, IOSTAT = io) tempInt, injectionFlux
+            uniformInjectionBool = (tempInt == 1)
+        end if
+        read(10, *, IOSTAT = io) tempInt, FractionFreqHeating
+        heatingBool = (tempInt == 1)
+        close(10)
         print *, "Particle lost is reinjected:", addLostPartBool
         print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
         print *, "Particle injection on neumann boundary", injectionBool
         print *, "Particle injection unformly with maxwellian", uniformInjectionBool
         print *, "Electron maxwellian heating", heatingBool
         if (injectionBool) then
-            injectionFlux = injectionFlux * COS(angleRad)
+            injectionFlux = injectionFlux
             print *, 'Particle injection flux:', injectionFlux
             numFluxPart = injectionFlux * del_t / w_p/real(numThread) ! particles injected per thread
             numFluxParticlesLow = floor(numFluxPart)
