@@ -188,9 +188,9 @@ class dataSetExplicit:
             raise Warning('No averaging done!')
         return n
     
-    def getAveEVDF(self):
+    def getAveEVDF(self, name):
         if (self.boolAverageFile):
-            VTot = np.fromfile(self.path + 'ElectronTemperature/EVDF_average.dat', dtype = 'float', offset = 4)
+            VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype = 'float', offset = 4)
             VHist = VTot[0:-1]
             VMax = VTot[-1]
             size = VHist.size/2

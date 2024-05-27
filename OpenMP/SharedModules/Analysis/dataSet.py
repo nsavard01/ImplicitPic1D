@@ -88,6 +88,11 @@ class dataSet:
             self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
         diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'TotalMomentum(kg/m/s)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+        diagList = ['Time', 'SolverTime', 'PotTime', 'MoverTime', 'CollTime', 'Step']
+        self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows=1, delim_whitespace=True,
+                                    names=diagList)
+        if (self.globDiag.shape[0] > self.numDiag):
+            self.numDiag = self.globDiag.shape[0]
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):
             diagAverageList = ['steps', 'time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'gaussError']

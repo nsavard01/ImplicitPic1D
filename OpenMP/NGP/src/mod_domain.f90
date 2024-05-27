@@ -354,7 +354,11 @@ contains
         print *, ""
         print *, "Reading domain inputs:"
         print *, "------------------"
-        open(10,file='../InputData/'//GeomFilename)
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//GeomFilename)
+        else
+            open(10,file=restartDirectory//'/InputData/'//GeomFilename)
+        end if
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
         read(10, *, IOSTAT = io) gridType, debyeLength
@@ -363,19 +367,6 @@ contains
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         close(10)
-        if (restartBool) then
-            open(10,file=restartDirectory//"/"//"InitialConditions.dat", IOSTAT=io)
-            read(10, *, IOSTAT = io)
-            read(10, *, IOSTAT = io) intArray(1), NumberXNodes
-            close(10) 
-            allocate(boundArray(NumberXNodes))
-            open(10,file=restartDirectory//"/"//"domainBoundaryConditions.dat", form='UNFORMATTED', IOSTAT=io)
-            read(10, IOSTAT = io) boundArray
-            close(10)
-            leftBoundary = boundArray(1)
-            rightBoundary = boundArray(NumberXNodes)
-            deallocate(boundArray)
-        end if
         NumberXHalfNodes = NumberXNodes-1
         debyeLength = MAX(0.1d0 * getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then

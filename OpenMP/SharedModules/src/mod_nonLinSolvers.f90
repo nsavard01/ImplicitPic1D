@@ -27,6 +27,7 @@ module mod_nonLinSolvers
     type(Particle), allocatable :: globalParticleList(:)
     type(potentialSolver) :: globalSolver
     integer(int32), protected :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, amountTimeSplits
+    integer(int64), protected :: potTimer, moverTimer
     integer(int32), private :: maxIter, solverType, m_Anderson
     real(real64), private :: Beta_k, eps_r, eps_a
 
@@ -40,7 +41,11 @@ contains
     subroutine initializeSolver()
         integer(int32) :: io
         print *, "Reading non-linear solver inputs:"
-        open(10,file='../InputData/SolverState.inp', IOSTAT=io)
+        if (.not. restartBool) then
+            open(10,file='../InputData/SolverState.inp', IOSTAT=io)
+        else
+            open(10,file=restartDirectory//'/InputData/SolverState.inp', IOSTAT=io)
+        end if
         read(10, *, IOSTAT = io) eps_a
         read(10, *, IOSTAT = io) eps_r
         read(10, *, IOSTAT = io) solverType
@@ -69,7 +74,8 @@ contains
         CASE(1)
             call initializeNitsol(maxIter, m_Anderson, NumberXNodes)
         END SELECT
-
+        potTimer = 0
+        moverTimer = 0
     end subroutine initializeSolver
 
     
@@ -85,11 +91,19 @@ contains
         real(real64) :: eps_tol, sumPastResiduals
         real(real64) :: normResidual(m_Anderson+1), alpha(m_Anderson+1)
         integer(int32) :: i, j, index, m_k
+        integer(int64) :: startTime, endTime
+        
         
         call solver%makeConstSourceTerm(world)
         phi_k(:,1) = solver%phi_f
+        call system_clock(startTime)
         call depositJ(solver, particleList, world, del_t)
+        call system_clock(endTime)
+        moverTimer = moverTimer + endTime - startTime
+        call system_clock(startTime)
         call solver%solve_tridiag_Ampere(world, del_t)
+        call system_clock(endTime)
+        potTimer = potTimer + endTime - startTime
         phi_k(:,2) = solver%phi_f
         Residual_k(:,1) = phi_k(:,2) - phi_k(:,1)
         normResidual(1) = SQRT(SUM(Residual_k(:,1)**2))
@@ -98,12 +112,21 @@ contains
         do i = 1, maxIter
             index = MODULO(i, m_Anderson+1) + 1
             m_k = MIN(i, m_Anderson)
+            call system_clock(startTime)
             call depositJ(solver,particleList, world, del_t)
+            call system_clock(endTime)
+            moverTimer = moverTimer + endTime - startTime
+            call system_clock(startTime)
             call solver%solve_tridiag_Ampere(world, del_t)
+            call system_clock(endTime)
+            potTimer = potTimer + endTime - startTime
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
             if (normResidual(index) < eps_tol) then
+                call system_clock(startTime)
                 call moveParticles(solver,particleList, world, del_t)
+                call system_clock(endTime)
+                moverTimer = moverTimer + endTime - startTime
                 iterNumPicard = i+1
                 exit
             end if
@@ -198,10 +221,17 @@ contains
         integer, intent(in out) :: itrmf, ipar(*)
         double precision, intent(in) :: xcur(n)
         double precision, intent(in out) :: rpar(*), fcur(n)
+        integer(int64) :: endTimer, startTimer
         !real(real64) :: d(n)
         globalSolver%phi_f = xcur
+        call system_clock(startTimer)
         call depositJ(globalSolver, globalParticleList, globalWorld, rpar(1))
+        call system_clock(endTimer)
+        moverTimer = moverTimer + endTimer - startTimer
+        call system_clock(startTimer)
         call globalSolver%solve_tridiag_Ampere(globalWorld, rpar(1))
+        call system_clock(endTimer)
+        potTimer = potTimer + endTimer - startTimer
         fcur = xcur - globalSolver%phi_f
         ! fcur = globalSolver%getError_tridiag_Ampere(globalWorld, rpar(1))
         itrmf = 0
@@ -226,7 +256,7 @@ contains
         real(real64), intent(in) :: del_t
         integer(int32) :: info(6), iterm, ipar(2), itrmf
         real(real64) :: fcurSolver(NumberXNodes), xcurSolver(NumberXNodes), rpar(1)
-
+        integer(int64) :: startTimer, endTimer
         ! Set Nitsol parameters
         iterm = 0
         call globalSolver%makeConstSourceTerm(globalWorld)
@@ -239,7 +269,10 @@ contains
         SELECT CASE (iterm)
         CASE(0)
             iterNumPicard = info(1)
+            call system_clock(startTimer)
             call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
+            call system_clock(endTimer)
+            moverTimer = moverTimer + endTimer - startTimer
         CASE(1,5,6)
             iterNumPicard = maxIter
         CASE default

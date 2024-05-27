@@ -34,7 +34,7 @@ program BoundPlasmaExample
     ! do i = 1, numberChargedParticles
     !     globalParticleList(i)%N_p = 0
     ! end do
-    call readInjectionInputs('ParticleInjection.inp', globalParticleList(1)%w_p, globalSolver%BFieldAngle)
+    call readInjectionInputs('ParticleInjection.inp', globalParticleList(1)%w_p)
     call initializeSolver()
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
     call globalSolver%solveInitialPotential(globalParticleList, globalWorld, startSimulationTime)

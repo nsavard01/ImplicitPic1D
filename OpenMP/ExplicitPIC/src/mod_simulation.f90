@@ -144,6 +144,8 @@ contains
         do i = 1, numberChargedParticles
             particleList(i)%accumEnergyLoss = 0.0d0
             particleList(i)%accumWallLoss = 0
+            particleList(i)%momentumLoss = 0.0d0
+            call particleList(i)%writeLocalTemperature(0, directoryName, NumberXHalfNodes)
             open(unitPart1+i,file=directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat', access = 'APPEND')
             if (.not. restartBool) write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p, Temp")')
         end do
@@ -189,11 +191,7 @@ contains
         call writeParticleDensity(particleList, world, 0, .false., directoryName)  
         call writePhi(solver%phi, 0, .false., directoryName)
         call world%writeDomain(directoryName)
-        do j=1, numberChargedParticles
-            particleList(j)%momentumLoss = 0.0d0
-            call particleList(j)%writeLocalTemperature(0, directoryName, NumberXHalfNodes)
-            !call particleList(j)%writePhaseSpace(0, directoryName)
-        end do
+        
         call system_clock(startTotal)
         do while(currentTime < simulationTime)
             currentTime = currentTime + del_t
@@ -331,9 +329,9 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
         integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber), k, iThread
+        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber, numberChargedParticles), k, iThread
         real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss
-        real(real64) :: E_max, VMax
+        real(real64) :: VMax(numberChargedParticles)
         real(real64), allocatable :: wallLoss(:)
 
 
@@ -434,9 +432,19 @@ contains
         print *, "Electron average wall loss (A/m^2):", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p * particleList(1)%q/(currentTime-startTime)
         print *, "Ion average wall loss (A/m^2):", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p * particleList(2)%q/(currentTime-startTime)
         print *, "Performing average for EEDF over 50/omega_p"
-        E_max = 3.0d0 * (MAXVAL(phi_average) - minval(phi_average))
-        VMax = SQRT(2.0d0 * E_max *e/ m_e)
-        windowDivision = INT(50.0d0/fractionFreq)
+        VMax = 0
+        !$OMP parallel private(iThread, j) reduction(max:VMax)
+        iThread = omp_get_thread_num() + 1
+        do j = 1, numberChargedParticles
+            VMax(j) = MAX(VMax(j), MAXVAL(ABS(particleList(j)%phaseSpace(2,1:particleList(j)%N_p(iThread), iThread))))
+        end do
+        !$OMP end parallel
+        if (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes) == 4) then
+            ! If RF boundary then average over RF cycle
+            windowDivision = INT(2.0d0 * pi / solver%RF_rad_frequency/del_t)
+        else
+            windowDivision = INT(50.0d0/fractionFreq)
+        end if
         VHist = 0.0d0
         do i = 1, windowDivision
             currentTime = currentTime + del_t
@@ -449,16 +457,21 @@ contains
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do
-            do k = 1, numThread
-                do j = 1, particleList(1)%N_p(k)
-                    intPartV = INT(particleList(1)%phaseSpace(2, j, k) * (binNumber) / VMax + binNumber + 1)
-                    if (intPartV > 0 .and. intPartV < binNumber*2+1) VHist(intPartV) = VHist(intPartV) + 1
+            !$OMP parallel private(iThread, j, k, intPartV) reduction(+:VHist)
+            iThread = omp_get_thread_num() + 1
+            do j = 1, numberChargedParticles
+                do k = 1, particleList(j)%N_p(iThread)
+                    intPartV = INT(particleList(j)%phaseSpace(2, k, iThread) * (binNumber) / VMax(j) + binNumber + 1)
+                    if (intPartV > 0 .and. intPartV < binNumber*2+1) VHist(intPartV, j) = VHist(intPartV, j) + 1
                 end do
             end do
+            !$OMP end parallel
         end do
-        open(10,file=directoryName//'/ElectronTemperature/EVDF_average.dat', form='UNFORMATTED')
-        write(10) real(VHist, kind = real64), VMax
-        close(10)
+        do j = 1, numberChargedParticles
+            open(10,file=directoryName//'/Temperature/Temp_'//particleList(j)%name//'_average.dat', form='UNFORMATTED')
+            write(10) real(VHist(:, j), kind = real64), VMax(j)
+            close(10)
+        end do
 
     end subroutine solveSimulationFinalAverage
 

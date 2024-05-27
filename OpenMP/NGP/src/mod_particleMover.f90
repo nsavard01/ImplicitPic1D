@@ -73,7 +73,7 @@ contains
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, startTime, endTime
         logical :: FutureAtBoundaryBool
         f_tol = del_t * 1.d-10
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)

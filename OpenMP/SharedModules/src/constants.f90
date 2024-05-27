@@ -145,10 +145,6 @@ contains
         if (.not. bool) then
             stop "Save directory not successfully created!"
         end if
-        bool = makedirqq(dirName//'/ElectronTemperature')
-        if (.not. bool) then
-            stop "Save directory not successfully created!"
-        end if
         bool = makedirqq(dirName//'/PhaseSpace')
         if (.not. bool) then
             stop "Save directory not successfully created!"

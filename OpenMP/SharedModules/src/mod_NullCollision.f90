@@ -587,6 +587,7 @@ contains
 
         bool = makedirqq(dirName//'/BinaryCollisions/'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name)
         if (.not. bool) then
+            print *, 'Not generating folder', dirName//'/BinaryCollisions/'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name
             stop "Save directory binary collision not successfully created!"
         end if
         open(10,file=dirName//'/BinaryCollisions/'//particleList(self%reactantsIndx(1))%name//"_on_"//targetParticleList(self%reactantsIndx(2))%name//"/CollisionProperties.dat")

@@ -65,10 +65,10 @@ Exp_RFBenchmark_case1 = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/Explic
 # Exp_VassBenchmark_Ar_10xParticles = dataSetExplicit('Y:/scratch/nsavard/ImplicitPic1D/ExplicitData/Exp_VassBenchmark_Ar_10xParticles/')
 #
 NGP_RF_Benchmark_case1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1/')
-NGP_RF_Benchmark_case1_lowerRes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1_lowerRes/')
-NGP_RF_Benchmark_case1_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1_10xParticles/')
-NGP_VassBenchmark_Ar = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_VassBenchmark_Ar/')
-NGP_VassBenchmark_Ar_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_VassBenchmark_Ar_10xParticles/')
+# NGP_RF_Benchmark_case1_lowerRes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1_lowerRes/')
+# NGP_RF_Benchmark_case1_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1_10xParticles/')
+# NGP_VassBenchmark_Ar = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_VassBenchmark_Ar/')
+# NGP_VassBenchmark_Ar_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_VassBenchmark_Ar_10xParticles/')
 # NGP_RF_Benchmark_case1_restart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1_restart/')
 # NGP_RFBenchmark_case1_retry = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_case1_retry/')
 # NGP_RFBenchmark_case1_Picard = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_case1_Picard/')
@@ -107,9 +107,9 @@ NGP_VassBenchmark_Ar_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/Im
 # NGP_RFBenchmark_highDensity_halfPart_257nodes_10xtime_halfEvenHalfSin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_257nodes_10xtime_halfEvenHalfSin/')
 # NGP_RFBenchmark_highDensity_halfPart_2001_10xtime_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_2001_10xtime_even/')
 #
-CIC_RF_Benchmark_case1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1/')
-CIC_RF_Benchmark_case1_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_10xParticles/')
-CIC_RF_Benchmark_case1_nonSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_nonSmooth/')
+# CIC_RF_Benchmark_case1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1/')
+# CIC_RF_Benchmark_case1_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_10xParticles/')
+# CIC_RF_Benchmark_case1_nonSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_nonSmooth/')
 # CIC_RF_Benchmark_case1_picard = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_picard/')
 # CIC_RF_Benchmark_case1_picardHalf = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_picardHalf/')
 #
