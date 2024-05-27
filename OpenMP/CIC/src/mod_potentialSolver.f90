@@ -16,10 +16,10 @@ module mod_potentialSolver
 
     type :: potentialSolver
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
-        real(real64) :: rho_const, BFieldMag, BField(3), BFieldAngle, RF_rad_frequency, RF_half_amplitude, RF_voltage, boundPhi(2), sourceTermVals(2)
+        real(real64) :: rho_const, RF_rad_frequency, RF_half_amplitude, RF_voltage, boundPhi(2), sourceTermVals(2)
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
         integer(int32) :: RF_indx
-        logical :: BFieldBool, RF_bool
+        logical :: RF_bool
 
 
     contains
@@ -47,12 +47,11 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, RF_frequency) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
-        real(real64), intent(in) :: BFieldMag, angle, RF_frequency
-        real(real64) :: angle_rad
+        real(real64), intent(in) :: RF_frequency
         allocate(self % J(NumberXHalfNodes), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXNodes-1), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXNodes-1), self%EField(NumberXHalfNodes))
         self % rho = 0.0d0
@@ -61,13 +60,6 @@ contains
         self%EField = 0.0d0
         self % rho_const = 0.0d0
         self%phi_f = self%phi 
-        self%BFieldMag = BFieldMag
-        self%BFieldBool = (BFieldMag /= 0.0d0)
-        angle_rad = angle * pi / 180.0d0
-        self%BFieldAngle = angle_rad
-        self%BField(1) = BFieldMag * COS(angle_rad)
-        self%BField(2) = BFieldMag * SIN(angle_rad)
-        self%BField(3) = 0.0d0 
         self%EField = 0.0d0
         self%RF_half_amplitude = 0.0d0
         self%boundPhi = 0.0d0 
@@ -525,7 +517,11 @@ contains
         print *, ""
         print *, "Reading solver inputs:"
         print *, "------------------"
-        open(10,file='../InputData/'//GeomFilename)
+        if (.not. restartBool) then
+            open(10,file='../InputData/'//GeomFilename)
+        else
+            open(10,file=restartDirectory//'/InputData/'//GeomFilename)
+        end if
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
         read(10, *, IOSTAT = io)
@@ -534,30 +530,13 @@ contains
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
-        if (restartBool) then
-            leftVoltage = 0.0d0
-            rightVoltage = 0.0d0
-            open(10,file=restartDirectory//"/"//"InitialConditions.dat", IOSTAT=io)
-            read(10, *, IOSTAT = io)
-            read(10, *, IOSTAT = io) realTemp(1:15)
-            close(10) 
-            RF_frequency = realTemp(14)/2.0d0/pi
-            if (world%boundaryConditions(1) == 4) then
-                leftVoltage = realTemp(15)
-            else if (world%boundaryConditions(NumberXHalfNodes) == 4) then
-                rightVoltage = realTemp(15)
-            end if   
-        end if
-        BFieldMag = 0.0d0
-        angle = 0.0d0
-        solver = potentialSolver(world, leftVoltage, rightVoltage, BFieldMag, angle, RF_frequency)
+        solver = potentialSolver(world, leftVoltage, rightVoltage, RF_frequency)
         print *, 'Left Voltage val:', solver%boundPhi(1)
         print *, 'Right Voltage val:', solver%boundPhi(2)
         print *, 'RF_bool:', solver%RF_bool
         print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
         print *, 'RF_half_amplitude:', solver%RF_half_amplitude
         print *, 'RF_rad_frequency:', solver%RF_rad_frequency
-        print *, "BField vector:", solver%BField
         print *, "------------------"
         print *, ""
 

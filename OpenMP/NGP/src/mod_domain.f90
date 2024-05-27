@@ -374,14 +374,7 @@ contains
             rightBoundary = 3
         end if
         world = Domain(leftBoundary, rightBoundary)
-        if (.not. restartBool) then
-            call world % constructGrid(debyeLength, L_domain, gridType)
-        else
-            open(10,file=restartDirectory//"/"//"domainGrid.dat", form='UNFORMATTED', IOSTAT=io)
-            read(10, IOSTAT = io) world%grid
-            close(10)
-            call world%makeArraysFromGrid()
-        end if
+        call world % constructGrid(debyeLength, L_domain, gridType)
         if (smoothInt /= 0) world%gridSmoothBool = .true.
         print *, "Number of nodes:", NumberXNodes
         print *, "Number of half nodes:", NumberXHalfNodes
