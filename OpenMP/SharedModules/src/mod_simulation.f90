@@ -65,7 +65,7 @@ contains
         character(len=10) :: time_char
         real(real64) :: rho_i(NumberXNodes)
         allocate(energyAddColl(numThread))
-        CurrentDiagStep = 1
+        CurrentDiagStep = oldDiagStep
         unitPart1 = 100
         if (.not. restartBool) call generateSaveDirectory(directoryName, numberBinaryCollisions)
         !Wrtie Initial conditions
@@ -108,7 +108,7 @@ contains
             particleList(i)%momentumLoss = 0.0d0
             momentum_total = momentum_total + particleList(i)%getTotalMomentum()
             call particleList(i)%writeLocalTemperature(0, directoryName, MIN(NumberXNodes, NumberXHalfNodes))
-            open(unitPart1+i,file=directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat')
+            open(unitPart1+i,file=directoryName//'/ParticleDiagnostic_'//particleList(i)%name//'.dat', access = 'APPEND')
             if (.not. restartBool) write(unitPart1+i,'("Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), Number Particles, Temperature (eV), Ave. Num. SubSteps., Ave. Num. Func. Evals.")')
         end do
         do i = 1, numberBinaryCollisions
@@ -138,8 +138,8 @@ contains
         energyAddColl = 0.0d0
         diagTimeDivision = (simulationTime - startSimulationTime)/real(numDiagnosticSteps)
         diagTime = diagTimeDivision + startSimulationTime
-        open(202,file=directoryName//'/GlobalDiagnosticData.dat')
-        write(202,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), EnergyTotal (J/m^2), MomentumTotal (kg/s/m), gaussError (a.u), chargeError (a.u), energyError(a.u), Picard Iteration Number")')
+        open(202,file=directoryName//'/GlobalDiagnosticData.dat', access = 'APPEND')
+        if (.not. restartBool) write(202,'("Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), EnergyTotal (J/m^2), MomentumTotal (kg/s/m), gaussError (a.u), chargeError (a.u), energyError(a.u), Picard Iteration Number")')
         
         !Save initial particle/field data, along with domain
         call loadParticleDensity(particleList, world, .true.)
@@ -318,10 +318,11 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
         integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, j, windowNum, VHist(2*binNumber), intPartV, k, iThread
+        integer(int32) :: i, j, windowNum, intPartV, k, iThread
+        integer(int64) :: VHist(2*binNumber, numberChargedParticles)
         real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
         real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss, RF_ave
-        real(real64) :: E_max, VMax
+        real(real64) :: VMax(numberChargedParticles)
         real(real64), allocatable :: wallLoss(:)
         
         !Save initial particle/field data, along with domain
@@ -427,11 +428,18 @@ contains
         print *, "Electron average wall loss flux:", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p/(currentTime - startTime)
         print *, "Ion average wall loss flux:", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p/(currentTime - startTime)
         print *, "Performing average for EEDF over 50/omega_p"
-        E_max = 3.0d0 * (MAXVAL(phi_average) - minval(phi_average))
-        print *, 'E_max is:', E_max
-        VMax = SQRT(2.0d0 * E_max *e/ m_e)
-        print *, "V_max is:", VMax
-        checkTimeDivision = 50.0d0 * del_t/fractionFreq
+        VMax = 0
+        !$OMP parallel private(iThread, j) reduction(max:VMax)
+        iThread = omp_get_thread_num() + 1
+        do j = 1, numberChargedParticles
+            VMax(j) = MAX(VMax(j), MAXVAL(ABS(particleList(j)%phaseSpace(2,1:particleList(j)%N_p(iThread), iThread))))
+        end do
+        !$OMP end parallel
+        if (solver%RF_bool) then
+            checkTimeDivision = 2.0d0 * pi / solver%RF_rad_frequency
+        else
+            checkTimeDivision = 50.0d0 * del_t/fractionFreq
+        end if
         startTime = currentTime
         VHist = 0.0d0
         do while((currentTime - startTime) < checkTimeDivision)
@@ -445,17 +453,22 @@ contains
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
             end do
-            do k = 1, numThread
-                do i=1, particleList(1)%N_p(k)
-                    intPartV = INT(particleList(1)%phaseSpace(2, i, k) * (binNumber) / VMax + binNumber + 1)
-                    if (intPartV > 0 .and. intPartV < binNumber*2+1) VHist(intPartV) = VHist(intPartV) + 1
+            !$OMP parallel private(iThread, j, k, intPartV) reduction(+:VHist)
+            iThread = omp_get_thread_num() + 1
+            do j = 1, numberChargedParticles
+                do k = 1, particleList(j)%N_p(iThread)
+                    intPartV = INT(particleList(j)%phaseSpace(2, k, iThread) * (binNumber) / VMax(j) + binNumber + 1)
+                    if (intPartV > 0 .and. intPartV < binNumber*2+1) VHist(intPartV, j) = VHist(intPartV, j) + 1
                 end do
             end do
+            !$OMP end parallel
             currentTime = currentTime + currDel_t
         end do
-        open(10,file=directoryName//'/ElectronTemperature/EVDF_average.dat', form='UNFORMATTED')
-        write(10) real(VHist, kind = real64), VMax
-        close(10)
+        do j = 1, numberChargedParticles
+            open(10,file=directoryName//'/Temperature/Temp_'//particleList(j)%name//'_average.dat', form='UNFORMATTED')
+            write(10) real(VHist(:, j), kind = real64), VMax(j)
+            close(10)
+        end do
 
 
 

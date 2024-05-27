@@ -329,7 +329,8 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
         integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, VHist(2*binNumber, numberChargedParticles), k, iThread
+        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, k, iThread
+        integer(int64) :: VHist(2*binNumber, numberChargedParticles)
         real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss
         real(real64) :: VMax(numberChargedParticles)
         real(real64), allocatable :: wallLoss(:)
