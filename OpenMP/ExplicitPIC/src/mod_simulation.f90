@@ -331,7 +331,7 @@ contains
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, k, iThread, intPartV
         real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss, VHist(2*binNumber, numberChargedParticles), EHist(binNumber, numberChargedParticles), partV, partE
-        real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), m_E(numberChargedParticles), b_E(numberChargedParticles), &
+        real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), &
         E_grid(binNumber, numberChargedParticles), diffE(numberChargedParticles), Emin_log(numberChargedParticles)
         real(real64), allocatable :: wallLoss(:)
 
@@ -452,8 +452,6 @@ contains
         !$OMP end parallel
         Emin_log = LOG(Emin)
         do j = 1, numberChargedParticles
-            b_E(j) = (LOG(EMax(j)) - real(binNumber) * LOG(Emin(j))) / (LOG(EMax(j)) - LOG(Emin(j)))
-            m_E(j) = (real(binNumber) - b_E(j))/LOG(EMax(j))
             diffE(j) = (LOG(EMax(j)) - LOG(Emin(j)))/real(binNumber - 1)
             partV = LOG(Emin(j))
             do i = 1, binNumber
@@ -492,16 +490,12 @@ contains
                         VHist(intPartV+1, j) = VHist(intPartV + 1, j) + partV - intPartV
                     end if
                     partE = SUM(particleList(j)%phaseSpace(2:4, k, iThread)**2)
-                    if (partE > Emin(j)) then
-                        if (partE < Emax(j)) then
-                            partV = (LOG(partE) - Emin_log(j))/diffE(j) + 1.0d0
-                            intPartV = INT(partV)
-                            partV = partV - intPartV
-                            EHist(intPartV, j) = EHist(intPartV, j) + (1.0d0 - partV)
-                            EHist(intPartV+1, j) = EHist(intPartV + 1, j) + partV
-                        end if
-                    else
-                        EHist(1, j) = EHist(1, j) + 1
+                    if (partE > Emin(j) .and. partE < EMax(j)) then
+                        partV = (LOG(partE) - Emin_log(j))/diffE(j) + 1.0d0
+                        intPartV = INT(partV)
+                        partV = partV - intPartV
+                        EHist(intPartV, j) = EHist(intPartV, j) + (1.0d0 - partV)
+                        EHist(intPartV+1, j) = EHist(intPartV + 1, j) + partV
                     end if
                 end do
             end do

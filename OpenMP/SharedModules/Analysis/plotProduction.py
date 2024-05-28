@@ -60,16 +60,16 @@ def plotAveEDF(dataSet, name, CurveFit = False, label = ''):
     EHist = EHist/Ebin
     Norm = np.trapz(EHist, Ebin)
     EHist = EHist/Norm
-    print(np.trapz(EHist, Ebin))
 
     if CurveFit:
         f_log = np.log(EHist/np.sqrt(Ebin))
         fit = np.polyfit(Ebin, f_log, 1)
-        plt.plot(Ebin, f_log, 'o-', label=label)
-        plt.ylabel(r'EPDF eV$^{-3/2}$')
-        plt.xlabel('Particle Energy (eV)')
+        plt.plot(Ebin, EHist/np.sqrt(Ebin), '--', label=label)
         dist = np.poly1d(fit)
-        plt.plot(Ebin, dist(Ebin), label = label + 'Fit T_e = ' + '{:2.2f}'.format(-1/fit[0]))
+        plt.plot(Ebin, np.exp(dist(Ebin)), label = label + 'Fit T_e = ' + '{:2.2f}'.format(-1/fit[0]))
+        plt.ylabel(r'EPDF eV$^{-3/2}$')
+        plt.yscale('log')
+        plt.xlabel('Particle Energy (eV)')
         plt.legend(loc = 'best')
     else:
         plt.plot(Ebin, EHist, 'o-', label=label)

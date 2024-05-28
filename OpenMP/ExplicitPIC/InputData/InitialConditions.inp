@@ -8,5 +8,5 @@
 7.374631268436579e-06 ! amount of time to average final Diagnostics
 ../../../../ExplicitData/  !Save directory
 Exp_RFBenchmark_case1 !save file name
-yes Exp_RFBenchmark_case1 ! Restart(yes/no) and save directory to take from
+no Exp_RFBenchmark_case1 ! Restart(yes/no) and save directory to take from
 END

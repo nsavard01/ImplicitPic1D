@@ -46,7 +46,7 @@ class dataSet:
         self.RF_half_amplitude = initialCond[14]
         ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
         self.particles = {}
-        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'numPart', 'Temp', 'numSubStep', 'numFuncEval']
+        partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p', 'Temp', 'numSubStep', 'numFuncEval']
         for i in range(len(ParticleProperties)):
             name = ParticleProperties.iloc[i]['name']
             self.particles[name] = {}
@@ -212,16 +212,24 @@ class dataSet:
             raise Warning('No averaging done!')
         return n
     
-    def getAveEVDF(self, name):
+    def getAveVDF(self, name):
         if (self.boolAverageFile):
-            VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype = 'float', offset = 4)
+            VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype='float', offset=4)
             VHist = VTot[0:-1]
             VMax = VTot[-1]
             Vedge = np.linspace(-VMax, VMax, VHist.size)
         else:
             raise Warning('No averaging done!')
         return VHist, Vedge
-            
+
+    def getAveEDF(self, name):
+        if (self.boolAverageFile):
+            ETot = np.fromfile(self.path + 'Temperature/TempEnergy_' + str(name) + '_average.dat', dtype='float', offset=4)
+            EHist = ETot[0:int(ETot.size/2)]
+            Ebin = ETot[int(ETot.size/2)::]
+        else:
+            raise Warning('No averaging done!')
+        return EHist, Ebin
         
 
     

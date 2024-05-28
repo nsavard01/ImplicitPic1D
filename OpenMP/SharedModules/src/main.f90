@@ -26,7 +26,7 @@ program BoundPlasmaExample
     call readInitialInputs('InitialConditions.inp')
     call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)
     call readWorld('Geometry.inp', globalWorld, T_e, n_ave)
-    call readSolver('Geometry.inp', globalSolver, globalWorld)
+    call readSolver('Geometry.inp', globalSolver, globalWorld, startSimulationTime)
     call readChargedParticleInputs('ParticleTypes.inp', stateRan0, T_e, T_i, numThread, globalWorld, globalParticleList)
     call readNeutralParticleInputs('ParticleTypes.inp', targetParticleList)
     call readNullCollisionInputs('collision.inp', nullCollisionList, globalParticleList, targetParticleList)
@@ -38,6 +38,7 @@ program BoundPlasmaExample
     call initializeSolver()
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
     call globalSolver%solveInitialPotential(globalParticleList, globalWorld, startSimulationTime)
+   
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
     ! E_i = globalSolver%getTotalPE(globalWorld, .false.)

@@ -46,11 +46,11 @@ module mod_potentialSolver
 
 contains
 
-    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, RF_frequency) result(self)
+    type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, RF_frequency, timeCurrent) result(self)
         ! Construct domain object, initialize grid, dx_dl, and nodeVol.
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
-        real(real64), intent(in) :: RF_frequency
+        real(real64), intent(in) :: RF_frequency, timeCurrent
         allocate(self % J(NumberXHalfNodes), self%rho(NumberXNodes), self % phi(NumberXNodes), self % phi_f(NumberXNodes), self%a_tri(NumberXHalfNodes), &
         self%b_tri(NumberXNodes), self%c_tri(NumberXHalfNodes), self%EField(NumberXHalfNodes))
         call construct_diagMatrix(self, world)
@@ -59,8 +59,12 @@ contains
         self % phi = 0.0d0
         self % rho_const = 0.0d0
         self%RF_half_amplitude = 0.0d0
+        self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
         if (world%boundaryConditions(1) == 1) self%phi(1) = leftVoltage
-        if (world%boundaryConditions(1) == 4) self%RF_half_amplitude = leftVoltage
+        if (world%boundaryConditions(1) == 4) then
+            self%RF_half_amplitude = leftVoltage
+            self%phi(1) = self%RF_half_amplitude * SIN(timeCurrent * self%RF_rad_frequency)
+        end if
         if (world%boundaryConditions(NumberXNodes) == 1) self%phi(NumberXNodes) = rightVoltage
         if (world%boundaryConditions(NumberXNodes) == 4) then
             if (self%RF_half_amplitude /= 0) then
@@ -68,13 +72,14 @@ contains
                 stop
             else
                 self%RF_half_amplitude = rightVoltage
+                self%phi(NumberXNodes) = self%RF_half_amplitude * SIN(timeCurrent * self%RF_rad_frequency)
             end if
         end if
         if (world%boundaryConditions(1) == 3) then
             self%phi(1) = leftVoltage
             self%phi(NumberXNodes) = leftVoltage
         end if
-        self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
+        
         self%RF_bool = self%RF_rad_frequency > 0 .and. self%RF_half_amplitude > 0 .and. (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes) == 4)
         self%phi_f = self%phi 
         self%EField = 0.0d0
@@ -480,10 +485,11 @@ contains
 
     ! ---------------------- read solver input ----------------------------
 
-    subroutine readSolver(GeomFilename, solver, world)
+    subroutine readSolver(GeomFilename, solver, world, timeCurrent)
         type(Domain), intent(in) :: world
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename
+        real(real64) :: timeCurrent
         integer(int32) :: io, intTemp
         real(real64) :: leftVoltage, rightVoltage, RF_frequency, realTemp(20)
         real(real64), allocatable :: allocReal(:)
@@ -504,7 +510,7 @@ contains
         read(10, *, IOSTAT = io) leftVoltage, rightVoltage
         read(10, *, IOSTAT = io) RF_frequency
         close(10)
-        solver = potentialSolver(world, leftVoltage, rightVoltage, RF_frequency)
+        solver = potentialSolver(world, leftVoltage, rightVoltage, RF_frequency, timeCurrent)
         print *, 'Left voltage:', solver%phi(1)
         print *, 'Right voltage:', solver%phi(NumberXNodes)
         print *, 'RF frequency:', solver%RF_rad_frequency/2.0d0/pi
