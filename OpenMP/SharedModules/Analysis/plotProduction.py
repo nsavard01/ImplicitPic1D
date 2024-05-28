@@ -42,19 +42,40 @@ def plotAvePhi(dataSet, label = ''):
 def maxwellEDVF(x, T):
     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)  
     
-def plotAveEVDF(dataSet, name, CurveFit = False, label = ''):
-    Vbins, VHist = dataSet.getAveEVDF(name)
-    dv = Vbins[1] - Vbins[0]
-    Norm = np.sum(VHist * dv)
+def plotAveVDF(dataSet, name, CurveFit = False, label = ''):
+    VHist, Vedge = dataSet.getAveVDF(name)
+    dv = Vedge[1] - Vedge[0]
+    Norm = np.sum(VHist[1:-1] * dv) + 0.5 * (VHist[0] + VHist[-1]) * dv
     VHist = VHist/Norm
-    plt.plot(Vbins, VHist, 'o-', label=label)
-    plt.ylabel('EVDF (s/m)')
+    plt.plot(Vedge, VHist, 'o-', label=label)
+    plt.ylabel('VDF (s/m)')
     plt.xlabel('Velocity (m/s)')
     if CurveFit:
-        popt, pcov = opt.curve_fit(maxwellEDVF, Vbins, VHist, p0 = [dataSet.T_e])
-        plt.plot(Vbins, maxwellEDVF(Vbins, popt[0]), label = label + 'Fit T_e = ' + '{:2.2f}'.format(popt[0]))
-    #plt.legend(loc = 'best')
-    
+        popt, pcov = opt.curve_fit(maxwellEDVF, Vedge, VHist, p0 = [dataSet.T_e])
+        plt.plot(Vedge, maxwellEDVF(Vedge, popt[0]), label = label + 'Fit T_e = ' + '{:2.2f}'.format(popt[0]))
+        plt.legend(loc = 'best')
+
+def plotAveEDF(dataSet, name, CurveFit = False, label = ''):
+    EHist, Ebin = dataSet.getAveEDF(name)
+    EHist = EHist/Ebin
+    Norm = np.trapz(EHist, Ebin)
+    EHist = EHist/Norm
+    print(np.trapz(EHist, Ebin))
+
+    if CurveFit:
+        f_log = np.log(EHist/np.sqrt(Ebin))
+        fit = np.polyfit(Ebin, f_log, 1)
+        plt.plot(Ebin, f_log, 'o-', label=label)
+        plt.ylabel(r'EPDF eV$^{-3/2}$')
+        plt.xlabel('Particle Energy (eV)')
+        dist = np.poly1d(fit)
+        plt.plot(Ebin, dist(Ebin), label = label + 'Fit T_e = ' + '{:2.2f}'.format(-1/fit[0]))
+        plt.legend(loc = 'best')
+    else:
+        plt.plot(Ebin, EHist, 'o-', label=label)
+        plt.ylabel('EDF (1/eV)')
+        plt.xlabel('Particle Energy (eV)')
+
 
     
 #-------------------------- Time Dependent ---------------------

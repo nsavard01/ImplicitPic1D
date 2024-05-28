@@ -217,12 +217,10 @@ class dataSet:
             VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype = 'float', offset = 4)
             VHist = VTot[0:-1]
             VMax = VTot[-1]
-            size = VHist.size/2
-            Vedge = np.arange(-size,size+1) * VMax/size
-            Vbins = (Vedge[0:-1] + Vedge[1:])/2
+            Vedge = np.linspace(-VMax, VMax, VHist.size)
         else:
             raise Warning('No averaging done!')
-        return Vbins, VHist
+        return VHist, Vedge
             
         
 

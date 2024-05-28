@@ -329,10 +329,10 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
         integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, intPartV, k, iThread
-        integer(int64) :: VHist(2*binNumber, numberChargedParticles)
-        real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss
-        real(real64) :: VMax(numberChargedParticles)
+        integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, k, iThread, intPartV
+        real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss, VHist(2*binNumber, numberChargedParticles), EHist(binNumber, numberChargedParticles), partV, partE
+        real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), m_E(numberChargedParticles), b_E(numberChargedParticles), &
+        E_grid(binNumber, numberChargedParticles), diffE(numberChargedParticles), Emin_log(numberChargedParticles)
         real(real64), allocatable :: wallLoss(:)
 
 
@@ -434,12 +434,34 @@ contains
         print *, "Ion average wall loss (A/m^2):", SUM(particleList(2)%accumWallLoss)* particleList(2)%w_p * particleList(2)%q/(currentTime-startTime)
         print *, "Performing average for EEDF over 50/omega_p"
         VMax = 0
-        !$OMP parallel private(iThread, j) reduction(max:VMax)
+        EMax = 0
+        do j = 1, numberChargedParticles
+            Emin(j) = 0.1d0 * e * 2.0d0 / particleList(j)%mass
+        end do
+        !$OMP parallel private(iThread, j, i, partV) reduction(max:VMax, EMax) reduction(min:Emin)
         iThread = omp_get_thread_num() + 1
         do j = 1, numberChargedParticles
-            VMax(j) = MAX(VMax(j), MAXVAL(ABS(particleList(j)%phaseSpace(2,1:particleList(j)%N_p(iThread), iThread))))
+            do i = 1, particleList(j)%N_p(iThread)
+                partV = ABS(particleList(j)%phaseSpace(2,i, iThread))
+                VMax(j) = MAX(VMax(j), partV)
+                partV = SUM(particleList(j)%phaseSpace(2:4,i, iThread)**2)
+                EMax(j) = MAX(EMax(j), partV)
+                Emin(j) = MIN(Emin(j), partV)
+            end do
         end do
         !$OMP end parallel
+        Emin_log = LOG(Emin)
+        do j = 1, numberChargedParticles
+            b_E(j) = (LOG(EMax(j)) - real(binNumber) * LOG(Emin(j))) / (LOG(EMax(j)) - LOG(Emin(j)))
+            m_E(j) = (real(binNumber) - b_E(j))/LOG(EMax(j))
+            diffE(j) = (LOG(EMax(j)) - LOG(Emin(j)))/real(binNumber - 1)
+            partV = LOG(Emin(j))
+            do i = 1, binNumber
+                E_grid(i, j) = EXP(partV)
+                partV = partV + diffE(j)
+            end do
+        end do
+      
         if (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes) == 4) then
             ! If RF boundary then average over RF cycle
             windowDivision = INT(2.0d0 * pi / solver%RF_rad_frequency/del_t)
@@ -447,6 +469,7 @@ contains
             windowDivision = INT(50.0d0/fractionFreq)
         end if
         VHist = 0.0d0
+        EHist = 0.0d0
         do i = 1, windowDivision
             currentTime = currentTime + del_t
             call solver%moveParticles(particleList, world, del_t)
@@ -458,12 +481,28 @@ contains
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do
-            !$OMP parallel private(iThread, j, k, intPartV) reduction(+:VHist)
+            !$OMP parallel private(iThread, j, k, partV, intPartV, partE) reduction(+:VHist, EHist)
             iThread = omp_get_thread_num() + 1
             do j = 1, numberChargedParticles
                 do k = 1, particleList(j)%N_p(iThread)
-                    intPartV = INT(particleList(j)%phaseSpace(2, k, iThread) * (binNumber) / VMax(j) + binNumber + 1)
-                    if (intPartV > 0 .and. intPartV < binNumber*2+1) VHist(intPartV, j) = VHist(intPartV, j) + 1
+                    partV = particleList(j)%phaseSpace(2, k, iThread) * (2.0d0 * binNumber - 1) / 2.0d0 / VMax(j) + binNumber + 0.5d0
+                    if (partV > 1 .and. partV < binNumber*2) then
+                        intPartV = INT(partV)
+                        VHist(intPartV, j) = VHist(intPartV, j) + (1.0d0 - (partV - intPartV))
+                        VHist(intPartV+1, j) = VHist(intPartV + 1, j) + partV - intPartV
+                    end if
+                    partE = SUM(particleList(j)%phaseSpace(2:4, k, iThread)**2)
+                    if (partE > Emin(j)) then
+                        if (partE < Emax(j)) then
+                            partV = (LOG(partE) - Emin_log(j))/diffE(j) + 1.0d0
+                            intPartV = INT(partV)
+                            partV = partV - intPartV
+                            EHist(intPartV, j) = EHist(intPartV, j) + (1.0d0 - partV)
+                            EHist(intPartV+1, j) = EHist(intPartV + 1, j) + partV
+                        end if
+                    else
+                        EHist(1, j) = EHist(1, j) + 1
+                    end if
                 end do
             end do
             !$OMP end parallel
@@ -471,6 +510,9 @@ contains
         do j = 1, numberChargedParticles
             open(10,file=directoryName//'/Temperature/Temp_'//particleList(j)%name//'_average.dat', form='UNFORMATTED')
             write(10) real(VHist(:, j), kind = real64), VMax(j)
+            close(10)
+            open(10,file=directoryName//'/Temperature/TempEnergy_'//particleList(j)%name//'_average.dat', form='UNFORMATTED')
+            write(10) real(EHist(:, j), kind = real64), E_grid(:,j) * 0.5d0 * particleList(j)%mass / e
             close(10)
         end do
 

@@ -187,18 +187,25 @@ class dataSetExplicit:
         else:
             raise Warning('No averaging done!')
         return n
-    
-    def getAveEVDF(self, name):
+
+    def getAveVDF(self, name):
         if (self.boolAverageFile):
-            VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype = 'float', offset = 4)
+            VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype='float', offset=4)
             VHist = VTot[0:-1]
             VMax = VTot[-1]
-            size = VHist.size/2
-            Vedge = np.arange(-size,size+1) * VMax/size
-            Vbins = (Vedge[0:-1] + Vedge[1:])/2
+            Vedge = np.linspace(-VMax, VMax, VHist.size)
         else:
             raise Warning('No averaging done!')
-        return Vbins, VHist
+        return VHist, Vedge
+
+    def getAveEDF(self, name):
+        if (self.boolAverageFile):
+            ETot = np.fromfile(self.path + 'Temperature/TempEnergy_' + str(name) + '_average.dat', dtype='float', offset=4)
+            EHist = ETot[0:int(ETot.size/2)]
+            Ebin = ETot[int(ETot.size/2)::]
+        else:
+            raise Warning('No averaging done!')
+        return EHist, Ebin
     
     def getBoundaryConditions(self):
         cond = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype = np.int32, offset = 4)[0:-1]
