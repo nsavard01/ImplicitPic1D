@@ -65,6 +65,7 @@ contains
         self%boundPhi = 0.0d0 
         self%sourceTermVals = 0.0d0
         self%RF_rad_frequency = 2.0d0 * pi * RF_frequency
+
         if (world%boundaryConditions(1)== 1) then
             self%boundPhi(1) = leftVoltage
             self%sourceTermVals(1) = -self%boundPhi(1) * 2.0d0 / world%dx_dl(1)
@@ -97,6 +98,7 @@ contains
         self%a_tri = 0.0
         self%b_tri = 0.0
         self%c_tri = 0.0
+        
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
             CASE(0)
