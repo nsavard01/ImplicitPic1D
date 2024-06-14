@@ -72,13 +72,13 @@ program BoundPlasmaExample
     ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, startSimulationTime)
     ! call system_clock(endTime)
     
-    ! ! do i = 1, NumberXHalfNodes
-    ! !     J_total(i) = eps_0 * (((globalSolver%phi_f(i) - globalSolver%phi_f(i+1)) -(globalSolver%phi(i) - globalSolver%phi(i+1))) /globalWorld%dx_dl(i)) / currDel_t + globalSolver%J(i)
-    ! ! end do
-    ! ! print *, J_total
-    ! ! print *, ''
-    ! ! print *, 'S is:', (SUM(globalSolver%J * globalWorld%dx_dl) + (eps_0/currDel_t) * &
-    ! !     (globalSolver%phi_f(NumberXNodes) - globalSolver%phi_f(1) - globalSolver%phi(NumberXNodes) + globalSolver%phi(1)))/globalWorld%L_domain
+    ! do i = 1, NumberXHalfNodes
+    !     J_total(i) = eps_0 * (((globalSolver%phi_f(i) - globalSolver%phi_f(i+1)) -(globalSolver%phi(i) - globalSolver%phi(i+1))) /globalWorld%dx_dl(i)) / currDel_t + globalSolver%J(i)
+    ! end do
+    ! print *, J_total
+    ! print *, ''
+    ! print *, 'S is:', (SUM(globalSolver%J * globalWorld%dx_dl) + (eps_0/currDel_t) * &
+    !     (globalSolver%phi_f(NumberXNodes) - globalSolver%phi_f(1) - globalSolver%phi(NumberXNodes) + globalSolver%phi(1)))/globalWorld%L_domain
    
     ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0
@@ -106,7 +106,8 @@ program BoundPlasmaExample
     ! print *, 'took', iterNumPicard, 'iterations'
     ! print *, 'took amount of integer time:', endTime - startTime
     ! print *, 'Momentum percent diff:', 100 * ABS((Momentum_i(1) - Momentum_f(1))/Momentum_i(1))
-
+    ! call globalSolver%depositRho(globalParticleList, globalWorld)
+    ! print *, 'gauss error first is:', globalSolver%getError_tridiag_Poisson(globalWorld)
     ! do j = 1, numberBinaryCollisions
     !     KE_i = globalParticleList(j)%getTotalKE()
     !     call nullCollisionList(j)%generateCollision(globalParticleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, stateRan0, del_t)

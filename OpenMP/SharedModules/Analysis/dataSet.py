@@ -22,9 +22,12 @@ class dataSet:
             self.path = path + '/'
         else:
             self.path = filename
-        dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows = 1)
-        self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' + \
-                        str(int(str(dateTime[1])[0:2]) - 7) + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[4:6]
+        dateTimeBool = os.path.isfile(self.path + 'DateTime.dat')
+        if (dateTimeBool):
+            dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows=1)
+            self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' + \
+                            str(int(str(dateTime[1])[0:2]) - 7) + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[
+                                                                                                      4:6]
         initialCond = np.loadtxt(self.path + 'InitialConditions.dat', skiprows = 1)
         if int(initialCond[0])== 0:
             self.scheme = 'NGP'
@@ -88,9 +91,10 @@ class dataSet:
             self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
         diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'TotalMomentum(kg/m/s)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
-        diagList = ['Time', 'SolverTime', 'PotTime', 'MoverTime', 'CollTime', 'Step']
-        self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows=1, delim_whitespace=True,
-                                    names=diagList)
+        if (os.path.isfile(self.path + 'SimulationTimeData.dat')):
+            diagList = ['Time', 'SolverTime', 'PotTime', 'MoverTime', 'CollTime', 'Step']
+            self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows=1, delim_whitespace=True,
+                                        names=diagList)
         if (self.globDiag.shape[0] > self.numDiag):
             self.numDiag = self.globDiag.shape[0]
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
@@ -147,10 +151,15 @@ class dataSet:
         else:
             self.solverType = 'JFNK'
         self.eps_a = solver[1]
-        self.eps_r = solver[2]
-        self.m_And = int(solver[3])
-        self.beta_k = solver[4]
-        self.maxIter = int(solver[5])
+        if (dateTimeBool):
+            self.eps_r = solver[2]
+            self.m_And = int(solver[3])
+            self.beta_k = solver[4]
+            self.maxIter = int(solver[5])
+        else:
+            self.m_And = int(solver[2])
+            self.beta_k = solver[3]
+            self.maxIter = int(solver[4])
             
             
     def getPhaseSpace(self, name):

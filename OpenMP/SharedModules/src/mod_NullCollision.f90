@@ -211,7 +211,7 @@ contains
                         CASE(4)
                             incidentVelocity = targetVelocity
                         CASE(5)
-                            print *, 'dissociation'
+                            continue
                         END SELECT
                         energyLoss(collIdx) = energyLoss(collIdx) + primary_mass * (IncidentEnergy - SUM(incidentVelocity**2))
                         exit

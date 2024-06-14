@@ -98,7 +98,7 @@ contains
         self%a_tri = 0.0
         self%b_tri = 0.0
         self%c_tri = 0.0
-        
+
         do i = 1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i+1) - world%boundaryConditions(i))
             CASE(0)
@@ -172,9 +172,7 @@ contains
             end do
         else
             self%rho = particleList(1)%densities(:, 1)
-        end if
-        
-        
+        end if 
     end subroutine depositRho
 
     subroutine solve_tridiag_Poisson(self, world, timeCurrent)

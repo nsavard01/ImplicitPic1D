@@ -123,7 +123,7 @@ contains
         CurrentDiagStep = oldDiagStep
         unitPart1 = 100
         if (.not. restartBool) call generateSaveDirectory(directoryName, numberBinaryCollisions)
-        !Wrtie Initial conditions
+        ! Wrtie Initial conditions
         call date_and_time(DATE=date_char, TIME = time_char)
         open(15,file=directoryName//'/DateTime.dat')
         write(15,'("UTC Date, UTC Time")')
@@ -139,6 +139,12 @@ contains
         write(9,'("Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2), maxIdx")')
         do j=1, numberChargedParticles
             write(9,"((A, 1x), 3(es16.8,1x), (I10, 1x))") particleList(j)%name//'       ', particleList(j)%mass, particleList(j)%q, particleList(j)%w_p, particleList(j)%finalIdx
+        end do
+        close(9)
+        open(9,file=directoryName//'/TargetParticleProperties.dat')
+        write(9,'("Particle Symbol, Particle Mass (kg), Particle Temp (K), Particle Density (m^-3)")')
+        do j=1, numberNeutralParticles
+            write(9,"((A, 1x), 3(es16.8,1x))") targetParticleList(j)%name//'       ', targetParticleList(j)%mass, targetParticleList(j)%temperature, targetParticleList(j)%density
         end do
         close(9)
         do i = 1, numberChargedParticles

@@ -55,6 +55,7 @@ contains
         res(3) = self%v_therm * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)
     end function generate3DMaxwellianVelocity
 
+
     ! ------------------------ read in neutrals ------------------------------------------
 
     subroutine readNeutralParticleInputs(filename, targetParticleList)

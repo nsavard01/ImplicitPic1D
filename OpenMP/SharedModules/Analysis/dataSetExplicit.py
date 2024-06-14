@@ -14,8 +14,10 @@ class dataSetExplicit:
             self.path = path + '/'
         else:
             self.path = filename
-        dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows=1)
-        self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' + \
+        dateTimeBool = os.path.isfile(self.path + 'DateTime.dat')
+        if (dateTimeBool):
+            dateTime = np.loadtxt(self.path + 'DateTime.dat', skiprows=1)
+            self.dateTime = str(dateTime[0])[0:4] + '-' + str(dateTime[0])[4:6] + '-' + str(dateTime[0])[6:8] + ' ' + \
                         str(int(str(dateTime[1])[0:2]) - 7) + ':' + str(dateTime[1])[2:4] + ':' + str(dateTime[1])[4:6]
         initialCond = np.loadtxt(self.path + 'InitialConditions.dat', skiprows = 1)
         self.scheme = 'Explicit'
@@ -72,15 +74,21 @@ class dataSetExplicit:
         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
         self.totTime = endDiag[0]
         self.totPotTime = endDiag[1]
-        self.totMoveTime = endDiag[2]
-        self.totCollTime = endDiag[3]
-        self.totTimeSteps = int(endDiag[4])
+        if (dateTimeBool):
+            self.totMoveTime = endDiag[2]
+            self.totCollTime = endDiag[3]
+            self.totTimeSteps = int(endDiag[4])
+        else:
+            self.totCollTime = endDiag[2]
+            self.totTimeSteps = int(endDiag[3])
         diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalMomentum(kg/m/s)', 'TotalEnergy(J/m^2)']
         self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
-        diagList = ['Time', 'PotTime', 'MoverTime', 'CollTime', 'Step']
-        self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
-        if (self.globDiag.shape[0] > self.numDiag):
-            self.numDiag = self.globDiag.shape[0]
+        timeDataBool = os.path.isfile(self.path + 'SimulationTimeData.dat')
+        if (timeDataBool):
+            diagList = ['Time', 'PotTime', 'MoverTime', 'CollTime', 'Step']
+            self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+            if (self.globDiag.shape[0] > self.numDiag):
+                self.numDiag = self.globDiag.shape[0]
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):
             diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
