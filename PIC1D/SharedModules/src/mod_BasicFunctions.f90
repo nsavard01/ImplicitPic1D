@@ -6,8 +6,8 @@ module mod_BasicFunctions
     use omp_lib
     implicit none
 
-    integer(int32), allocatable :: stateRan0(:) !Global variable that will need to be changed in-out
-    integer(int32), allocatable :: stateRanNew(:,:)
+    integer(int32), allocatable :: stateRan0(:) !Global variable that will need to be changed in-out for threaded random number generator
+    integer(int32), allocatable :: stateRanNew(:,:) !Random number save state for larger period numbers
 
 contains
 
@@ -43,7 +43,7 @@ contains
 
     ! --------------- uniform Random Generators -----------------------------
     function ran2(irand) result(res)
-        ! Function from Gwenael for making random number
+        ! Function from from numerical recipes, basic rng, small period
         integer(int32),parameter :: ia_ran2=16807,im_ran2=2147483647,iq_ran2=127773,ir_ran2=2836
         real(real64),parameter :: am_ran2=1.0d0/im_ran2
         integer(int32), intent(in out) :: irand
@@ -58,7 +58,7 @@ contains
       end function ran2
 
     function randNew(irand) result(res)
-        ! Based on new numerical reciped in fortran 90, about as fast as ran0 (ran2 in our case)
+        ! Based on new numerical reciped in fortran 90, about as fast as ran0 (ran2 in our case) but period is squared
         integer(int32), parameter :: IA=16807,IM=2147483647,IQ=127773,IR=2836
         real(real64), parameter :: am = 1.0d0/IM
         integer(int32), intent(in out) :: irand(2)
@@ -74,7 +74,8 @@ contains
     end function randNew
 
     function randPCG(state) result(res)
-        ! random number generator PCG
+        ! random number generator PCG attempt without unsigned integers
+        ! Weakness of fortran here
         integer(int64), parameter :: multiplier = 6364136223846793005
         integer(int64), parameter :: increment = 1442695040888963407
         real(real64), parameter :: max_int32 = 2147483648.0d0
@@ -106,6 +107,7 @@ contains
     end subroutine getRandom
 
     subroutine initializeRandomGenerators(numThread, stateRan0, stateRanNew, preDeterminedBool)
+        ! Initialize random number states for each thread
         integer(int32), allocatable, intent(out) :: stateRan0(:), stateRanNew(:,:)
         integer(int32), intent(in) :: numThread
         logical, intent(in) :: preDeterminedBool
@@ -113,13 +115,14 @@ contains
         integer(int32) :: i
         
         allocate(stateRan0(numThread), stateRanNew(2,numThread))
-        if (.not. preDeterminedBool) call random_seed()
+        if (.not. preDeterminedBool) call random_seed() ! Having seeding be randomly generated
         do i = 1, numThread
             call random_number(rando)
-            stateRan0(i) = INT(rando * (huge(i))) !12345 * i + 11 * (i-1) !
+            stateRan0(i) = INT(rando * (huge(i)-1)) + 1 !12345 * i + 11 * (i-1) !
             call random_number(rando)
-            stateRanNew(1, i) = INT(2.0d0 * (rando-0.5d0) * (huge(stateRanNew(1, i))))
-            stateRanNew(2, i) = INT(rando * (huge(stateRanNew(2, i))))
+            stateRanNew(1, i) = INT(rando * (huge(stateRanNew(1, i))-1)) + 1
+            call random_number(rando)
+            stateRanNew(2, i) = INT(rando * (huge(stateRanNew(2, i))-1)) + 1
         end do
     end subroutine initializeRandomGenerators
 
@@ -203,6 +206,7 @@ contains
     end subroutine solve_tridiag
 
     function triMul(n, diagLower, diagUpper, diag, x) result(res)
+        ! for size nxn tridiagonal matrix with lower, upper and center diagonal matrix multiplied with x(n)
         integer(int32), intent(in) :: n
         real(real64), intent(in) :: diag(n), diagUpper(n-1), diagLower(n-1)
         real(real64), intent(in) :: x(n)
@@ -216,7 +220,8 @@ contains
     end function triMul
 
     subroutine solveGaussElimination(A, b, n)
-        ! solve system of equations using gaussian elimination
+        ! solve system of equations (x = A^-1 b) using gaussian elimination
+        ! return solution in b matrix, changes A matrix as well
         integer(int32), intent(in) :: n
         real(real64), intent(in out) :: A(n,n)
         real(real64), intent(in out) :: b(n)

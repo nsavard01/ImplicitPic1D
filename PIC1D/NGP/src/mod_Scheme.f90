@@ -12,30 +12,16 @@ module mod_Scheme
 contains
 
     subroutine initializeScheme()
+        ! Initialize scheme number
         schemeNum = 0
         print *, "--Scheme---"
         print *, "NGP constant grid size between phi/rho nodes"
         print *, '----------'
     end subroutine initializeScheme
 
-    ! subroutine initialize_randUniform(part, world, irand)
-    !     ! place particles randomly in each dx_dl based on portion of volume it take up
-    !     type(Particle), intent(in out) :: part
-    !     type(Domain), intent(in) :: world
-    !     integer(int32), intent(in out) :: irand(numThread)
-    !     integer(int32) :: i, iThread
-    !     real(real64) :: L_domain
-    !     L_domain = world%grid(NumberXNodes) - world%grid(1)
-    !     !$OMP parallel private(iThread, i)
-    !     iThread = omp_get_thread_num() + 1
-    !     do i=1, part%N_p(iThread)
-    !         part%phaseSpace(1,i, iThread) = ran2(irand(iThread)) * L_domain + world%grid(1)
-    !         part%phaseSpace(1,i, iThread) = world%getLFromX(part%phaseSpace(1,i, iThread))
-    !     end do
-    !     !$OMP end parallel    
-    ! end subroutine initialize_randUniform
 
     subroutine initialize_QuasiNeutral(ions, electrons)
+        ! Initialze plasma where ions and electrons start at same location
         type(Particle), intent(in) :: electrons
         type(Particle), intent(in out) :: ions
         integer(int32) :: i, iThread
@@ -66,6 +52,7 @@ contains
 
 
     subroutine loadParticleDensity(particleList, world, reset)
+        ! load particles to density array for each thread
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         logical, intent(in) :: reset
@@ -84,7 +71,7 @@ contains
 
     subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
         ! For diagnostics, deposit single particle density
-        ! Re-use rho array since it doesn't get used after first Poisson
+        ! Can choose to have averaged as well
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         integer(int32), intent(in) :: CurrentDiagStep
@@ -95,6 +82,7 @@ contains
         character(len=5) :: char_i
         
         do i=1, numberChargedParticles
+            ! accumulate particle densities on different threads
             !$OMP parallel private(iThread, j, leftThreadIndx, rightThreadIndx)
             iThread = omp_get_thread_num() + 1
             leftThreadIndx = world%threadNodeIndx(1,iThread)
@@ -142,6 +130,7 @@ contains
                 densities(NumberXNodes) = densities(1)
             END SELECT
 
+            ! Write density
             write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

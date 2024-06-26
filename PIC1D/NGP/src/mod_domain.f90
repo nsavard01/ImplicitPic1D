@@ -9,16 +9,15 @@ module mod_domain
     integer(int32), public, protected :: NumberXNodes = 10
     integer(int32), public, protected :: NumberXHalfNodes = 9
 
-    ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
+    ! Class which stores properties of domain 
     type :: Domain
         real(real64), allocatable :: grid(:) !array representing values at grid in m
-        real(real64), allocatable :: dx_dl(:) !ratio of grid differences from physical to logical, assume logical separated by 1
-        real(real64), allocatable :: nodeVol(:) !node vol, or difference between half grid in physical space
-        integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary condition flags for fields and particles
+        real(real64), allocatable :: dx_dl(:) ! l for logical, cell sizes
+        real(real64), allocatable :: nodeVol(:) ! node volume, size of 
+        integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary conditions, node indices divided into threads for OpenMP
         real(real64) :: L_domain, startX, endX
         integer(int32) :: numThreadNodeIndx, numThreadHalfNodeIndx
         logical :: gridSmoothBool
-        ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
         procedure, public, pass(self) :: constructHalfSineGrid
@@ -42,9 +41,8 @@ module mod_domain
 
 contains
 
-    ! Initialization procedures
     type(Domain) function domain_constructor(leftBoundary, rightBoundary) result(self)
-        ! Construct domain object, initialize grid, dx_dl, and nodeVol.
+        ! Construct domain object
         integer(int32), intent(in) :: leftBoundary, rightBoundary
         integer(int32) :: i, k, spacingThread, modThread
         allocate(self % grid(NumberXNodes), self % dx_dl(NumberXHalfNodes), self % nodeVol(NumberXNodes), self%boundaryConditions(NumberXNodes))
@@ -102,6 +100,7 @@ contains
 
 
     subroutine constructGrid(self, del_x, L_domain, gridType)
+        ! Construct Grid
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32), intent(in) :: gridType
@@ -126,6 +125,7 @@ contains
     end subroutine constructGrid
 
     subroutine constructSineGrid(self, del_x, L_domain)
+        ! Sine grid with grid compressed at edges, large in center
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32) :: i
@@ -145,6 +145,7 @@ contains
     end subroutine constructSineGrid
 
     subroutine constructInvSineGrid(self, del_x, L_domain)
+        ! Sin grid compressed in center, larger at edges
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32) :: i
@@ -164,6 +165,7 @@ contains
     end subroutine constructInvSineGrid
 
     subroutine constructHalfSineGrid(self, del_x, L_domain)
+        ! First sine grid but half of the grid
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32) :: i
@@ -186,6 +188,7 @@ contains
     end subroutine constructHalfSineGrid
 
     subroutine constructExpHalfGrid(self, del_x, L_domain)
+        ! Exponential increase of grid
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32) :: i
@@ -214,6 +217,7 @@ contains
     end subroutine constructExpHalfGrid
 
     subroutine constructUniformGrid(self, L_domain)
+        ! uniform grid
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: L_domain
         integer(int32) :: i
@@ -225,6 +229,7 @@ contains
     end subroutine constructUniformGrid
 
     subroutine constructHalfEvenHalfSinusoid(self, del_x, L_domain)
+        ! Half of grid is even, half increases like sinusoid
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
         integer(int32) :: numEvenCells, numSinCells, i
@@ -265,6 +270,7 @@ contains
     end subroutine makeArraysFromGrid
 
     function getXFromL(self, l) result(x)
+        ! get physical coordinate from logical
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: l
         real(real64) :: x
@@ -273,6 +279,7 @@ contains
     end function getXFromL
 
     function getLFromX(self, x) result(l)
+        ! get logical from physical space, use binary search
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: x
         integer(int32) :: idxLower, idxHigher, idxMiddle
@@ -296,11 +303,11 @@ contains
     end function getLFromX
 
     subroutine smoothField(self, rawField, newField)
+        ! Smooth fields on grid with quadratic smoothing
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: rawField(NumberXHalfNodes)
         real(real64), intent(in out) :: newField(NumberXHalfNodes)
         integer(int32) :: i, boundVal
-        ! threaded smoothing of fields
         do i = 1, NumberXHalfNodes
             boundVal = self%boundaryConditions(i+1) - self%boundaryConditions(i)
             SELECT CASE(boundVal)
@@ -345,6 +352,7 @@ contains
     ! ----------------------- read inputs ------------------------------------
 
     subroutine readWorld(GeomFilename, world, T_e, n_ave)
+        ! read world input
         type(Domain), intent(in out) :: world
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave

@@ -68,6 +68,7 @@ NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3 = dataSet('Y:/scra
 #
 
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT/')
+CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_1e18/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg1/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_4delT_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_4delT_epsNeg3/')
@@ -79,7 +80,6 @@ CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3 = dataSet('Y:/scra
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_30PPC_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_30PPC_epsNeg3/')
 
-plt.interactive(False)
 plt.plot(Exp_IASW_Chacon2013_4Threads.grid, Exp_IASW_Chacon2013_4Threads.getDensity('ion',20), '-', label = 'Exp.')
 plt.plot(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid, NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.getDensity('ion',20), linestyle = '--', marker = '.', label = r'NGP')
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid, CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.getDensity('ion',20), linestyle = '--', marker = '.', label = r'CIC')

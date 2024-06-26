@@ -12,7 +12,7 @@ module mod_targetParticle
     ! target particle contains basic properties of basic neutral particle for target null collision
     type :: targetParticle
         character(:), allocatable :: name !name of the particle
-        real(real64) :: mass, density, temperature, v_therm
+        real(real64) :: mass, density, temperature, v_therm 
     contains
         procedure, public, pass(self) :: generate3DMaxwellianVelocity
     end type targetParticle
@@ -59,6 +59,7 @@ contains
     ! ------------------------ read in neutrals ------------------------------------------
 
     subroutine readNeutralParticleInputs(filename, targetParticleList)
+        ! Read input neutral particles
         type(targetParticle), allocatable, intent(out) :: targetParticleList(:)
         character(len=*), intent(in) :: filename
         integer(int32) :: j, numNeutral = 0, io

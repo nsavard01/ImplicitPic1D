@@ -1,0 +1,12 @@
+32 ! number of threads
+0.00014749262536873156 0.0d0 ! simulation time
+1.d16 ! Initial number density (1/m^3) of particles
+2.59d0 ! T_e (eV)
+0.025d0 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+1.5d0 7.845352413230403e-12 ! Fraction of initial 1/w_p for initial time step
+7.374631268436579e-06 ! amount of time to average final Diagnostics
+../../../../ImplicitData/  !Save directory
+NGP_VassBenchmark_Ar_10xParticles !filename
+no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
+END

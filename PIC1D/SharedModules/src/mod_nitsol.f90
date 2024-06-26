@@ -2,6 +2,9 @@ module mod_nitsol
     use iso_fortran_env, only: int32, real64
     implicit none
 
+    ! From https://github.com/cmacmackin/nitsol
+    ! Modified to module and to use intrinsics whenever possible
+
     interface
 
         function ddot(n, x, sx, y, sy)
@@ -2723,6 +2726,7 @@ subroutine nitdrv(n, xcur, fcur, xpls, fpls, step, f, jacv, rpar, ipar, abstol, 
      endif
      nfe = nfe + 1
      fcnrm = SQRT(SUM(fcur**2))!dnrm2(n, fcur, 1) 
+     ! Use similar convergence tolerance to AA
      ftol = abstol + reltol*fcnrm
      
     ! c ------------------------------------------------------------------------ 

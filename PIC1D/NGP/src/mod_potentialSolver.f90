@@ -9,12 +9,12 @@ module mod_potentialSolver
     ! This module will be for the potential solver
     ! This uses the interaction between particles (particle module) and grid (domain module) in order to solve for the potential
     ! Will contain particle to mesh gathers (J, rho) and potential which comes from them (phi)
-    ! Will also contain particle mover, since needed to store to J, and cannot be separate
     ! Assume dirichlet boundaries at ends for now, so matrix solver can go down by two dimensions
     private
     public :: potentialSolver, readSolver
 
     type :: potentialSolver
+        ! store grid quantities
         real(real64), allocatable :: phi(:), J(:), rho(:), phi_f(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
         real(real64) :: rho_const, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
@@ -47,7 +47,7 @@ module mod_potentialSolver
 contains
 
     type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, RF_frequency, timeCurrent) result(self)
-        ! Construct domain object, initialize grid, dx_dl, and nodeVol.
+        ! Construct object, set initialize variables
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: leftVoltage, rightVoltage
         real(real64), intent(in) :: RF_frequency, timeCurrent
@@ -87,6 +87,7 @@ contains
 
     subroutine construct_diagMatrix(self, world)
         ! construct diagonal components for thomas algorithm
+        ! Same matrix used for gauss' law and divergence of ampere
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
@@ -108,11 +109,9 @@ contains
             CASE(2)
                 if (i == 1) then
                     self % c_tri(i) = 2.0d0/world%dx_dl(i)
-                    !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
                     self%b_tri(i) = - (2.0d0/world%dx_dl(i))
                 else if (i == NumberXNodes) then
                     self % a_tri(i-1) = 2.0d0/ world%dx_dl(i-1)
-                    !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
                     self%b_tri(i) = - (2.0d0/world%dx_dl(i-1))
                 else
                     print *, "Neumann boundary not on left or right most index!"
@@ -128,6 +127,7 @@ contains
     end subroutine construct_diagMatrix
 
     subroutine depositRho(self, particleList, world) 
+        ! Solve for rho from particle positions
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
@@ -222,7 +222,6 @@ contains
             self%phi(i) = dp(i)-cp(i)*self%phi(i+1)
         end do
         self%phi_f = self%phi
-        !self%EField = (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Poisson
 
     subroutine solveInitialPotential(self, particleList, world, timeCurrent)
@@ -233,11 +232,11 @@ contains
         real(real64), intent(in) :: timeCurrent
         call self%depositRho(particleList, world)
         call self%solve_tridiag_Poisson(world, timeCurrent)
-        ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
 
     end subroutine solveInitialPotential
 
     function getError_tridiag_Poisson(self, world) result(res)
+        ! Get error in gauss' law
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
@@ -265,7 +264,7 @@ contains
     end function getError_tridiag_Poisson
 
     subroutine makeConstSourceTerm(self, world)
-        ! Store constant source term for ampere into rho array
+        ! Store constant source term for div ampere calc into rho array
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
@@ -286,7 +285,7 @@ contains
     end subroutine makeConstSourceTerm
 
     subroutine solve_tridiag_Ampere(self, world, del_t)
-        ! Tridiagonal (Thomas algorithm) solver for Ampere
+        ! Tridiagonal (Thomas algorithm) solver for div. Ampere
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
@@ -326,11 +325,11 @@ contains
         do i = NumberXHalfNodes, 1, -1
             self%phi_f(i) = dp(i)-cp(i)*self%phi_f(i+1)
         end do
-        !self%EField = 0.5d0 * (self%phi(1:NumberXHalfNodes) + self%phi_f(1:NumberXHalfNodes) - self%phi(2:NumberXNodes) - self%phi_f(2:NumberXNodes)) / world%dx_dl
     end subroutine solve_tridiag_Ampere
 
 
     function getError_tridiag_Ampere(self, world, del_t) result(res)
+        ! Error in div. ampere
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
@@ -356,6 +355,7 @@ contains
     end function getError_tridiag_Ampere
 
     function getChargeContinuityError(self, rho_i, world, del_t) result(chargeError)
+        ! get error in charge continuity equation
         class(potentialSolver), intent(in) :: self
         real(real64), intent(in) :: del_t, rho_i(NumberXNodes)
         type(Domain), intent(in) :: world
@@ -390,6 +390,7 @@ contains
     end function getChargeContinuityError
 
     subroutine makeHalfTimeEField(self, workArray, world)
+        !  Make half-time EField for particle mover
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in out) :: workArray(NumberXHalfNodes)
@@ -420,8 +421,7 @@ contains
     end function getTotalPE
 
     function getJdotE(self, world, del_t) result(res)
-        ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
-        ! In 1D is J/m^2
+        ! get j dot E which should be equivalent to particle energy gain in domain
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
@@ -430,8 +430,7 @@ contains
     end function getJdotE
 
     function getEnergyFromBoundary(self, world, del_t) result(res)
-        ! Get energy input into domain from dirichlet boundary
-        ! In 1D is J/m^2
+        ! Get energy across boundary from time step
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
@@ -442,6 +441,7 @@ contains
     end function getEnergyFromBoundary
 
     subroutine setRFVoltage(self, world, timeFuture)
+        ! Set future boundary value of voltage for RF
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: timeFuture 
@@ -459,6 +459,7 @@ contains
     end subroutine resetVoltage
 
     subroutine aveRFVoltage(self, accumBool, phi_average, RF_ave, numSteps, world)
+        ! For averaging if RF voltage is applied
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         logical, intent(in) :: accumBool
@@ -486,6 +487,7 @@ contains
     ! ---------------------- read solver input ----------------------------
 
     subroutine readSolver(GeomFilename, solver, world, timeCurrent)
+        ! Read input to solver
         type(Domain), intent(in) :: world
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename

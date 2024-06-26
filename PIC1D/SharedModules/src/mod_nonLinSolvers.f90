@@ -10,6 +10,8 @@ module mod_nonLinSolvers
     use mod_Scheme
     use mod_nitsol
     implicit none
+
+    ! Non-linear solvers for implicit PIC
     
     interface
         subroutine dgels(trans, m, n, nrhs, a, lda, b, ldb, work, lwork, info)
@@ -22,16 +24,18 @@ module mod_nonLinSolvers
 
     end interface
 
-    ! Initialize objects needed
+    ! Initialize classes here since nitsol made to work with arrays of numbers instead of objects
+    ! For this reason, just make global so nitsol can be used. Suffer potential consequences later
     type(Domain) :: globalWorld
     type(Particle), allocatable :: globalParticleList(:)
     type(potentialSolver) :: globalSolver
+    ! Initialize variables used for solver parameters and diagnostics
     integer(int32), protected :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, amountTimeSplits
     integer(int64), protected :: potTimer, moverTimer
     integer(int32), private :: maxIter, solverType, m_Anderson
     real(real64), private :: Beta_k, eps_r, eps_a
 
-    !allocatable arrays for Anderson
+    !allocatable arrays for Anderson Acceleration
     real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :)
 
 contains
@@ -39,6 +43,7 @@ contains
     ! Non-linear solver stuff -------------------------------------------------------------
 
     subroutine initializeSolver()
+        ! Initialize either AA or JFNK (nitsol) solver parameters
         integer(int32) :: io
         print *, "Reading non-linear solver inputs:"
         if (.not. restartBool) then
@@ -83,7 +88,7 @@ contains
     ! ----------- Picard with Anderson Acceleration -------------------------------
 
     subroutine solveDivAmpereAnderson(solver, particleList, world, del_t)
-        ! Solve for divergence of ampere using picard iterations
+        ! Solve for divergence of ampere using picard iterations with anderson acceleration
         type(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
@@ -93,7 +98,7 @@ contains
         integer(int32) :: i, j, index, m_k
         integer(int64) :: startTime, endTime
         
-        
+        ! put constaent source term into solver%rho so don't need to recalculate 
         call solver%makeConstSourceTerm(world)
         phi_k(:,1) = solver%phi_f
         call system_clock(startTime)
@@ -104,12 +109,14 @@ contains
         call solver%solve_tridiag_Ampere(world, del_t)
         call system_clock(endTime)
         potTimer = potTimer + endTime - startTime
+        ! Store solutions 
         phi_k(:,2) = solver%phi_f
         Residual_k(:,1) = phi_k(:,2) - phi_k(:,1)
         normResidual(1) = SQRT(SUM(Residual_k(:,1)**2))
+        ! Find total convergence criterion
         eps_tol = eps_r * normResidual(1) + eps_a * SQRT(real(NumberXNodes))
-        ! print *, "Initial norm is:", initialR
         do i = 1, maxIter
+            ! store last m iterations with index cycling
             index = MODULO(i, m_Anderson+1) + 1
             m_k = MIN(i, m_Anderson)
             call system_clock(startTime)
@@ -123,6 +130,7 @@ contains
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
             if (normResidual(index) < eps_tol) then
+                ! Move particles
                 call system_clock(startTime)
                 call moveParticles(solver,particleList, world, del_t)
                 call system_clock(endTime)
@@ -131,6 +139,7 @@ contains
                 exit
             end if
             if (i > m_Anderson) then
+                !Stagnant if average previous 3 residuals > current residual
                 if (m_Anderson > 3) then
                     sumPastResiduals = normResidual(MODULO(i-1, m_Anderson+1) + 1) &
                     + normResidual(MODULO(i-2, m_Anderson+1) + 1) + normResidual(MODULO(i-3, m_Anderson+1) + 1)
@@ -148,8 +157,10 @@ contains
                 fitMat(:,j+1) =  Residual_k(:, index) - Residual_k(:, MODULO(i - m_k + j, m_Anderson+1) + 1)
             end do
             !call dgels('N', NumberXNodes, m_k, 1, fitMat(:, 1:m_k), NumberXNodes, alpha(1:ldb), ldb, work, lwork, info)
+            ! For small m_anderson quicker to solve normal equation
             alpha(1:m_k) = solveNormalEquation(fitMat(:, 1:m_k), Residual_k(:, index), NumberXNodes, m_k)
             alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k)) 
+            ! update next phi_k
             phi_k(:, MODULO(i+1, m_Anderson+1) + 1) = alpha(1) * (Beta_k*Residual_k(:, MODULO(i-m_k, m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k,m_Anderson+1) + 1))
             do j=1, m_k
                 phi_k(:, MODULO(i+1, m_Anderson+1) + 1) = phi_k(:, MODULO(i+1, m_Anderson+1) + 1) + alpha(j + 1) * (Beta_k*Residual_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1) + phi_k(:, MODULO(i-m_k + j, m_Anderson+1) + 1))
@@ -176,6 +187,7 @@ contains
         if (iterNumPicard < maxIter) then
             remainDel_t = del_t  
         else
+            ! Time step is split
             amountTimeSplits = amountTimeSplits + 1
             iterNumAdaptiveSteps = 0
             !adaptiveJ = 0.0d0
@@ -196,12 +208,14 @@ contains
     end subroutine adaptiveSolveDivAmpereAnderson
 
     subroutine solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, timeCurrent)
+        ! General potential solver
         type(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
         ! make future phi now current phi
+        ! allows use of phi_f and phi for diagnostics before solving next time step
         call solver%resetVoltage()
         SELECT CASE (solverType)
         CASE(0)
@@ -216,13 +230,13 @@ contains
 
     ! -------------------- JFNK functions ---------------------------------------
     subroutine funcNitsol(n, xcur, fcur, rpar, ipar, itrmf)
-        ! Use solver and whatnot as global inputs, I'm sure as hell not combining all data into one rpar and then creating new routines on those!
+        ! Function evaluation for Nitsol mod
+        ! Instead of reorganizing all data into rpar, use globals set in this module for simplicity
         integer, intent(in) :: n
         integer, intent(in out) :: itrmf, ipar(*)
         double precision, intent(in) :: xcur(n)
         double precision, intent(in out) :: rpar(*), fcur(n)
         integer(int64) :: endTimer, startTimer
-        !real(real64) :: d(n)
         globalSolver%phi_f = xcur
         call system_clock(startTimer)
         call depositJ(globalSolver, globalParticleList, globalWorld, rpar(1))
@@ -233,13 +247,12 @@ contains
         call system_clock(endTimer)
         potTimer = potTimer + endTimer - startTimer
         fcur = xcur - globalSolver%phi_f
-        ! fcur = globalSolver%getError_tridiag_Ampere(globalWorld, rpar(1))
         itrmf = 0
         
     end subroutine funcNitsol
 
     subroutine jacNitsol(n, xcur, fcur, ijob, v, z, rpar, ipar, itrmjv) 
-        ! If analytical jacobian matrix-vector product or preconditioner needed
+        ! If analytical jacobian matrix-vector product or right-preconditioner needed
         integer, intent(in) :: ijob, n
         integer, intent(in out) :: itrmjv, ipar(*)
         double precision, intent(in) :: fcur(n), v(n), xcur(n)
@@ -253,21 +266,19 @@ contains
     end subroutine jacNitsol
 
     subroutine solveJFNK(del_t)
+        ! Solve divergence of ampere with Nitsol-mod
         real(real64), intent(in) :: del_t
         integer(int32) :: info(6), iterm, ipar(2), itrmf
         real(real64) :: fcurSolver(NumberXNodes), xcurSolver(NumberXNodes), rpar(1)
         integer(int64) :: startTimer, endTimer
-        ! Set Nitsol parameters
         iterm = 0
         call globalSolver%makeConstSourceTerm(globalWorld)
         xcurSolver = globalSolver%phi_f
         rpar(1) = del_t
-        !dnrm2(NumberXNodes, fcurSolver, 1)
-        !print *, "initial norm is:", initialNorm
-        !eps_r * SQRT(real(NumberXNodes))
         call nitsol(NumberXNodes, xcurSolver, funcNitsol, jacNitsol, eps_a, eps_r, 1.d-12, info, rpar, ipar, iterm)
         SELECT CASE (iterm)
         CASE(0)
+            ! Move final particles
             iterNumPicard = info(1)
             call system_clock(startTimer)
             call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
@@ -282,8 +293,8 @@ contains
     end subroutine solveJFNK
 
     subroutine adaptiveSolveDivAmpereJFNK(del_t, remainDel_t, currDel_t, timeCurrent)
-        ! Solve for divergence of ampere's law with picard
-        ! cut del_t in two if non-convergence after maxIter, repeat until convergence
+        ! Same function as AA applied to JFNK
+        ! JFNK does not have stagnation check so far
         real(real64), intent(in) :: del_t, timeCurrent
         real(real64), intent(in out) :: remainDel_t, currDel_t
         currDel_t = remainDel_t

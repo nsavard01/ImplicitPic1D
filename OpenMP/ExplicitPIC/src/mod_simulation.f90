@@ -89,8 +89,13 @@ contains
             densities(leftThreadIndx:rightThreadIndx) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
             !$OMP end parallel
             densities = densities/world%delX
-            densities(1) = 2.0d0 * densities(1)
-            densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)
+            if (world%boundaryConditions(1) == 3) then
+                densities(1) = (densities(1) + densities(NumberXNodes))
+                densities(NumberXNodes) = densities(1)
+            else
+                densities(1) = 2.0d0 * densities(1)
+                densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)
+            end if
             write(char_i, '(I3)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')

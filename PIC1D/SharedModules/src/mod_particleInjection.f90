@@ -6,6 +6,7 @@ module mod_particleInjection
     use mod_particle
     use omp_lib
     implicit none
+    ! Module for artificial particle injection at boundaries or artificial collisions
     real(real64), allocatable, public :: energyAddColl(:)
     logical, public, protected :: addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool
     integer(int32), private :: numFluxParticlesHigh, numFluxParticlesLow
@@ -40,6 +41,7 @@ contains
     end subroutine addMaxwellianLostParticles
 
     subroutine refluxParticles(particleList, T_e, T_i, irand, world)
+        !reflux particles at the boundary
         type(Particle), intent(in out) :: particleList(2)
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
@@ -69,6 +71,7 @@ contains
     end subroutine refluxParticles
 
     subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+        ! inject particles at boundary at ion sound speed
         type(Particle), intent(in out) :: particleList(2)
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
@@ -130,13 +133,13 @@ contains
     end subroutine injectAtBoundary
 
     subroutine injectUniformFlux(particleList, T_e, T_i, irand, world)
+        ! volume injection at set rate
         type(Particle), intent(in out) :: particleList(2)
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
         integer(int32) :: i, iThread, numInjected
         real(real64) :: x_random
-        ! Reflux particles
         
         !$OMP parallel private(iThread, i, numInjected, x_random)
         iThread = omp_get_thread_num() + 1
@@ -180,6 +183,7 @@ contains
     ! -------------------- read inputs artificial collisions/particle injection ------------------------------------
 
     subroutine readInjectionInputs(InjFilename, w_p)
+        ! Read input for artificial particle collisions
         real(real64), intent(in) :: w_p
         character(len=*), intent(in) :: InjFilename
         integer(int32) :: tempInt, io

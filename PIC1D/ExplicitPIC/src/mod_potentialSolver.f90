@@ -7,15 +7,11 @@ module mod_potentialSolver
     use omp_lib
     implicit none
 
-    ! This module will be for the potential solver
-    ! This uses the interaction between particles (particle module) and grid (domain module) in order to solve for the potential
-    ! Will contain particle to mesh gathers (J, rho) and potential which comes from them (phi)
-    ! Will also contain particle mover, since needed to store to J, and cannot be separate
-    ! Assume dirichlet boundaries at ends for now, so matrix solver can go down by two dimensions
+    ! Class for scalar and field quantities on the domain
     public :: potentialSolver, readSolver
 
     type :: potentialSolver
-        real(real64), allocatable :: phi(:), rho(:), EField(:) !phi_f is final phi, will likely need to store two arrays for phi, can't be avoided
+        real(real64), allocatable :: phi(:), rho(:), EField(:) ! Store phi, rho, and EField
         real(real64) :: rho_const, RF_rad_frequency, RF_half_amplitude
         real(real64), allocatable :: a_tri(:), b_tri(:), c_tri(:) !for thomas algorithm potential solver, a_tri is lower diagonal, b_tri middle, c_tri upper
 
@@ -40,7 +36,7 @@ module mod_potentialSolver
 contains
 
     type(potentialSolver) function potentialSolver_constructor(world, leftVoltage, rightVoltage, RF_frequency) result(self)
-        ! Construct domain object, initialize grid, dx_dl, and dx_dl.
+        ! Construct object
         real(real64), intent(in) :: leftVoltage, rightVoltage
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: RF_frequency
@@ -75,6 +71,7 @@ contains
     end function potentialSolver_constructor
 
     subroutine depositRho(self, particleList, world) 
+        ! calculate rho from particle locations
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
@@ -105,7 +102,7 @@ contains
     end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
-        ! construct diagonal components for thomas algorithm
+        ! construct tridiagonal components of matrix for thomas algorithm
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
@@ -124,11 +121,9 @@ contains
             CASE(2)
                 if (i == 1) then
                     self % c_tri(i) = 1.0d0/(world%delX)
-                    !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
                     self%b_tri(i) = - 1.0d0 / (world%delX)
                 else if (i == NumberXNodes) then
                     self % a_tri(i-1) = 1.0d0/(world%delX)
-                    !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
                     self%b_tri(i) = - 1.0d0 / (world%delX)
                 else
                     print *, "Neumann boundary reflecting not on left or right most index!"
@@ -144,7 +139,7 @@ contains
     end subroutine construct_diagMatrix
 
     subroutine solve_tridiag_Poisson(self, world, timeCurrent)
-        ! Tridiagonal (Thomas algorithm) solver for initial Poisson
+        ! Solve for phi using rho
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: timeCurrent
@@ -181,87 +176,9 @@ contains
 
     end subroutine solve_tridiag_Poisson
 
-    ! subroutine solve_gaussSiedel_Poisson(self, world)
-    !     ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-    !     class(potentialSolver), intent(in out) :: self
-    !     type(Domain), intent(in) :: world
-    !     integer(int32) :: i, j
-    !     real(real64) :: b(NumberXNodes), sigma(NumberXNodes), Ax(NumberXNodes), res
-
-    !     do i=1, NumberXNodes
-    !         SELECT CASE (world%boundaryConditions(i))
-    !         CASE(0,2)
-    !             b(i) = -self%rho(i) / eps_0
-    !         CASE(1,3)
-    !             b(i) = self%phi(i)
-    !         END SELECT
-    !     end do
-    !     do i = 1, self%siedelIter
-    !         sigma(1) = self%c_tri(1)*self%phi(2)
-    !         self%phi(1) = self%phi(1) + 1.4d0*((b(1) - sigma(1))/self%b_tri(1) - self%phi(1))
-    !         do j = 2, NumberXNodes-1
-    !             sigma(j) = self%c_tri(j)*self%phi(j+1) + self%a_tri(j-1) * self%phi(j-1)    
-    !             self%phi(j) = self%phi(j) + 1.4d0*((b(j) - sigma(j))/self%b_tri(j) - self%phi(j))
-    !         end do
-    !         sigma(NumberXNodes) = self%a_tri(NumberXNodes-1) * self%phi(NumberXNodes-1)
-    !         self%phi(NumberXNodes) = self%phi(NumberXNodes) + 1.4d0 * ((b(NumberXNodes) - sigma(NumberXNodes))/self%b_tri(NumberXNodes) - self%phi(NumberXNodes))
-    !         if (MOD(i, 100) == 0) then
-    !             Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-    !             res = SUM(((Ax + 1d-15)/(b + 1d-15) - 1.0d0)**2)
-    !             res = SQRT(res/NumberXNodes)
-    !             if (res < self%siedelEps) then
-    !                 exit
-    !             end if
-    !         end if
-    !     end do
-    !     if (i == self%siedelIter+1) then
-    !         stop 'Max iterations reached Gauss-siedel solver!'
-    !     end if
-    ! end subroutine solve_gaussSiedel_Poisson
-
-    ! subroutine solve_CG_Poisson(self, world)
-    !     ! Tridiagonal (Thomas algorithm) solver for initial Poisson
-    !     class(potentialSolver), intent(in out) :: self
-    !     type(Domain), intent(in) :: world
-    !     integer(int32) :: i
-    !     real(real64) :: b(NumberXNodes), RPast(NumberXNodes), RFuture(NumberXNodes), D(NumberXNodes), beta, alpha, resPast, resFuture, Ax(NumberXNodes)
-    !     logical :: converge
-    !     converge = .false.
-    !     do i=1, NumberXNodes
-    !         SELECT CASE (world%boundaryConditions(i))
-    !         CASE(0,2)
-    !             b(i) = -self%rho(i) / eps_0
-    !         CASE(1,3)
-    !             b(i) = self%phi(i)
-    !         END SELECT
-    !     end do
-    !     RPast = b - triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-    !     resPast = SQRT(SUM(RPast**2))
-    !     D = RPast
-    !     do i = 1, 1000
-    !         alpha = resPast**2 / SUM(D * triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, D))
-    !         self%phi = self%phi + alpha * D
-    !         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi)
-    !         RFuture = b - Ax
-    !         resFuture = SQRT(SUM(RFuture**2))
-    !         if (SUM(ABS(RFuture/(b + 1.d-15)))/NumberXNodes < 1.d-8) then
-    !             converge = .true.
-    !             exit
-    !         end if
-    !         beta = (resFuture**2)/(resPast**2)
-    !         D = RFuture + beta * D
-    !         RPast = RFuture
-    !         resPast = resFuture
-    !     end do
-    !     if (.not. converge) then
-    !         stop 'Max iterations reached CG solver!'
-    !     end if
-    ! end subroutine solve_CG_Poisson
-
 
     function getTotalPE(self, world) result(res)
-        ! Get energy in electric fields, future true, then derive from phi_f, otherwise phi
-        ! In 1D is J/m^2
+        ! Get field energy in J/m^2
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         real(real64) :: res
@@ -276,13 +193,13 @@ contains
     !----------------- Particle mover/sub-stepping procedures -------------------------------------------------------
 
     subroutine makeEField(self, world)
-        !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
+        ! Generate EField at nodes
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         self%EField(2:NumberXNodes-1) = (self%phi(1:NumberXNodes-2) - self%phi(3:NumberXNodes))/2.0d0/world%delX
         SELECT CASE (world%boundaryConditions(1))
         CASE(1,4)
-            self%EField(1) = (self%phi(1) - self%phi(2))/world%delX !0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
+            self%EField(1) = (self%phi(1) - self%phi(2))/world%delX !Use first order so in line with implicit, 0.5d0 * (3.0d0 * self%phi(1) - 4.0d0 * self%phi(2) + self%phi(3)) / world%delX
         CASE(2)
             self%EField(1) = 0.0d0
         CASE(3)
@@ -294,7 +211,7 @@ contains
 
         SELECT CASE (world%boundaryConditions(NumberXNodes))
         CASE(1,4)
-            self%EField(NumberXNodes) = (self%phi(NumberXNodes-1) - self%phi(NumberXNodes))/world%delX !0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
+            self%EField(NumberXNodes) = (self%phi(NumberXNodes-1) - self%phi(NumberXNodes))/world%delX !Use first order so in line with implicit, 0.5d0 * (-3.0d0 * self%phi(NumberXNodes) + 4.0d0 * self%phi(NumberXNodes-1) - self%phi(NumberXNodes-2))/ world%delX
         CASE(2)
             self%EField(NumberXNodes) = 0.0d0
         CASE(3)
@@ -306,7 +223,7 @@ contains
     end subroutine makeEField
 
     pure function getEField(self, l_p) result(res)
-        !return EField of particle at logical position l_p (this is half distance), per particle since particle mover loop will be per particle
+        !return EField of particle at computational position l_p
         class(potentialSolver), intent(in) :: self
         real(real64), intent(in) :: l_p
         integer(int32) :: l_left
@@ -319,6 +236,7 @@ contains
     ! -------------------------------------------- Particle mover without boolean checks for depositing J -----------------------------------------------------------
 
     subroutine initialVRewind(self, particleList, del_t)
+        ! Rewind particle velocities by half step using E-Field
         class(potentialSolver), intent(in out) :: self
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
@@ -336,6 +254,7 @@ contains
     end subroutine initialVRewind
 
     function getTotalE(self, particleList, world) result(res)
+        ! Get total kinetic + potential energy using average velocity (v^k-1/2 + v^k+1/2) / 2
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in) :: particleList(:)
@@ -357,12 +276,11 @@ contains
     end function getTotalE
 
     subroutine moveParticles(self, particleList, world, del_t)
-        ! particle mover to avoid the boolean checks which mostly don't happen when depositing J
+        ! particle mover using the fields
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
-        !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         integer(int32) :: j, i, delIdx, refIdx, iThread, N_p
         real(real64) :: v_prime, q_over_m, partLoc
         !$OMP parallel private(iThread, i, j,delIdx, v_prime,partLoc, refIdx, N_p)
@@ -378,6 +296,8 @@ contains
                 v_prime = particleList(j)%phaseSpace(2, i, iThread) + particleList(j)%q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
                 ! Get new position
                 partLoc = particleList(j)%phaseSpace(1, i, iThread) + v_prime * del_t/world%delX
+
+                ! Check if outside boundary
                 if (partLoc <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
                     CASE(1,4)
@@ -392,9 +312,6 @@ contains
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc - 2.0d0, real(NumberXNodes, kind = real64)) + 1
-                    ! CASE default
-                    !     print *, 'no case, moveParticles'
-                    !     stop
                     END SELECT
                 else if ((partLoc >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
@@ -410,9 +327,6 @@ contains
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc, real(NumberXNodes, kind = real64)) + 1
-                    ! CASE default
-                    !     print *, 'no case, moveParticles'
-                    !     stop
                     END SELECT
                 else
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = partLoc
@@ -425,6 +339,7 @@ contains
             particleList(j)%refIdx(iThread) = refIdx
         end do loopSpecies
         !$OMP end parallel
+        ! Update particle accumulation stats
         do j = 1, numberChargedParticles
             particleList(j)%numToCollide = particleList(j)%N_p
             particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM=2)
@@ -442,7 +357,6 @@ contains
         real(real64), intent(in) :: timeCurrent
         call self%depositRho(particleList, world)
         call self%solve_tridiag_Poisson(world, timeCurrent)
-        ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
         call self%makeEField(world)
     end subroutine solvePotential
 
@@ -450,6 +364,7 @@ contains
     ! ---------------- read Solver parameters --------------------------------------
 
     subroutine readSolver(GeomFilename,solver,world)
+        ! Read inputs for solver class
         type(Domain), intent(in) :: world
         type(potentialSolver), intent(in out) :: solver
         character(len=*), intent(in) :: GeomFilename

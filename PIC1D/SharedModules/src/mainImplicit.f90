@@ -22,6 +22,7 @@ program BoundPlasmaExample
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
 
+    ! Read all inputs and create objects
     call initializeScheme()
     call readInitialInputs('InitialConditions.inp')
     call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)
@@ -31,30 +32,11 @@ program BoundPlasmaExample
     call readNeutralParticleInputs('ParticleTypes.inp', targetParticleList)
     call readNullCollisionInputs('collision.inp', nullCollisionList, globalParticleList, targetParticleList)
     call allocateParticleMoverData()
-    ! do i = 1, numberChargedParticles
-    !     globalParticleList(i)%N_p = 0
-    ! end do
     call readInjectionInputs('ParticleInjection.inp', globalParticleList(1)%w_p)
     call initializeSolver()
-    ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
+    ! Solve initial potential
     call globalSolver%solveInitialPotential(globalParticleList, globalWorld, startSimulationTime)
-   
-    ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
-    ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
-    ! E_i = globalSolver%getTotalPE(globalWorld, .false.)
-    ! do j=1, numberChargedParticles
-    !     E_i = E_i + globalParticleList(j)%getTotalKE()
-    ! end do
-    ! call moveParticles(globalSolver, globalParticleList, globalWorld, del_t)
-    ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
-    ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
-    ! E_f = globalSolver%getTotalPE(globalWorld, .false.)
-    ! do j=1, numberChargedParticles
-    !     E_f = E_f + globalParticleList(j)%getTotalKE() + SUM(globalParticleList(j)%energyLoss) * globalParticleList(j)%mass * globalParticleList(j)%w_p * 0.5d0
-    ! end do
-    ! print *, ABS((E_i - E_f)/(E_i))
-    ! stop
-    
+    ! Used for testing, comment out
     ! allocate(rho_i(NumberXNodes), J_total(NumberXHalfNodes))
     ! rho_i = globalSolver%rho
     ! KE_i = 0.0d0
@@ -71,14 +53,6 @@ program BoundPlasmaExample
     ! call system_clock(startTime)
     ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, startSimulationTime)
     ! call system_clock(endTime)
-    
-    ! do i = 1, NumberXHalfNodes
-    !     J_total(i) = eps_0 * (((globalSolver%phi_f(i) - globalSolver%phi_f(i+1)) -(globalSolver%phi(i) - globalSolver%phi(i+1))) /globalWorld%dx_dl(i)) / currDel_t + globalSolver%J(i)
-    ! end do
-    ! print *, J_total
-    ! print *, ''
-    ! print *, 'S is:', (SUM(globalSolver%J * globalWorld%dx_dl) + (eps_0/currDel_t) * &
-    !     (globalSolver%phi_f(NumberXNodes) - globalSolver%phi_f(1) - globalSolver%phi(NumberXNodes) + globalSolver%phi(1)))/globalWorld%L_domain
    
     ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0
@@ -120,6 +94,8 @@ program BoundPlasmaExample
     ! print *, 'gauss error is:', globalSolver%getError_tridiag_Poisson(globalWorld)
     ! print *, 'charge error is:', globalSolver%getChargeContinuityError(rho_i, globalWorld, currDel_t)
     ! stop
+
+    ! Run simulations
     call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, simulationTime)
     call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, averagingTime, 100)
 end program BoundPlasmaExample

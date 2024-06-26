@@ -11,15 +11,16 @@ module mod_particle
     public :: Particle, readChargedParticleInputs
     integer(int32), public, protected :: numberChargedParticles = 0
 
-    ! Particle contains particle properties and stored values in phase space df
+    ! Particle contains particle properties and stored values in phase space
     type :: Particle
         character(:), allocatable :: name !name of the particle
-        integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:), numToCollide(:) !N_p is the current last index of particle, final idx is the last allowable in memory. Index starts at 1
-        integer(int32) :: finalIdx, accumWallLoss(2)
+        integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:), numToCollide(:) !N_p is the current last index of particle, refIdx and delIdx are number to reflux and delete
+        ! numToCollide saves number that can collided in nullCollision
+        integer(int32) :: finalIdx, accumWallLoss(2) ! finalIdx is maximum particles per thread
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
         real(real64) :: mass, q, w_p, q_over_m, q_times_wp ! mass (kg), charge(C), and weight (N/m^2 in 1D) of particles. Assume constant weight for moment
-        real(real64), allocatable :: wallLoss(:,:), energyLoss(:,:), momentumLoss(:,:)
-        real(real64), allocatable :: densities(:, :), workSpace(:,:)
+        real(real64), allocatable :: wallLoss(:,:), energyLoss(:,:), momentumLoss(:,:) ! Accumulate number of particles, v^2, and v of particles at wall
+        real(real64), allocatable :: densities(:, :), workSpace(:,:) ! Per thread densities and general workspace over domain
         real(real64) :: numFuncEvalAve, numSubStepsAve
         real(real64) :: accumEnergyLoss(2)
 
@@ -61,7 +62,7 @@ contains
         self%accumEnergyLoss = 0.0d0
         self%numFuncEvalAve = 0.0d0
         self%numSubStepsAve = 0.0d0
-        maxNumNodes = MAX(NumberXNodes, NumberXHalfNodes)
+        maxNumNodes = MAX(NumberXNodes, NumberXHalfNodes) ! Take maximum of nodes on domain
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
             self%densities(NumberXNodes, numThread), self%workSpace(maxNumNodes, numThread), self%numToCollide(numThread), self%momentumLoss(2, numThread))
@@ -82,6 +83,7 @@ contains
     end subroutine initialize_n_ave
 
     subroutine initializeRandUniform(self, world, irand)
+        ! distribute particles randomly over the domain
         class(Particle), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32), intent(in out) :: irand(numThread)
@@ -97,6 +99,8 @@ contains
     end subroutine initializeRandUniform
 
     subroutine initializeRandCosine(self, world, irand, alpha)
+        ! Use acceptance-rejection method to distribute particles
+        ! f(x) = 1 + alpha * Cos(2 pi x/L)
         class(Particle), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: alpha
@@ -123,6 +127,8 @@ contains
     end subroutine initializeRandCosine
 
     subroutine initializeRandSine(self, world, irand, alpha)
+        ! Use acceptance-rejection method to distribute particles
+        ! f(x) = 1 + alpha * Sin(2 pi x/L)
         class(Particle), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: alpha
@@ -153,7 +159,7 @@ contains
 
     subroutine generate3DMaxwellian(self, T, world, irand, alpha, distType, v_drift)
         ! random velocity generator for the particle for temperature T (eV)
-        ! Use box-muller method for random guassian variable, same as gwenael but doesn't have factor 2? Maybe factored into v_th
+        ! Use box-muller method for random guassian variable
         class(Particle), intent(in out) :: self
         class(Domain), intent(in) :: world
         real(real64), intent(in) :: T, alpha, v_drift
@@ -204,6 +210,7 @@ contains
     end function getKEAve
 
     function getTotalMomentum(self) result(res)
+        ! Get total momentum in domain
         class(Particle), intent(in) :: self
         real(real64) :: res(3), temp(3)
         integer(int32) :: iThread
@@ -286,6 +293,7 @@ contains
     ! ------------------- read and initialize particles using world type ---------------------------------
 
     subroutine readChargedParticleInputs(filename, irand, T_e, T_i, numThread, world, particleList)
+        ! Read input file for particles
         type(Particle), allocatable, intent(out) :: particleList(:)
         type(Domain) :: world
         character(len=*), intent(in) :: filename
@@ -347,6 +355,7 @@ contains
         numberChargedParticles = numSpecies
         print *, 'Amount charged particles:', numberChargedParticles
         if (numberChargedParticles > 0) then
+            ! Initialize and generate particles
             allocate(particleList(numberChargedParticles))
             do j=1, numberChargedParticles
                 particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
@@ -366,7 +375,7 @@ contains
                     if (j == 1) then
                         call particleList(j) % generate3DMaxwellian(Ti(j), world, irand, alpha(j), distType(j), v_drift(j))
                     else
-                        call particleList(j) % generate3DMaxwellian(Ti(j), world, irand, 1.236d0, distType(j), v_drift(j))
+                        call particleList(j) % generate3DMaxwellian(Ti(j), world, irand, 1.236d0, distType(j), v_drift(j)) ! Used for IASW case, will likely change to general later
                     end if
                 else
                     !$OMP parallel private(iThread, boolVal, char_i, io, i)

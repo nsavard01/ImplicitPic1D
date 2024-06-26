@@ -14,7 +14,7 @@ module constants
     real(real64), parameter :: mu_0 = 1.25663706212d-6 ! m kg s^-2 A^-2
     real(real64), parameter :: pi = 4.0d0*atan(1.0d0) ! pi from atan
     ! Essential parameters set that is important for entire simulation state
-    integer(int32), protected :: numDiagnosticSteps, numThread
+    integer(int32), protected :: numDiagnosticSteps , numThread
     logical, protected :: restartBool = .false.
     integer(int32), protected :: oldDiagStep
     real(real64), protected :: fractionFreq, n_ave, T_e, T_i
@@ -32,6 +32,7 @@ contains
         character(len=100) :: tempName, restartName, otherTemp, saveFolderName
         real(real64) :: plasmaFreqTemp, tempReal
         logical :: fileExists
+        ! Read input parameters
         print *, ""
         print *, "Reading initial inputs:"
         print *, "------------------"
@@ -56,6 +57,7 @@ contains
         end do
         restartBool = trim(restartName) == 'yes' .or. trim(restartName) == 'Yes' .or. trim(restartName) == 'YES'
         if (restartBool) then
+            ! Read from restart input file
             restartDirectory = trim(otherTemp)
             restartDirectory = saveFolderName(1:k-1)//restartDirectory
             print *, 'Restart directory is:', restartDirectory
@@ -76,6 +78,7 @@ contains
             close(10)
             INQUIRE( file=restartDirectory//"/"//"GlobalDiagnosticData.dat", EXIST=fileExists) 
             if (fileExists) then
+                !Set new diagnostic step number
                 open(10,file=restartDirectory//"/"//"GlobalDiagnosticData.dat", IOSTAT=io)
                 io = 0
                 read(10, *, IOSTAT = io)
@@ -124,6 +127,7 @@ contains
     end subroutine readInitialInputs
 
     subroutine generateSaveDirectory(dirName, collNumber)
+        ! Generate save directory with appropriate folders
         character(*), intent(in) :: dirName
         integer(int32), intent(in) :: collNumber
         logical :: bool
@@ -131,6 +135,7 @@ contains
         character(len=10) :: buf
         bool = makedirqq(dirName)
         if (.not. bool) then
+            ! User input for rewriting same directory name
             print *, "Save directory ", dirName, " already exists. Are you sure you want to continue(yes/no)?"
             read *, buf
             if (buf(1:3) /= 'yes') then
@@ -163,6 +168,7 @@ contains
                 stop "Save directory not successfully created!"
             end if
         end if
+        ! Copy input files
         call execute_command_line("cp -Tr ../InputData "//dirName//"/InputData", EXITSTAT = io)
         if (io /= 0) then
             stop 'Issue copying input data deck'
@@ -170,6 +176,7 @@ contains
     end subroutine generateSaveDirectory
 
     subroutine changeDelT(dt)
+        ! Function to use if del_t needs to be changed
         real(real64), intent(in) :: dt
         del_t = dt
     end subroutine changeDelT

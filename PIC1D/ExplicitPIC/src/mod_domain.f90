@@ -6,13 +6,13 @@ module mod_domain
 
     private
     public :: Domain, readWorld
-    integer(int32), public, protected :: NumberXNodes = 10
-    integer(int32), public, protected :: NumberXHalfNodes = 10
+    integer(int32), public, protected :: NumberXNodes = 10 ! Number of nodes, where phi and E defined
+    integer(int32), public, protected :: NumberXHalfNodes = 10 ! Number of cells
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
         real(real64), allocatable :: grid(:) !Physical grid where phi is evaluated
-        real(real64) :: delX, L_domain, startX, endX !Physical grid where E-Fields are
+        real(real64) :: delX, L_domain, startX, endX ! Physical end points, cell size, domain size
         integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:) ! Boundary condition flags for fields and particles
         integer(int32) :: numThreadNodeIndx
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
@@ -32,9 +32,8 @@ module mod_domain
 
 contains
 
-    ! Initialization procedures
     type(Domain) function domain_constructor(leftBoundary, rightBoundary) result(self)
-        ! Construct domain object, initialize grid, dx_dl, and dx_dl.
+        ! Construct domain object, initialize grid, dx_dl
         integer(int32), intent(in) :: leftBoundary, rightBoundary
         integer(int32) :: i, k, spacingThread, modThread
         allocate(self % grid(NumberXNodes), self%boundaryConditions(NumberXNodes))
@@ -67,6 +66,7 @@ contains
 
 
     subroutine constructGrid(self, L_domain)
+        ! Make grid
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: L_domain
         self%L_domain = L_domain
@@ -77,6 +77,7 @@ contains
     end subroutine constructGrid
 
     function getLFromX(self, x) result(l)
+        ! get computational location from physical location
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: x
         real(real64) :: l
@@ -85,6 +86,7 @@ contains
     end function getLFromX
 
     function getXFromL(self, l) result(x)
+        ! get physical location from computational
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: l
         real(real64) :: x
@@ -121,6 +123,7 @@ contains
 
 
     subroutine readWorld(GeomFilename, world, T_e, n_ave)
+        ! Read inputs for domain
         type(Domain), intent(in out) :: world
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave

@@ -18,7 +18,7 @@ program BoundPlasmaExample
     
     integer(int32) :: i, j, iThread, startTime, endTime
     real(real64) :: remainDel_t, currDel_t, PE_i, KE_i, PE_f, KE_f, Momentum_i(3), Momentum_f(3)
-    ! real(real64), allocatable :: rho_i(:), J_total(:)
+    real(real64), allocatable :: rho_i(:)
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
 
@@ -55,7 +55,7 @@ program BoundPlasmaExample
     ! print *, ABS((E_i - E_f)/(E_i))
     ! stop
     
-    ! allocate(rho_i(NumberXNodes), J_total(NumberXHalfNodes))
+    ! allocate(rho_i(NumberXNodes))
     ! rho_i = globalSolver%rho
     ! KE_i = 0.0d0
     ! do j=1, numberChargedParticles
@@ -71,14 +71,6 @@ program BoundPlasmaExample
     ! call system_clock(startTime)
     ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, startSimulationTime)
     ! call system_clock(endTime)
-    
-    ! do i = 1, NumberXHalfNodes
-    !     J_total(i) = eps_0 * (((globalSolver%phi_f(i) - globalSolver%phi_f(i+1)) -(globalSolver%phi(i) - globalSolver%phi(i+1))) /globalWorld%dx_dl(i)) / currDel_t + globalSolver%J(i)
-    ! end do
-    ! print *, J_total
-    ! print *, ''
-    ! print *, 'S is:', (SUM(globalSolver%J * globalWorld%dx_dl) + (eps_0/currDel_t) * &
-    !     (globalSolver%phi_f(NumberXNodes) - globalSolver%phi_f(1) - globalSolver%phi(NumberXNodes) + globalSolver%phi(1)))/globalWorld%L_domain
    
     ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0
@@ -102,6 +94,7 @@ program BoundPlasmaExample
     ! print *, 'Total KE loss:', KE_f - KE_i
     ! print *, 'Total PE loss:', PE_f - PE_i
     ! print *, 'JE:', globalSolver%getJdotE(globalWorld, currDel_t)
+    
     ! print *, 'Energy in:', globalSolver%getEnergyFromBoundary(globalWorld, currDel_t)
     ! print *, 'took', iterNumPicard, 'iterations'
     ! print *, 'took amount of integer time:', endTime - startTime

@@ -11,7 +11,7 @@ program BoundPlasmaExample
     use mod_simulation
     implicit none
 
-    integer(int32) :: i,j, iThread!, tclock1, tclock2, clock_rate
+    integer(int32) :: i,j, iThread
     type(Domain) :: world
     type(Particle), allocatable :: particleList(:)
     type(targetParticle), allocatable :: targetParticleList(:)
@@ -19,7 +19,8 @@ program BoundPlasmaExample
     type(potentialSolver) :: solver
     real(real64), allocatable :: temp(:)
     integer(int32), allocatable :: numTemp(:)   
-   
+    
+    ! Read initial inputs
     call readInitialInputs('InitialConditions.inp')
     call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)
     call readWorld('Geometry.inp', world, T_e, n_ave)
@@ -27,18 +28,16 @@ program BoundPlasmaExample
     call readChargedParticleInputs('ParticleTypes.inp', stateRan0, T_e, T_i, numThread, world, particleList)
     call readNeutralParticleInputs('ParticleTypes.inp', targetParticleList)
     call readNullCollisionInputs('collision.inp', nullCollisionList, particleList, targetParticleList)
-    ! do i = 1, numberChargedParticles
-    !     particleList(i)%N_p = 0
-    ! end do
     call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p)
-    ! if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+    ! Solve initial potential
     call solver%depositRho(particleList, world)
     call solver%solve_tridiag_Poisson(world, startSimulationTime)
 
-    ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
+    ! Make field, and if new simulation, rewind particle velocities a half step
     call solver%makeEField(world)
     if (.not. restartBool) call solver%initialVRewind(particleList, del_t)
     
+    ! Solve Simulation
     call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, stateRan0, simulationTime)
     if (averagingTime /= 0.0d0) then
         print *, "Averaging over", averagingTime, "seconds"

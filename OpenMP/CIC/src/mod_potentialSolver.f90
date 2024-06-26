@@ -238,7 +238,6 @@ contains
         d(1) = d(1) + self%sourceTermVals(1)
         d(NumberXNodes) = d(NumberXNodes) + self%sourceTermVals(2)
         d = 1.0d0 - Ax/d
-        
         !res = Ax*eps_0 - 
         res = SQRT(SUM(d**2)/NumberXNodes)
 

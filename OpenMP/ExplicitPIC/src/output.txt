@@ -173,3 +173,42 @@
  Simulation is   55.0000000143607      percent done
  Number of electrons is:     2683437
  Number of ions is:     2685638
+ Simulation is   60.0000000160657      percent done
+ Number of electrons is:     2685874
+ Number of ions is:     2688075
+ Simulation is   65.0000000177707      percent done
+ Number of electrons is:     2685563
+ Number of ions is:     2687775
+ Simulation is   70.0000000194758      percent done
+ Number of electrons is:     2685524
+ Number of ions is:     2687721
+ Simulation is   75.0000000211808      percent done
+ Number of electrons is:     2684753
+ Number of ions is:     2686927
+ Simulation is   80.0000000228858      percent done
+ Number of electrons is:     2686688
+ Number of ions is:     2688903
+ Simulation is   85.0000000088925      percent done
+ Number of electrons is:     2687360
+ Number of ions is:     2689575
+ Simulation is   90.0000020722468      percent done
+ Number of electrons is:     2687519
+ Number of ions is:     2689699
+ Simulation is   95.0000020522678      percent done
+ Number of electrons is:     2687257
+ Number of ions is:     2689436
+ Simulation is   100.000002032289      percent done
+ Number of electrons is:     2686454
+ Number of ions is:     2688641
+ Elapsed time for simulation is:   159599.672584000      seconds
+ moverTime is:   148058.861814000     
+ potentialTime is:   9177.77305100000     
+ collision time is:   2342.64121800000     
+ Averaging over  1.400000000000000E-005 seconds
+ Averaging finished over  3.193706237238580E-006 simulation time (s)
+ Final RF boundary values:  -1997.38290470264     
+ Power loss to wall is:   426856.919903359     
+ Power loss to inelastic collisions:   192925.657122787     
+ Electron average wall loss (A/m^2):  -651.180798850986     
+ Ion average wall loss (A/m^2):   651.137033641667     
+ Performing average for EEDF over 50/omega_p
