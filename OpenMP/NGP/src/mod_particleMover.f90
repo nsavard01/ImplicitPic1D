@@ -18,19 +18,27 @@ contains
 
     end subroutine allocateParticleMoverData
     
-    subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
+    subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
         ! Do initial substep, where particles start between nodes
         real(real64), intent(in) :: q_over_m, dx_dl, l_sub, v_sub, E_x
         real(real64), intent(in out) :: l_f, del_tau, v_f
         logical, intent(in out) :: FutureAtBoundaryBool
         integer(int32), intent(in out) :: l_boundary
+        integer(int32), intent(in) :: l_cell
         real(real64) :: diff_PE, a, v_i_sqr
-        !integer(int32) :: l_alongV, l_awayV
+        integer(int32) :: l_alongV, l_awayV
         logical :: inCellBool, equalVSignBool
         ! print *, 'del_tau is:', del_tau
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
 
         a = q_over_m * E_x
+        if (v_sub(1) > 0) then
+            l_alongV = l_cell + 1
+            l_awayV = l_cell
+        else
+            l_alongV = l_cell
+            l_awayV = l_cell + 1
+        end if
         v_f = v_sub + a * del_tau
         l_f = l_sub + 0.5d0 * (v_sub + v_f) * del_tau / dx_dl
         inCellBool = (INT(l_f+1.0d0) == 1)
