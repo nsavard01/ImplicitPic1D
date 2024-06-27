@@ -34,7 +34,7 @@ class dataSetExplicit:
         self.numThreads = int(initialCond[10])
         self.RF_rad_frequency = initialCond[11]
         self.RF_half_amplitude = initialCond[12]
-        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
+        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], sep='\s+')
         self.particles = {}
         partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p', 'Temp']
         for i in range(len(ParticleProperties)):
@@ -44,7 +44,7 @@ class dataSetExplicit:
             self.particles[name]['q'] = ParticleProperties.iloc[i]['q']
             self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
             self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
-            self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, delim_whitespace=True, names = partDiag)
+            self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, sep='\s+', names = partDiag)
 
         boundConditions = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype = np.int32, offset = 4)[0:-1]
         if (boundConditions[0] == 1):
@@ -82,17 +82,17 @@ class dataSetExplicit:
             self.totCollTime = endDiag[2]
             self.totTimeSteps = int(endDiag[3])
         diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalMomentum(kg/m/s)', 'TotalEnergy(J/m^2)']
-        self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+        self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, sep='\s+', names = diagList)
         timeDataBool = os.path.isfile(self.path + 'SimulationTimeData.dat')
         if (timeDataBool):
             diagList = ['Time', 'PotTime', 'MoverTime', 'CollTime', 'Step']
-            self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+            self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows = 1, sep='\s+', names = diagList)
             if (self.globDiag.shape[0] > self.numDiag):
                 self.numDiag = self.globDiag.shape[0]
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):
             diagAverageList = ['steps', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)']
-            self.aveGlobDiag = pd.read_csv(self.path + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
+            self.aveGlobDiag = pd.read_csv(self.path + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, sep='\s+', names = diagAverageList)
         else:
             self.aveGlobDiag = None
             print("No averaging done for this simulation!")
@@ -121,7 +121,7 @@ class dataSetExplicit:
                     self.binaryColl[react][i]['E_thres'] = prop[i,2]
                     self.binaryColl[react][i]['maxSigma'] = prop[i, 3]
                     self.binaryColl[react][i]['EatMaxSigma'] = prop[i, 4]
-                    self.binaryColl[react][i]['diag'] = pd.read_csv(self.path + 'BinaryCollisions/' + filename + '/CollisionDiag_' + str(i+1) + '.dat', skiprows = 1, delim_whitespace=True, names = collDiag)
+                    self.binaryColl[react][i]['diag'] = pd.read_csv(self.path + 'BinaryCollisions/' + filename + '/CollisionDiag_' + str(i+1) + '.dat', skiprows = 1, sep='\s+', names = collDiag)
                 if (self.boolAverageFile):
                     prop = np.loadtxt(self.path + 'BinaryCollisions/' + filename + '/AveCollisionDiag.dat', skiprows = 1)
                     for i,coll in enumerate(self.binaryColl[react]):

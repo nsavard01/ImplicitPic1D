@@ -9,50 +9,54 @@ module mod_particleMover
     use omp_lib
     implicit none
     ! Procedures for moving particles and depositing J 
-    integer(int32), parameter, private :: m_Anderson_Particle = 2
     integer(int32), parameter, private :: maxPartIter = 50
 
 contains
 
     subroutine allocateParticleMoverData()
-        ! Empty, just so CIC and NGP can use same functions
+
     end subroutine allocateParticleMoverData
     
-    subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
-        ! Solve particle trajectory over substep
+    subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, q_over_m, dx_dl, l_cell, FutureAtBoundaryBool, l_boundary)
+        ! Procedure for a single substep
         real(real64), intent(in) :: q_over_m, dx_dl, l_sub, v_sub, E_x
         real(real64), intent(in out) :: l_f, del_tau, v_f
         logical, intent(in out) :: FutureAtBoundaryBool
         integer(int32), intent(in out) :: l_boundary
+        integer(int32), intent(in) :: l_cell
         real(real64) :: diff_PE, a, v_i_sqr
         logical :: inCellBool, equalVSignBool
 
-        ! Calculate particle trajectory over entire remaining del_tau
+        ! Solve for particle v_f, l_f over remaining del_tau
         a = q_over_m * E_x
         v_f = v_sub + a * del_tau
         l_f = l_sub + 0.5d0 * (v_sub + v_f) * del_tau / dx_dl
-        inCellBool = (INT(l_f+1.0d0) == 1)
+        ! Check if particle is outside cell or flipped direction
+        ! This is typically faster for general conditions than checking for substep time to each cell boundary
+        ! Faster because many particles will not need these checks
+        inCellBool = (INT(l_f) == l_cell)
         equalVSignBool = ((v_sub > 0) .eq. (v_f > 0))
         FutureAtBoundaryBool = (.not. inCellBool) .or. (.not. equalVSignBool)
         if (FutureAtBoundaryBool) then
-            ! Particle outside cell or reversed direction
+            ! Get location of boundary it's heading towards initially
             if (v_sub > 0) then
-                l_boundary = 1
+                l_boundary = l_cell + 1
             else
-                l_boundary = 0
+                l_boundary = l_cell
             end if
             diff_PE = 2.0d0 * a * (real(l_boundary) - l_sub) * dx_dl
             v_i_sqr = v_sub**2
+            ! Will the the particle be able to reach this boundary?
             FutureAtBoundaryBool = (diff_PE > -v_i_sqr)
             if (FutureAtBoundaryBool) then
-                ! Particle can reach boundary along initial direction
+                ! calculate v_f and del_tau at boundary along v_sub
                 l_f = real(l_boundary)
                 v_f = SIGN(1.0d0, v_sub) * SQRT(diff_PE + v_i_sqr)
                 del_tau = (v_f - v_sub)/a
             else if (.not. inCellBool) then
-                ! particle can reach boundary along negative of initial direction
+                ! calculate v_f and del_tau at boundary in opposite direction
                 FutureAtBoundaryBool = .true.
-                l_boundary = 1-l_boundary
+                l_boundary = 2*l_cell + 1 - l_boundary
                 l_f = real(l_boundary)
                 diff_PE = 2.0d0 * a * (l_f - l_sub) * dx_dl
                 v_f = -SIGN(1.0d0, v_sub) * SQRT(diff_PE + v_i_sqr)
@@ -65,7 +69,7 @@ contains
 
 
     subroutine depositJ(solver, particleList, world, del_t)
-        ! Substepping procedure to calcule j on the grid
+        ! Solve for calculation of J on domain as particle moves along trajectory in current iteration of electric fields
         class(potentialSolver), intent(in out), target :: solver
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
@@ -74,39 +78,43 @@ contains
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, startTime, endTime
         logical :: FutureAtBoundaryBool
         f_tol = del_t * 1.d-10
-        ! Make half-time field for pushing particles
+        ! Solve for current iteration of E^n+1/2
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
                 numIter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
-            ! j will initially go in threaded particle workspace array
+            ! Reset workspace for specific thread for adding J to domain
             particleList(j)%workSpace(1:NumberXHalfNodes,iThread) = 0.0d0
+            ! loop over particles
             loopParticles: do i = 1, particleList(j)%N_p(iThread)
+                ! initialize variables
                 v_sub = particleList(j)%phaseSpace(2,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
-                l_cell = INT(l_sub)
+                ! Very small probability particle trajectories end on boundaries, so look along cell to determine
+                l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
                 del_tau = del_t
                 do while(del_tau > f_tol)
-                    ! Get cell properties
+                    
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    l_sub = l_sub - real(l_cell)
-                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
+
+                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, l_cell, FutureAtBoundaryBool, l_boundary)
                     
-                    ! Deposit to workspace
+                    ! Add to J
                     particleList(j)%workSpace(l_cell, iThread) = particleList(j)%workSpace(l_cell, iThread) + l_f - l_sub
-                    l_f = l_f + real(l_cell)
+                    
                     if (FutureAtBoundaryBool) then
-                        ! boundary condition check
-                        l_boundary = l_boundary + l_cell
+                        ! Determine new cell based on boundary particle is on
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
                             l_cell = l_cell + INT(SIGN(1.0d0, v_f))
                         CASE(1,4)
+                            ! Dirichlet absorbing
                             exit
                         CASE(2)
+                            ! Neumann-symmetric
                             if (l_boundary == NumberXNodes) then
                                 if (v_f > 0) then
                                     v_f = -v_f
@@ -117,14 +125,14 @@ contains
                                 end if
                             end if
                         CASE(3)
+                            ! Periodic
                             l_f = real(ABS(l_boundary - NumberXNodes- 1))
                             l_cell = ABS(l_cell - NumberXNodes)
                         END SELECT
                     end if
-                    ! Add time passed, get new del_tau
+                    ! Update parameters of particle trajectory for next substep
                     timePassed = timePassed + del_tau
                     del_tau = del_t - timePassed
-                    ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
                     
@@ -132,13 +140,14 @@ contains
             end do loopParticles
         end do loopSpecies
         !$OMP barrier
-        ! concatenate into first thread workspace array
+        ! Concatenate workspace array to get J array
         particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) = SUM(particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), :), DIM=2) * particleList(1)%q_times_wp
         do j = 2, numberChargedParticles
             particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) = particleList(1)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), 1) &
                 + SUM(particleList(j)%workSpace(world%threadHalfNodeIndx(1,iThread):world%threadHalfNodeIndx(2,iThread), :), DIM=2) * particleList(j)%q_times_wp
         end do
         !$OMP end parallel
+        ! apply smoothing
         if (world%gridSmoothBool) then
             call world%smoothField(particleList(1)%workSpace(1:NumberXHalfNodes,1), solver%J)
             solver%J = solver%J/del_t
@@ -147,28 +156,30 @@ contains
         end if
     end subroutine depositJ
 
-
-    ! -------------------------------------------- Particle mover without boolean checks for depositing J ------------------------------------------------------------
-
     subroutine moveParticles(solver, particleList, world, del_t)
-        ! particle mover after convergence, no calculation of j, accumulation of diagnostics for particles
+        ! Solve for phasespace of particles after convergence of potential solver
         class(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p
-        logical :: refluxedBool, FutureAtBoundaryBool
+        logical :: refluxedBool, FutureAtBoundaryBool, convergeTimeBool
         f_tol = del_t * 1.d-10
+        ! Initialize counters for function evaluations and substep number
         numSubStepAve = 0
         funcEvalCounter = 0
+        ! E^1/2 
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
+        ! Make counters private, otherwise have false sharing which causes significant slowdown! In general, keep variables private whenever possible
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, delIdx, dx_dl, E_x, l_boundary, numIter, &
-                refIdx, refluxedBool, FutureAtBoundaryBool, N_p) reduction(+:numSubStepAve, funcEvalCounter)
+                refIdx, refluxedBool, FutureAtBoundaryBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
+            ! initialize deletion index at dirichlet boundaries and reflux if applicable to neumann boundaries
             delIdx = 0
             refIdx = 0
+            ! initialize loss at walls 
             particleList(j)%wallLoss(:, iThread) = 0
             particleList(j)%energyLoss(:, iThread) = 0.0d0
             N_p = particleList(j)%N_p(iThread)
@@ -177,27 +188,28 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 refluxedBool = .false.
-                l_cell = INT(l_sub)
+                l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
                 del_tau = del_t
-                do while(del_tau > f_tol)
-                    ! accumulate substeps
+                convergeTimeBool = .true.
+                do while(convergeTimeBool)
+                    ! accumulate statistics for num sub steps
                     numSubStepAve(j) = numSubStepAve(j) + 1
                     
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    l_sub = l_sub - real(l_cell)
                     
-                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
+                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, l_cell, FutureAtBoundaryBool, l_boundary)
                     
-                    l_f = l_f + real(l_cell)
                     if (FutureAtBoundaryBool) then
-                        l_boundary = l_boundary + l_cell
+                        ! Boundaries similar to deposit J
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
                             l_cell = l_cell + INT(SIGN(1.0d0, v_f))
                         CASE(1,4)
+                            ! delete index up by one, so saved phasespace overwrites current particle number
                             delIdx = delIdx + 1
-                            ! accumulate particle diagnostics
+                            ! accumulate number, energy (v^2), and momentum loss (v) for each particles
+                            ! These multiplied by other factors after concatenation
                             if (l_boundary == 1) then
                                 particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + v_f**2 + (SUM(particleList(j)%phaseSpace(3:4,i,iThread)**2))
                                 particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
@@ -218,6 +230,7 @@ contains
                                     v_f = -v_f
                                 end if
                             end if
+                            ! If reflux, save particle index 
                             if (.not. refluxedBool) then
                                 refIdx = refIdx + 1
                                 particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
@@ -231,27 +244,27 @@ contains
                     
                     timePassed = timePassed + del_tau
                     del_tau = del_t - timePassed
-                    
-                    ! now final position/velocity becomes next starting position/velocity
+                    ! Save convergeTimeBool to determine if particle has been elminated or not
+                    convergeTimeBool = del_tau > f_tol
                     l_sub = l_f
                     v_sub = v_f
                     
                 end do
-                if (.not. FutureAtBoundaryBool) then
-                    ! if not at boundary, then save new phasespace
+                ! Save final particle properties
+                if (.not. convergeTimeBool) then
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
                     particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)
                 end if
             end do loopParticles
-            ! Calculate new particle variables for each thread
+            ! Per thread number of particles, along with number deleted and number refluxed
             particleList(j)%N_p(iThread) = N_p - delIdx
             particleList(j)%delIdx(iThread) = delIdx
             particleList(j)%refIdx(iThread) = refIdx
         end do loopSpecies
         !$OMP end parallel
         do j = 1, numberChargedParticles
-            ! accumulate diagnostics
+            ! Accumulate statistics
             particleList(j)%numToCollide = particleList(j)%N_p
             particleList(j)%numSubStepsAve = real(numSubStepAve(j)) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))
             particleList(j)%numFuncEvalAve = real(funcEvalCounter(j)) / real(SUM(particleList(j)%N_p) + SUM(particleList(j)%delIdx))

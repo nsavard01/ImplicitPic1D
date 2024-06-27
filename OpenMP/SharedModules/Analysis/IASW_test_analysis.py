@@ -135,10 +135,10 @@ plt.savefig('IASW/IASW_CIC_EnergyError_Res.pdf')
 plt.close()
 
 
-plt.plot(Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.grid, Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.getDensity('ion',20), '--', label = r'30 PPC, 400 Cells, $\frac{0.2}{\omega_{pe}}$')
 plt.plot(Exp_IASW_Chacon2013_4Threads_100PPC.grid, Exp_IASW_Chacon2013_4Threads_100PPC.getDensity('ion',20), '--', label = r'100 PPC, 512 Cells, $\frac{0.1}{\omega_{pe}}$')
 plt.plot(Exp_IASW_Chacon2013_4Threads_200PPC.grid, Exp_IASW_Chacon2013_4Threads_200PPC.getDensity('ion',20), '--', label = r'200 PPC, 512 Cells, $\frac{0.1}{\omega_{pe}}$')
 plt.plot(Exp_IASW_Chacon2013_4Threads.grid, Exp_IASW_Chacon2013_4Threads.getDensity('ion',20), '--', label = r'2000 PPC, 512 Cells, $\frac{0.1}{\omega_{pe}}$')
+plt.plot(Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.grid, Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.getDensity('ion',20), '--', label = r'30 PPC, 400 Cells, $\frac{0.2}{\omega_{pe}}$')
 plt.xlim(Exp_IASW_Chacon2013_4Threads.grid[0], Exp_IASW_Chacon2013_4Threads.grid[-1])
 plt.xlabel('Distance (m)')
 plt.ylabel(r'Ion Density (m$^{-3}$)')

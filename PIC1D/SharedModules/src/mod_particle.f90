@@ -361,17 +361,23 @@ contains
                 particleList(j) = Particle(mass(j), e * charge(j), 1.0d0, numParticles(j), numParticles(j) * particleIdxFactor(j), trim(particleNames(j)), numThread)
                 call particleList(j) % initialize_n_ave(n_ave, world%L_domain)
                 if (.not. restartBool) then
-                    SELECT CASE(distType(j))
-                    CASE(0)
-                        call particleList(j)% initializeRandUniform(world, irand)
-                    CASE(1)
-                        call particleList(j)% initializeRandCosine(world, irand, alpha(j))
-                    CASE(2)
-                        call particleList(j)% initializeRandSine(world, irand, alpha(j))
-                    CASE default
-                        print *, 'Distribution type should be between 0 and 2!'
-                        stop
-                    END SELECT
+                    if (j==2 .and. numberChargedParticles == 2 .and. charge(2) == -charge(1) .and. numParticles(1) == numParticles(2)) then
+                        ! If only ions and electrons (electrons come first) then set ion positions same as electrons for neutral start
+                        print *, 'Neutral charge start!'
+                        particleList(2)%phaseSpace(1, :, :) = particleList(1)%phaseSpace(1,:,:)
+                    else
+                        SELECT CASE(distType(j))
+                        CASE(0)
+                            call particleList(j)% initializeRandUniform(world, irand)
+                        CASE(1)
+                            call particleList(j)% initializeRandCosine(world, irand, alpha(j))
+                        CASE(2)
+                            call particleList(j)% initializeRandSine(world, irand, alpha(j))
+                        CASE default
+                            print *, 'Distribution type should be between 0 and 2!'
+                            stop
+                        END SELECT
+                    end if
                     if (j == 1) then
                         call particleList(j) % generate3DMaxwellian(Ti(j), world, irand, alpha(j), distType(j), v_drift(j))
                     else

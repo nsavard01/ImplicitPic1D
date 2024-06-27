@@ -34,8 +34,10 @@ program BoundPlasmaExample
     call allocateParticleMoverData()
     call readInjectionInputs('ParticleInjection.inp', globalParticleList(1)%w_p)
     call initializeSolver()
+    
     ! Solve initial potential
     call globalSolver%solveInitialPotential(globalParticleList, globalWorld, startSimulationTime)
+    
     ! Used for testing, comment out
     ! allocate(rho_i(NumberXNodes), J_total(NumberXHalfNodes))
     ! rho_i = globalSolver%rho
@@ -53,7 +55,6 @@ program BoundPlasmaExample
     ! call system_clock(startTime)
     ! call solvePotential(globalSolver, globalParticleList, globalWorld, del_t, remainDel_t, currDel_t, startSimulationTime)
     ! call system_clock(endTime)
-   
     ! PE_i = globalSolver%getTotalPE(globalWorld, .false.)
     ! KE_f = 0.0d0
     ! do i = 1, numberChargedParticles

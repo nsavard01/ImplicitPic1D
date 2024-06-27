@@ -18,7 +18,7 @@ contains
 
     end subroutine allocateParticleMoverData
     
-    subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, q_over_m, l_cell, dx_dl, FutureAtBoundaryBool, l_boundary)
+    subroutine particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, q_over_m, dx_dl, l_cell, FutureAtBoundaryBool, l_boundary)
         ! Do initial substep, where particles start between nodes
         real(real64), intent(in) :: q_over_m, dx_dl, l_sub, v_sub, E_x
         real(real64), intent(in out) :: l_f, del_tau, v_f
@@ -26,29 +26,22 @@ contains
         integer(int32), intent(in out) :: l_boundary
         integer(int32), intent(in) :: l_cell
         real(real64) :: diff_PE, a, v_i_sqr
-        integer(int32) :: l_alongV, l_awayV
+        !integer(int32) :: l_alongV, l_awayV
         logical :: inCellBool, equalVSignBool
         ! print *, 'del_tau is:', del_tau
         ! Particle first between nodes, so solve quadratic for that particle depending on conditions
 
         a = q_over_m * E_x
-        if (v_sub(1) > 0) then
-            l_alongV = l_cell + 1
-            l_awayV = l_cell
-        else
-            l_alongV = l_cell
-            l_awayV = l_cell + 1
-        end if
         v_f = v_sub + a * del_tau
         l_f = l_sub + 0.5d0 * (v_sub + v_f) * del_tau / dx_dl
-        inCellBool = (INT(l_f+1.0d0) == 1)
+        inCellBool = (INT(l_f) == l_cell)
         equalVSignBool = ((v_sub > 0) .eq. (v_f > 0))
         FutureAtBoundaryBool = (.not. inCellBool) .or. (.not. equalVSignBool)
         if (FutureAtBoundaryBool) then
             if (v_sub > 0) then
-                l_boundary = 1
+                l_boundary = l_cell + 1
             else
-                l_boundary = 0
+                l_boundary = l_cell
             end if
             diff_PE = 2.0d0 * a * (real(l_boundary) - l_sub) * dx_dl
             v_i_sqr = v_sub**2
@@ -59,7 +52,7 @@ contains
                 del_tau = (v_f - v_sub)/a
             else if (.not. inCellBool) then
                 FutureAtBoundaryBool = .true.
-                l_boundary = 1-l_boundary
+                l_boundary = 2*l_cell + 1 - l_boundary
                 l_f = real(l_boundary)
                 diff_PE = 2.0d0 * a * (l_f - l_sub) * dx_dl
                 v_f = -SIGN(1.0d0, v_sub) * SQRT(diff_PE + v_i_sqr)
@@ -95,20 +88,19 @@ contains
                 v_sub = particleList(j)%phaseSpace(2,i,iThread)
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
-                l_cell = INT(l_sub)
+                l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
                 del_tau = del_t
                 do while(del_tau > f_tol)
                     
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    l_sub = l_sub - real(l_cell)
-                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
+
+                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, l_cell, FutureAtBoundaryBool, l_boundary)
                     
                     !J_temp(l_cell) = J_temp(l_cell) + (l_f - l_sub)
                     particleList(j)%workSpace(l_cell, iThread) = particleList(j)%workSpace(l_cell, iThread) + l_f - l_sub
-                    l_f = l_f + real(l_cell)
+                    
                     if (FutureAtBoundaryBool) then
-                        l_boundary = l_boundary + l_cell
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
                             l_cell = l_cell + INT(SIGN(1.0d0, v_f))
@@ -176,13 +168,13 @@ contains
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p
-        logical :: refluxedBool, FutureAtBoundaryBool
+        logical :: refluxedBool, FutureAtBoundaryBool, convergeTimeBool
         f_tol = del_t * 1.d-10
         numSubStepAve = 0
         funcEvalCounter = 0
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, delIdx, dx_dl, E_x, l_boundary, numIter, &
-                refIdx, refluxedBool, FutureAtBoundaryBool, N_p) reduction(+:numSubStepAve, funcEvalCounter)
+                refIdx, refluxedBool, FutureAtBoundaryBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             delIdx = 0
@@ -195,20 +187,18 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 refluxedBool = .false.
-                l_cell = INT(l_sub)
+                l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
                 del_tau = del_t
-                do while(del_tau > f_tol)
+                convergeTimeBool = .true.
+                do while(convergeTimeBool)
                     numSubStepAve(j) = numSubStepAve(j) + 1
                     
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
-                    l_sub = l_sub - real(l_cell)
                     
-                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, FutureAtBoundaryBool, l_boundary)
+                    call particleSubStepNoBField(l_sub, v_sub, l_f, v_f, del_tau, E_x, particleList(j)%q_over_m, dx_dl, l_cell, FutureAtBoundaryBool, l_boundary)
                     
-                    l_f = l_f + real(l_cell)
                     if (FutureAtBoundaryBool) then
-                        l_boundary = l_boundary + l_cell
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
                             l_cell = l_cell + INT(SIGN(1.0d0, v_f))
@@ -253,13 +243,13 @@ contains
                     
                     timePassed = timePassed + del_tau
                     del_tau = del_t - timePassed
-                    
+                    convergeTimeBool = del_tau > f_tol
                     ! now final position/velocity becomes next starting position/velocity
                     l_sub = l_f
                     v_sub = v_f
                     
                 end do
-                if (.not. FutureAtBoundaryBool) then
+                if (.not. convergeTimeBool) then
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
                     particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)

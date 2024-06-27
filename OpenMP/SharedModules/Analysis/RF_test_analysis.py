@@ -75,6 +75,7 @@ Exp_VassBenchmark_Ar_lowerDensity_10xParticles = dataSetExplicit('Y:/scratch/nsa
 NGP_RF_Benchmark_case1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1/')
 NGP_RF_Benchmark_case2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case2/')
 NGP_RF_Benchmark_case2_noSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case2_noSmooth/')
+NGP_RF_Benchmark_case2_noSmooth_changeMover = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case2_noSmooth_changeMover/')
 NGP_RF_Benchmark_case2_halfTime = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case2_halfTime/')
 NGP_RF_Benchmark_case2_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case2_10xParticles/')
 # NGP_RF_Benchmark_case1_lowerRes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1_lowerRes/')
