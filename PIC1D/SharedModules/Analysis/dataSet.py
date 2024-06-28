@@ -47,7 +47,7 @@ class dataSet:
         self.numThreads = int(initialCond[12])
         self.RF_rad_frequency = initialCond[13]
         self.RF_half_amplitude = initialCond[14]
-        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], delim_whitespace = True)
+        ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], sep='\s+')
         self.particles = {}
         partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p', 'Temp', 'numSubStep', 'numFuncEval']
         for i in range(len(ParticleProperties)):
@@ -57,7 +57,7 @@ class dataSet:
             self.particles[name]['q'] = ParticleProperties.iloc[i]['q']
             self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
             self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
-            self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, delim_whitespace=True, names = partDiag)
+            self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, sep='\s+', names = partDiag)
 
         boundConditions = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype=np.int32, offset=4)[0:-1]
         if (boundConditions[0] == 1):
@@ -90,17 +90,17 @@ class dataSet:
             self.x_min = self.grid[0] - 0.5 * self.dx_dl[0]
             self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
         diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'TotalMomentum(kg/m/s)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
-        self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, delim_whitespace=True, names = diagList)
+        self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, sep='\s+', names = diagList)
         if (os.path.isfile(self.path + 'SimulationTimeData.dat')):
             diagList = ['Time', 'SolverTime', 'PotTime', 'MoverTime', 'CollTime', 'Step']
-            self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows=1, delim_whitespace=True,
+            self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows=1, sep='\s+',
                                         names=diagList)
         if (self.globDiag.shape[0] > self.numDiag):
             self.numDiag = self.globDiag.shape[0]
         self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
         if (self.boolAverageFile):
             diagAverageList = ['steps', 'time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'gaussError']
-            self.aveGlobDiag = pd.read_csv(self.path + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, delim_whitespace=True, names = diagAverageList)
+            self.aveGlobDiag = pd.read_csv(self.path + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, sep='\s+', names = diagAverageList)
             endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
             self.totTime = endDiag[0]
             self.totPotTime = endDiag[1]
@@ -135,7 +135,7 @@ class dataSet:
                     self.binaryColl[react][i]['E_thres'] = prop[i,2]
                     self.binaryColl[react][i]['maxSigma'] = prop[i, 3]
                     self.binaryColl[react][i]['EatMaxSigma'] = prop[i, 4]
-                    self.binaryColl[react][i]['diag'] = pd.read_csv(self.path + 'BinaryCollisions/' + filename + '/CollisionDiag_' + str(i+1) + '.dat', skiprows = 1, delim_whitespace=True, names = collDiag)
+                    self.binaryColl[react][i]['diag'] = pd.read_csv(self.path + 'BinaryCollisions/' + filename + '/CollisionDiag_' + str(i+1) + '.dat', skiprows = 1, sep='\s+', names = collDiag)
                 if (self.boolAverageFile):
                     prop = np.loadtxt(self.path + 'BinaryCollisions/' + filename + '/AveCollisionDiag.dat', skiprows = 1)
                     for i,coll in enumerate(self.binaryColl[react]):

@@ -4,7 +4,7 @@
 4.0d0 ! T_e (eV)
 0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-2.0d0 2.5e-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+10.0d0 1.0 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 5.d-7 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
 NGP_RFBenchmark_highDensity_fourthPart_1001nodes_epsNeg8 !save file name

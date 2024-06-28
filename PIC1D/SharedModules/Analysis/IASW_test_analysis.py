@@ -68,6 +68,7 @@ NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3 = dataSet('Y:/scra
 #
 
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT/')
+CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_1e18 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_1e18/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg1/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_4delT_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_4delT_epsNeg3/')
@@ -79,7 +80,6 @@ CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3 = dataSet('Y:/scra
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_30PPC_epsNeg3 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_30PPC_epsNeg3/')
 
-plt.interactive(False)
 plt.plot(Exp_IASW_Chacon2013_4Threads.grid, Exp_IASW_Chacon2013_4Threads.getDensity('ion',20), '-', label = 'Exp.')
 plt.plot(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid, NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.getDensity('ion',20), linestyle = '--', marker = '.', label = r'NGP')
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid, CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.getDensity('ion',20), linestyle = '--', marker = '.', label = r'CIC')
@@ -135,10 +135,10 @@ plt.savefig('IASW/IASW_CIC_EnergyError_Res.pdf')
 plt.close()
 
 
-plt.plot(Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.grid, Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.getDensity('ion',20), '--', label = r'30 PPC, 400 Cells, $\frac{0.2}{\omega_{pe}}$')
 plt.plot(Exp_IASW_Chacon2013_4Threads_100PPC.grid, Exp_IASW_Chacon2013_4Threads_100PPC.getDensity('ion',20), '--', label = r'100 PPC, 512 Cells, $\frac{0.1}{\omega_{pe}}$')
 plt.plot(Exp_IASW_Chacon2013_4Threads_200PPC.grid, Exp_IASW_Chacon2013_4Threads_200PPC.getDensity('ion',20), '--', label = r'200 PPC, 512 Cells, $\frac{0.1}{\omega_{pe}}$')
 plt.plot(Exp_IASW_Chacon2013_4Threads.grid, Exp_IASW_Chacon2013_4Threads.getDensity('ion',20), '--', label = r'2000 PPC, 512 Cells, $\frac{0.1}{\omega_{pe}}$')
+plt.plot(Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.grid, Exp_IASW_Chacon2013_4Threads_30PPC_400Cells_0p2delT.getDensity('ion',20), '--', label = r'30 PPC, 400 Cells, $\frac{0.2}{\omega_{pe}}$')
 plt.xlim(Exp_IASW_Chacon2013_4Threads.grid[0], Exp_IASW_Chacon2013_4Threads.grid[-1])
 plt.xlabel('Distance (m)')
 plt.ylabel(r'Ion Density (m$^{-3}$)')

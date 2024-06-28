@@ -76,7 +76,7 @@ contains
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, startTime, endTime
         logical :: FutureAtBoundaryBool
-        f_tol = del_t * 1.d-10
+        f_tol = del_t * 1.d-15
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
                 numIter)
@@ -169,7 +169,7 @@ contains
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p
         logical :: refluxedBool, FutureAtBoundaryBool, convergeTimeBool
-        f_tol = del_t * 1.d-10
+        f_tol = del_t * 1.d-15
         numSubStepAve = 0
         funcEvalCounter = 0
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
