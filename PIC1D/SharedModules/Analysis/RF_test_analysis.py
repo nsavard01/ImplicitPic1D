@@ -137,6 +137,7 @@ CIC_RF_Benchmark_case1_10xParticles = dataSet('Y:/scratch/nsavard/ImplicitPic1D/
 #
 CIC_RFBenchmark_highDensity_halfPart_1000nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_halfPart_1001nodes/')
 CIC_RFBenchmark_highDensity_halfPart_1000nodes_epsNeg5 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_halfPart_1000nodes_epsNeg5/')
+CIC_RFBenchmark_highDensity_threeQuartPart_1000nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_threeQuartPart_1001nodes/')
 CIC_RFBenchmark_highDensity_quarterPart_1000nodes_epsNeg5 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_quarterPart_1000nodes_epsNeg5/')
 CIC_RFBenchmark_highDensity_eighthPart_1000nodes_epsNeg5 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_eighthPart_1000nodes_epsNeg5/')
 CIC_RFBenchmark_highDensity_eighthPart_1000nodes_epsNeg8 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_eighthPart_1000nodes_epsNeg8/')
