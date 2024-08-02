@@ -11,13 +11,13 @@ module mod_domain
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
-        real(real64), allocatable :: grid(:) !array representing values at grid in m
-        real(real64), allocatable :: dx_dl(:), centerDiff(:) !ratio of grid differences from physical to logical, assume logical separated by 1
+        real(real64), allocatable :: grid(:) ! array representing values at grid in m
+        real(real64), allocatable :: dx_dl(:), centerDiff(:) ! ratio of grid differences from physical to logical, assume logical separated by 1
         integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary condition flags for fields and particles
         real(real64) :: L_domain, startX, endX
         integer(int32) :: numThreadNodeIndx, numThreadHalfNodeIndx
         logical :: gridSmoothBool
-        ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
+        ! 
 
     contains
         procedure, public, pass(self) :: constructHalfSineGrid
@@ -26,6 +26,7 @@ module mod_domain
         procedure, public, pass(self) :: constructUniformGrid
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
+        procedure, public, pass(self) :: constructHalfEvenHalfSinusoid
         procedure, public, pass(self) :: smoothField
         procedure, public, pass(self) :: getLFromX
         procedure, public, pass(self) :: getXFromL
@@ -114,6 +115,8 @@ contains
             call self%constructHalfSineGrid(del_x, L_domain)
         CASE(3)
             call self%constructExpHalfGrid(del_x, L_domain)
+        CASE(4)
+            call self%constructHalfEvenHalfSinusoid(del_x, L_domain)
         CASE(5)
             call self%constructInvSineGrid(del_x, L_domain)
         CASE default
@@ -251,6 +254,39 @@ contains
         self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
     end subroutine constructUniformGrid
 
+    subroutine constructHalfEvenHalfSinusoid(self, del_x, L_domain)
+        ! Half of grid is even, half increases like sinusoid
+        class(Domain), intent(in out) :: self
+        real(real64), intent(in) :: del_x, L_domain
+        real(real64) :: gridField(NumberXHalfNodes)
+        integer(int32) :: numEvenCells, numSinCells, i
+        real(real64) :: leftX, rightX, evenDelX, middleDelX
+        numEvenCells = (NumberXNodes)/4 
+        numSinCells = NumberXNodes - 2 * numEvenCells
+        evenDelX = del_x/numEvenCells
+        gridField = 0.0d0
+        gridField(1) = 0.0d0
+        gridField(NumberXHalfNodes) = L_domain
+        do i = 1, numEvenCells
+            gridField(i+1) = gridField(i) + evenDelX
+            gridField(NumberXHalfNodes-i) = gridField(NumberXHalfNodes-i+1) - evenDelX
+        end do
+        middleDelX = gridField(NumberXHalfNodes-numEvenCells) - gridField(numEvenCells+1) + 2 * evenDelX
+        leftX = evenDelX
+        do i = 3,numSinCells+2
+            
+            rightX = middleDelX * ((real(i)-1.0d0)/(real(numSinCells+2)) - (1.0d0/(real(numSinCells+2)) - evenDelX/middleDelX) &
+            * SIN(2 * pi * (i-1) / (numSinCells+2)) / SIN(2 * pi / (numSinCells+2)) )
+            gridField(i+numEvenCells-1) = gridField(numEvenCells+i-2) + rightX - leftX
+            leftX = rightX
+        end do
+        do i = 1, NumberXNodes
+            self%dx_dl(i) = gridField(i+1) - gridField(i)
+            self%grid(i) = gridField(i) + 0.5d0 * self%dx_dl(i)
+        end do
+    end subroutine constructHalfEvenHalfSinusoid
+
+    
     function getLFromX(self, x) result(l)
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: x
