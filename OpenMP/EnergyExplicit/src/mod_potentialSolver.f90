@@ -196,6 +196,7 @@ contains
 
     subroutine construct_diagMatrix(self, world)
         ! construct diagonal components for thomas algorithm
+        ! Same matrix used for gauss' law and divergence of ampere
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
@@ -217,11 +218,9 @@ contains
             CASE(2)
                 if (i == 1) then
                     self % c_tri(i) = 2.0d0/world%dx_dl(i)
-                    !self%a_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-1) + world%dx_dl(i)) / world%dx_dl(i-1)
                     self%b_tri(i) = - (2.0d0/world%dx_dl(i))
                 else if (i == NumberXNodes) then
                     self % a_tri(i-1) = 2.0d0/ world%dx_dl(i-1)
-                    !self % c_tri(i - leftNodeIdx) = 2.0d0/(world%dx_dl(i-2) + world%dx_dl(i-1))/world%dx_dl(i-1)
                     self%b_tri(i) = - (2.0d0/world%dx_dl(i-1))
                 else
                     print *, "Neumann boundary not on left or right most index!"
@@ -310,8 +309,7 @@ contains
             CASE(1,3)
                 d(i) = self%phi(i)
             CASE(4)
-                self%phi(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeCurrent)
-                d(i) = self%phi(i)
+                d(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeCurrent)
             END SELECT
         end do
     ! initialize c-prime and d-prime
@@ -331,9 +329,9 @@ contains
         do i = NumberXHalfNodes, 1, -1
             self%phi(i) = dp(i)-cp(i)*self%phi(i+1)
         end do
-        !self%EField = (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes)) / world%dx_dl
-        self%EField(1) = (self%phi(1) - self%phi(2))/world%dx_dl(1)
-        self%EField(2:NumberXHalfNodes) = (self%phi(1:NumberXNodes-2) - self%phi(3:NumberXNodes))/world%dx_dl/2.0
+    self%EField = (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes)) / world%dx_dl
+    !self%EField(1) = (self%phi(1) - self%phi(2))/world%dx_dl(1)
+    !self%EField(2:NumberXHalfNodes) = (self%phi(1:NumberXNodes-2) - self%phi(3:NumberXNodes))/world%dx_dl/2.0
     end subroutine solve_tridiag_Poisson
 
     subroutine solvePotential(self, particleList, world, timeCurrent)
@@ -344,8 +342,7 @@ contains
         real(real64), intent(in) :: timeCurrent
         call self%depositRho(particleList, world)
         call self%solve_tridiag_Poisson(world, timeCurrent)
-        ! Assume only use potential solver once, then need to generate matrix for Div-Ampere
-
+        
     end subroutine solvePotential
 
     function getError_tridiag_Poisson(self, world) result(res)

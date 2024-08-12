@@ -36,9 +36,15 @@ program BoundPlasmaExample
     call readInjectionInputs('ParticleInjection.inp', globalParticleList(1)%w_p)
     ! if (injectionBool) call injectAtBoundary(globalParticleList, T_e, T_i, irand, globalWorld, del_t, globalSolver%BFieldAngle)
 
+    call globalSolver%depositRho(globalParticleList, globalWorld)
+    call globalSolver%solve_tridiag_Poisson(globalWorld, startSimulationTime)
     call globalSolver%initialVRewind(globalParticleList, del_t)
-    call globalSolver%solvePotential(globalParticleList, globalWorld, startSimulationTime)
-    
+
+    ! print*, globalSolver%a_tri
+    ! print*, globalSolver%b_tri
+    ! print*, globalSolver%c_tri
+    ! stop
+
     ! allocate(phi_calc(NumberXNodes))
     ! do loop_var = 1, NumberXNodes
     !     phi_calc(loop_var) = -0.5 * E * n_ave * globalWorld%grid(loop_var) * (globalWorld%grid(NumberXNodes) - globalWorld%grid(loop_var)) / eps_0
@@ -81,7 +87,7 @@ program BoundPlasmaExample
     ! call globalSolver%solvePotential(globalParticleList, globalWorld, startSimulationTime + del_t)
     ! print *, 'electron particle number:', SUM(globalParticleList(1)%N_p)
     ! print *, 'ion particle number:', SUM(globalParticleList(2)%N_p)
-    ! stop
+    ! !stop
     ! PE_f = globalSolver%getTotalPE(globalWorld)
     ! PE2_f = globalSolver%getTotalPE2(globalWorld)
     ! KE_f = globalSolver%getTotalKE(del_t, globalParticleList, globalWorld)

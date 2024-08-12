@@ -7,6 +7,6 @@
 1.0d0 1.8436578e-10 ! Fraction of initial 1/w_p for initial time step
 7.374631268436579e-06 ! amount of time to average final Diagnostics
 ../../../../EnergyExplicitData/  !Save directory
-Original_RF_Benchmark_case1 !filename
+RF_Benchmark_case2 !filename
 no NGP_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
 END

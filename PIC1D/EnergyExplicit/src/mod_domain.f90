@@ -1,23 +1,20 @@
 module mod_domain
     use iso_fortran_env, only: int32, real64
-    use mod_BasicFunctions
     use constants
+    use mod_BasicFunctions
     implicit none
 
     private
     public :: Domain, readWorld
-    integer(int32), public, protected :: NumberXNodes = 10
-    integer(int32), public, protected :: NumberXHalfNodes = 9
+    integer(int32), public, protected :: NumberXNodes = 10 ! Number of nodes, where phi and E defined
+    integer(int32), public, protected :: NumberXHalfNodes = 10 ! Number of cells
 
     ! domain contains arrays and values related to physical, logical dimensions of the spatial grid
     type :: Domain
-        real(real64), allocatable :: grid(:) !array representing values at grid in m
-        real(real64), allocatable :: dx_dl(:) !ratio of grid differences from physical to logical, assume logical separated by 1
-        real(real64), allocatable :: nodeVol(:) !node vol, or difference between half grid in physical space
-        integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary condition flags for fields and particles
-        real(real64) :: L_domain, startX, endX
-        integer(int32) :: numThreadNodeIndx, numThreadHalfNodeIndx, gridType
-        logical :: gridSmoothBool
+        real(real64), allocatable :: grid(:) !Physical grid where phi is evaluated
+        real(real64) :: delX, L_domain, startX, endX ! Physical end points, cell size, domain size
+        integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:) ! Boundary condition flags for fields and particles
+        integer(int32) :: numThreadNodeIndx
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
@@ -25,14 +22,15 @@ module mod_domain
         procedure, public, pass(self) :: constructSineGrid
         procedure, public, pass(self) :: constructInvSineGrid
         procedure, public, pass(self) :: constructUniformGrid
-        procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
         procedure, public, pass(self) :: constructHalfEvenHalfSinusoid
-        procedure, public, pass(self) :: makeArraysFromGrid
-        procedure, public, pass(self) :: smoothField
+
+
+        procedure, public, pass(self) :: constructGrid
+        procedure, public, pass(self) :: writeDomain
         procedure, public, pass(self) :: getLFromX
         procedure, public, pass(self) :: getXFromL
-        procedure, public, pass(self) :: writeDomain
+        procedure, public, pass(self) :: addThreadedDomainArray
     end type Domain
 
 
@@ -42,23 +40,17 @@ module mod_domain
 
 contains
 
-    ! Initialization procedures
     type(Domain) function domain_constructor(leftBoundary, rightBoundary) result(self)
-        ! Construct domain object, initialize grid, dx_dl, and nodeVol.
+        ! Construct domain object, initialize grid, dx_dl
         integer(int32), intent(in) :: leftBoundary, rightBoundary
         integer(int32) :: i, k, spacingThread, modThread
-        allocate(self % grid(NumberXNodes), self % dx_dl(NumberXHalfNodes), self % nodeVol(NumberXNodes), self%boundaryConditions(NumberXNodes))
-        self % grid = (/(i, i=1, NumberXNodes)/)
-        self%gridSmoothBool = .false.
-        self % dx_dl = 1.0d0
-        self % nodeVol = 1.0d0
+        allocate(self % grid(NumberXNodes), self%boundaryConditions(NumberXNodes))
+        self % grid = (/(i, i=0, NumberXNodes-1)/)
+        self % delX = 0.0d0
+        self % L_domain = 0.0d0
         self % boundaryConditions = 0
         self%boundaryConditions(1) = leftBoundary
         self%boundaryConditions(NumberXNodes) = rightBoundary
-        if (leftBoundary == 3 .or. rightBoundary == 3) then
-            self%boundaryConditions(1) = 3
-            self%boundaryConditions(NumberXNodes) = 3
-        end if
         if (numThread < NumberXNodes) then
             self%numThreadNodeIndx = numThread
         else
@@ -78,52 +70,7 @@ contains
             self%threadNodeIndx(2,i) = k
             k = k + 1
         end do
-        
-        if (numThread < NumberXHalfNodes) then
-            self%numThreadHalfNodeIndx = numThread
-        else
-            self%numThreadHalfNodeIndx = NumberXHalfNodes
-        end if
-        allocate(self%threadHalfNodeIndx(2, self%numThreadHalfNodeIndx))
-        spacingThread = NumberXHalfNodes/self%numThreadHalfNodeIndx - 1
-        modThread = MOD(NumberXHalfNodes, self%numThreadHalfNodeIndx)
-        k = 1
-        do i = 1, self%numThreadHalfNodeIndx
-            self%threadHalfNodeIndx(1, i) = k
-            if (i <= modThread) then
-                k = k + spacingThread + 1
-            else
-                k = k + spacingThread
-            end if
-            self%threadHalfNodeIndx(2,i) = k
-            k = k + 1
-        end do
     end function domain_constructor
-
-
-    subroutine constructGrid(self, del_x, L_domain, gridType)
-        class(Domain), intent(in out) :: self
-        real(real64), intent(in) :: del_x, L_domain
-        integer(int32), intent(in) :: gridType
-        SELECT CASE (gridType)
-        CASE(0)
-            call self%constructUniformGrid(L_domain)
-        CASE(1)
-            call self%constructSineGrid(del_x, L_domain)
-        CASE(2)
-            call self%constructHalfSineGrid(del_x, L_domain)
-        CASE(3)
-            call self%constructExpHalfGrid(del_x, L_domain)
-        CASE(4)
-            call self%constructHalfEvenHalfSinusoid(del_x, L_domain)
-        CASE(5)
-            call self%constructInvSineGrid(del_x, L_domain)
-        CASE default
-            print *, "Gridtype", gridType, "doesn't exist!"
-            stop
-        END SELECT
-        call self%makeArraysFromGrid()
-    end subroutine constructGrid
 
     subroutine constructSineGrid(self, del_x, L_domain)
         class(Domain), intent(in out) :: self
@@ -243,114 +190,74 @@ contains
             self % grid(i+numEvenCells) = self%grid(numEvenCells+1) + middleDelX * ((real(i)-1.0d0)/(real(numSinCells)) - (1.0d0/(real(numSinCells)) - evenDelX/middleDelX) &
             * SIN(2 * pi * (i-1) / (numSinCells)) / SIN(2 * pi / (numSinCells)) )
         end do
-        
-
-
     end subroutine constructHalfEvenHalfSinusoid
 
-    subroutine makeArraysFromGrid(self)
+
+    subroutine constructGrid(self, L_domain)
+        ! Make grid
         class(Domain), intent(in out) :: self
-        integer(int32) :: i
-        do i = 1, NumberXHalfNodes
-            self%dx_dl(i) = self%grid(i+1) - self%grid(i)
-        end do
-        do i = 2, NumberXHalfNodes
-            self%nodeVol(i) = (self%dx_dl(i-1) + self%dx_dl(i))/2.0d0
-        end do
-        self%nodeVol(1) = 0.5d0 * self%dx_dl(1)
-        self%nodeVol(NumberXNodes) = 0.5d0 * self%dx_dl(NumberXHalfNodes)
+        real(real64), intent(in) :: L_domain
+        self%L_domain = L_domain
+        self%delX = self%L_domain/(NumberXNodes - 1)
+        self%grid = self%grid * self%delX
         self%startX = self%grid(1)
         self%endX = self%grid(NumberXNodes)
-        self%L_domain = self%endX - self%startX
-    end subroutine makeArraysFromGrid
-
-    function getXFromL(self, l) result(x)
-        class(Domain), intent(in) :: self
-        real(real64), intent(in) :: l
-        real(real64) :: x
-        x = self%grid(INT(l)) + self%dx_dl(INT(l)) * (l - INT(l))
-
-    end function getXFromL
+    end subroutine constructGrid
 
     function getLFromX(self, x) result(l)
+        ! get computational location from physical location
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: x
-        integer(int32) :: idxLower, idxHigher, idxMiddle
         real(real64) :: l
-        idxLower = 1
-        idxHigher = NumberXNodes
-        if ((x<self%grid(1)) .or. (x > self%grid(NumberXNodes))) then
-            print *, 'x value outside of grid range in getLFromX!'
-            stop
-        end if
-        do while (idxLower /= idxHigher-1)
-            idxMiddle = (idxLower + idxHigher)/2
-            if (self%grid(idxMiddle) <= x) then
-                idxLower = idxMiddle
-            else
-                idxHigher = idxMiddle
-            end if
-        end do
-        l = idxLower + (x - self%grid(idxLower))/self%dx_dl(idxLower)
+        l = x/self%delX + 1.0d0
         
     end function getLFromX
 
-    subroutine smoothField(self, rawField, newField)
+    function getXFromL(self, l) result(x)
+        ! get physical location from computational
         class(Domain), intent(in) :: self
-        real(real64), intent(in) :: rawField(NumberXHalfNodes)
-        real(real64), intent(in out) :: newField(NumberXHalfNodes)
-        integer(int32) :: i, boundVal
-        ! threaded smoothing of fields
-        do i = 1, NumberXHalfNodes
-            boundVal = self%boundaryConditions(i+1) - self%boundaryConditions(i)
-            SELECT CASE(boundVal)
-            CASE(0)
-                newField(i) = 0.25d0 * (rawField(i-1) + 2.0d0 * rawField(i) + rawField(i+1))
-            CASE(-1,-4)
-                newField(i) = 0.25d0 * (3.0d0 * rawField(1) + rawField(2))
-            CASE(1,4)
-                newField(i) = 0.25d0 * (3.0d0 * rawField(NumberXHalfNodes) + rawField(NumberXHalfNodes-1))
-            CASE(-2)
-                newField(i) = 0.25d0 * (rawField(1) + rawField(2))
-            CASE(2)
-                newField(i) = 0.25d0 * (rawField(NumberXHalfNodes) + rawField(NumberXHalfNodes-1))
-            CASE(-3)
-                newField(i) = 0.25d0 * (rawField(NumberXHalfNodes) + 2.0d0 * rawField(1) + rawField(2))
-            CASE(3)
-                newField(i) = 0.25d0 * (rawField(NumberXHalfNodes-1) + 2.0d0 * rawField(NumberXHalfNodes) + rawField(1))
-            END SELECT
-        end do
+        real(real64), intent(in) :: l
+        real(real64) :: x
+        x = (l-1) * self%delX + self%startX
+        
+    end function getXFromL
 
-    end subroutine smoothField
+    subroutine addThreadedDomainArray(self, array_add, x, iThread, const)
+        ! Take array on grid nodes of half nodes x with second dimension thread count and add to array_add of same domain dimension using Openmp
+        class(Domain), intent(in) :: self
+        real(real64), intent(in out) :: array_add(NumberXNodes)
+        real(real64), intent(in) :: x(NumberXNodes, numThread), const
+        integer(int32), intent(in) :: iThread
+        
+        array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) = array_add(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread)) &
+            + SUM(x(self%threadNodeIndx(1,iThread):self%threadNodeIndx(2,iThread), :), DIM=2) * const
 
+    end subroutine addThreadedDomainArray
 
     subroutine writeDomain(self, dirName)
         ! Writes domain data into binary file under Data
         class(Domain), intent(in) :: self
         character(*), intent(in) :: dirName
-        open(41,file=dirName//'/domainGrid.dat', form='UNFORMATTED')
+        open(41,file=dirName//"/domainGrid.dat", form='UNFORMATTED')
         write(41) self%grid
-        close(41)
-        open(41,file=dirName//'/domainDxDl.dat', form='UNFORMATTED')
-        write(41) self%dx_dl
-        close(41)
-        open(41,file=dirName//'/domainNodeVol.dat', form='UNFORMATTED')
-        write(41) self%nodeVol
         close(41)
         open(41,file=dirName//"/domainBoundaryConditions.dat", form='UNFORMATTED')
         write(41) self%boundaryConditions
         close(41)
     end subroutine writeDomain
 
-    ! ----------------------- read inputs ------------------------------------
+
+    ! -------------- read in world components -----------------------------------
+
 
     subroutine readWorld(GeomFilename, world, T_e, n_ave)
+        ! Read inputs for domain
         type(Domain), intent(in out) :: world
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave
-        integer(int32) :: io, leftBoundary, rightBoundary, gridType, intArray(20), i, smoothInt
-        real(real64) :: debyeLength, L_domain
-        integer(int32), allocatable :: boundArray(:)
+        integer(int32) :: io, leftBoundary, rightBoundary
+        real(real64) :: debyeLength, L_domain, fracDebye
+
         print *, ""
         print *, "Reading domain inputs:"
         print *, "------------------"
@@ -361,34 +268,33 @@ contains
         end if
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) gridType, debyeLength
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
-        read(10, *, IOSTAT = io) smoothInt
         read(10, *, IOSTAT = io)
-        read(10, *, IOSTAT = io)
+        read(10, *, IOSTAT = io) fracDebye
+        read(10, *, IOSTAT = io) 
         close(10)
+        debyeLength = getDebyeLength(T_e, n_ave)
+        if (L_domain / (NumberXNodes-1) > fracDebye * debyeLength) then
+            print *, "Insufficient amount of nodes to resolve initial debyeLength"
+            NumberXNodes = NINT(L_domain/debyeLength/fracDebye) + 1
+        end if
         NumberXHalfNodes = NumberXNodes-1
-        debyeLength = MAX(0.1d0 * getDebyeLength(T_e, n_ave), debyeLength)
         if ((leftBoundary == 3) .or. (rightBoundary == 3)) then
             leftBoundary = 3
             rightBoundary = 3
         end if
         world = Domain(leftBoundary, rightBoundary)
-        call world % constructGrid(debyeLength, L_domain, gridType)
-        if (smoothInt /= 0) world%gridSmoothBool = .true.
+        call world % constructGrid(L_domain) 
         print *, "Number of nodes:", NumberXNodes
-        print *, "Number of half nodes:", NumberXHalfNodes
-        print *, "Grid length:", world%L_domain
-        print *, 'gridType:', world%gridType
         print *, "Left boundary type:", world%boundaryConditions(1)
         print *, "Right boundary type:", world%boundaryConditions(NumberXNodes)
-        print *, 'smallest delX:', MINVAL(world%dx_dl)
-        print *, 'Binomial smoothing:', world%gridSmoothBool
+        print *, 'Fraction of debye length:', world%delX/getDebyeLength(T_e, n_ave)
+        print *, "Grid length:", world%L_domain
+        print *, 'DelX is:', world%delX
         print *, "------------------"
         print *, ""
 
     end subroutine readWorld
-
 
 
 end module mod_domain

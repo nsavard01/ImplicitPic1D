@@ -1,0 +1,12 @@
+32 ! number of threads
+22e-6 0.0d0 ! simulation time
+1.0e18 ! Initial number density (1/m^3) of particles
+5.0 ! T_e (eV)
+1.0 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+0.2 1.0 ! Fraction of initial 1/w_p for initial time step
+1d-9 ! amount of time to average final Diagnostics
+../../../../EnergyExplicitData/  !Save directory
+Energy_Explicit_test !filename
+no Energy_Explicit_Benchmark ! Restart(yes/no) and save directory to take from
+END

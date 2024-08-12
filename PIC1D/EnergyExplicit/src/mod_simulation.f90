@@ -1,39 +1,26 @@
 module mod_simulation
-    ! module which actually uses others to run a simulation (single or multiple time steps)
-    ! will contain diagnostics as well
+    ! Module for running simulation over several time steps
     use iso_fortran_env, only: int32, real64, int64
     use constants
     use mod_BasicFunctions
     use mod_particle
-    use mod_targetParticle
-    use mod_NullCollision
     use mod_domain
     use mod_potentialSolver
-    use mod_particleMover
     use mod_particleInjection
-    use mod_Scheme
-    !use mod_collisions
+    use mod_targetParticle
+    use mod_NullCollision
     use omp_lib
     implicit none
 
     real(real64) :: inelasticEnergyLoss, currentTime
 
-    ! Initialize objects needed
-    type(Domain) :: globalWorld
-    type(Particle), allocatable :: globalParticleList(:)
-    type(potentialSolver) :: globalSolver
-    integer(int32), protected :: iterNumPicard, iterNumParticle, iterNumAdaptiveSteps, amountTimeSplits
-    integer(int64), protected :: potTimer, moverTimer
-    integer(int32), private :: maxIter, solverType, m_Anderson
-    real(real64), private :: Beta_k, eps_r, eps_a
-
 contains
 
-    ! ------------------------- Reading Input data --------------------------------
-    
+
+    ! --------------------------- Diagnostics ------------------------------------
+
     subroutine writePhi(phi, CurrentDiagStep, boolAverage, dirName) 
-        ! For diagnostics, deposit single particle density
-        ! Re-use rho array since it doesn't get used after first Poisson
+        ! Write phi array 
         real(real64), intent(in) :: phi(:)
         integer(int32), intent(in) :: CurrentDiagStep
         character(*), intent(in) :: dirName
@@ -50,11 +37,74 @@ contains
         
     end subroutine writePhi
 
-    ! --------------------------- Diagnostics ------------------------------------
+
+    subroutine loadParticleDensity(particleList, world, reset)
+        ! load particle densities
+        type(Particle), intent(in out) :: particleList(numberChargedParticles)
+        type(Domain), intent(in) :: world
+        logical, intent(in) :: reset
+        integer(int32) :: i,j, l_left, l_right, iThread
+        real(real64) :: d
+        !$OMP parallel private(iThread, j, i, l_left, l_right, d)
+        iThread = omp_get_thread_num() + 1
+        do i=1, numberChargedParticles
+            if (reset) then
+                particleList(i)%densities(:,iThread) = 0.0d0
+            end if
+            do j = 1, particleList(i)%N_p(iThread)
+                l_left = INT(particleList(i)%phaseSpace(1,j, iThread))
+                l_right = l_left + 1
+                d = particleList(i)%phaseSpace(1,j, iThread) - l_left
+                particleList(i)%densities(l_left, iThread) = particleList(i)%densities(l_left, iThread) + (1.0d0-d)
+                particleList(i)%densities(l_right, iThread) = particleList(i)%densities(l_right, iThread) + d
+            end do
+        end do
+        !$OMP end parallel
+
+    end subroutine loadParticleDensity
+
+    subroutine WriteParticleDensity(particleList, world, CurrentDiagStep, boolAverage, dirName) 
+        ! Write particle densities, option for averaged
+        type(Particle), intent(in) :: particleList(numberChargedParticles)
+        type(Domain), intent(in) :: world
+        character(*), intent(in) :: dirName
+        integer(int32), intent(in) :: CurrentDiagStep
+        logical, intent(in) :: boolAverage
+        real(real64) :: densities(NumberXNodes)
+        integer(int32) :: i, iThread, leftThreadIndx, rightThreadIndx
+        character(len=5) :: char_i
+        
+        do i=1, numberChargedParticles
+            densities = 0.0d0
+            !$OMP parallel private(iThread, leftThreadIndx, rightThreadIndx)
+            iThread = omp_get_thread_num() + 1
+            leftThreadIndx = world%threadNodeIndx(1,iThread)
+            rightThreadIndx = world%threadNodeIndx(2,iThread)
+            densities(leftThreadIndx:rightThreadIndx) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
+            !$OMP end parallel
+            densities = densities/world%delX
+            if (world%boundaryConditions(1) == 3) then
+                densities(1) = (densities(1) + densities(NumberXNodes))
+                densities(NumberXNodes) = densities(1)
+            else
+                densities(1) = 2.0d0 * densities(1)
+                densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)
+            end if
+            write(char_i, '(I3)'), CurrentDiagStep
+            if (boolAverage) then
+                open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
+            else
+                open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_"//trim(adjustl(char_i))//".dat", form='UNFORMATTED')
+            end if
+            write(41) densities
+            close(41)
+        end do
+        
+    end subroutine WriteParticleDensity
+
 
     subroutine solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, irand, simulationTime)
-        ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
-        ! Impliment averaging for final select amount of timeSteps, this will be last data dump
+        ! Run simulation over several time steps with included diagnostic data dumps
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberNeutralParticles)
         type(nullCollision), intent(in out) :: nullCollisionList(numberBinaryCollisions)
@@ -63,25 +113,24 @@ contains
         real(real64), intent(in) :: del_t, simulationTime
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
-        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3), totMoverTime, totPotTime, totCollTime,smoothInt
+        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3), totMoverTime, totPotTime, totCollTime
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
         character(len=8) :: date_char
         character(len=10) :: time_char
         allocate(energyAddColl(numThread))
         CurrentDiagStep = oldDiagStep
         unitPart1 = 100
-        smoothInt = 0
-        if (world%gridSmoothBool) smoothInt = 1
+        ! Create save directory
         if (.not. restartBool) call generateSaveDirectory(directoryName, numberBinaryCollisions)
-        !Wrtie Initial conditions
+        ! Write initial conditions
         call date_and_time(DATE=date_char, TIME = time_char)
         open(15,file=directoryName//'/DateTime.dat')
         write(15,'("UTC Date, UTC Time")')
         write(15,"(2(A,1x))") date_char, time_char 
         close(15)
         open(15,file=directoryName//'/InitialConditions.dat')
-        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, smooth int, n_ave, T_e, T_i, numDiag, NumChargedPart, numThread, RF_frequency, RF_half_amplitude")')
-        write(15,"((I6, 1x), 7(es16.8,1x), 3(I6, 1x), 2(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, smoothInt, n_ave, T_e, T_i, numDiagnosticSteps, numberChargedParticles, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude
+        write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, n_ave, T_e, T_i, numDiag, NumChargedPart, numThread, RF_frequency, RF_half_amplitude")')
+        write(15,"((I6, 1x), 7(es16.8,1x), 3(I6, 1x), 2(es16.8,1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps, numberChargedParticles, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude
         close(15)
         call system_clock(count_rate = timingRate)
         ! Write Particle properties
@@ -91,6 +140,13 @@ contains
             write(9,"((A, 1x), 3(es16.8,1x), (I10, 1x))") particleList(j)%name//'       ', particleList(j)%mass, particleList(j)%q, particleList(j)%w_p, particleList(j)%finalIdx
         end do
         close(9)
+        open(9,file=directoryName//'/TargetParticleProperties.dat')
+        write(9,'("Particle Symbol, Particle Mass (kg), Particle Temp (K), Particle Density (m^-3)")')
+        do j=1, numberNeutralParticles
+            write(9,"((A, 1x), 3(es16.8,1x))") targetParticleList(j)%name//'       ', targetParticleList(j)%mass, targetParticleList(j)%temperature, targetParticleList(j)%density
+        end do
+        close(9)
+        ! Initialize particle diagnostics
         do i = 1, numberChargedParticles
             particleList(i)%accumEnergyLoss = 0.0d0
             particleList(i)%accumWallLoss = 0
@@ -104,6 +160,7 @@ contains
         end do
 
         if (restartBool) then
+            ! If restart, continue timing from previous simulation
             open(303,file=directoryName//'/SimulationTimeData.dat')
             read(303, *, IOSTAT = j)
             do while (j == 0)
@@ -133,10 +190,9 @@ contains
 
         
         
-        !Save initial particle/field data, along with domain
+        ! Save initial grid properties
         energyAddColl = 0.0d0
         inelasticEnergyLoss = 0.0d0
-        !call solver%initialVRewind(particleList, del_t)
         call loadParticleDensity(particleList, world, .true.)
         call writeParticleDensity(particleList, world, 0, .false., directoryName)  
         call writePhi(solver%phi, 0, .false., directoryName)
@@ -146,23 +202,17 @@ contains
         do while(currentTime < simulationTime)
             currentTime = currentTime + del_t
             if (currentTime < diagTime) then
+                ! Normal operations
                 call system_clock(startTime)
-
-                if(world%gridType == 0) then
-                    call moveParticlesEvenGrid(solver, particleList, world, del_t)
-                else
-                    call moveParticles(solver, particleList, world, del_t)
-                endif
-                !call moveParticles(solver, particleList, world, del_t)
-                
+                call solver%moveParticles(particleList, world, del_t)
                 call solver%depositRho(particleList, world)
                 call system_clock(endTime)
                 moverTime = moverTime + (endTime - startTime)
                 call system_clock(startTime)
                 call solver%solve_tridiag_Poisson(world, currentTime)
+                call solver%makeEField(world)
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
-                !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
@@ -175,25 +225,18 @@ contains
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
-                ! Data dump with diagnostics
+                ! Operations with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
                 call system_clock(startTime)
-
-                if(world%gridType == 0) then
-                    call moveParticlesEvenGrid(solver, particleList, world, del_t)
-                else
-                    call moveParticles(solver, particleList, world, del_t)
-                endif
-                !call moveParticles(solver, particleList, world, del_t)
-
+                call solver%moveParticles(particleList, world, del_t)
                 call solver%depositRho(particleList, world)
                 call system_clock(endTime)
                 moverTime = moverTime + (endTime - startTime)
                 call system_clock(startTime)
                 call solver%solve_tridiag_Poisson(world, currentTime)
+                call solver%makeEField(world)
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
-                !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
                 call system_clock(startTime)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
@@ -205,6 +248,8 @@ contains
                 end do
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
+
+                ! Save grid quantities
                 call loadParticleDensity(particleList, world, .true.)
                 call writeParticleDensity(particleList, world, CurrentDiagStep, .false., directoryName)  
                 call writePhi(solver%phi, CurrentDiagStep, .false., directoryName)
@@ -212,6 +257,7 @@ contains
                 energyLoss = 0.0d0
                 momentum_total = 0.0d0
                 do j=1, numberChargedParticles
+                    ! Save particle diagnostics
                     call particleList(j)%writeLocalTemperature(CurrentDiagStep, directoryName, NumberXHalfNodes)
                     call particleList(j)%writePhaseSpace(directoryName)
                     chargeTotal = chargeTotal + SUM(particleList(j)%accumWallLoss) * particleList(j)%q * particleList(j)%w_p
@@ -226,18 +272,22 @@ contains
                     particleList(j)%accumWallLoss = 0
                 end do
                 do j = 1, numberBinaryCollisions
+                    ! Save collision diagnostics
                     inelasticEnergyLoss = inelasticEnergyLoss + 0.5d0 * SUM(nullCollisionList(j)%totalEnergyLoss) * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
                     call nullCollisionList(j)%writeCollisionDiag(particleList, targetParticleList, directoryName, del_t * diagStepDiff)
                 end do
+                ! write global diagnostics
                 write(202,"(6(es16.8,1x))") currentTime, inelasticEnergyLoss/del_t/diagStepDiff, &
-                chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff, momentum_total(1), solver%getTotalE(del_t, particleList, world)
+                chargeTotal/del_t/diagStepDiff, energyLoss/del_t/diagStepDiff, momentum_total(1), solver%getTotalE(particleList, world)
                 call system_clock(endTotal)
+                ! Write timing data
                 write(303,"(4(es16.8,1x), 1(I8, 1x))") elapsed_time + real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64), &
                 totPotTime + real(potentialTime, kind = real64) / real(timingRate, kind = real64), &
                 totMoverTime + real(moverTime, kind = real64) / real(timingRate, kind = real64), &
                 totCollTime + real(collisionTime, kind = real64) / real(timingRate, kind = real64), i+1
 
                 do j = 1, numberBinaryCollisions
+                    ! reset accumulation variables
                     nullCollisionList(j)%totalNumberCollidableParticles = 0
                     nullCollisionList(j)%totalEnergyLoss = 0
                     nullCollisionList(j)%totalAmountCollisions = 0
@@ -281,8 +331,7 @@ contains
 
 
     subroutine solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, irand, averagingTime, binNumber)
-        ! Perform certain amount of timesteps, with diagnostics taken at first and last time step
-        ! Impliment averaging for final select amount of timeSteps, this will be last data dump
+        ! Perform averaging over certain time period for diagnostics
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberNeutralParticles)
         type(nullCollision), intent(in out) :: nullCollisionList(numberBinaryCollisions)
@@ -322,16 +371,8 @@ contains
         windowNum = 0
         do while(currentTime-startTime < averagingTime)
             currentTime = currentTime + del_t
-
-            if(world%gridType == 0) then
-                call moveParticlesEvenGrid(solver, particleList, world, del_t)
-            else
-                call moveParticles(solver, particleList, world, del_t)
-            endif
-            !call moveParticles(solver, particleList, world, del_t)
-
+            call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
-            !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, del_t, 15.8d0, 0.0d0, irand)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
@@ -342,9 +383,6 @@ contains
             end do
             call loadParticleDensity(particleList, world, .false.)
             phi_average = phi_average + solver%phi
-            ! if (MODULO(i, heatSkipSteps) == 0) then
-            !     call addUniformPowerMaxwellian(particleList(1), Power, nu_h, irand, heatSksipSteps*del_t)
-            ! end if
             i = i + 1
             windowNum = windowNum + 1
             wallLoss(windowNum) = 0.0d0
@@ -353,6 +391,7 @@ contains
             end do
             wallLoss(windowNum) = wallLoss(windowNum)/(currentTime - startTime)
             if (windowNum > windowDivision) then
+                ! If std_dev/mean of particle loss to walls is low, then can stop averaging
                 meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
                 stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
                 if (stdLoss/meanLoss < 1d-6) exit
@@ -375,6 +414,7 @@ contains
         end do
         call writeParticleDensity(particleList, world, 0, .true., directoryName) 
         do j = 1, numberBinaryCollisions
+            ! Save binary collision statistics
             inelasticEnergyLoss = inelasticEnergyLoss + SUM(nullCollisionList(j)%totalEnergyLoss) * 0.5d0 * particleList(nullCollisionList(j)%reactantsIndx(1))%w_p
             open(22,file=directoryName//'/BinaryCollisions/'//particleList(nullCollisionList(j)%reactantsIndx(1))%name//"_on_"//targetParticleList(nullCollisionList(j)%reactantsIndx(2))%name//"/AveCollisionDiag.dat")
             write(22, '("Coll #, CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2)")')
@@ -439,14 +479,7 @@ contains
         EHist = 0.0d0
         do i = 1, windowDivision
             currentTime = currentTime + del_t
-
-            if(world%gridType == 0) then
-                    call moveParticlesEvenGrid(solver, particleList, world, del_t)
-                else
-                    call moveParticles(solver, particleList, world, del_t)
-            endif
-            !call moveParticles(solver, particleList, world, del_t)
-
+            call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)

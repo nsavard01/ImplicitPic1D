@@ -519,159 +519,243 @@ contains
     !     end do
     ! end subroutine moveParticles
 
-    subroutine moveParticles(solver, particleList, world, del_t)
-        ! Particle mover version 4
-        ! initialize classes and variables
-        class(potentialSolver), intent(in out) :: solver
-        type(Domain), intent(in) :: world
-        type(Particle), intent(in out) :: particleList(:)
-        real(real64), intent(in) :: del_t
-        real(real64) :: l_f, l_sub, v_sub, v_f, x_i, x_f
-        integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, refIdx, N_p, v_flag
-        logical :: bool
+subroutine moveParticles(solver, particleList, world, del_t)
+    ! Particle mover version 4
+    ! initialize classes and variables
+    class(potentialSolver), intent(in out) :: solver
+    type(Domain), intent(in) :: world
+    type(Particle), intent(in out) :: particleList(:)
+    real(real64), intent(in) :: del_t
+    real(real64) :: l_f, l_sub, v_sub, v_f, x_i, x_f
+    integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, refIdx, N_p, v_flag
+    logical :: refluxedBool, bool
 
-        ! OMP parallel start
-        !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, l_cell, delIdx, l_boundary, numIter, &
-        !$OMP& refIdx, N_p, v_flag, x_i, x_f, bool)
-        ! get thread number for indexing
-        iThread = omp_get_thread_num() + 1
+    ! OMP parallel start
+    !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, l_cell, delIdx, l_boundary, numIter, &
+    !$OMP& refIdx, N_p, v_flag, x_i, x_f, refluxedBool, bool)
+    ! get thread number for indexing
+    iThread = omp_get_thread_num() + 1
 
-        ! loop over particle types
-        loopSpecies: do j = 1, numberChargedParticles
+    ! loop over particle types
+    loopSpecies: do j = 1, numberChargedParticles
 
-            ! count of deleted particles (dirichlet boundary conditions)
-            delIdx = 0
-            ! count of reflected particles (neuman boundary conditions)
-            refIdx = 0
+        ! count of deleted particles (dirichlet boundary conditions)
+        delIdx = 0
+        ! count of reflected particles (neuman boundary conditions)
+        refIdx = 0
 
-            ! reset loss counters for dirichlet walls
-            particleList(j)%wallLoss(:, iThread) = 0
-            particleList(j)%energyLoss(:, iThread) = 0
-            particleList(j)%momentumLoss(:,iThread) = 0
+        ! reset loss counters for dirichlet walls
+        particleList(j)%wallLoss(:, iThread) = 0
+        particleList(j)%energyLoss(:, iThread) = 0
+        particleList(j)%momentumLoss(:,iThread) = 0
 
-            ! number of particles
-            N_p = particleList(j)%N_p(iThread)
+        ! number of particles
+        N_p = particleList(j)%N_p(iThread)
 
-            ! loop over number of particles
-            loopParticles: do i = 1, N_p
+        ! loop over number of particles
+        loopParticles: do i = 1, N_p
+            refluxedBool = .False.
+            ! Initial phase coords
+            v_sub = particleList(j)%phaseSpace(2,i,iThread)
+            l_sub = particleList(j)%phaseSpace(1,i,iThread)
 
-                ! Initial phase coords
-                v_sub = particleList(j)%phaseSpace(2,i,iThread)
-                l_sub = particleList(j)%phaseSpace(1,i,iThread)
+            ! left side node
+            l_cell = INT(l_sub) 
 
-                ! left side node
-                l_cell = INT(l_sub) 
+            
+            ! Final velocity
+            v_f = v_sub + particleList(j)%q_over_m * solver%EField(l_cell) * del_t
 
+            ! real postions
+            x_i = world%grid(l_cell) + (l_sub - l_cell) * world%dx_dl(l_cell)
+            x_f = x_i + del_t * v_f
+
+            ! set flags for left or right movment
+            if(v_f >= 0) then
+                ! positive velocity flag
+                v_flag = 1
+                l_cell = l_cell + 1
+            else
+                ! negative velocity flag
+                v_flag = -1
+            end if
+            
+            bool = v_flag * x_f > v_flag * world%grid(l_cell)
+            ! loop to find final position and check boundary conditions
+            ! move the particle to the boundary of the next cell, if it wouldn't make it then end loop
+            do while(bool)
                 
-                ! Final velocity
-                v_f = v_sub + particleList(j)%q_over_m * solver%EField(l_cell) * del_t
+                ! left boundary check
+                if(l_cell == 1 .and. v_flag == -1) then
+                    ! periodic
+                    if(world%boundaryConditions(1) == 3) then
+                        ! move cell to other boundary minus one of left side
+                        l_cell = NumberXHalfNodes
+                        x_f = x_f + world%L_domain
+                    ! nueman
+                    elseif(world%boundaryConditions(1) == 2) then
+                        
+                        ! flip velocity flag
+                        v_flag = -v_flag
+                        x_f = 2 * world%grid(1) - x_f
 
-                ! real postions
-                x_i = world%grid(l_cell) + (l_sub - l_cell) * world%dx_dl(l_cell)
-                x_f = x_i + del_t * v_f
+                        ! add to reflected particle count
+                        refIdx = refIdx +1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
+                        refluxedBool = .true.
+                    ! Dirichlet   
+                    else
+                        ! add to deleted paticle count and update loss
+                        delIdx = delIdx + 1
+                        particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + v_f**2 + (SUM(particleList(j)%phaseSpace(3:4,i,iThread)**2))
+                        particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                        particleList(j)%momentumLoss(1, iThread) = particleList(j)%momentumLoss(1, iThread) + v_f
+                        ! skip to next particle
+                        cycle loopParticles
+                    end if
+                endif
+                ! right boundary check
+                if(l_cell == NumberXNodes .and. v_flag == 1) then
+                    ! periodic
+                    if(world%boundaryConditions(NumberXNodes) == 3) then
+                        ! move cell to other boundary
+                        l_cell = 1
+                        x_f = x_f - world%L_domain
+                    ! nueman
+                    elseif(world%boundaryConditions(NumberXNodes) == 2) then
+                        
+                        ! flip velocity flag
+                        v_flag = -v_flag
+                        x_f = 2 * world%grid(NumberXNodes) - x_f
 
-                ! set flags for left or right movment
-                if(v_f >= 0) then
-                    ! positive velocity flag
-                    v_flag = 1
-                    l_cell = l_cell + 1
-                else
-                    ! negative velocity flag
-                    v_flag = -1
-                end if
-                
+                        ! add to reflected particle count
+                        refIdx = refIdx +1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
+                        refluxedBool = .true.
+                    ! Dirichlet   
+                    else
+                        ! add to deleted paticle count and update loss
+                        delIdx = delIdx + 1
+                        particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + v_f**2 + (SUM(particleList(j)%phaseSpace(3:4,i,iThread)**2)) !J/m^2 in 1D
+                        particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                        particleList(j)%momentumLoss(2, iThread) = particleList(j)%momentumLoss(2, iThread) + v_f
+                        ! skip to next particle
+                        cycle loopParticles
+                    endif
+                endif
+
+                ! set cell to next cell by adding the flag (1 or -1)
+                l_cell = l_cell + v_flag
+
+                ! update distance to travel
                 bool = v_flag * x_f > v_flag * world%grid(l_cell)
-                ! loop to find final position and check boundary conditions
-                ! move the particle to the boundary of the next cell, if it wouldn't make it then end loop
-                do while(bool)
-                    
-                    ! left boundary check
-                    if(l_cell == 1 .and. v_flag == -1) then
-                        ! periodic
-                        if(world%boundaryConditions(1) == 3) then
-                            ! move cell to other boundary minus one of left side
-                            l_cell = NumberXHalfNodes
-                            x_f = x_f + world%L_domain
-                        ! nueman
-                        elseif(world%boundaryConditions(1) == 2) then
-                            ! add to reflected particle count
-                            refIdx = refIdx +1
-                            ! flip velocity flag
-                            v_flag = -v_flag
-                            x_f = 2 * world%grid(1) - x_f
-                        ! Dirichlet   
-                        else
-                            ! add to deleted paticle count and update loss
-                            delIdx = delIdx + 1
-                            particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + v_f**2 + (SUM(particleList(j)%phaseSpace(3:4,i,iThread)**2))
-                            particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
-                            particleList(j)%momentumLoss(1, iThread) = particleList(j)%momentumLoss(1, iThread) + v_f
-                            ! skip to next particle
-                            cycle loopParticles
-                        end if
-                    endif
-                    ! right boundary check
-                    if(l_cell == NumberXNodes .and. v_flag == 1) then
-                        ! periodic
-                        if(world%boundaryConditions(NumberXNodes) == 3) then
-                            ! move cell to other boundary
-                            l_cell = 1
-                            x_f = x_f - world%L_domain
-                        ! nueman
-                        elseif(world%boundaryConditions(NumberXNodes) == 2) then
-                            ! add to reflected particle count
-                            refIdx = refIdx +1
-                            ! flip velocity flag
-                            v_flag = -v_flag
-                            x_f = 2 * world%grid(NumberXNodes) - x_f
-                        ! Dirichlet   
-                        else
-                            ! add to deleted paticle count and update loss
-                            delIdx = delIdx + 1
-                            particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + v_f**2 + (SUM(particleList(j)%phaseSpace(3:4,i,iThread)**2)) !J/m^2 in 1D
-                            particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
-                            particleList(j)%momentumLoss(2, iThread) = particleList(j)%momentumLoss(2, iThread) + v_f
-                            ! skip to next particle
-                            cycle loopParticles
-                        endif
-                    endif
+            enddo
+            
+            ! move the remaining amount of distance depending on travel direction
+            ! positive direction
+            if(v_f >= 0) then
+                l_cell = l_cell -1
+            end if
+            l_f = l_cell + (x_f - world%grid(l_cell))/world%dx_dl(l_cell)
 
-                    ! set cell to next cell by adding the flag (1 or -1)
-                    l_cell = l_cell + v_flag
+            ! write new positions
+            particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
+            particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
+            particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)
+            
+        end do loopParticles
+        ! update particle list length and reflect and deleteted particles
+        particleList(j)%N_p(iThread) = N_p - delIdx
+        particleList(j)%delIdx(iThread) = delIdx
+        particleList(j)%refIdx(iThread) = refIdx
+    end do loopSpecies
+    
+    !$OMP end parallel
+    
+    ! update loss values
+    do j = 1, numberChargedParticles
+        particleList(j)%numToCollide = particleList(j)%N_p
+        particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
+        particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM=2)
+    end do
+end subroutine moveParticles
 
-                    ! update distance to travel
-                    bool = v_flag * x_f > v_flag * world%grid(l_cell)
-                enddo
-                
-                ! move the remaining amount of distance depending on travel direction
-                ! positive direction
-                if(v_f >= 0) then
-                    l_cell = l_cell -1
-                end if
-                l_f = l_cell + (x_f - world%grid(l_cell))/world%dx_dl(l_cell)
-
-                ! write new positions
-                particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
-                particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
-                particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)
-                
-            end do loopParticles
-            ! update particle list length and reflect and deleteted particles
-            particleList(j)%N_p(iThread) = N_p - delIdx
-            particleList(j)%delIdx(iThread) = delIdx
-            particleList(j)%refIdx(iThread) = refIdx
-        end do loopSpecies
-        
-        !$OMP end parallel
-        
-        ! update loss values
-        do j = 1, numberChargedParticles
-            particleList(j)%numToCollide = particleList(j)%N_p
-            particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM = 2)
-            particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM=2)
-        end do
-    end subroutine moveParticles
-
+subroutine moveParticlesEvenGrid(self, particleList, world, del_t)
+    ! particle mover to avoid the boolean checks which mostly don't happen when depositing J
+    class(potentialSolver), intent(in out) :: self
+    type(Domain), intent(in) :: world
+    type(Particle), intent(in out) :: particleList(:)
+    real(real64), intent(in) :: del_t
+    !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
+    integer(int32) :: j, i, delIdx, refIdx, iThread, N_p
+    real(real64) :: v_prime, q_over_m, partLoc, Del_x
+    Del_x = world%dx_dl(1)
+    !$OMP parallel private(iThread, i, j,delIdx, v_prime,partLoc, refIdx, N_p)
+    iThread = omp_get_thread_num() + 1
+    loopSpecies: do j = 1, numberChargedParticles
+        delIdx = 0
+        refIdx = 0
+        particleList(j)%wallLoss(:, iThread) = 0
+        particleList(j)%energyLoss(:, iThread) = 0.0d0
+        N_p = particleList(j)%N_p(iThread)
+        loopParticles: do i = 1, N_p
+            ! First velocity change
+            v_prime = particleList(j)%phaseSpace(2, i, iThread) + particleList(j)%q_over_m * self%getEField(particleList(j)%phaseSpace(1, i, iThread)) * del_t
+            ! Get new position
+            partLoc = particleList(j)%phaseSpace(1, i, iThread) + v_prime * del_t/Del_x
+            if (partLoc <= 1) then
+                SELECT CASE (world%boundaryConditions(1))
+                CASE(1,4)
+                    particleList(j)%energyLoss(1, iThread) = particleList(j)%energyLoss(1, iThread) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
+                    particleList(j)%wallLoss(1, iThread) = particleList(j)%wallLoss(1, iThread) + 1 !C/m^2 in 1D
+                    particleList(j)%momentumLoss(1,iThread) = particleList(j)%momentumLoss(1,iThread) + v_prime
+                    delIdx = delIdx + 1
+                CASE(2)
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
+                    particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                    refIdx = refIdx + 1
+                    particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
+                CASE(3)
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc - 2.0d0, real(NumberXNodes, kind = real64)) + 1
+                ! CASE default
+                !     print *, 'no case, moveParticles'
+                !     stop
+                END SELECT
+            else if ((partLoc >= NumberXNodes)) then
+                SELECT CASE (world%boundaryConditions(NumberXNodes))
+                CASE(1,4)
+                    particleList(j)%energyLoss(2, iThread) = particleList(j)%energyLoss(2, iThread) + v_prime**2 + SUM(particleList(j)%phaseSpace(3:4, i, iThread)**2)
+                    particleList(j)%wallLoss(2, iThread) = particleList(j)%wallLoss(2, iThread) + 1 !C/m^2 in 1D
+                    particleList(j)%momentumLoss(2,iThread) = particleList(j)%momentumLoss(2,iThread) + v_prime
+                    delIdx = delIdx + 1
+                CASE(2)
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
+                    particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                    refIdx = refIdx + 1
+                    particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
+                CASE(3)
+                    particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc, real(NumberXNodes, kind = real64)) + 1
+                ! CASE default
+                !     print *, 'no case, moveParticles'
+                !     stop
+                END SELECT
+            else
+                particleList(j)%phaseSpace(1, i-delIdx, iThread) = partLoc
+                particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_prime
+                particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
+            end if
+        end do loopParticles
+        particleList(j)%N_p(iThread) = N_p - delIdx
+        particleList(j)%delIdx(iThread) = delIdx
+        particleList(j)%refIdx(iThread) = refIdx
+    end do loopSpecies
+    !$OMP end parallel
+    do j = 1, numberChargedParticles
+        particleList(j)%numToCollide = particleList(j)%N_p
+        particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM=2)
+        particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM=2)
+    end do
+end subroutine moveParticlesEvenGrid
 
 
 end module mod_particleMover
