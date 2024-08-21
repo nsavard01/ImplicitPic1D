@@ -101,6 +101,67 @@ contains
         !$OMP end parallel
     end subroutine depositRho
 
+    ! subroutine depositRho(self, particleList, world) 
+    !     ! calculate rho from particle locations
+    !     class(potentialSolver), intent(in out) :: self
+    !     type(Domain), intent(in) :: world
+    !     type(Particle), intent(in out) :: particleList(:)
+    !     integer(int32) :: i, j, cell, iThread, leftThreadIndx, rightThreadIndx
+    !     real(real64) :: delD, partLoc, delBoundary
+    !     self % rho = self%rho_const
+    !     !$OMP parallel private(iThread, j, i, cell, partLoc, leftThreadIndx, rightThreadIndx, delBoundary, delD)
+    !     iThread = omp_get_thread_num() + 1
+    !     do i=1, numberChargedParticles
+    !         particleList(i)%workSpace(:, iThread) = 0.0d0   
+    !         do j = 1, particleList(i)%N_p(iThread)
+    !             partLoc = particleList(i)%phaseSpace(1, j, iThread)
+    !             cell = INT(partLoc)
+    !             delD = partLoc - real(cell)
+    !             if (delD >= 0.5) then
+    !                 if(cell == NumberXHalfNodes) then
+    !                     SELECT CASE (world%boundaryConditions(NumberXNodes))
+    !                     CASE(1,4)
+    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (1.5d0 - delD) - (delD - 0.5d0)
+    !                     CASE(2)
+    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (1.5d0 - delD) + (delD - 0.5d0)
+    !                     CASE(3)
+    !                         particleList(i)%workSpace(1 , iThread)    = particleList(i)%workSpace(1, iThread)    + (delD - 0.5d0)
+    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (1.5d0 - delD)
+    !                     END SELECT
+    !                 else
+    !                     particleList(i)%workSpace(cell + 1 , iThread) = particleList(i)%workSpace(cell + 1 ,iThread) + (delD - 0.5d0)
+    !                     particleList(i)%workSpace(cell , iThread)     = particleList(i)%workSpace(cell, iThread)     + (1.5d0 - delD)
+    !                 end if
+                    
+    !             else 
+    !                 if(cell == 1) then
+    !                     SELECT CASE (world%boundaryConditions(1))
+    !                     CASE(1,4)
+    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (0.5d0 + delD) - (0.5d0 - delD)
+    !                     CASE(2)
+    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (0.5d0 + delD) + (0.5d0 - delD)
+    !                     CASE(3)
+    !                         particleList(i)%workSpace(NumberXNodes , iThread) = particleList(i)%workSpace(cell, iThread)     + (0.5d0 - delD)
+    !                         particleList(i)%workSpace(cell , iThread)     = particleList(i)%workSpace(cell + 1, iThread) + (0.5d0 + delD)
+    !                     END SELECT
+    !                 else
+    !                     particleList(i)%workSpace(cell - 1 , iThread) = particleList(i)%workSpace(cell - 1, iThread) + (0.5d0 - delD)
+    !                     particleList(i)%workSpace(cell , iThread)     = particleList(i)%workSpace(cell, iThread)     + (0.5d0 + delD)
+    !                 end if
+    !             end if
+    !         end do        
+    !     end do
+    !     !$OMP barrier
+    !     leftThreadIndx = world%threadNodeIndx(1,iThread)
+    !     rightThreadIndx = world%threadNodeIndx(2,iThread)
+    !     self%rho(leftThreadIndx:rightThreadIndx) = SUM(particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
+    !     do i = 2, numberChargedParticles
+    !         self%rho(leftThreadIndx:rightThreadIndx) = self%rho(leftThreadIndx:rightThreadIndx) &
+    !             + SUM(particleList(i)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
+    !     end do
+    !     !$OMP end parallel
+    ! end subroutine depositRho
+
     subroutine construct_diagMatrix(self, world)
         ! construct tridiagonal components of matrix for thomas algorithm
         class(potentialSolver), intent(in out) :: self
@@ -131,6 +192,15 @@ contains
                 end if
             CASE(3)
                 self%b_tri(i) = 1.0d0
+            CASE(5)
+                if (i == 1) then
+                    self % c_tri(i) = 1.0d0
+                    self%b_tri(i) = -1.0d0
+                else if (i == NumberXNodes) then
+                    self % a_tri(i-1) = 1.0d0
+                    self%b_tri(i) = -1.0d0
+                end if
+                    
             CASE default
                 print *, "Error when constructing poisson matrix, inner nodes not plasma or neumann!"
             END SELECT
@@ -154,6 +224,8 @@ contains
                 d(i) = self%phi(i)
             CASE(4)
                 d(i) = self%RF_half_amplitude * SIN(self%RF_rad_frequency * timeCurrent)
+            CASE(5)
+                d(i) = 0
             END SELECT
         end do
     ! initialize c-prime and d-prime
@@ -273,6 +345,18 @@ contains
                 ! Get new position
                 partLoc = particleList(j)%phaseSpace(1, i, iThread) + v_prime * del_t/world%delX
 
+
+                ! if(particleList(j)%phaseSpace(1, i, iThread) == NumberXNodes) then
+                !     if(ABS(partLoc - particleList(j)%phaseSpace(1, i, iThread)) < 0) then
+                !         print*, "no move"
+                !         stop
+                !     else if(partLoc > NumberXNodes) then
+                !         print*, " too far"
+                !         stop
+                !     end if
+                ! end if
+
+
                 ! Check if outside boundary
                 if (partLoc <= 1) then
                     SELECT CASE (world%boundaryConditions(1))
@@ -284,10 +368,17 @@ contains
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
                         particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                        !delIdx = delIdx + 1
                         refIdx = refIdx + 1
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc - 2.0d0, real(NumberXNodes, kind = real64)) + 1
+                    CASE(5)
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
+                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                        !delIdx = delIdx + 1
+                        refIdx = refIdx + 1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     END SELECT
                 else if ((partLoc >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
@@ -299,16 +390,24 @@ contains
                     CASE(2)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
                         particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                        !delIdx = delIdx + 1
                         refIdx = refIdx + 1
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
                         particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc, real(NumberXNodes, kind = real64)) + 1
+                    CASE(5)
+                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
+                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                        !delIdx = delIdx + 1
+                        refIdx = refIdx + 1
+                        particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     END SELECT
                 else
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = partLoc
                     particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_prime
                     particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
                 end if
+
             end do loopParticles
             particleList(j)%N_p(iThread) = N_p - delIdx
             particleList(j)%delIdx(iThread) = delIdx

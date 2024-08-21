@@ -31,11 +31,14 @@ program BoundPlasmaExample
     call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p)
     ! Solve initial potential
     call solver%depositRho(particleList, world)
+
+
     call solver%solve_tridiag_Poisson(world, startSimulationTime)
 
     ! Make field, and if new simulation, rewind particle velocities a half step
     call solver%makeEField(world)
     if (.not. restartBool) call solver%initialVRewind(particleList, del_t)
+
     
     ! Solve Simulation
     call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, stateRan0, simulationTime)

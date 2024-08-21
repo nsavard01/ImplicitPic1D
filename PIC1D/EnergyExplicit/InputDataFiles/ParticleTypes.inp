@@ -1,22 +1,15 @@
 ELECTRONS
 name	 NumParticles/thread   ArraySizeMultiplication  alpha  distType  v_drift
 -------------------------------------------
-e	  2048	 4  0.0  0  0.0
+e	  6647	 2  0.0  0  0.0
 -------------------------------------------
 
 
 IONS
 name   massAtom(AMU)  charge 	NumParticles/thread   ArraySizeMultiplication  alpha  distType  v_drift
 --------------------------------------------------
-He+     4.002602      1. 		2048   4  0.0  0  0.0d0
+H+     1.00784      1. 		6647   2  0.0  0  0.0d0
 --------------------------------------------------
-
-
-NEUTRALS
-name   mass(AMU)  temp(K)  density
--------------------------------------
-He     4.002602    300.0d0     96.4d20
--------------------------------------
 
 
 ENDFILE

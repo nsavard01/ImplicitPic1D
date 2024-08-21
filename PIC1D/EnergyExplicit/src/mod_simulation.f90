@@ -203,9 +203,34 @@ contains
             currentTime = currentTime + del_t
             if (currentTime < diagTime) then
                 ! Normal operations
+
+                ! print*, "pre-move: "
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************"
+
                 call system_clock(startTime)
                 call solver%moveParticles(particleList, world, del_t)
+
+                ! print*, "post-move: "
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************"
+
+                
+
                 call solver%depositRho(particleList, world)
+
                 call system_clock(endTime)
                 moverTime = moverTime + (endTime - startTime)
                 call system_clock(startTime)
@@ -214,14 +239,38 @@ contains
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
+
+                ! print*, "post-solve: "                
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************"
+
+                do j = 1, numberBinaryCollisions
+                    call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+                end do
+
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
-                do j = 1, numberBinaryCollisions
-                    call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
-                end do
+                
+                ! print*, "post-injection: "                
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************" 
+                ! stop
+
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
             else  
@@ -238,11 +287,13 @@ contains
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
+
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                
                 do j = 1, numberBinaryCollisions
                     call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
                 end do
@@ -311,8 +362,7 @@ contains
         close(202)
         close(303)
         call system_clock(endTotal)
-        
-        
+               
         ! Write Final Data
         elapsed_time = elapsed_time + real((endTotal - startTotal), kind = real64) / real(timingRate, kind = real64)
         totPotTime = totPotTime + real(potentialTime, kind = real64) / real(timingRate, kind = real64)
@@ -373,11 +423,13 @@ contains
             currentTime = currentTime + del_t
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
+
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
             if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do
@@ -481,10 +533,12 @@ contains
             currentTime = currentTime + del_t
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
+            
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
             end do
