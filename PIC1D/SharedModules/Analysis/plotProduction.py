@@ -10,12 +10,15 @@ from dataSetExplicit import *
 
 
 # ---------------------------- Averages -------------------------------------
-def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--'):
+def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--', shift = False):
     if name == "":
         colors = ['b', 'r', 'g', 'k', 'c', 'm', 'yAve']
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
+            if shift == True:
+                plt.plot(dataSet.gridShift, n,  linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
+            else:
+                plt.plot(dataSet.grid, n,  linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
         plt.xlabel('Distance (m)')
         plt.ylabel('Particle Density (1/m^3)')
         plt.xlim([dataSet.x_min, dataSet.x_max])
@@ -30,14 +33,16 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
             plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([dataSet.x_min, dataSet.x_max])
  
-def plotAvePhi(dataSet, label = ''):
-
+def plotAvePhi(dataSet, label = '', shift = False):
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid, phi, 'o-', label = label)
+    if shift == True:
+        plt.plot(dataSet.gridShift, phi, 'o-', label = label)
+    else:
+        plt.plot(dataSet.grid, phi, 'o-', label = label)
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
     plt.xlim([dataSet.x_min, dataSet.x_max])
-    plt.show()
+    #plt.show()
     
 def maxwellEDVF(x, T):
     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)  

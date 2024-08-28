@@ -99,6 +99,7 @@ contains
                 + SUM(particleList(i)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
         end do
         !$OMP end parallel
+        !self%rho = 1e-10
     end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
@@ -333,6 +334,7 @@ contains
                     particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_prime
                     particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)
                 end if
+
             end do loopParticles
             particleList(j)%N_p(iThread) = N_p - delIdx
             particleList(j)%delIdx(iThread) = delIdx

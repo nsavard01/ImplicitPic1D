@@ -113,10 +113,11 @@ contains
         real(real64), intent(in) :: del_t, simulationTime
         integer(int32), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
-        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3), totMoverTime, totPotTime, totCollTime
+        real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3), totMoverTime, totPotTime, totCollTime, heatingPercent, powerAbsorbed
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
         character(len=8) :: date_char
         character(len=10) :: time_char
+        logical :: atrifitialHeatingBool
         allocate(energyAddColl(numThread))
         CurrentDiagStep = oldDiagStep
         unitPart1 = 100
@@ -203,27 +204,83 @@ contains
             currentTime = currentTime + del_t
             if (currentTime < diagTime) then
                 ! Normal operations
+                ! print*, "pre-move: "
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************"
+
                 call system_clock(startTime)
                 call solver%moveParticles(particleList, world, del_t)
+                ! print*, "post-move: "
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************"
+
                 call solver%depositRho(particleList, world)
                 call system_clock(endTime)
                 moverTime = moverTime + (endTime - startTime)
                 call system_clock(startTime)
                 call solver%solve_tridiag_Poisson(world, currentTime)
                 call solver%makeEField(world)
+                ! print*, "Rho:"
+                ! print*, solver%rho
+                ! print*, "Phi:"
+                ! print*, solver%phi
+                ! print*, "E:"
+                ! print*, solver%EField
+                ! stop
+                    
+                ! print*, "post-solve: "
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************"
+
+                
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
+
+                heatingPercent = 0.0005
+                atrifitialHeatingBool = .false.
+                if (atrifitialHeatingBool) call artificialMaxwellianHeating(particleList, powerAbsorbed, heatingPercent, irand)
+
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+
+                ! print*, "post-reflux: "
+                ! do j = 1,2
+                !     print*, "type: ", particleList(j)%name 
+                !     print*, "number of particles: ", particleList(j)%N_p
+                !     print*, "Deleted: ", particleList(j)%delIdx
+                !     print*, "Reflected: ", particleList(j)%refIdx
+                !     print*, " "
+                ! end do
+                ! print*, "*************************************"
+
                 do j = 1, numberBinaryCollisions
                     call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
                 end do
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
+                !stop
             else  
                 ! Operations with diagnostics
                 print *, "Simulation is", currentTime/simulationTime * 100.0, "percent done"
@@ -238,6 +295,9 @@ contains
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
+
+                if (atrifitialHeatingBool) call artificialMaxwellianHeating(particleList, powerAbsorbed, heatingPercent, irand)
+
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
@@ -343,9 +403,9 @@ contains
         integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, k, iThread, intPartV
         real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss, VHist(2*binNumber, numberChargedParticles), EHist(binNumber, numberChargedParticles), partV, partE
         real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), &
-        E_grid(binNumber, numberChargedParticles), diffE(numberChargedParticles), Emin_log(numberChargedParticles)
+        E_grid(binNumber, numberChargedParticles), diffE(numberChargedParticles), Emin_log(numberChargedParticles), heatingPercent, powerAbsorbed
         real(real64), allocatable :: wallLoss(:)
-
+        logical :: atrifitialHeatingBool
 
         
         
@@ -373,6 +433,12 @@ contains
             currentTime = currentTime + del_t
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
+
+            heatingPercent = 0.005
+            powerAbsorbed = 0
+            atrifitialHeatingBool = .false.
+            if (atrifitialHeatingBool) call artificialMaxwellianHeating(particleList, powerAbsorbed, heatingPercent, irand)
+
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
@@ -481,6 +547,9 @@ contains
             currentTime = currentTime + del_t
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
+
+            if (atrifitialHeatingBool) call artificialMaxwellianHeating(particleList, powerAbsorbed, heatingPercent, irand)
+
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)

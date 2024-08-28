@@ -1,0 +1,13 @@
+32 ! number of processors
+22e-6 0.0d0 ! simulation time
+2.5d16 ! Initial number density (1/m^3) of electrons
+5.0 ! T_e (eV)
+1.0 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+0.033d0 1.0 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+1d-5 ! amount of time to average final Diagnostics
+../../../../EnergyExplicitData/  !Save directory
+2p5e16 !save file name
+no Exp_RF_Benchmark_case2 ! Restart(yes/no) and save directory to take from
+END
+

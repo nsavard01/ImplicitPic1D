@@ -40,6 +40,42 @@ contains
         !$OMP end parallel
     end subroutine addMaxwellianLostParticles
 
+    ! procassini
+    ! subroutine refluxParticles(particleList, T_e, T_i, irand, world)
+    !     !reflux particles at the boundary
+    !     type(Particle), intent(in out) :: particleList(2)
+    !     type(Domain), intent(in) :: world
+    !     integer(int32), intent(in out) :: irand(numThread)
+    !     real(real64), intent(in) :: T_e, T_i
+    !     integer(int32) :: i,j, iThread, irand_thread, N_p
+    !     do j = 1, 2
+    !         !$OMP parallel private(iThread, i, irand_thread, N_p)
+    !         iThread = omp_get_thread_num() + 1
+    !         irand_thread = irand(iThread)
+    !         N_p = particleList(j)%N_p(iThread)
+    !         do i = 1, particleList(j)%refIdx(iThread)
+    !             energyAddColl(iThread) = energyAddColl(iThread) - (SUM(particleList(j)%phaseSpace(2:4, N_p + 1, iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
+    !             if (j == 1) then
+    !                 call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, N_p + 1, iThread), particleList(j)%mass, T_e, irand_thread)
+    !             else
+    !                 call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, N_p + 1, iThread), particleList(j)%mass, T_i, irand_thread)
+    !             end if
+    !             if (world%boundaryConditions(1) == 2) then
+    !                 particleList(j)%phaseSpace(2, N_p + 1, iThread) = ABS(particleList(j)%phaseSpace(2, N_p + 1, iThread))
+    !                 particleList(j)%phaseSpace(1, N_p + 1, iThread) = 1 + ((particleList(j)%phaseSpace(2, N_p + 1, iThread)) * del_t * ran2(irand_thread)) / world%delX
+    !             else
+    !                 particleList(j)%phaseSpace(2, N_p + 1, iThread) = -ABS(particleList(j)%phaseSpace(2, N_p + 1, iThread))
+    !                 particleList(j)%phaseSpace(1, N_p + 1, iThread) = NumberXNodes + ((particleList(j)%phaseSpace(2, N_p + 1, iThread)) * del_t * ran2(irand_thread)) / world%delX
+    !             end if
+    !             energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, N_p + 1, iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
+    !             N_P = N_P + 1
+    !         end do
+    !         irand(iThread) = irand_thread
+    !         particleList(j)%N_p(iThread) = N_p
+    !         !$OMP end parallel
+    !     end do
+    ! end subroutine refluxParticles
+
     subroutine refluxParticles(particleList, T_e, T_i, irand, world)
         !reflux particles at the boundary
         type(Particle), intent(in out) :: particleList(2)
@@ -62,13 +98,46 @@ contains
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
                 else
                     particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread) = -ABS(particleList(j)%phaseSpace(2, particleList(j)%refRecordIdx(i, iThread), iThread))
-                end if
+                end if   
                 energyAddColl(iThread) = energyAddColl(iThread) + (SUM(particleList(j)%phaseSpace(2:4, particleList(j)%refRecordIdx(i, iThread), iThread)**2) * particleList(j)%mass * particleList(j)%w_p) * 0.5d0
             end do
             irand(iThread) = irand_thread
             !$OMP end parallel
         end do
     end subroutine refluxParticles
+
+    ! subroutine refluxParticles(particleList, T_e, T_i, irand, world)
+    !     !reflux particles at the boundary
+    !     type(Particle), intent(in out) :: particleList(2)
+    !     type(Domain), intent(in) :: world
+    !     integer(int32), intent(in out) :: irand(numThread)
+    !     real(real64), intent(in) :: T_e, T_i
+    !     integer(int32) :: i,j, iThread, irand_thread, N_p
+    !     do j = 1, 2
+    !         !$OMP parallel private(iThread, i, irand_thread, N_p)
+    !         iThread = omp_get_thread_num() + 1
+    !         irand_thread = irand(iThread)
+    !         N_p = particleList(j)%N_p(iThread)
+    !         do i = 1, particleList(j)%refIdx(iThread)
+    !             if( j == 1) then
+    !                 call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, N_p + 1, iThread), particleList(1)%mass, T_e, irand_thread)
+    !             else    
+    !                 call getMaxwellianFluxSample(particleList(j)%phaseSpace(2:4, N_p + 1, iThread), particleList(2)%mass, T_i, irand_thread)
+    !             end if
+    !             if (world%boundaryConditions(1) == 5) then
+    !                 particleList(j)%phaseSpace(2, N_p + 1, iThread) = ABS(particleList(j)%phaseSpace(2, N_p + 1, iThread))
+    !                 particleList(j)%phaseSpace(1, N_p + 1, iThread) = 1.0d0
+    !             else
+    !                 particleList(j)%phaseSpace(2, N_p + 1, iThread) = -ABS(particleList(j)%phaseSpace(2, N_p + 1, iThread))
+    !                 particleList(j)%phaseSpace(1, N_p + 1, iThread) = real(NumberXNodes)
+    !             end if
+    !         N_p = N_p + 1
+    !         end do
+    !         irand(iThread) = irand_thread
+    !         particleList(j)%N_p(iThread) = N_p
+    !         !$OMP end parallel
+    !     end do
+    ! end subroutine refluxParticles
 
     subroutine injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
         ! inject particles at boundary at ion sound speed
@@ -178,6 +247,51 @@ contains
         end do
         !$OMP end parallel
     end subroutine maxwellianHeating
+
+    subroutine artificialMaxwellianHeating(particleList, powerAbsorbed, heatingFrequency, irand, regionStart, regionEnd)
+        type(Particle), intent(in out) :: particleList(2)
+        integer(int32), intent(in out) :: irand(numThread)
+        integer(int32), intent(in), optional :: regionStart, regionEnd
+        real(real64), intent(in) :: powerAbsorbed, heatingFrequency
+        real(real64) :: heatingTemperature, aveEnergy
+        integer(int32) :: i, iThread, random, eInArea, start, end
+        
+        if(present(regionStart)) then
+            start = regionStart
+        else
+            start = 1
+        end if
+
+        if(present(regionEnd)) then
+            end = regionEnd
+        else
+            end = NumberXNodes
+        end if
+
+        aveEnergy = 0
+        eInArea = 0
+        !$OMP parallel private(i, iThread) REDUCTION(+:aveEnergy, eInArea)
+            iThread = omp_get_thread_num() + 1
+            do i=1,particleList(1)%N_p(iThread)
+                if(i >= start .and. i <= end) then
+                    aveEnergy = aveEnergy + (0.5 * SUM(particleList(1)%phaseSpace(2:4,i,iThread)**2) * particleList(1)%mass)
+                    eInArea = eInArea + 1
+                end if
+            end do
+        !$OMP end parallel
+        heatingTemperature = (2.0d0/3.0d0) * (aveEnergy + powerAbsorbed/heatingFrequency) / (eInArea * e)
+
+        !$OMP parallel private(i, iThread, random)
+            iThread = omp_get_thread_num() + 1
+            random = irand(iThread)
+            do i=1,particleList(1)%N_p(iThread)
+                if(i >= start .and. i <= end .and. ran2(random) <= heatingFrequency) then
+                   call get3DMaxwellianVelocity(particleList(1)%phaseSpace(2:4,i,iThread),particleList(1)%mass,heatingTemperature,random)
+                end if
+            end do
+        !$OMP end parallel
+        irand(iThread) = random
+    end subroutine artificialMaxwellianHeating
 
 
     ! -------------------- read inputs artificial collisions/particle injection ------------------------------------

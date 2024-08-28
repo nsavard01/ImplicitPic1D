@@ -1,0 +1,12 @@
+32 ! number of threads
+0.0003775811209439528d0 0.0d0 ! simulation time
+5.12d14 ! Initial number density (1/m^3) of particles
+2.59d0 ! T_e (eV)
+0.025d0 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+1.0d0 4.609144542772861d-11 ! Fraction of initial 1/w_p for initial time step
+7.374631268436579e-06 ! amount of time to average final Diagnostics
+../../../../ExplicitData/  !Save directory
+RF_Benchmark_case3 !filename
+no NGP_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
+END

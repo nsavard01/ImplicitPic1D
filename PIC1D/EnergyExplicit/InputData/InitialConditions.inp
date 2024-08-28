@@ -1,12 +1,13 @@
-32 ! number of threads
-0.0003775811209439528d0 0.0d0 ! simulation time
-5.12d14 ! Initial number density (1/m^3) of particles
-2.59d0 ! T_e (eV)
-0.025d0 ! T_i (eV)
+32 ! number of processors
+1.5e-4 0.0d0 ! simulation time
+1.6d18 ! Initial number density (1/m^3) of electrons
+4.0 ! T_e (eV)
+0.025 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-1.0d0 4.609144542772861d-11 ! Fraction of initial 1/w_p for initial time step
-7.374631268436579e-06 ! amount of time to average final Diagnostics
+10.0d0 3.125d-12  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+1.4d-5 ! amount of time to average final Diagnostics
 ../../../../EnergyExplicitData/  !Save directory
-RF_Benchmark_case3 !filename
-no NGP_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
+EE_RFBenchmark_highDensity_EvenMoreResolved_2 !save file name
+no Exp_RF_Benchmark_case2 ! Restart(yes/no) and save directory to take from
 END
+

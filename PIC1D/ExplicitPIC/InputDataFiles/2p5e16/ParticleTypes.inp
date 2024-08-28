@@ -1,0 +1,15 @@
+ELECTRONS
+name	 NumParticles/thread   ArraySizeMultiplication  alpha  distType  v_drift
+-------------------------------------------
+e	  3808	 2  0.0  0  0.0
+-------------------------------------------
+
+
+IONS
+name   massAtom(AMU)  charge 	NumParticles/thread   ArraySizeMultiplication  alpha  distType  v_drift
+--------------------------------------------------
+H+     1.00784      1. 		3808   2  0.0  0  0.0d0
+--------------------------------------------------
+
+
+ENDFILE

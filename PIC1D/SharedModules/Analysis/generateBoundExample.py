@@ -230,7 +230,7 @@ def compareRefToDatasAbsRes(dataList, labelList, ref):
     
     ax4.set_ylabel(r'Total Wall Time for Solver (s)', fontsize = 12)
     
-def compareModelToDatas(dataList, labelList, model, saveFile):
+def compareModelToDatas(dataList, labelList, model, shiftList, saveFile):
     if (len(dataList) != len(labelList)):
         raise Warning("List of data and labels not the same size!")
         
@@ -248,15 +248,24 @@ def compareModelToDatas(dataList, labelList, model, saveFile):
     factor = int(math.log10(n_ave))
     for i in range(len(dataList)):
         data = dataList[i]
+        if shiftList[i]:
+            n_e = data.getAveDensity('e')
+            ax1.plot(data.gridShift, n_e/(10**factor), linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
         
-        n_e = data.getAveDensity('e')
-        ax1.plot(data.grid, n_e/(10**factor), linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
+            n_i = data.getAveDensity(ion)
+            ax2.plot(data.gridShift, n_i/(10**factor), linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
         
-        n_i = data.getAveDensity(ion)
-        ax2.plot(data.grid, n_i/(10**factor), linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
+            phi = data.getAvePhi()[0:-1]
+            ax3.plot(data.gridShift, phi, linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
+        else:
+            n_e = data.getAveDensity('e')
+            ax1.plot(data.grid, n_e/(10**factor), linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
         
-        phi = data.getAvePhi()
-        ax3.plot(data.grid, phi, linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
+            n_i = data.getAveDensity(ion)
+            ax2.plot(data.grid, n_i/(10**factor), linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
+        
+            phi = data.getAvePhi()
+            ax3.plot(data.grid, phi, linestyle = '--', linewidth = 2, marker = '.',label = labelList[i])
      
     
     ax1.plot(model[0, :], model[2, :]/(10**factor), linewidth = 2, label = 'Model')
@@ -284,7 +293,7 @@ def compareModelToDatas(dataList, labelList, model, saveFile):
     # fig2.savefig(saveFile + '_ionDensity.pdf', bbox_inches = 'tight')
     # fig3.savefig(saveFile + '_voltage.pdf', bbox_inches = 'tight')
     
-def compareModelToData(data, model):
+def compareModelToData(data, model, shift = False):
     for name in data.particles.keys():
         if name != 'e':
             ion = name
@@ -293,33 +302,43 @@ def compareModelToData(data, model):
     M = data.particles[ion]['mass']
     plt.figure()
     n_e = data.getAveDensity('e')
-    plt.plot(data.grid, n_e, 'o', label = 'PIC')
+    if shift:
+        plt.plot(data.gridShift, n_e, 'o', label = 'PIC')
+    else:
+        plt.plot(data.grid, n_e, 'o', label = 'PIC')
     plt.plot(model[0, :], model[2, :], label = 'Model')
     plt.ylabel(r'$n_e$ (m$^-3$)')
     plt.legend(loc = 'best')
-    modelN_e = np.interp(data.grid[1:-1], model[0,:], model[2,:])
-    res = np.sum(abs((modelN_e - n_e[1:-1])/modelN_e)/(data.Nx - 2))
-    print('Percent diff. root mean square in n_e is:', 100*res)
+    #modelN_e = np.interp(data.grid[1:-1], model[0,:], model[2,:])
+    #res = np.sum(abs((modelN_e - n_e[1:-1])/modelN_e)/(data.Nx - 2))
+    #print('Percent diff. root mean square in n_e is:', 100*res)
     
     plt.figure()
     n_i = data.getAveDensity(ion)
-    plt.plot(data.grid, n_i, 'o',  label = 'PIC')
+    if shift:
+        plt.plot(data.gridShift, n_i, 'o', label = 'PIC')
+    else:
+        plt.plot(data.grid, n_i, 'o',  label = 'PIC')
     plt.plot(model[0, :], model[3, :], label = 'Model')
     plt.ylabel(r'$n_i$ (m$^-3$)')
     plt.legend(loc = 'best')
-    modelN_i = np.interp(data.grid[1:-1], model[0,:], model[3,:])
-    res = np.sum(abs((modelN_i - n_i[1:-1])/modelN_i))/(data.Nx - 2)
-    print('Percent diff. root mean square in n_i is:', 100*res)
+    #modelN_i = np.interp(data.grid[1:-1], model[0,:], model[3,:])
+    #res = np.sum(abs((modelN_i - n_i[1:-1])/modelN_i))/(data.Nx - 2)
+    #print('Percent diff. root mean square in n_i is:', 100*res)
     
     plt.figure()
     phi = data.getAvePhi()
-    plt.plot(data.grid, phi, 'o', label = 'PIC')
+    if shift:
+        phi = phi[0:-1]
+        plt.plot(data.gridShift, phi, 'o', label = 'PIC')
+    else:
+        plt.plot(data.grid, phi, 'o', label = 'PIC')
     plt.plot(model[0, :], model[1, :], label = 'Model')
     plt.ylabel(r'Voltage (V)')
     plt.legend(loc = 'best')
-    modelPhi = np.interp(data.grid[1:-1], model[0,:], model[1,:])
-    res = np.sum(abs((modelPhi - phi[1:-1])/modelPhi)/(data.Nx - 2))
-    print('Percent diff. root mean square in phi is:', 100 * res)
+    #modelPhi = np.interp(data.grid[1:-1], model[0,:], model[1,:])
+    #res = np.sum(abs((modelPhi - phi[1:-1])/modelPhi)/(data.Nx - 2))
+    #print('Percent diff. root mean square in phi is:', 100 * res)
         
 def compareModelToDatasRes(dataList, labelList, model):
     if (len(dataList) != len(labelList)):

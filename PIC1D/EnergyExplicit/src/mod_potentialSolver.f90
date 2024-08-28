@@ -101,67 +101,6 @@ contains
         !$OMP end parallel
     end subroutine depositRho
 
-    ! subroutine depositRho(self, particleList, world) 
-    !     ! calculate rho from particle locations
-    !     class(potentialSolver), intent(in out) :: self
-    !     type(Domain), intent(in) :: world
-    !     type(Particle), intent(in out) :: particleList(:)
-    !     integer(int32) :: i, j, cell, iThread, leftThreadIndx, rightThreadIndx
-    !     real(real64) :: delD, partLoc, delBoundary
-    !     self % rho = self%rho_const
-    !     !$OMP parallel private(iThread, j, i, cell, partLoc, leftThreadIndx, rightThreadIndx, delBoundary, delD)
-    !     iThread = omp_get_thread_num() + 1
-    !     do i=1, numberChargedParticles
-    !         particleList(i)%workSpace(:, iThread) = 0.0d0   
-    !         do j = 1, particleList(i)%N_p(iThread)
-    !             partLoc = particleList(i)%phaseSpace(1, j, iThread)
-    !             cell = INT(partLoc)
-    !             delD = partLoc - real(cell)
-    !             if (delD >= 0.5) then
-    !                 if(cell == NumberXHalfNodes) then
-    !                     SELECT CASE (world%boundaryConditions(NumberXNodes))
-    !                     CASE(1,4)
-    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (1.5d0 - delD) - (delD - 0.5d0)
-    !                     CASE(2)
-    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (1.5d0 - delD) + (delD - 0.5d0)
-    !                     CASE(3)
-    !                         particleList(i)%workSpace(1 , iThread)    = particleList(i)%workSpace(1, iThread)    + (delD - 0.5d0)
-    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (1.5d0 - delD)
-    !                     END SELECT
-    !                 else
-    !                     particleList(i)%workSpace(cell + 1 , iThread) = particleList(i)%workSpace(cell + 1 ,iThread) + (delD - 0.5d0)
-    !                     particleList(i)%workSpace(cell , iThread)     = particleList(i)%workSpace(cell, iThread)     + (1.5d0 - delD)
-    !                 end if
-                    
-    !             else 
-    !                 if(cell == 1) then
-    !                     SELECT CASE (world%boundaryConditions(1))
-    !                     CASE(1,4)
-    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (0.5d0 + delD) - (0.5d0 - delD)
-    !                     CASE(2)
-    !                         particleList(i)%workSpace(cell , iThread) = particleList(i)%workSpace(cell, iThread) + (0.5d0 + delD) + (0.5d0 - delD)
-    !                     CASE(3)
-    !                         particleList(i)%workSpace(NumberXNodes , iThread) = particleList(i)%workSpace(cell, iThread)     + (0.5d0 - delD)
-    !                         particleList(i)%workSpace(cell , iThread)     = particleList(i)%workSpace(cell + 1, iThread) + (0.5d0 + delD)
-    !                     END SELECT
-    !                 else
-    !                     particleList(i)%workSpace(cell - 1 , iThread) = particleList(i)%workSpace(cell - 1, iThread) + (0.5d0 - delD)
-    !                     particleList(i)%workSpace(cell , iThread)     = particleList(i)%workSpace(cell, iThread)     + (0.5d0 + delD)
-    !                 end if
-    !             end if
-    !         end do        
-    !     end do
-    !     !$OMP barrier
-    !     leftThreadIndx = world%threadNodeIndx(1,iThread)
-    !     rightThreadIndx = world%threadNodeIndx(2,iThread)
-    !     self%rho(leftThreadIndx:rightThreadIndx) = SUM(particleList(1)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(1)%q_times_wp
-    !     do i = 2, numberChargedParticles
-    !         self%rho(leftThreadIndx:rightThreadIndx) = self%rho(leftThreadIndx:rightThreadIndx) &
-    !             + SUM(particleList(i)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
-    !     end do
-    !     !$OMP end parallel
-    ! end subroutine depositRho
-
     subroutine construct_diagMatrix(self, world)
         ! construct tridiagonal components of matrix for thomas algorithm
         class(potentialSolver), intent(in out) :: self

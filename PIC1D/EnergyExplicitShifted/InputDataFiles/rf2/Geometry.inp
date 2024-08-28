@@ -1,0 +1,7 @@
+257 ! minimum number of grid nodes
+0.067d0 ! Domain length in meters, 0.0002572099123144409d0 for two stream
+1 4 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 = RF-Dirichlet)
+0. 200. ! Voltage for left and right side boundary, used for dirichlet and periodic conditions. For RF-Dirichlet, voltage is half amplitude
+10000.0d0 ! fraction of debye length, take if minimum
+13.56d6 ! Osciallating voltage frequency
+END

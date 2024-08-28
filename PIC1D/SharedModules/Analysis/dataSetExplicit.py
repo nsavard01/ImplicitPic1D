@@ -66,9 +66,12 @@ class dataSetExplicit:
             self.rightBoundary = 'Periodic'
         elif (boundConditions[-1] == 4):
             self.rightBoundary = 'RF-Dirichlet'
+        elif (boundConditions[-1] == 5):
+            self.rightBoundary = 'BC5'
         else:
             raise Warning("Right boundary not defined!")
         self.grid = np.fromfile(self.path + 'domainGrid.dat', offset = 4)
+        self.gridShift = self.grid[0:-1] + 0.5*self.delX
         self.x_min = self.grid[0]
         self.x_max = self.grid[-1]
         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
