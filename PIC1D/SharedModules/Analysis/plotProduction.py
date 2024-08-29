@@ -30,10 +30,10 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
             plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([dataSet.x_min, dataSet.x_max])
  
-def plotAvePhi(dataSet, label = ''):
+def plotAvePhi(dataSet, label = '', marker = 'o', linestyle = '--'):
 
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid, phi, 'o-', label = label)
+    plt.plot(dataSet.grid, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
     plt.xlim([dataSet.x_min, dataSet.x_max])
@@ -42,12 +42,12 @@ def plotAvePhi(dataSet, label = ''):
 def maxwellEDVF(x, T):
     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)  
     
-def plotAveVDF(dataSet, name, CurveFit = False, label = ''):
+def plotAveVDF(dataSet, name, CurveFit = False, marker = '', linestyle = '--', label = ''):
     VHist, Vedge = dataSet.getAveVDF(name)
     dv = Vedge[1] - Vedge[0]
     Norm = np.sum(VHist[1:-1] * dv) + 0.5 * (VHist[0] + VHist[-1]) * dv
     VHist = VHist/Norm
-    plt.plot(Vedge, VHist, 'o-', label=label)
+    plt.plot(Vedge, VHist, marker = marker, linestyle = linestyle, linewidth = 2, label=label)
     plt.ylabel('VDF (s/m)')
     plt.xlabel('Velocity (m/s)')
     if CurveFit:
@@ -77,6 +77,49 @@ def plotAveEDF(dataSet, name, CurveFit = False, label = ''):
         plt.xlabel('Particle Energy (eV)')
 
 
+def plotAveEPF(dataSet, name, label = '', marker = 'o', linestyle = '--'):
+    EHist, Ebin = dataSet.getAveEDF(name)
+    EHist = EHist/Ebin
+    Norm = np.trapz(EHist, Ebin)
+    EHist = EHist/Norm
+
+    plt.plot(Ebin, EHist/np.sqrt(Ebin), linestyle = linestyle, marker = marker, markersize = 2, label=label)
+    plt.ylabel(r'EPDF eV$^{-3/2}$')
+    plt.xlabel('Particle Energy (eV)')
+
+def getAveDensityFiles(dataName, name = 'e', diagNumber = 0):
+    # Given name of file which will have _1, _2, etc appended
+    if ('Explicit' in dataName):
+        data = dataSetExplicit(dataName + '/')
+    else:
+        data = dataSet(dataName + '/')
+    density = data.getDensity(name, diagNumber)
+    fileList = glob.glob(dataName + '_[0-9]')
+    number = len(fileList)
+    for filename in fileList:
+        if ('Explicit' in dataName):
+            data = dataSetExplicit(filename + '/')
+        else:
+            data = dataSet(filename + '/')
+        density = density + data.getDensity(name, diagNumber)
+    print('Finished averaging for', dataName)
+    print('Contained', number+1, 'files')
+    return density/(number+1)
+
+def plotAveDensityVsRef(refData, dataList, name, labelList = [''], marker = 'o', linestyle = '--'):
+    #Plotting average density vs a reference density
+    refDensity = refData.getAveDensity(name)
+    refGrid = refData.grid
+    for indx,data in enumerate(dataList):
+        density = data.getAveDensity(name)
+        interpDensity = np.interp(data.grid, refGrid, refDensity)
+        relDensity = (density - interpDensity)
+        if (labelList[0] == ''):
+            labelStr = ''
+        else:
+            labelStr = labelList[indx]
+        plt.plot(data.grid, relDensity, linestyle=linestyle, marker=marker, markersize=2,
+             label= labelStr)
     
 #-------------------------- Time Dependent ---------------------
     
