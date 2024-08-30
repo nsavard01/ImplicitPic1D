@@ -82,6 +82,9 @@ contains
             rightThreadIndx = world%threadNodeIndx(2,iThread)
             densities(leftThreadIndx:rightThreadIndx) = SUM(particleList(i)%densities(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%w_p
             !$OMP end parallel
+            if(world%gridSmoothBool) then
+                call world%smoothDensities(densities)
+            end if
             densities = densities/world%delX
             if (world%boundaryConditions(1) == 3) then
                 densities(1) = (densities(1) + densities(NumberXNodes))

@@ -15,6 +15,7 @@ module mod_domain
         real(real64) :: delX, L_domain, startX, endX ! Physical end points, cell size, domain size
         integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:) ! Boundary condition flags for fields and particles
         integer(int32) :: numThreadNodeIndx
+        logical :: gridSmoothBool
         ! (>0 dirichlet, -2 Neumann, -3 periodic, <=-4 dielectric), 0 is default in-body condition 
 
     contains
@@ -25,7 +26,9 @@ module mod_domain
         procedure, public, pass(self) :: constructExpHalfGrid
         procedure, public, pass(self) :: constructHalfEvenHalfSinusoid
 
-
+        procedure, public, pass(self) :: smoothDensities
+        procedure, public, pass(self) :: smoothField
+        procedure, public, pass(self) :: smoothRho
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: writeDomain
         procedure, public, pass(self) :: getLFromX
@@ -51,6 +54,7 @@ contains
         self % boundaryConditions = 0
         self%boundaryConditions(1) = leftBoundary
         self%boundaryConditions(NumberXNodes) = rightBoundary
+        self%gridSmoothBool = .true.
         if (numThread < NumberXNodes) then
             self%numThreadNodeIndx = numThread
         else
@@ -192,6 +196,88 @@ contains
         end do
     end subroutine constructHalfEvenHalfSinusoid
 
+
+
+    subroutine smoothDensities(self, densities)
+        ! Smooth Rho on grid with quadratic smoothing
+        class(Domain), intent(in) :: self
+        real(real64), intent(in out) :: densities(NumberXHalfNodes)
+        real(real64) :: work(NumberXNodes)
+
+        work(2:NumberXHalfNodes) = 0.25d0 * (densities(1:NumberXHalfNodes-1) + 2.0d0 * densities(2:NumberXHalfNodes) + densities(3:NumberXNodes))
+        SELECT CASE(self%boundaryConditions(1))
+            CASE(1,2,4)
+                work(1) = 0.25d0 * (2.0d0 * densities(1) + densities(2))
+                work(2) = work(2) + 0.25d0 * densities(1)
+            CASE(3)
+                work(1) = 0.25d0 * (densities(NumberXHalfNodes) + 2.0d0 * densities(1) + densities(2))
+        END SELECT
+
+        SELECT CASE(self%boundaryConditions(NumberXNodes))
+            CASE(1,2,4)
+                work(NumberXNodes) = 0.25d0 * (2.0d0 * densities(NumberXNodes) + densities(NumberXHalfNodes))
+                work(NumberXHalfNodes) = work(NumberXHalfNodes) + 0.25d0 * densities(NumberXNodes)
+            CASE(3)
+                work(NumberXNodes) = 0.25d0 * (densities(NumberXHalfNodes) + 2.0d0 * densities(1) + densities(2))
+        END SELECT
+        densities = work
+    end subroutine smoothDensities    
+
+    subroutine smoothRho(self, Rho)
+        ! Smooth Rho on grid with quadratic smoothing
+        class(Domain), intent(in) :: self
+        real(real64), intent(in out) :: Rho(NumberXHalfNodes)
+        real(real64) :: work(NumberXNodes)   
+    
+        work(2:NumberXHalfNodes) = 0.25d0 * (Rho(1:NumberXHalfNodes-1) + 2.0d0 * Rho(2:NumberXHalfNodes) + Rho(3:NumberXHalfNodes+1))
+        
+        SELECT CASE(self%boundaryConditions(1))
+            CASE(1,4)
+                work(1) = 0.0d0
+            CASE(2)
+                work(1) = 0.25d0 * (2.0d0 * Rho(1) + 2.0d0 * Rho(2))
+            CASE(3)
+                work(1) = 0.25d0 * (Rho(NumberXHalfNodes) + 2.0d0 * Rho(1) + Rho(2))
+        END SELECT
+
+        SELECT CASE(self%boundaryConditions(NumberXNodes))
+            CASE(1,4)
+                work(NumberXNodes) = 0.0d0
+            CASE(2)
+                work(NumberXNodes) = 0.25d0 * (2.0d0 * Rho(NumberXNodes) + 2.0d0 * Rho(NumberXHalfNodes))
+            CASE(3)
+                work(NumberXNodes) = 0.25d0 * (Rho(NumberXHalfNodes) + 2.0d0 * Rho(NumberXNodes) + Rho(2))
+        END SELECT
+    end subroutine smoothRho
+
+
+    subroutine smoothField(self, rawField, newField)
+        ! Smooth fields on grid with quadratic smoothing
+        class(Domain), intent(in) :: self
+        real(real64), intent(in) :: rawField(NumberXHalfNodes)
+        real(real64), intent(in out) :: newField(NumberXHalfNodes)
+
+        newField(2:NumberXHalfNodes-1) = 0.25d0 * (rawField(1:NumberXHalfNodes-2) + 2.0d0 * rawField(2:NumberXHalfNodes-1) + rawField(3:NumberXHalfNodes))
+        
+        SELECT CASE(self%boundaryConditions(1))
+            CASE(1,4)
+                newField(1) = 0.25d0 * (3.0d0 * rawField(1) + rawField(2))
+            CASE(2)
+                newField(1) = 0.25d0 * (rawField(1) + rawField(2))
+            CASE(3)
+                newField(1) = 0.25d0 * (rawField(NumberXHalfNodes) + 2.0d0 * rawField(1) + rawField(2))
+        END SELECT
+
+        SELECT CASE(self%boundaryConditions(NumberXNodes))
+            CASE(1,4)
+                newField(NumberXHalfNodes) = 0.25d0 * (3.0d0 * rawField(NumberXHalfNodes) + rawField(NumberXHalfNodes-1))
+            CASE(2)
+                newField(NumberXHalfNodes) = 0.25d0 * (rawField(NumberXHalfNodes) + rawField(NumberXHalfNodes-1))
+            CASE(3)
+                newField(NumberXHalfNodes) = 0.25d0 * (rawField(NumberXHalfNodes-1) + 2.0d0 * rawField(NumberXHalfNodes) + rawField(1))
+        END SELECT
+
+    end subroutine smoothField
 
     subroutine constructGrid(self, L_domain)
         ! Make grid

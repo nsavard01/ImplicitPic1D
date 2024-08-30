@@ -99,6 +99,10 @@ contains
                 + SUM(particleList(i)%workSpace(leftThreadIndx:rightThreadIndx, :), DIM=2) * particleList(i)%q_times_wp
         end do
         !$OMP end parallel
+
+        if(world%gridSmoothBool) then
+            call world%smoothRho(self%rho)
+        end if
     end subroutine depositRho
 
     subroutine construct_diagMatrix(self, world)
@@ -207,7 +211,14 @@ contains
         ! Generate EField at nodes
         class(potentialSolver), intent(in out) :: self
         type(Domain), intent(in) :: world
-        self%EField(1:NumberXHalfNodes) =  (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes))/world%delX
+        real(real64) :: work(NumberXHalfNodes)
+        work(1:NumberXHalfNodes) =  (self%phi(1:NumberXHalfNodes) - self%phi(2:NumberXNodes))
+        if(world%gridSmoothBool) then
+            call world%smoothField(work,self%EField)
+            self%EField = self%EField/world%delX
+        else
+            self%EField = work/world%delX
+        end if
     end subroutine makeEField
 
     pure function getEField(self, l_p) result(res)
