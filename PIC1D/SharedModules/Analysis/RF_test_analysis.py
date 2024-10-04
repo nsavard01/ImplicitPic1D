@@ -128,7 +128,9 @@ NGP_RFBenchmark_highDensity_fourthPart_257nodes_10xtime_halfEvenHalfSin = dataSe
 # NGP_RFBenchmark_highDensity_halfPart_513nodes_10xtime_restart = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_513nodes_10xtime_restart/')
 NGP_RFBenchmark_highDensity_halfPart_257nodes_10xtime_halfEvenHalfSin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_257nodes_10xtime_halfEvenHalfSin/')
 # NGP_RFBenchmark_highDensity_halfPart_2001_10xtime_even = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_2001_10xtime_even/')
-#
+NGP_RF_Benchmark_case4_201nodes_halfSinHalfEven = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case4_201nodes_halfSinHalfEven/')
+NGP_RF_Benchmark_case4_201nodes_halfSinHalfEven_NoSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case4_201nodes_halfSinHalfEven_NoSmooth/')
+NGP_RFBenchmark_highDensity_halfPart_257nodes_halfEvenHalfSin_NoSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_highDensity_halfPart_257nodes_halfEvenHalfSin_NoSmooth/')
 
 CIC_RF_Benchmark_case1 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1/')
 CIC_RF_Benchmark_case2 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case2/')
@@ -149,6 +151,8 @@ CIC_RFBenchmark_highDensity_fourthPart_1000nodes = dataSet('Y:/scratch/nsavard/I
 CIC_RFBenchmark_highDensity_halfPart_1000nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_halfPart_1000nodes/')
 CIC_RFBenchmark_highDensity_threeQuartPart_1000nodes = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_threeQuartPart_1001nodes/')
 CIC_RFBenchmark_highDensity_halfPart_256nodes_halfEvenHalfSin = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_halfPart_256nodes_halfEvenHalfSin/')
+CIC_RFBenchmark_highDensity_halfPart_256nodes_halfEvenHalfSin_NoSmooth = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_halfPart_256nodes_halfEvenHalfSin_NoSmooth/')
+
 
 CIC_RFBenchmark_highDensity_quarterPart_1000nodes_epsNeg5 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_quarterPart_1000nodes_epsNeg5/')
 CIC_RFBenchmark_highDensity_eighthPart_1000nodes_epsNeg5 = dataSet('Y:/scratch/nsavard/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_highDensity_eighthPart_1000nodes_epsNeg5/')
@@ -311,6 +315,7 @@ plt.close()
 
 plt.figure()
 plotAvePhi(Exp_RFBenchmark_highDensity_EvenMoreResolved_2, label = 'Exp. #3')
+plotAvePhi(CIC_RFBenchmark_highDensity_threeQuartPart_1000nodes, label = 'ICIC #3')
 plotAvePhi(CIC_RFBenchmark_highDensity_halfPart_256nodes_halfEvenHalfSin, label = 'ICIC #4')
 plotAvePhi(CIC_RFBenchmark_highDensity_200nodes_320PPC, label = 'ICIC #6')
 plt.xlim(Exp_RFBenchmark_case1.grid[0], Exp_RFBenchmark_case1.grid[-1])
@@ -325,18 +330,19 @@ plt.savefig('HighDensityRF/Phi_comp.pdf')
 plt.close()
 
 plt.figure()
-plotAveVDF(Exp_RFBenchmark_highDensity_EvenMoreResolved_2, 'e', label = 'Exp. #3')
-plotAveVDF(CIC_RFBenchmark_highDensity_halfPart_256nodes_halfEvenHalfSin, 'e', label = 'ICIC #4')
-plotAveVDF(CIC_RFBenchmark_highDensity_200nodes_320PPC, 'e', label = 'ICIC #6')
+plotAveEPF(Exp_RFBenchmark_highDensity_EvenMoreResolved_2, 'e', label = 'Exp. #3')
+plotAveEPF(CIC_RFBenchmark_highDensity_threeQuartPart_1000nodes, 'e', label = 'ICIC #3')
+plotAveEPF(CIC_RFBenchmark_highDensity_halfPart_256nodes_halfEvenHalfSin, 'e', label = 'ICIC #4')
+plotAveEPF(CIC_RFBenchmark_highDensity_200nodes_320PPC, 'e', label = 'ICIC #6')
 plt.ylim(0,None)
-plt.xlim(-5e6, 5e6)
-plt.xlabel('Velocity', fontsize = 14)
-plt.ylabel(r'Electron VDF (s/m)', fontsize = 14)
+plt.xlim(0.1,150)
+plt.xlabel('Energy (eV)', fontsize = 14)
+plt.ylabel(r'EPDF (eV$^{-3/2}$)', fontsize = 14)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 plt.legend(loc = 'best', fontsize = 12)
 plt.tight_layout()
-plt.savefig('HighDensityRF/VDF_comp.pdf')
+plt.savefig('HighDensityRF/EPF_comp.pdf')
 plt.close()
 
 dataList = [CIC_RFBenchmark_highDensity_fourthPart_1000nodes, \
@@ -346,10 +352,10 @@ dataList = [CIC_RFBenchmark_highDensity_fourthPart_1000nodes, \
 labelList = ['ICIC #1', 'ICIC #2', 'ICIC #3', 'ICIC #4']
 
 plt.figure()
-plotAveDensityVsRef(Exp_RFBenchmark_highDensity_SuperResolved, dataList, 'He+', labelList = labelList, marker = 'o', linestyle = '--')
+plotAveDensityVsRef_percent(Exp_RFBenchmark_highDensity_SuperResolved, dataList, 'He+', labelList = labelList, marker = 'o', linestyle = '--')
 plt.xlim(Exp_RFBenchmark_case1.grid[0], Exp_RFBenchmark_case1.grid[-1])
 plt.xlabel('Distance (m)', fontsize = 14)
-plt.ylabel(r'$\Delta n_{He+}$ (m$^{-3}$)', fontsize = 14)
+plt.ylabel(r'$\Delta n_{He+} / n_{He+}$', fontsize = 14)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 plt.legend(loc = 'best', fontsize = 12)
@@ -364,10 +370,10 @@ dataList = [Exp_RFBenchmark_highDensity_lowRes, \
 labelList = ['Exp #1', 'ICIC #5', 'ICIC #6']
 
 plt.figure()
-plotAveDensityVsRef(Exp_RFBenchmark_highDensity_SuperResolved, dataList, 'He+', labelList = labelList, marker = 'o', linestyle = '--')
+plotAveDensityVsRef_percent(Exp_RFBenchmark_highDensity_SuperResolved, dataList, 'He+', labelList = labelList, marker = 'o', linestyle = '--')
 plt.xlim(Exp_RFBenchmark_case1.grid[0], Exp_RFBenchmark_case1.grid[-1])
 plt.xlabel('Distance (m)', fontsize = 14)
-plt.ylabel(r'$\Delta n_{He+}$ (m$^{-3}$)', fontsize = 14)
+plt.ylabel(r'$\Delta n_{He+} / n_{He+}$', fontsize = 14)
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 plt.legend(loc = 'best', fontsize = 12)

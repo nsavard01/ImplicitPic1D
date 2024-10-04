@@ -42,6 +42,7 @@ def gyroradius(voltage, mass, charge, B): #voltage in V
     v = beta*c
     R = gamma*mass*v/(charge*B)
     return R
+
 def crossSectionCoulomb(T_e, n_e):
     b_0 = e / (4 * np.pi * eps_0) / T_e
     omega = 2 * debye_length(T_e, n_e)/b_0
