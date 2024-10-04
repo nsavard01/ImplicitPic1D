@@ -1,13 +1,12 @@
-32 ! number of processors
-1.5e-4 0.0d0 ! simulation time
-1.6d18 ! Initial number density (1/m^3) of electrons
-4.0 ! T_e (eV)
-0.025 ! T_i (eV)
+4 ! number of processors
+5.317772131794625e-06 0.0d0 ! simulation time
+1.d14 ! Initial number density (1/m^3) of electrons
+1.0d0 ! Initial electron Temperature (eV) 
+0.01d0 ! Initial ion Temperature (eV)
 20 ! number of diagnostic data dumps    
-10.0d0 1.25d-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-1.4d-5 ! amount of time to average final Diagnostics
+0.2d0 1.0d0 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+5.317772131794625e-08 ! amount of time to average final Diagnostics
 ../../../../ExplicitData/  !Save directory
-Exp_RFBenchmark_highDensity_lowerRes !save file name
-no Exp_RF_Benchmark_case2 ! Restart(yes/no) and save directory to take from
+Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT !save file name
+no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
 END
-

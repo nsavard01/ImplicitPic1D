@@ -339,16 +339,17 @@ contains
         do i =1, NumberXNodes
             SELECT CASE (world%boundaryConditions(i))
             CASE(0)
-                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1) + (self%phi(i+1) - self%phi(i))/world%dx_dl(i)
+                d(i) = (self%J(i) - self%J(i-1)) * del_t / eps_0
             CASE(1,3,4)
-                d(i) = self%phi_f(i)
+                d(i) = 0.0d0
             CASE(2)
                 if (i == 1) then
-                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0 - (self%phi(i) - self%phi(i+1))/world%dx_dl(i))
+                    d(i) = 2.0d0 * (del_t * self%J(i)/eps_0)
                 else if (i == NumberXNodes) then
-                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0 - (self%phi(i) - self%phi(i-1))/world%dx_dl(i-1))
+                    d(i) = 2.0d0 * (-del_t * self%J(i-1)/eps_0)
                 end if
             END SELECT
+            d(i) = d(i) + self%rho(i)
         end do
         res = Ax- d
 

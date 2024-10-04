@@ -30,10 +30,10 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
             plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([dataSet.x_min, dataSet.x_max])
  
-def plotAvePhi(dataSet, label = ''):
+def plotAvePhi(dataSet, label = '', marker = 'o', linestyle = '--'):
 
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid, phi, 'o-', label = label)
+    plt.plot(dataSet.grid, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
     plt.xlim([dataSet.x_min, dataSet.x_max])
@@ -42,12 +42,12 @@ def plotAvePhi(dataSet, label = ''):
 def maxwellEDVF(x, T):
     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)  
     
-def plotAveVDF(dataSet, name, CurveFit = False, label = ''):
+def plotAveVDF(dataSet, name, CurveFit = False, marker = '', linestyle = '--', label = ''):
     VHist, Vedge = dataSet.getAveVDF(name)
     dv = Vedge[1] - Vedge[0]
     Norm = np.sum(VHist[1:-1] * dv) + 0.5 * (VHist[0] + VHist[-1]) * dv
     VHist = VHist/Norm
-    plt.plot(Vedge, VHist, 'o-', label=label)
+    plt.plot(Vedge, VHist, marker = marker, linestyle = linestyle, linewidth = 2, label=label)
     plt.ylabel('VDF (s/m)')
     plt.xlabel('Velocity (m/s)')
     if CurveFit:
@@ -77,6 +77,65 @@ def plotAveEDF(dataSet, name, CurveFit = False, label = ''):
         plt.xlabel('Particle Energy (eV)')
 
 
+def plotAveEPF(dataSet, name, lower_limit = 0.2, label = '', marker = 'o', linestyle = '--'):
+    EHist, Ebin = dataSet.getAveEDF(name)
+    EHist = EHist/Ebin
+    Norm = np.trapz(EHist, Ebin)
+    EHist = EHist/Norm
+    lower_indx = np.where(Ebin < lower_limit)[0][-1]
+    plt.plot(Ebin[lower_indx::], EHist[lower_indx::]/np.sqrt(Ebin[lower_indx::]), linestyle = linestyle, marker = marker, markersize = 2, label=label)
+    plt.ylabel(r'EPDF eV$^{-3/2}$')
+    plt.yscale('log')
+    plt.xlabel('Particle Energy (eV)')
+
+def getAveDensityFiles(dataName, name = 'e', diagNumber = 0):
+    # Given name of file which will have _1, _2, etc appended
+    if ('Explicit' in dataName):
+        data = dataSetExplicit(dataName + '/')
+    else:
+        data = dataSet(dataName + '/')
+    density = data.getDensity(name, diagNumber)
+    fileList = glob.glob(dataName + '_[0-9]')
+    number = len(fileList)
+    for filename in fileList:
+        if ('Explicit' in dataName):
+            data = dataSetExplicit(filename + '/')
+        else:
+            data = dataSet(filename + '/')
+        density = density + data.getDensity(name, diagNumber)
+    print('Finished averaging for', dataName)
+    print('Contained', number+1, 'files')
+    return density/(number+1)
+
+def plotAveDensityVsRef(refData, dataList, name, labelList = [''], marker = 'o', linestyle = '--'):
+    #Plotting average density vs a reference density
+    refDensity = refData.getAveDensity(name)
+    refGrid = refData.grid
+    for indx,data in enumerate(dataList):
+        density = data.getAveDensity(name)
+        interpDensity = np.interp(data.grid, refGrid, refDensity)
+        relDensity = (density - interpDensity)
+        if (labelList[0] == ''):
+            labelStr = ''
+        else:
+            labelStr = labelList[indx]
+        plt.plot(data.grid, relDensity, linestyle=linestyle, marker=marker, markersize=2,
+             label= labelStr)
+
+def plotAveDensityVsRef_percent(refData, dataList, name, labelList = [''], marker = 'o', linestyle = '--'):
+    #Plotting average density vs a reference density
+    refDensity = refData.getAveDensity(name)
+    refGrid = refData.grid
+    for indx,data in enumerate(dataList):
+        density = data.getAveDensity(name)
+        interpDensity = np.interp(data.grid, refGrid, refDensity)
+        relDensity = (density - interpDensity)/interpDensity
+        if (labelList[0] == ''):
+            labelStr = ''
+        else:
+            labelStr = labelList[indx]
+        plt.plot(data.grid, relDensity, linestyle=linestyle, marker=marker, markersize=2,
+             label= labelStr)
     
 #-------------------------- Time Dependent ---------------------
     
@@ -209,4 +268,31 @@ def plotPhaseSpace(dataSet, name):
             
     
  
-#------------ Bounded Model comparison ---------------------------            
+#------------ Calculations ---------------------------
+
+def get_thermalization_parameters(dataSet, reaction):
+    nu = 0
+    del_t = dataSet.delT
+    for obj in dataSet.binaryColl[reaction]:
+        nu += obj['aveDiag']['ratio']
+    nu = nu / del_t
+    n_e = dataSet.getAveDensity('e').max()
+
+    EHist, Ebin = dataSet.getAveEDF('e')
+    EHist = EHist/Ebin
+    Norm = np.trapz(EHist, Ebin)
+    EHist = EHist/Norm
+    T_e = np.trapz(EHist*Ebin, Ebin) * 2/3
+    deb = debye_length(T_e, n_e)
+    L = dataSet.grid[-1] - dataSet.grid[0]
+    N_p = dataSet.particles['e']['diag']['N_p'].values[-1]
+    N_D = N_p/(L/deb)
+    plas_freq = plasmaFreq(n_e)
+    denom = N_D**-2 + 28 * (1/N_D) * (nu/plas_freq)
+    tau_R = 34.4 / denom / plas_freq
+
+    nu_coulomb = crossSectionCoulomb(T_e, n_e)
+    nu_coulomb = nu_coulomb * n_e * np.sqrt(2 * e * T_e / np.pi / m_e)
+    return tau_R, 1/nu, 1/nu_coulomb
+
+
