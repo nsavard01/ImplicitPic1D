@@ -92,7 +92,7 @@ contains
             particleTimeStep(:, j) = 0.1d0 * world%dx_dl / SQRT(ABS(particleList(j)%q_over_m * (solver%EField(1:NumberXNodes) - solver%EField(2:NumberXHalfNodes))))
         end do
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
-                dx_dl, l_boundary, numIter, J_part, d_half, leftThreadIndx, rightThreadIndx)
+        !$OMP&        dx_dl, l_boundary, numIter, J_part, d_half, leftThreadIndx, rightThreadIndx)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles 
         ! Reset workspace for specific thread for adding J to domain
@@ -206,7 +206,7 @@ contains
         end do
         ! Make counters private, otherwise have false sharing which causes significant slowdown! In general, keep variables private whenever possible
         !$OMP parallel private(iThread, i, j,l_f, l_sub, v_sub, v_f, d_half, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
-            dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
+        !$OMP&    dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             !initialize deletion index at dirichlet boundaries and reflux if applicable to neumann boundaries

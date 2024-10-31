@@ -138,8 +138,8 @@ contains
         target_mass = targetParticleList(self%reactantsIndx(2))%mass
         self%totalNumberCollidableParticles = self%totalNumberCollidableParticles + SUM(particleList(self%reactantsIndx(1))%numToCollide) ! accumulate number of particles collided
         !$OMP parallel private(iThread, i,numberSelected, numberSelectedReal, Rand, particleIndx, numberTotalParticles, targetVelocity, incidentVelocity, &
-            velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, &
-            addIonizationIndx, particleLocation, irand_thread, IncidentEnergy) reduction(+:energyLoss,totalCollisions, totIncidentEnergy)
+        !$OMP&    velocity_CM, energyCM, d_value, indxHigh, indxLow, indxMiddle, collIdx, sigma_v, sigma_v_low, collisionBool, speedCM, &
+        !$OMP&    addIonizationIndx, particleLocation, irand_thread, IncidentEnergy) reduction(+:energyLoss,totalCollisions, totIncidentEnergy)
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread) ! set to local variable to prevent false sharing
         ! Select amount of particles to sample
