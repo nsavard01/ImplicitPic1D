@@ -81,7 +81,7 @@ contains
         ! Solve for current iteration of E^n+1/2
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
-                numIter)
+        !$OMP& numIter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             ! Reset workspace for specific thread for adding J to domain
@@ -173,7 +173,7 @@ contains
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         ! Make counters private, otherwise have false sharing which causes significant slowdown! In general, keep variables private whenever possible
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, delIdx, dx_dl, E_x, l_boundary, numIter, &
-                refIdx, refluxedBool, FutureAtBoundaryBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
+        !$OMP&        refIdx, refluxedBool, FutureAtBoundaryBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             ! initialize deletion index at dirichlet boundaries and reflux if applicable to neumann boundaries

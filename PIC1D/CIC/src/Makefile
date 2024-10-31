@@ -1,4 +1,4 @@
-FC = ifort
+FC = ifx
 CC=mpiifort
 BASE= -qopenmp -qmkl -O3 -ipo -no-prec-div -m64 -auto -fp-model fast=2 -unroll-aggressive -mtune=skylake -heap-arrays 8192 -xHost  #-xCORE-AVX512 -mt_mpi -qopt-report=1
 DEBUG = -qmkl -g -traceback -check all -fp-stack-check -warn all #-traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
