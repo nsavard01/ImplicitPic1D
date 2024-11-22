@@ -215,6 +215,7 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+                if (EField_heating_bool) call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
@@ -239,6 +240,7 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+                if (EField_heating_bool) call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
@@ -345,6 +347,7 @@ contains
         real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), &
         E_grid(binNumber, numberChargedParticles), diffE(numberChargedParticles), Emin_log(numberChargedParticles)
         real(real64), allocatable :: wallLoss(:)
+        real(real64) :: Efield_RF_energy_total, J_particles_heat_total, v_ave_heat_tot
 
 
         
@@ -358,6 +361,9 @@ contains
         inelasticEnergyLoss = 0.0d0
         energyAddColl = 0.0d0
         phi_average = 0.0d0
+        Efield_RF_energy_total = 0.0d0
+        J_particles_heat_total = 0.0d0
+        v_ave_heat_tot = 0.0d0
         startTime = currentTime
         i = 0
         do j = 1, numberBinaryCollisions
@@ -374,6 +380,12 @@ contains
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+            if (EField_heating_bool) then
+                call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
+                Efield_RF_energy_total = Efield_RF_energy_total + Efield_RF_energy
+                J_particles_heat_total = J_particles_heat_total + J_particles_heat**2
+                v_ave_heat_tot = v_ave_heat_tot + v_ave_heat**2
+            end if
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
@@ -401,6 +413,8 @@ contains
         print *, "Averaging finished over", (currentTime - startTime), 'simulation time (s)'
         stepsAverage = i 
         phi_average = phi_average/stepsAverage
+        J_particles_heat_total = J_particles_heat_total/stepsAverage
+        v_ave_heat_tot = v_ave_heat_tot/stepsAverage
         call writePhi(phi_average, 0, .true., directoryName)
         chargeTotal = 0.0d0
         energyLoss = 0.0d0
@@ -436,7 +450,12 @@ contains
         else if (world%boundaryConditions(NumberXNodes) == 4) then
             print *, 'Final RF boundary values:', solver%phi(NumberXNodes)
         end if
-        
+        if (EField_heating_bool) then
+            print*, 'Power average for Efield heating is:', Efield_RF_energy_total / (currentTime - startTime), 'W'
+            print*, 'Power per m^2 for particles is:', Efield_RF_energy_total * particleList(1)%w_p / (currentTime - startTime)
+            print*, 'J average:', SQRT(J_particles_heat_total)
+            print*, 'v average:', SQRT(v_ave_heat_tot)
+        end if
         print *, 'Power loss to wall is:', energyLoss/(currentTime-startTime)
         print *, 'Power loss to inelastic collisions:', inelasticEnergyLoss/(currentTime-startTime)
         print *, "Electron average wall loss (A/m^2):", SUM(particleList(1)%accumWallLoss)* particleList(1)%w_p * particleList(1)%q/(currentTime-startTime)
@@ -472,6 +491,8 @@ contains
         if (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes) == 4) then
             ! If RF boundary then average over RF cycle
             windowDivision = INT(2.0d0 * pi / solver%RF_rad_frequency/del_t)
+        else if (Efield_heating_bool) then
+            windowDivision = INT(1.0d0 / Efield_heating_freq/del_t)
         else
             windowDivision = INT(50.0d0/fractionFreq)
         end if
@@ -482,6 +503,7 @@ contains
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+            if (EField_heating_bool) call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)

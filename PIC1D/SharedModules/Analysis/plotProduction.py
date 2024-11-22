@@ -275,8 +275,10 @@ def get_thermalization_parameters(dataSet, reaction):
     del_t = dataSet.delT
     for obj in dataSet.binaryColl[reaction]:
         nu += obj['aveDiag']['ratio']
+        if (obj['type'] == 'Ionization'):
+            nu_ion = obj['aveDiag']['ratio']/del_t
     nu = nu / del_t
-    n_e = dataSet.getAveDensity('e').max()
+    n_e = dataSet.getAveDensity('e').mean()
 
     EHist, Ebin = dataSet.getAveEDF('e')
     EHist = EHist/Ebin
@@ -287,12 +289,13 @@ def get_thermalization_parameters(dataSet, reaction):
     L = dataSet.grid[-1] - dataSet.grid[0]
     N_p = dataSet.particles['e']['diag']['N_p'].values[-1]
     N_D = N_p/(L/deb)
+    print('N_D is', N_D)
     plas_freq = plasmaFreq(n_e)
-    denom = N_D**-2 + 28 * (1/N_D) * (nu/plas_freq)
+    denom = (N_D**(-2)) + 28 * (1/N_D) * (nu/plas_freq)
     tau_R = 34.4 / denom / plas_freq
 
     nu_coulomb = crossSectionCoulomb(T_e, n_e)
     nu_coulomb = nu_coulomb * n_e * np.sqrt(2 * e * T_e / np.pi / m_e)
-    return tau_R, 1/nu, 1/nu_coulomb
+    return tau_R, 1/nu, 1/nu_coulomb, 1/nu_ion
 
 

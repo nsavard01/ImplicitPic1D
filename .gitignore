@@ -5,3 +5,4 @@ tmp*
 *.a
 *.pdf
 *.png
+!PIC1D/CollisionData/*.dat

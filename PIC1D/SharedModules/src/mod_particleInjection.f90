@@ -8,9 +8,9 @@ module mod_particleInjection
     implicit none
     ! Module for artificial particle injection at boundaries or artificial collisions
     real(real64), allocatable, public :: energyAddColl(:)
-    logical, public, protected :: addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool
+    logical, public, protected :: addLostPartBool, refluxPartBool, injectionBool, uniformInjectionBool, heatingBool, EField_heating_bool
     integer(int32), private :: numFluxParticlesHigh, numFluxParticlesLow
-    real(real64), private :: injectionFlux, injectionR, FractionFreqHeating
+    real(real64), protected :: injectionFlux, injectionR, FractionFreqHeating, Efield_heating_freq, J_total_RF, power_left_bound_x, power_right_bound_x, Efield_RF_past, Efield_RF_energy, J_particles_heat, v_ave_heat
 
 contains
 
@@ -179,6 +179,69 @@ contains
         !$OMP end parallel
     end subroutine maxwellianHeating
 
+    subroutine EField_heating(species, old_time, current_time, world)
+        ! Add velocity along y direction to particles from given oscillating field (sinusoidal)
+        type(Particle), intent(in out) :: species
+        type(Domain), intent(in) :: world
+        real(real64), intent(in) :: current_time, old_time
+        real(real64) :: del_v, coeff_time, x, half_time, Efield_future, v_sum, Efield_half, del_t
+        integer(int32) :: i, iThread, number_part
+        
+        coeff_time = 2.0d0 * pi * Efield_heating_freq
+
+        del_v = species%q_over_m * J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time
+
+        ! !$OMP parallel private(iThread, i) reduction(+:v_sum, number_part)
+        ! iThread = omp_get_thread_num() + 1
+        ! do i = 1, species%N_p(iThread)
+        !     x = world%getXFromL(species%phaseSpace(1,i,iThread))
+        !     if (x > power_left_bound_x .and. x < power_right_bound_x) then
+        !         v_sum = v_sum + species%phaseSpace(3, i, iThread)
+        !         number_part = number_part + 1
+        !     end if
+        ! end do
+        ! !$OMP end parallel
+
+
+
+        ! half_time = 0.5d0 * (current_time + old_time)
+        ! del_t = current_time - old_time
+        ! ! loop through particles to get v_sum
+        ! v_sum = 0.0d0
+        ! number_part = 0
+        ! !$OMP parallel private(iThread, i) reduction(+:v_sum, number_part)
+        ! iThread = omp_get_thread_num() + 1
+        ! do i = 1, species%N_p(iThread)
+        !     x = world%getXFromL(species%phaseSpace(1,i,iThread))
+        !     if (x > power_left_bound_x .and. x < power_right_bound_x) then
+        !         v_sum = v_sum + species%phaseSpace(3, i, iThread)
+        !         number_part = number_part + 1
+        !     end if
+        ! end do
+        ! !$OMP end parallel
+
+        ! ! get Efield in future
+        ! Efield_future = (J_total_RF * SIN(coeff_time * half_time) - species%q_times_wp * v_sum / (power_right_bound_x - power_left_bound_x)) * del_t/eps_0 + Efield_RF_past
+        ! EField_half = 0.5d0 * (Efield_future + Efield_RF_past)
+
+        ! ! Get change in particle velocity from field
+        ! del_v = species%q_over_m * Efield_half * del_t
+
+        !$OMP parallel private(iThread, i)
+        iThread = omp_get_thread_num() + 1
+        do i = 1, species%N_p(iThread)
+            x = world%getXFromL(species%phaseSpace(1,i,iThread))
+            if (x > power_left_bound_x .and. x < power_right_bound_x) species%phaseSpace(3, i, iThread) = species%phaseSpace(3, i, iThread) + del_v
+        end do
+        !$OMP end parallel
+        
+        J_particles_heat = 0 !species%q_times_wp * v_sum / (power_right_bound_x - power_left_bound_x)
+        !Efield_RF_past = Efield_future
+        v_ave_heat = 0 !v_sum / number_part
+        Efield_RF_energy = 0!(v_sum * species%q * Efield_half * del_t + number_part * 0.5d0 * species%q**2 * Efield_half**2 * del_t**2 / species%mass) ! Joules
+        
+    end subroutine EField_heating
+
 
     ! -------------------- read inputs artificial collisions/particle injection ------------------------------------
 
@@ -208,12 +271,19 @@ contains
         end if
         read(10, *, IOSTAT = io) tempInt, FractionFreqHeating
         heatingBool = (tempInt == 1)
+        read(10, *, IOSTAT = io) Efield_heating_freq, J_total_RF, power_left_bound_x, power_right_bound_x
+        if (EField_heating_freq /= 0) then
+            EField_heating_bool = .true.
+        else
+            EField_heating_bool = .false.
+        end if
         close(10)
         print *, "Particle lost is reinjected:", addLostPartBool
         print *, "Particle refluxing activated on neumann boundary:", refluxPartBool
         print *, "Particle injection on neumann boundary", injectionBool
         print *, "Particle injection unformly with maxwellian", uniformInjectionBool
         print *, "Electron maxwellian heating", heatingBool
+        print *, 'Electron E-field heating', EField_heating_bool
         if (injectionBool) then
             injectionFlux = injectionFlux
             print *, 'Particle injection flux:', injectionFlux
@@ -235,6 +305,12 @@ contains
             print *, 'Number for selection of flux particles is:', injectionR
         else if (heatingBool) then
             print *, 'FractionFreqHeating for maxwellian heating is:', FractionFreqHeating
+        end if
+        if (EField_heating_bool) then
+            print *, 'EField frequency:', EField_heating_freq, 'Hz'
+            print *, 'J_total current density:', J_total_RF, 'A/m^2'
+            print *, 'Heating region boundary between', power_left_bound_x, 'and', power_right_bound_x, ' meters'
+            Efield_RF_past = 0.0d0
         end if
         print *, "------------------"
         print *, ""
