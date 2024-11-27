@@ -41,6 +41,7 @@ Exp_RFBenchmark_Denis = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBen
 Exp_RFBenchmark_Denis_moreCells = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells/')
 Exp_RFBenchmark_Denis_moreCells_doublePart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_doublePart/')
 Exp_RFBenchmark_Denis_moreCells_quadPart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_quadPart/')
+Exp_RFBenchmark_Denis_moreCells_40xPart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_40xPart/')
 
 Exp_RFBenchmark_Denis_moreCells_lowerDen = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_lowerDen/')
 Exp_RFBenchmark_Denis_moreCells_lowerDen_doublePart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_lowerDen_doublePart/')

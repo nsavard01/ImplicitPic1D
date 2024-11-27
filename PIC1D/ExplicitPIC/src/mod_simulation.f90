@@ -215,7 +215,7 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
-                if (EField_heating_bool) call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
+                if (EField_heating_bool) call Efield_heating_implicit(particleList(1), currentTime - del_t, currentTime, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
@@ -240,7 +240,7 @@ contains
                 potentialTime = potentialTime + (endTime - startTime)
                 call system_clock(startTime)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
-                if (EField_heating_bool) call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
+                if (EField_heating_bool) call Efield_heating_implicit(particleList(1), currentTime - del_t, currentTime, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
@@ -381,7 +381,7 @@ contains
             call solver%solvePotential(particleList, world, currentTime)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
             if (EField_heating_bool) then
-                call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
+                call Efield_heating_implicit(particleList(1), currentTime - del_t, currentTime, world)
                 Efield_RF_energy_total = Efield_RF_energy_total + Efield_RF_energy
                 J_particles_heat_total = J_particles_heat_total + J_particles_heat**2
                 v_ave_heat_tot = v_ave_heat_tot + v_ave_heat**2
@@ -503,7 +503,7 @@ contains
             call solver%moveParticles(particleList, world, del_t)
             call solver%solvePotential(particleList, world, currentTime)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
-            if (EField_heating_bool) call EField_heating(particleList(1), currentTime - del_t, currentTime, world)
+            if (EField_heating_bool) call Efield_heating_implicit(particleList(1), currentTime - del_t, currentTime, world)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
