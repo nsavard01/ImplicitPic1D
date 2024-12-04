@@ -103,6 +103,8 @@ NGP_RFBenchmark_Denis_lowerDen_262PPC_512cells_noSmoothing = dataSet('Y:/Implici
 NGP_RFBenchmark_Denis_lowerDen_524PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_512cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_1048PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_1048PPC_512cells_noSmoothing/')
 
+NGP_RFBenchmark_Denis_lowerDen_524PPC_1024cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_1024cells_noSmoothing/')
+
 #-------------------------- CIC -----------------
 
 CIC_RFBenchmark_Denis_131PPC_128cells = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_131PPC_128cells/')

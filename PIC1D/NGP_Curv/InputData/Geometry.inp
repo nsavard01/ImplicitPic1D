@@ -1,0 +1,8 @@
+129 ! number of grid nodes
+0.067 ! Domain length in meters, 0.0002572099123144409d0 for two stream
+1 1.d-4 40 ! (0 == even grid, 1 = sinusoidal grid. 2 = half-grid, 3= exp-grid), size smallest grid (take max of this value or debye length)
+1 4 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 = RF-Dirichlet)
+0 ! 1 = smoothing, else no smoothing
+0. 500. ! Voltage for left and right side boundary, used for dirichlet and periodic conditions. For RF-Dirichlet, voltage is half amplitude
+100.0d6 ! Osciallating voltage frequency
+END
