@@ -2,7 +2,8 @@
  Reading initial inputs:
  ------------------
  Save data folder: 
- ../../../../ExplicitData/Exp_RFBenchmark_Denis_moreCells_lowerDen_10xPart
+ ../../../../ExplicitData/Exp_RFBenchmark_Denis_moreCells_lowerDen_10xPart_halfT
+ ime
  Restart Bool: F
  Number of threads is:          32
  Total allowable threads:          64
@@ -10,11 +11,11 @@
  Initial electron temperature:   4.00000000000000     
  Initial ion temperature:  2.500000000000000E-002
  Number of diagnostic steps is:          20
- Fraction of 1/w_p for time step:  0.178398636597908     
- del_t will be:  9.999999999999999E-012
+ Fraction of 1/w_p for time step:  8.919931829895418E-002
+ del_t will be:  5.000000000000000E-012
  Simulation start time is:  0.000000000000000E+000
  Simulation time is:  6.999999999999999E-005
- Final averaging time is:  1.000000000000000E-006
+ Final averaging time is:  4.000000000000000E-006
  ------------------
  
  
@@ -44,7 +45,7 @@
  Particle mass is:  9.109383701500001E-031
  Particle charge is: -1.602176634000000E-019
  Particle weight is:   2555847167.96875     
- Particle mean KE is:   5.99808991675068     
+ Particle mean KE is:   6.00010579097561     
  Distribution type:           0
  Drift velocity:  0.000000000000000E+000
  Neutral charge start!
@@ -53,7 +54,7 @@
  Particle mass is:  6.645566050681144E-027
  Particle charge is:  1.602176634000000E-019
  Particle weight is:   2555847167.96875     
- Particle mean KE is:  3.750656933672750E-002
+ Particle mean KE is:  3.748492526960864E-002
  Distribution type:           0
  Drift velocity:  0.000000000000000E+000
  ---------------
@@ -142,75 +143,75 @@
  Electron E-field heating F
  ------------------
  
- Simulation is   5.00001428568721      percent done
- Number of electrons is:     2483348
- Number of ions is:     2491670
- Simulation is   10.0000142856135      percent done
- Number of electrons is:     2445207
- Number of ions is:     2453447
- Simulation is   15.0000000001728      percent done
- Number of electrons is:     2414537
- Number of ions is:     2422885
- Simulation is   20.0000000005226      percent done
- Number of electrons is:     2392184
- Number of ions is:     2400574
- Simulation is   25.0000000008724      percent done
- Number of electrons is:     2374553
- Number of ions is:     2382925
- Simulation is   30.0000000012221      percent done
- Number of electrons is:     2358318
- Number of ions is:     2366749
- Simulation is   35.0000000015719      percent done
- Number of electrons is:     2351008
- Number of ions is:     2359301
- Simulation is   40.0000000019217      percent done
- Number of electrons is:     2344095
- Number of ions is:     2352364
- Simulation is   45.0000000022715      percent done
- Number of electrons is:     2334736
- Number of ions is:     2343086
- Simulation is   50.0000000026212      percent done
- Number of electrons is:     2336421
- Number of ions is:     2344844
- Simulation is   55.0000000029710      percent done
- Number of electrons is:     2336758
- Number of ions is:     2345031
- Simulation is   60.0000000033208      percent done
- Number of electrons is:     2336114
- Number of ions is:     2344478
- Simulation is   65.0000000036706      percent done
- Number of electrons is:     2334337
- Number of ions is:     2342720
- Simulation is   70.0000000040204      percent done
- Number of electrons is:     2329348
- Number of ions is:     2337652
- Simulation is   75.0000000043701      percent done
- Number of electrons is:     2332081
- Number of ions is:     2340409
- Simulation is   80.0000000047199      percent done
- Number of electrons is:     2333555
- Number of ions is:     2341895
- Simulation is   85.0000000050697      percent done
- Number of electrons is:     2328130
- Number of ions is:     2336489
- Simulation is   90.0000000054195      percent done
- Number of electrons is:     2324556
- Number of ions is:     2332916
- Simulation is   95.0000000057692      percent done
- Number of electrons is:     2324672
- Number of ions is:     2333025
- Simulation is   100.000000006119      percent done
- Number of electrons is:     2326615
- Number of ions is:     2335005
- Elapsed time for simulation is:   16224.1211450000      seconds
- moverTime is:   15782.1969670000     
- potentialTime is:   188.014943000000     
- collision time is:   247.055558000000     
- Averaging over  1.000000000000000E-006 seconds
- Averaging finished over  1.000000000069955E-006 simulation time (s)
- Final RF boundary values:  2.735225900038111E-003
- Power loss to wall is:   35818.1143237497     
- Power loss to inelastic collisions:   10622.2082920900     
- Electron average wall loss (A/m^2):  -129.941185881346     
- Ion average wall loss (A/m^2):   129.961250982546     
+ Simulation is   5.00000714280674      percent done
+ Number of electrons is:     2481437
+ Number of ions is:     2489709
+ Simulation is   10.0000000002613      percent done
+ Number of electrons is:     2443035
+ Number of ions is:     2451639
+ Simulation is   15.0000000006111      percent done
+ Number of electrons is:     2409890
+ Number of ions is:     2418411
+ Simulation is   20.0000000009608      percent done
+ Number of electrons is:     2386199
+ Number of ions is:     2394618
+ Simulation is   25.0000000013106      percent done
+ Number of electrons is:     2365105
+ Number of ions is:     2373513
+ Simulation is   30.0000000016604      percent done
+ Number of electrons is:     2353230
+ Number of ions is:     2361475
+ Simulation is   35.0000000020102      percent done
+ Number of electrons is:     2342981
+ Number of ions is:     2351506
+ Simulation is   40.0000000023600      percent done
+ Number of electrons is:     2337737
+ Number of ions is:     2346132
+ Simulation is   45.0000000027097      percent done
+ Number of electrons is:     2335056
+ Number of ions is:     2343469
+ Simulation is   50.0000000030595      percent done
+ Number of electrons is:     2329890
+ Number of ions is:     2338282
+ Simulation is   55.0000000034093      percent done
+ Number of electrons is:     2329717
+ Number of ions is:     2338170
+ Simulation is   60.0000000037591      percent done
+ Number of electrons is:     2329383
+ Number of ions is:     2337788
+ Simulation is   65.0000000041088      percent done
+ Number of electrons is:     2327741
+ Number of ions is:     2336096
+ Simulation is   70.0000000044586      percent done
+ Number of electrons is:     2328427
+ Number of ions is:     2336739
+ Simulation is   75.0000000048084      percent done
+ Number of electrons is:     2329412
+ Number of ions is:     2337733
+ Simulation is   80.0000000051582      percent done
+ Number of electrons is:     2329781
+ Number of ions is:     2338192
+ Simulation is   85.0000000055079      percent done
+ Number of electrons is:     2330147
+ Number of ions is:     2338598
+ Simulation is   90.0000000020536      percent done
+ Number of electrons is:     2328703
+ Number of ions is:     2337020
+ Simulation is   95.0000071384843      percent done
+ Number of electrons is:     2328071
+ Number of ions is:     2336369
+ Simulation is   100.000007132058      percent done
+ Number of electrons is:     2331137
+ Number of ions is:     2339399
+ Elapsed time for simulation is:   33608.7724440000      seconds
+ moverTime is:   32779.7835470000     
+ potentialTime is:   377.655053000000     
+ collision time is:   443.920176000000     
+ Averaging over  4.000000000000000E-006 seconds
+ Averaging finished over  2.360819996965644E-006 simulation time (s)
+ Final RF boundary values:   430.367625105392     
+ Power loss to wall is:   35844.0549628291     
+ Power loss to inelastic collisions:   10590.0480665839     
+ Electron average wall loss (A/m^2):  -130.211862453796     
+ Ion average wall loss (A/m^2):   130.204577418005     
  Performing average for EEDF over 50/omega_p

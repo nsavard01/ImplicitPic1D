@@ -27,6 +27,7 @@ module mod_domain
         procedure, public, pass(self) :: constructGrid
         procedure, public, pass(self) :: constructExpHalfGrid
         procedure, public, pass(self) :: constructHalfEvenHalfSinusoid
+        procedure, public, pass(self) :: construct_even_grid_doubling_region
         procedure, public, pass(self) :: smoothField
         procedure, public, pass(self) :: getLFromX
         procedure, public, pass(self) :: getXFromL
@@ -101,10 +102,10 @@ contains
     end function domain_constructor
 
 
-    subroutine constructGrid(self, del_x, L_domain, gridType)
+    subroutine constructGrid(self, del_x, L_domain, gridType, numEvenCells)
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
-        integer(int32), intent(in) :: gridType
+        integer(int32), intent(in) :: gridType, numEvenCells
         self%L_domain = L_domain
         SELECT CASE (gridType)
         CASE(0)
@@ -116,9 +117,11 @@ contains
         CASE(3)
             call self%constructExpHalfGrid(del_x, L_domain)
         CASE(4)
-            call self%constructHalfEvenHalfSinusoid(del_x, L_domain)
+            call self%constructHalfEvenHalfSinusoid(del_x, L_domain, numEvenCells)
         CASE(5)
             call self%constructInvSineGrid(del_x, L_domain)
+        case(6)
+            call self%construct_even_grid_doubling_region(del_x, L_domain, numEvenCells)
         CASE default
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
@@ -254,14 +257,14 @@ contains
         self%centerDiff = self%grid(2:NumberXNodes) - self%grid(1:NumberXNodes-1)
     end subroutine constructUniformGrid
 
-    subroutine constructHalfEvenHalfSinusoid(self, del_x, L_domain)
+    subroutine constructHalfEvenHalfSinusoid(self, del_x, L_domain, numEvenCells)
         ! Half of grid is even, half increases like sinusoid
         class(Domain), intent(in out) :: self
         real(real64), intent(in) :: del_x, L_domain
+        integer(int32), intent(in) :: numEvenCells
         real(real64) :: gridField(NumberXHalfNodes)
-        integer(int32) :: numEvenCells, numSinCells, i
+        integer(int32) :: numSinCells, i
         real(real64) :: leftX, rightX, evenDelX, middleDelX
-        numEvenCells = (NumberXNodes)/4 
         numSinCells = NumberXNodes - 2 * numEvenCells
         evenDelX = del_x/numEvenCells
         gridField = 0.0d0
@@ -271,20 +274,66 @@ contains
             gridField(i+1) = gridField(i) + evenDelX
             gridField(NumberXHalfNodes-i) = gridField(NumberXHalfNodes-i+1) - evenDelX
         end do
-        middleDelX = gridField(NumberXHalfNodes-numEvenCells) - gridField(numEvenCells+1) + 2 * evenDelX
+        middleDelX = gridField(NumberXHalfNodes-numEvenCells) - gridField(numEvenCells+1)
         leftX = evenDelX
-        do i = 3,numSinCells+2
-            
-            rightX = middleDelX * ((real(i)-1.0d0)/(real(numSinCells+2)) - (1.0d0/(real(numSinCells+2)) - evenDelX/middleDelX) &
-            * SIN(2 * pi * (i-1) / (numSinCells+2)) / SIN(2 * pi / (numSinCells+2)) )
-            gridField(i+numEvenCells-1) = gridField(numEvenCells+i-2) + rightX - leftX
-            leftX = rightX
+        do i = 2,numSinCells
+            gridField(i+numEvenCells) = gridField(numEvenCells+1) + middleDelX * ((real(i)-1.0d0)/(real(numSinCells)) - (1.0d0/(real(numSinCells)) - evenDelX/middleDelX) &
+            * SIN(2 * pi * (i-1) / (numSinCells)) / SIN(2 * pi / (numSinCells)) )
         end do
         do i = 1, NumberXNodes
             self%dx_dl(i) = gridField(i+1) - gridField(i)
             self%grid(i) = gridField(i) + 0.5d0 * self%dx_dl(i)
         end do
     end subroutine constructHalfEvenHalfSinusoid
+
+    subroutine construct_even_grid_doubling_region(self, del_x, L_domain, numEvenEdgeCells)
+        ! Half of grid cells used for even cells on either side up to del_x
+        ! Other half used to center, have increasing cell size until cell are at maximum doubled
+        class(Domain), intent(in out) :: self
+        real(real64), intent(in) :: del_x, L_domain
+        integer(int32), intent(in) :: numEvenEdgeCells
+        real(real64) :: gridField(NumberXHalfNodes)
+        integer(int32) :: numMiddleCells, numberIncreaseCells, num_center_even_cells, i
+        real(real64) :: edge_del_x, middle_L, middle_del_x, center_even_L
+        numMiddleCells = NumberXNodes - 2 * numEvenEdgeCells
+        edge_del_x = del_x/numEvenEdgeCells
+        middle_L = L_domain - 2.0d0 * del_x
+        numberIncreaseCells = 0
+        middle_del_x = middle_L/numMiddleCells
+        gridField = 0.0d0
+        do while (middle_del_x > (2**numberIncreaseCells) * edge_del_x) 
+            numberIncreaseCells = numberIncreaseCells + 1
+            center_even_L = middle_L - 2.0d0 * (2**(numberIncreaseCells+1)-2) * edge_del_x
+            num_center_even_cells = numMiddleCells - 2 * numberIncreaseCells
+            middle_del_x = center_even_L/num_center_even_cells
+        end do
+        numberIncreaseCells = numberIncreaseCells -1
+        center_even_L = middle_L - 2.0d0 * (2**(numberIncreaseCells+1)-2) * edge_del_x
+        num_center_even_cells = numMiddleCells - 2 * numberIncreaseCells
+        middle_del_x = center_even_L/num_center_even_cells
+        
+        gridField(1) = 0.0d0
+        gridField(NumberXHalfNodes) = L_domain
+        do i = 1, numEvenEdgeCells
+            gridField(i+1) = gridField(i) + edge_del_x
+            gridField(NumberXHalfNodes-i) = gridField(NumberXHalfNodes-i+1) - edge_del_x
+        end do
+
+        do i = 1, numberIncreaseCells
+            gridField(numEvenEdgeCells + i + 1) = gridField(numEvenEdgeCells + i) + (2**i) * edge_del_x
+            gridField(NumberXHalfNodes-numEvenEdgeCells - i) = gridField(NumberXHalfNodes-numEvenEdgeCells - i + 1) - (2**i) * edge_del_x
+        end do
+
+        do i = numEvenEdgeCells + numberIncreaseCells + 2, NumberXNodes - numEvenEdgeCells - numberIncreaseCells
+            gridField(i) = gridField(i-1) + middle_del_x
+        end do
+
+        do i = 1, NumberXNodes
+            self%dx_dl(i) = gridField(i+1) - gridField(i)
+            self%grid(i) = gridField(i) + 0.5d0 * self%dx_dl(i)
+        end do
+
+    end subroutine construct_even_grid_doubling_region
 
     
     function getLFromX(self, x) result(l)
@@ -369,7 +418,7 @@ contains
         type(Domain), intent(in out) :: world
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave
-        integer(int32) :: io, leftBoundary, rightBoundary, gridType, tempInt, i, smoothInt
+        integer(int32) :: io, leftBoundary, rightBoundary, gridType, tempInt, i, smoothInt, extra_int
         real(real64) :: debyeLength, L_domain
         integer(int32), allocatable :: boundArray(:)
         print *, ""
@@ -382,7 +431,7 @@ contains
         end if
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) gridType, debyeLength
+        read(10, *, IOSTAT = io) gridType, debyeLength, extra_int
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) smoothInt
         read(10, *, IOSTAT = io)
@@ -395,7 +444,7 @@ contains
             rightBoundary = 3
         end if
         world = Domain(leftBoundary, rightBoundary)
-        call world % constructGrid(debyeLength, L_domain, gridType)
+        call world % constructGrid(debyeLength, L_domain, gridType, extra_int)
         if (smoothInt /= 0) world%gridSmoothBool = .true.
         print *, "Number of nodes:", NumberXNodes
         print *, 'Number of half nodes:', NumberXHalfNodes
