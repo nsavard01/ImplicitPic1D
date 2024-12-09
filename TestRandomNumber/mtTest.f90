@@ -24,12 +24,13 @@ program mtTest
     integer(i4), allocatable, target :: irand(:)
     integer(int64), allocatable :: iStatePCG(:) 
     real(wp), allocatable, target :: x(:,:)
+    integer(int64) :: max_int, u
     
 
     call omp_set_num_threads(numThread)
     allocate(irand(numThread), randGen(numThread), x(n, numThread), randOther(numThread), iStatePCG(numThread), state_PCG(numThread), rand_PCG(numThread))
     call system_clock(count_rate = timingRate)
-    call random_seed()
+    ! call random_seed()
     do i = 1, numThread
         call random_number(r)
         irand(i) = INT(r * (huge(irand(i))) + 1)
@@ -44,6 +45,7 @@ program mtTest
         call random_number(r)
         call rand_PCG(i)%initialize(INT((r-0.5d0) * 2 * (huge(state_PCG(i))), kind = c_int64_t))
     end do
+    max_int = huge(max_int)
 
     ! call random%initialize(42)
 
@@ -70,6 +72,33 @@ program mtTest
 
     ! r = random%genrand64_real3()
     ! write(output_unit, '(E30.16)') r
+
+    var = 0
+    mean = 0
+    print *, 'starting PCG:'
+    print *, 'max_int',max_int
+    print *, state_PCG
+    call system_clock(startTime)
+    !$OMP parallel private(iThread, u, test_c_int, var)
+    iThread = omp_get_thread_num() + 1
+    test_c_int = state_PCG(iThread)
+    do u = 1, 1000
+        var = pcg32_random_r(test_c_int)
+        if (test_c_int == 0) then
+            print *, 'bad'
+        end if
+    end do
+    state_PCG(iThread) = test_c_int
+    !$OMP end parallel
+    call system_clock(endTime)
+    print *, 'results PCG'
+    print *, 'mean:', mean/(real(numThread) * n * outer_n)
+    print *, 'var:', var/(real(numThread) * n * outer_n)
+    print *, 'Time:', real(endTime - startTime)/real(timingRate)
+    print *, 'end PCG:'
+    print *, state_PCG
+
+    stop
 
     var = 0
     mean = 0
