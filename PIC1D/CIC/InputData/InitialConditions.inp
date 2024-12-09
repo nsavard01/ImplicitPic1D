@@ -7,6 +7,6 @@
 10.0d0 5d-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 4.d-6 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-CIC_RFBenchmark_Denis_1048PPC_128cells_noSmoothing_sinCenter !save file name
+CIC_RFBenchmark_Denis_524PPC_256cells_noSmoothing !save file name
 no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
 END

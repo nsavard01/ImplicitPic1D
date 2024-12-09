@@ -98,10 +98,16 @@ contains
         self%endX = self%L_domain
         self%grid(1) = self%startX
         self%grid(NumberXNodes) = self%L_domain
-
+        if (self%grid_type == 4) then
+            self%grid(1 + self%num_even_edge_cells) = self%min_del_x
+            self%grid(NumberXNodes - self%num_even_edge_cells) = self%L_domain - self%min_del_x
+            self%min_del_x = self%min_del_x / self%num_even_edge_cells
+        end if
+        
         do i = 2, NumberXHalfNodes
             self%grid(i) = self%getXFromL(real(i, kind = 8))
         end do
+        
         do i = 1, NumberXHalfNodes
             self%dx_dl(i) = self%get_jacobian(real(i, kind = 8) + 0.5d0)
         end do
@@ -116,7 +122,7 @@ contains
     function get_jacobian(self, xi) result(res)
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: xi
-        real(real64) :: res
+        real(real64) :: res, N_cells, length_scale
 
         select case (self%grid_type)
         case(0)
@@ -124,6 +130,16 @@ contains
         case(1)
             res = self%L_domain * (1.0d0/real(NumberXHalfNodes) - (2.0d0 * pi / real(NumberXHalfNodes)) * (1.0d0/real(NumberXHalfNodes) - self%min_del_x/self%L_domain) &
             * COS(2 * pi * (xi-1.0d0) / real(NumberXHalfNodes)) / SIN(2 * pi / real(NumberXHalfNodes)) )
+        case(4)
+            if (xi > self%num_even_edge_cells + 1 .and. xi < NumberXNodes - self%num_even_edge_cells) then
+                N_cells = real(NumberXHalfNodes - 2 * self%num_even_edge_cells, kind = 8)
+                length_scale = (self%grid(NumberXNodes - self%num_even_edge_cells) - self%grid(1 + self%num_even_edge_cells)) / N_cells
+
+                res = length_scale * ( 1.0d0 - cos(2.0d0 * pi * (xi - 1.0d0 - self%num_even_edge_cells) / N_cells) * (1.0d0 - self%min_del_x/length_scale) )
+            else
+                res = self%min_del_x
+            end if
+
         end select
     end function get_jacobian
 
@@ -132,7 +148,7 @@ contains
         ! get physical coordinate from logical
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: l
-        real(real64) :: x
+        real(real64) :: x, N_cells, length_scale
 
         select case (self%grid_type)
         case(0)
@@ -140,6 +156,19 @@ contains
         case(1)
             x = self%L_domain * ((l-1.0d0)/real(NumberXHalfNodes) - (1.0d0/real(NumberXHalfNodes) - self%min_del_x/self%L_domain) &
             * SIN(2 * pi * (l-1.0d0) / real(NumberXHalfNodes)) / SIN(2 * pi / real(NumberXHalfNodes)) )
+        case(4)
+            ! Assume have already defined grid points where two grids divide
+            if (l > self%num_even_edge_cells + 1 .and. l < NumberXNodes - self%num_even_edge_cells) then
+                N_cells = real(NumberXHalfNodes - 2 * self%num_even_edge_cells, kind = 8)
+                length_scale = (self%grid(NumberXNodes - self%num_even_edge_cells) - self%grid(1 + self%num_even_edge_cells)) / N_cells
+
+                x = self%grid(self%num_even_edge_cells+1) + length_scale * ( l-1.0d0 - self%num_even_edge_cells - 0.5d0 * N_cells * sin(2.0d0 * pi * (l-1.0d0 - self%num_even_edge_cells)/N_cells) * &
+                    (1.0d0 - self%min_del_x / length_scale)/pi)
+            else if (l <= self%num_even_edge_cells + 1) then
+                x = self%min_del_x * (l - 1.0d0) + self%startX
+            else
+                x = self%endX - (real(NumberXNodes, kind = 8) - l) * self%min_del_x
+            end if
         end select
 
     end function getXFromL
@@ -150,7 +179,7 @@ contains
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: x
         integer(int32) :: idxLower, idxHigher, idxMiddle
-        real(real64) :: l
+        real(real64) :: l, l_prev
         idxLower = 1
         idxHigher = NumberXNodes
         if ((x<self%grid(1)) .or. (x > self%grid(NumberXNodes))) then
@@ -165,17 +194,13 @@ contains
                 idxHigher = idxMiddle
             end if
         end do
-        l = idxLower + (x - self%grid(idxLower))/self%dx_dl(idxLower)
-        ! Use linear approximation for the moment
-        ! print *, 'x:', x
-        ! print *, 'l_prev', l
-        ! l_prev = 0.0d0
-        ! do while (abs(l - l_prev) > 1.d-8)
-        !     l_prev = l
-        !     l = l_prev + (x - self%getXFromL(l_prev))/self%get_jacobian(l_prev)
-        !     print *, l
-        ! end do
-        ! print *, self%getXFromL(l)
+        l_prev = idxLower + (x - self%grid(idxLower))/self%dx_dl(idxLower)
+        l = l_prev + (x - self%getXFromL(l_prev))/self%get_jacobian(l_prev)
+        !picard iteration (assume close enough initial condition to get to solution)
+        do while (abs(l - l_prev) > 1.d-8)
+            l_prev = l
+            l = l_prev + (x - self%getXFromL(l_prev))/self%get_jacobian(l_prev)
+        end do
 
         
     end function getLFromX

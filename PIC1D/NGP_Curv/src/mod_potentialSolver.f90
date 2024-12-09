@@ -401,9 +401,8 @@ contains
         ! Now apply smoothing if on
         if (world%gridSmoothBool) then
             call world%smoothField(workArray, self%EField)
-            self%EField = self%EField/world%dx_dl
         else
-            self%EField = workArray/world%dx_dl
+            self%EField = workArray
         end if
     end subroutine makeHalfTimeEField
 
@@ -427,7 +426,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t
         real(real64) :: res
-        res = SUM(self%EField * world%dx_dl * self%J) * del_t
+        res = SUM(self%EField * self%J) * del_t
     end function getJdotE
 
     function getEnergyFromBoundary(self, world, del_t) result(res)

@@ -116,16 +116,16 @@ contains
             end if
             SELECT CASE (world%boundaryConditions(1))
             CASE(1,2,4)
-                densities(1) = 2.0d0 * densities(1)/world%dx_dl(1)
+                densities(1) = 2.0d0 * densities(1)/world%nodeVol(1)
             CASE(3)
-                densities(1) = 2.0d0 * densities(1)/(world%dx_dl(1) + world%dx_dl(NumberXHalfNodes))
+                densities(1) = 2.0d0 * densities(1)/(world%nodeVol(1) + world%nodeVol(NumberXNodes))
             END SELECT 
             do j = 2, NumberXHalfNodes
-                densities(j) = 2.0d0 * densities(j) / (world%dx_dl(j-1) + world%dx_dl(j))
+                densities(j) = densities(j) / (world%nodeVol(j))
             end do
             SELECT CASE (world%boundaryConditions(NumberXNodes))
             CASE(1,2,4)
-                densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)/world%dx_dl(NumberXHalfNodes)
+                densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)/world%nodeVol(NumberXNodes)
             CASE(3)
                 densities(NumberXNodes) = densities(1)
             END SELECT

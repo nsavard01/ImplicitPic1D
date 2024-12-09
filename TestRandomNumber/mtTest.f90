@@ -11,20 +11,25 @@ program mtTest
 
     type(mt19937), allocatable :: randGen(:)
     type(randType), allocatable :: randOther(:)
+    type(PCG_type), allocatable :: rand_PCG(:)
     real(wp) :: r, temp
     integer(i4) :: i, j, startTime, endTime, timingRate, iThread
-    integer, parameter :: n = 10**7, numThread = 16, numBins = 200, outer_n = 100
+    integer, parameter :: n = 10**7, numThread = 6, numBins = 200, outer_n = 100
     integer(int32) :: hist(numBins), thread_irand
     real(real64) :: var, mean
-    integer(int32), pointer :: point_irand
+    real(c_double) :: test_c_double
+    integer(c_int64_t) :: test_c_int
     real(real64), pointer :: point_x(:)
-    integer(i4), allocatable, target:: irand(:)
+    integer(c_int64_t), allocatable, target :: state_PCG(:)
+    integer(i4), allocatable, target :: irand(:)
     integer(int64), allocatable :: iStatePCG(:) 
     real(wp), allocatable, target :: x(:,:)
     
+
     call omp_set_num_threads(numThread)
-    allocate(irand(numThread), randGen(numThread), x(n, numThread), randOther(numThread), iStatePCG(numThread))
+    allocate(irand(numThread), randGen(numThread), x(n, numThread), randOther(numThread), iStatePCG(numThread), state_PCG(numThread), rand_PCG(numThread))
     call system_clock(count_rate = timingRate)
+    call random_seed()
     do i = 1, numThread
         call random_number(r)
         irand(i) = INT(r * (huge(irand(i))) + 1)
@@ -34,8 +39,11 @@ program mtTest
         call randGen(i)%initialize(INT(r * (huge(irand(i))) + 1))
         call random_number(r)
         call randOther(i)%initialize(INT(r * (huge(irand(i))) + 1))
+        call random_number(r)
+        state_PCG(i) = INT((r-0.5d0) * (huge(state_PCG(i))), kind = c_int64_t)
+        call random_number(r)
+        call rand_PCG(i)%initialize(INT((r-0.5d0) * (huge(state_PCG(i))), kind = c_int64_t))
     end do
-
 
     ! call random%initialize(42)
 
@@ -63,74 +71,112 @@ program mtTest
     ! r = random%genrand64_real3()
     ! write(output_unit, '(E30.16)') r
 
-    ! ! randomness tests:
+    var = 0
+    mean = 0
+    call system_clock(startTime)
+    !$OMP parallel private(iThread, j,i) reduction(+:var, mean) 
+    iThread = omp_get_thread_num() + 1
+    do j = 1, outer_n
+        do i = 1, n
+            x(i, iThread) = randGen(iThread)%genrand64_real1()
+        end do
+        var = var + SUM((x(:, iThread) - 0.5d0)**2)
+        mean = mean + SUM(x(:,iThread))
+    end do
+    !$OMP end parallel
+    call system_clock(endTime)
+    print *, 'results mt19973'
+    print *, 'mean:', mean/(real(numThread) * n * outer_n)
+    print *, 'var:', var/(real(numThread) * n * outer_n)
+    print *, 'Time:', real(endTime - startTime)/real(timingRate)
 
-    
+
+    var = 0
+    mean = 0
+    print *, 'starting PCG:'
+    print *, state_PCG
+    call system_clock(startTime)
+    !$OMP parallel private(iThread, j,i, test_c_int) reduction(+:var,mean)
+    iThread = omp_get_thread_num() + 1
+    test_c_int = state_PCG(iThread)
+    do j = 1, outer_n
+        do i = 1, n
+            x(i, iThread) = pcg32_random_r(test_c_int)
+        end do
+        var = var + SUM((x(:,iThread) - 0.5d0)**2)
+        mean = mean + SUM(x(:,iThread))
+    end do
+    state_PCG(iThread) = test_c_int
+    !$OMP end parallel
+    call system_clock(endTime)
+    print *, 'results PCG'
+    print *, 'mean:', mean/(real(numThread) * n * outer_n)
+    print *, 'var:', var/(real(numThread) * n * outer_n)
+    print *, 'Time:', real(endTime - startTime)/real(timingRate)
+    print *, 'end PCG:'
+    print *, state_PCG
+
+    var = 0
+    mean = 0
     print *, 'starting irand:'
     print *, irand
     call system_clock(startTime)
-    !$OMP parallel private(iThread, j,i, point_irand)
+    !$OMP parallel private(iThread, j,i, thread_irand) reduction(+:var,mean)
     iThread = omp_get_thread_num() + 1
-    point_irand => irand(iThread)
-    do j = 1, n
-        point_irand = point_irand + mod(j, iThread)
+    thread_irand = irand(iThread)
+    do j = 1, outer_n
+        do i = 1, n
+            x(i, iThread) = ran2(thread_irand)
+        end do
+        var = var + SUM((x(:,iThread) - 0.5d0)**2)
+        mean = mean + SUM(x(:,iThread))
     end do
-    !irand(iThread) = thread_irand
+    irand(iThread) = thread_irand
     !$OMP end parallel
     call system_clock(endTime)
- 
+    print *, 'results ran0'
+    print *, 'mean:', mean/(real(numThread) * n * outer_n)
+    print *, 'var:', var/(real(numThread) * n * outer_n)
     print *, 'Time:', real(endTime - startTime)/real(timingRate)
     print *, 'end irand:'
     print *, irand
-    stop
+
+    var = 0
+    mean = 0
+    print *, 'starting irand type:'
+    print *, irand
+    call system_clock(startTime)
+    !$OMP parallel private(iThread, j,i) reduction(+:var,mean)
+    iThread = omp_get_thread_num() + 1
+    do j = 1, outer_n
+        do i = 1, n
+            x(i, iThread) = randOther(iThread)%getRand()
+        end do
+        var = var + SUM((x(:,iThread) - 0.5d0)**2)
+        mean = mean + SUM(x(:,iThread))
+    end do
+    !$OMP end parallel
+    call system_clock(endTime)
+    print *, 'results ran0 type'
+    print *, 'mean:', mean/(real(numThread) * n * outer_n)
+    print *, 'var:', var/(real(numThread) * n * outer_n)
+    print *, 'Time:', real(endTime - startTime)/real(timingRate)
 
 
-    ! var = 0
-    ! mean = 0
-    ! print *, 'starting irand:'
-    ! print *, irand
-    ! call system_clock(startTime)
-    ! !$OMP parallel private(iThread, j,i, thread_irand)
-    ! iThread = omp_get_thread_num() + 1
-    ! thread_irand = irand(iThread)
-    ! do j = 1, outer_n
-    !     do i = 1, n
-    !         x(i, iThread) = ran2(thread_irand)
-    !     end do
-    !     var = var + SUM((x(:,iThread) - 0.5d0)**2)
-    !     mean = mean + SUM(x(:,iThread))
-    ! end do
-    ! irand(iThread) = thread_irand
-    ! !$OMP end parallel
-    ! call system_clock(endTime)
-    ! print *, 'results ran0'
-    ! print *, 'mean:', mean/(real(numThread) * n * outer_n)
-    ! print *, 'var:', var/(real(numThread) * n * outer_n)
-    ! print *, 'Time:', real(endTime - startTime)/real(timingRate)
-    ! print *, 'end irand:'
-    ! print *, irand
-    ! stop
 
-    ! var = 0
-    ! mean = 0
-    ! call system_clock(startTime)
-    ! !$OMP parallel private(iThread, j,i) reduction(+:var, mean) 
-    ! iThread = omp_get_thread_num() + 1
-    ! do j = 1, outer_n
-    !     do i = 1, n
-    !         x(i, iThread) = randGen(iThread)%genrand64_real1()
-    !     end do
-    !     var = var + SUM((x(:, iThread) - 0.5d0)**2)
-    !     mean = mean + SUM(x(:,iThread))
-    ! end do
-    ! !$OMP end parallel
-    ! call system_clock(endTime)
-    ! print *, 'results mt19973'
-    ! print *, 'mean:', mean/(real(numThread) * n * outer_n)
-    ! print *, 'var:', var/(real(numThread) * n * outer_n)
-    ! print *, 'Time:', real(endTime - startTime)/real(timingRate)
+
     
 
+
+
+
+
+    
+    
+
+    
+    
+    stop
     ! var = 0
     ! mean = 0
     ! call system_clock(startTime)
