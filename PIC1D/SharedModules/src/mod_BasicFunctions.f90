@@ -4,10 +4,18 @@ module mod_BasicFunctions
     use iso_fortran_env, only: int32, real64, int64, output_unit
     use constants
     use omp_lib
+    use iso_c_binding
     implicit none
 
     integer(int32), allocatable :: stateRan0(:) !Global variable that will need to be changed in-out for threaded random number generator
-    integer(int32), allocatable :: stateRanNew(:,:) !Random number save state for larger period numbers
+    integer(c_int64_t), allocatable :: state_PCG(:) !Random number save state for larger period numbers from PCG
+
+    interface 
+        real(c_double) function pcg32_random_r(state) bind(c)
+        use iso_c_binding
+        integer(c_int64_t) :: state
+        end function
+    end interface
 
 contains
 
@@ -57,44 +65,6 @@ contains
         res=am_ran2*irand
       end function ran2
 
-    function randNew(irand) result(res)
-        ! Based on new numerical reciped in fortran 90, about as fast as ran0 (ran2 in our case) but period is squared
-        integer(int32), parameter :: IA=16807,IM=2147483647,IQ=127773,IR=2836
-        real(real64), parameter :: am = 1.0d0/IM
-        integer(int32), intent(in out) :: irand(2)
-        integer(int32) :: k
-        real(real64) :: res
-        irand(1)=ieor(irand(1),ishft(irand(1),13))
-        irand(1)=ieor(irand(1),ishft(irand(1),-17))
-        irand(1)=ieor(irand(1),ishft(irand(1),5))
-        k=irand(2)/IQ 
-        irand(2)=IA*(irand(2)-k*IQ)-IR*k
-        if (irand(2) < 0) irand(2)=irand(2)+IM
-        res=am*ior(iand(IM,ieor(irand(1),irand(2))),1)
-    end function randNew
-
-    function randPCG(state) result(res)
-        ! random number generator PCG attempt without unsigned integers
-        ! Weakness of fortran here
-        integer(int64), parameter :: multiplier = 6364136223846793005
-        integer(int64), parameter :: increment = 1442695040888963407
-        real(real64), parameter :: max_int32 = 2147483648.0d0
-        real(real64), parameter :: norm_PCG = 4294967296.0d0
-        integer(int64), intent(in out) :: state
-        integer(int64) :: x
-        integer(int32) :: count, x_shifted, random_number
-        real(real64) :: res
-
-        x = state
-        state = x * multiplier + increment
-        x = ieor(x, shiftR(x, 18))
-        x_shifted = int(shiftR(x, 27), kind = int32)
-        count = int(shiftR(x,59), kind = int32)
-        random_number = ior(shiftR(x_shifted, count), shiftL(x_shifted, iand(-count, 31_int32)))
-        res = real(random_number, kind = real64) + max_int32
-        res = res / norm_PCG
-
-    end function randPCG
 
     subroutine getRandom(x, irand)
         !use Gwenael's function to generate array of random number
@@ -106,23 +76,22 @@ contains
         end do
     end subroutine getRandom
 
-    subroutine initializeRandomGenerators(numThread, stateRan0, stateRanNew, preDeterminedBool)
+    subroutine initializeRandomGenerators(numThread, stateRan0, state_PCG, preDeterminedBool)
         ! Initialize random number states for each thread
-        integer(int32), allocatable, intent(out) :: stateRan0(:), stateRanNew(:,:)
+        integer(int32), allocatable, intent(out) :: stateRan0(:)
+        integer(c_int64_t), allocatable, intent(out) :: state_PCG(:)
         integer(int32), intent(in) :: numThread
         logical, intent(in) :: preDeterminedBool
         real(real64) :: rando
         integer(int32) :: i
         
-        allocate(stateRan0(numThread), stateRanNew(2,numThread))
+        allocate(stateRan0(numThread), state_PCG(numThread))
         if (.not. preDeterminedBool) call random_seed() ! Having seeding be randomly generated
         do i = 1, numThread
             call random_number(rando)
             stateRan0(i) = INT(rando * (huge(i)-1)) + 1 !12345 * i + 11 * (i-1) !
             call random_number(rando)
-            stateRanNew(1, i) = INT(rando * (huge(stateRanNew(1, i))-1)) + 1
-            call random_number(rando)
-            stateRanNew(2, i) = INT(rando * (huge(stateRanNew(2, i))-1)) + 1
+            state_PCG(i) = INT((rando-0.5d0) * 2 * (huge(state_PCG(i))), kind = c_int64_t)
         end do
     end subroutine initializeRandomGenerators
 
@@ -132,12 +101,12 @@ contains
         ! T in eV
         real(real64), intent(in out) :: V(3)
         real(real64), intent(in) :: mass, t
-        integer(int32), intent(in out) :: irand
+        integer(c_int64_t), intent(in out) :: irand
         real(real64) :: U(4), v_therm
         integer(int32) :: i
         v_therm = SQRT(T*e/ mass)
         do i = 1, 4
-            U(i) = ran2(irand)
+            U(i) = pcg32_random_r(irand)
         end do
         V(1) = v_therm * SQRT(-2 * LOG(U(1))) * COS(2 * pi * U(2))
         V(2) = v_therm * SQRT(-2 * LOG(U(1))) * SIN(2 * pi * U(2))
@@ -148,12 +117,12 @@ contains
         ! Use to sample a single neutral background particle at some temperature T_gas (eV)
         real(real64), intent(in out) :: v(3)
         real(real64), intent(in) :: T_gas, M
-        integer(int32), intent(in out) :: irand
+        integer(c_int64_t), intent(in out) :: irand
         real(real64) :: U(4), v_therm
         integer(int32) :: i
         v_therm = SQRT(T_gas*e/ M)
         do i = 1, 4
-            U(i) = ran2(irand)
+            U(i) = pcg32_random_r(irand)
         end do
         v(1) = v_therm * SQRT(-2.0d0 * LOG(U(1))) * COS(2.0d0 * pi * U(2))
         v(2) = v_therm * SQRT(-2.0d0 * LOG(U(1))) * SIN(2.0d0 * pi * U(2))
@@ -165,12 +134,12 @@ contains
         ! Use to sample a single neutral background particle at some temperature T_gas (eV)
         real(real64), intent(in out) :: v(3)
         real(real64), intent(in) :: T_gas, M
-        integer(int32), intent(in out) :: irand
+        integer(c_int64_t), intent(in out) :: irand
         real(real64) :: U(4), v_therm
         integer(int32) :: i
         v_therm = SQRT(T_gas*e/ M)
         do i = 1, 4
-            U(i) = ran2(irand)
+            U(i) = pcg32_random_r(irand)
         end do
         v(1) = v_therm * SQRT(-2 * LOG(U(1))) * SIGN(1.0d0, U(2)-0.5d0)
         v(2) = v_therm * SQRT(-2 * LOG(U(3))) * COS(2 * pi * U(4))

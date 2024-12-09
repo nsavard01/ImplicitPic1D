@@ -13,6 +13,7 @@ module mod_simulation
     use mod_particleInjection
     use mod_Scheme
     use mod_nonLinSolvers
+    use iso_c_binding
     use ifport, only: makedirqq
     implicit none
 
@@ -52,7 +53,7 @@ contains
         type(nullCollision), intent(in out) :: nullCollisionList(numberBinaryCollisions)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, simulationTime
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, smoothInt
         integer(int64) :: startTimer, endTimer, startTotal, endTotal, timingRate
         real(real64) :: diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime, energyLoss, totCollTime, totPotTime, totSolverTime, totMoverTime
@@ -325,7 +326,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, windowNum, intPartV, k, iThread
         real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
         real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss, RF_ave, partV, partE

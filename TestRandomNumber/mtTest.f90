@@ -40,9 +40,9 @@ program mtTest
         call random_number(r)
         call randOther(i)%initialize(INT(r * (huge(irand(i))) + 1))
         call random_number(r)
-        state_PCG(i) = INT((r-0.5d0) * (huge(state_PCG(i))), kind = c_int64_t)
+        state_PCG(i) = INT((r-0.5d0) * 2 * (huge(state_PCG(i))), kind = c_int64_t)
         call random_number(r)
-        call rand_PCG(i)%initialize(INT((r-0.5d0) * (huge(state_PCG(i))), kind = c_int64_t))
+        call rand_PCG(i)%initialize(INT((r-0.5d0) * 2 * (huge(state_PCG(i))), kind = c_int64_t))
     end do
 
     ! call random%initialize(42)

@@ -4,6 +4,7 @@ module mod_particle
     use constants
     use mod_BasicFunctions
     use mod_domain
+    use iso_c_binding
     use omp_lib
     implicit none
 
@@ -86,15 +87,18 @@ contains
         ! distribute particles randomly over the domain
         class(Particle), intent(in out) :: self
         type(Domain), intent(in) :: world
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: iThread, i
+        integer(c_int64_t) :: irand_thread
         real(real64) :: x_pos
-        !$OMP parallel private(iThread, i, x_pos)
+        !$OMP parallel private(iThread, i, x_pos, irand_thread)
         iThread = omp_get_thread_num() + 1
+        irand_thread = irand(iThread)
         do i = 1, self%N_p(iThread)
-            x_pos = ran2(irand(iThread)) * world%L_domain + world%startX
+            x_pos = pcg32_random_r(irand_thread) * world%L_domain + world%startX
             self%phaseSpace(1,i, iThread) = world%getLFromX(x_pos)
         end do
+        irand(iThread) = irand_thread
         !$OMP end parallel
     end subroutine initializeRandUniform
 
@@ -104,25 +108,26 @@ contains
         class(Particle), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: alpha
-        integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: iThread, i, randNum
+        integer(c_int64_t), intent(in out) :: irand(numThread)
+        integer(int32) :: iThread, i
+        integer(c_int64_t) :: irand_thread
         real(real64) :: Rand1, Rand2, x_pos, val
-        !$OMP parallel private(iThread, i, randNum, Rand1, Rand2, x_pos, val)
+        !$OMP parallel private(iThread, i, irand_thread, Rand1, Rand2, x_pos, val)
         iThread = omp_get_thread_num() + 1
-        randNum = irand(iThread)
+        irand_thread = irand(iThread)
         do i = 1, self%N_p(iThread)
-            Rand1 = ran2(randNum)
-            Rand2 = ran2(randNum)
+            Rand1 = pcg32_random_r(irand_thread)
+            Rand2 = pcg32_random_r(irand_thread)
             val = (1.0d0 + alpha * COS(2 * pi * Rand2))/(1.0d0 + alpha)
             do while (Rand1 > val)
-                Rand1 = ran2(randNum)
-                Rand2 = ran2(randNum)
+                Rand1 = pcg32_random_r(irand_thread)
+                Rand2 = pcg32_random_r(irand_thread)
                 val = (1.0d0 + alpha * COS(2 * pi * Rand2))/(1.0d0 + alpha)
             end do
             x_pos = Rand2 * world%L_domain + world%startX
             self%phaseSpace(1,i, iThread) = world%getLFromX(x_pos)
         end do
-        irand(iThread) = randNum
+        irand(iThread) = irand_thread
         !$OMP end parallel
     end subroutine initializeRandCosine
 
@@ -132,25 +137,26 @@ contains
         class(Particle), intent(in out) :: self
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: alpha
-        integer(int32), intent(in out) :: irand(numThread)
-        integer(int32) :: iThread, i, randNum
+        integer(c_int64_t), intent(in out) :: irand(numThread)
+        integer(int32) :: iThread, i
+        integer(c_int64_t) :: irand_thread
         real(real64) :: Rand1, Rand2, x_pos, val
-        !$OMP parallel private(iThread, i, randNum, Rand1, Rand2, x_pos, val)
+        !$OMP parallel private(iThread, i, irand_thread, Rand1, Rand2, x_pos, val)
         iThread = omp_get_thread_num() + 1
-        randNum = irand(iThread)
+        irand_thread = irand(iThread)
         do i = 1, self%N_p(iThread)
-            Rand1 = ran2(randNum)
-            Rand2 = ran2(randNum)
+            Rand1 = pcg32_random_r(irand_thread)
+            Rand2 = pcg32_random_r(irand_thread)
             val = (1.0d0 + alpha * SIN(2 * pi * Rand2))/(1.0d0 + alpha)
             do while (Rand1 > val)
-                Rand1 = ran2(randNum)
-                Rand2 = ran2(randNum)
+                Rand1 = pcg32_random_r(irand_thread)
+                Rand2 = pcg32_random_r(irand_thread)
                 val = (1.0d0 + alpha * SIN(2 * pi * Rand2))/(1.0d0 + alpha)
             end do
             x_pos = Rand2 * world%L_domain + world%startX
             self%phaseSpace(1,i, iThread) = world%getLFromX(x_pos)
         end do
-        irand(iThread) = randNum
+        irand(iThread) = irand_thread
         !$OMP end parallel
     end subroutine initializeRandSine
 
@@ -164,19 +170,19 @@ contains
         class(Domain), intent(in) :: world
         real(real64), intent(in) :: T, alpha, v_drift
         integer(int32), intent(in) :: distType
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: iThread, i
-        integer(int32) :: irand_thread
+        integer(c_int64_t) :: irand_thread
         real(real64) :: U1, U2, U3, U4, v_therm, v_extra, x_pos
         v_therm = SQRT(T*e/self%mass)
         !$OMP PARALLEL PRIVATE(iThread, i, U1, U2, U3, U4, irand_thread, v_extra, x_pos)
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread)
         do i = 1, self%N_p(iThread)
-            U1 = ran2(irand_thread)
-            U2 = ran2(irand_thread)
-            U3 = ran2(irand_thread)
-            U4 = ran2(irand_thread)
+            U1 = pcg32_random_r(irand_thread)
+            U2 = pcg32_random_r(irand_thread)
+            U3 = pcg32_random_r(irand_thread)
+            U4 = pcg32_random_r(irand_thread)
             SELECT CASE (distType)
             CASE(0)
                 v_extra = v_drift
@@ -298,7 +304,7 @@ contains
         type(Domain) :: world
         character(len=*), intent(in) :: filename
         integer(int32), intent(in) :: numThread
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: T_e, T_i
         integer(int32) :: j, io, numSpecies = 0, numParticles(100), particleIdxFactor(100), i, tempInt, distType(100), iThread
         character(len=15) :: name

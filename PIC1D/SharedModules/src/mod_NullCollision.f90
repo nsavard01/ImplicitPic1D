@@ -6,6 +6,7 @@ module mod_NullCollision
     use mod_particle
     use mod_targetParticle
     use omp_lib
+    use iso_c_binding
     use ifport, only: makedirqq
     implicit none
 
@@ -113,14 +114,14 @@ contains
         integer(int32), intent(in) :: numberChargedParticles, numberBinaryCollisions
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(targetParticle), intent(in) :: targetParticleList(numberBinaryCollisions)
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         real(real64), intent(in) :: del_t
         logical :: collisionBool
         real(real64) :: P_null, numberSelectedReal, Rand, targetVelocity(3), incidentVelocity(3), velocity_CM(3), energyCM, d_value, sigma_v, &
         sigma_v_low, speedCM, particleLocation, energyLoss(self%numberCollisions), primary_mass, target_mass, IncidentEnergy, totIncidentEnergy(self%numberCollisions)
         integer(int32) :: numberSelected, iThread, i, particleIndx, numberTotalParticles, indxHigh, indxLow, indxMiddle, collIdx, addIonizationIndx
         integer(int64) :: totalCollisions(self%numberCollisions)
-        integer(int32) :: irand_thread
+        integer(c_int64_t) :: irand_thread
 
         ! Calculate null collision probability to determine percentage of particles to react
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
@@ -147,12 +148,12 @@ contains
         numberSelectedReal = P_null * real(numberTotalParticles)
         numberSelected = INT(numberSelectedReal)
         ! Account for integer selection
-        Rand = ran2(irand_thread)
+        Rand = pcg32_random_r(irand_thread)
         if (Rand < (numberSelectedReal - numberSelected)) numberSelected = numberSelected + 1   
         addIonizationIndx = 0
         do i = 1, numberSelected
             ! Randomly sample particle and save properties
-            Rand = ran2(irand_thread)
+            Rand = pcg32_random_r(irand_thread)
             particleIndx = INT((numberTotalParticles) * Rand) + 1
             particleLocation = particleList(self%reactantsIndx(1))%phaseSpace(1, particleIndx, iThread)
             incidentVelocity = particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleIndx, iThread)
@@ -184,7 +185,7 @@ contains
                 end do
                 d_value = (energyCM - self%energyArray(indxLow))/(self%energyArray(indxHigh) - self%energyArray(indxLow))
             end if
-            Rand = ran2(irand_thread)
+            Rand = pcg32_random_r(irand_thread)
             sigma_v_low = 0.0d0
             do collIdx = 1, self%numberCollisions
                 ! Cycle through each collision and test if in probabilty bracket
@@ -251,7 +252,7 @@ contains
         class(nullCollision), intent(in) :: self
         real(real64), intent(in) :: energyCM, E_thres, primary_mass, ion_mass, target_mass
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
-        integer(int32), intent(in out) :: irand
+        integer(c_int64_t), intent(in out) :: irand
         real(real64) :: speedPerParticle, phi, e_vector(3), u_vector(3), V_cm(3), delE, secTheta, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -261,8 +262,8 @@ contains
         V_cm = (P_beginning) / (self%sumMass)
     
         ! Scatter primary particle
-        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
-        phi = ran2(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*pcg32_random_r(irand)
+        phi = pcg32_random_r(irand) * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
@@ -274,7 +275,7 @@ contains
 
         ! secondary electron scattering
         cos_theta = COS(2.0d0 * pi/3.0d0)
-        phi = ran2(irand) * 2.0d0 * pi
+        phi = pcg32_random_r(irand) * 2.0d0 * pi
 
         call scatterVector(u_vector, e_vector, cos_theta, phi)
 
@@ -384,7 +385,7 @@ contains
         class(nullCollision), intent(in) :: self
         real(real64), intent(in) :: energyCM, E_thres, primary_mass, target_mass
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3)
-        integer(int32), intent(in out) :: irand
+        integer(c_int64_t), intent(in out) :: irand
         real(real64) :: speedPerParticle, phi, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3)!, E_beginning, E_end, P_end(3)
         !integer(int32) :: i
 
@@ -394,8 +395,8 @@ contains
         V_cm = (P_beginning) / self%sumMass
     
         ! scatter primary particle in CM frame
-        cos_theta = 1.0d0 - 2.0d0*ran2(irand)
-        phi = ran2(irand) * 2.0d0 * pi
+        cos_theta = 1.0d0 - 2.0d0*pcg32_random_r(irand)
+        phi = pcg32_random_r(irand) * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)

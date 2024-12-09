@@ -25,10 +25,10 @@ program BoundPlasmaExample
     ! Read all inputs and create objects
     call initializeScheme()
     call readInitialInputs('InitialConditions.inp')
-    call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)
+    call initializeRandomGenerators(numThread, stateRan0, state_PCG, .false.)
     call readWorld('Geometry.inp', globalWorld, T_e, n_ave)
     call readSolver('Geometry.inp', globalSolver, globalWorld, startSimulationTime)
-    call readChargedParticleInputs('ParticleTypes.inp', stateRan0, T_e, T_i, numThread, globalWorld, globalParticleList)
+    call readChargedParticleInputs('ParticleTypes.inp', state_PCG, T_e, T_i, numThread, globalWorld, globalParticleList)
     call readNeutralParticleInputs('ParticleTypes.inp', targetParticleList)
     call readNullCollisionInputs('collision.inp', nullCollisionList, globalParticleList, targetParticleList)
     call allocateParticleMoverData()
@@ -98,6 +98,6 @@ program BoundPlasmaExample
     ! stop
 
     ! Run simulations
-    call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, simulationTime)
-    call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, stateRan0, averagingTime, 100)
+    call solveSimulation(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, state_PCG, simulationTime)
+    call solveSimulationFinalAverage(globalSolver, globalParticleList, targetParticleList, nullCollisionList, globalWorld, del_t, state_PCG, averagingTime, 100)
 end program BoundPlasmaExample
