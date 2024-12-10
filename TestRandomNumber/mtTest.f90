@@ -73,34 +73,7 @@ program mtTest
     ! r = random%genrand64_real3()
     ! write(output_unit, '(E30.16)') r
 
-    mean = 0
-    print *, 'starting PCG:'
-    print *, 'max_int',max_int
-    print *, state_PCG
-    call system_clock(startTime)
-    !$OMP parallel private(iThread, j,i, test_c_int, var)
-    iThread = omp_get_thread_num() + 1
-    test_c_int = state_PCG(iThread)
-    do j = 1, outer_n
-        do i = 1, n
-            var = pcg32_random_r(test_c_int)
-            if () then
-                print *, 'bad nan', var
-                stop
-            end if
-        end do
-    end do
-    state_PCG(iThread) = test_c_int
-    !$OMP end parallel
-    call system_clock(endTime)
-    print *, 'results PCG'
-    print *, 'mean:', mean/(real(numThread) * n * outer_n)
-    print *, 'var:', var/(real(numThread) * n * outer_n)
-    print *, 'Time:', real(endTime - startTime)/real(timingRate)
-    print *, 'end PCG:'
-    print *, state_PCG
 
-    stop
 
     var = 0
     mean = 0

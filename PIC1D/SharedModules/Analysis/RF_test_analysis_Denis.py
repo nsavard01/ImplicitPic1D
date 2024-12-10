@@ -82,6 +82,7 @@ NGP_RFBenchmark_Denis_131PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/Im
 NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing/')
+NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing_PCG = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing_PCG/')
 NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing_OGTime = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing_OGTime/')
 
@@ -103,6 +104,7 @@ NGP_RFBenchmark_Denis_lowerDen_131PPC_256cells_noSmoothing = dataSet('Y:/Implici
 NGP_RFBenchmark_Denis_lowerDen_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_262PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing/')
+NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing_PCG = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing_PCG/')
 NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing/')
 
 NGP_RFBenchmark_Denis_lowerDen_131PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_131PPC_512cells_noSmoothing/')

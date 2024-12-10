@@ -3,7 +3,7 @@
 // Slight modification where it passes reference to int64_t for interoperability with fortran, and returns a double precision float
 
 #include <stdint.h>
-static double const mult_factor_PCG = 1.0 / ((double)(UINT32_MAX) + 1.0); // Multiplier for conversion to (0,1] double
+static double const mult_factor_PCG = 1.0 / ((double)(UINT32_MAX) + 2.0); // Multiplier for conversion to [0,1] double
 
 
 double pcg32_random_r(int64_t* state)
@@ -15,7 +15,7 @@ double pcg32_random_r(int64_t* state)
     uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
     uint32_t rot = oldstate >> 59u;
     uint32_t res = (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-    return (double)(res) * mult_factor_PCG;
+    return ((double)(res) + 1.0) * mult_factor_PCG; //error in collisions when include 0 so just have 0 and 1 not included
 }
 
 
