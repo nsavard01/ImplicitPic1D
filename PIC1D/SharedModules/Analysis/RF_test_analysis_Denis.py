@@ -97,7 +97,7 @@ NGP_RFBenchmark_Denis_lowerDen_262PPC_256cells_noSmoothing = dataSet('Y:/Implici
 NGP_RFBenchmark_Denis_lowerDen_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing/')
-NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing/')
+
 
 NGP_RFBenchmark_Denis_lowerDen_131PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_131PPC_512cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_262PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_262PPC_512cells_noSmoothing/')
@@ -111,6 +111,12 @@ CIC_RFBenchmark_Denis_262PPC_128cells = dataSet('Y:/ImplicitPic1D/ImplicitData/C
 CIC_RFBenchmark_Denis_262PPC_128cells_NoSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_128cells_NoSmoothing/')
 CIC_RFBenchmark_Denis_262PPC_128cells_normTime = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_128cells_normTime/')
 
+CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing/')
+CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing/')
+CIC_RFBenchmark_Denis_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_524PPC_256cells_noSmoothing/')
+CIC_RFBenchmark_Denis_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_1048PPC_256cells_noSmoothing/')
+CIC_RFBenchmark_Denis_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_2096PPC_256cells_noSmoothing/')
+CIC_RFBenchmark_Denis_4192PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_4192PPC_256cells_noSmoothing/')
 
 CIC_RFBenchmark_Denis_131PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_131PPC_128cells_noSmoothing_sinCenter/')
 CIC_RFBenchmark_Denis_262PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_128cells_noSmoothing_sinCenter/')
@@ -174,6 +180,7 @@ plotAveDensity(NGP_RFBenchmark_Denis_131PPC_256cells_noSmoothing, 'He+', '131 PP
 plotAveDensity(NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing, 'He+', '262 PPC')
 plotAveDensity(NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing, 'He+', '524 PPC')
 plotAveDensity(NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing, 'He+', '1048 PPC')
+plotAveDensity(NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing, 'He+', '2096 PPC')
 plt.xlim(Exp_RFBenchmark_Denis_moreCells.grid[0], Exp_RFBenchmark_Denis_moreCells.grid[-1])
 plt.ylim(0, None)
 plt.xlabel('Distance (m)', fontsize = 14)
