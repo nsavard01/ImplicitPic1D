@@ -79,6 +79,8 @@ NGP_RFBenchmark_Denis_131PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/Im
 NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing/')
+NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing/')
+NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing_OGTime = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing_OGTime/')
 
 NGP_RFBenchmark_Denis_262PPC_128cells_noSmoothing_normTime = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_262PPC_128cells_noSmoothing_normTime/')
 
@@ -181,6 +183,7 @@ plotAveDensity(NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing, 'He+', '262 PP
 plotAveDensity(NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing, 'He+', '524 PPC')
 plotAveDensity(NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing, 'He+', '1048 PPC')
 plotAveDensity(NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing, 'He+', '2096 PPC')
+plotAveDensity(NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing_OGTime, 'He+', '2096 PPC')
 plt.xlim(Exp_RFBenchmark_Denis_moreCells.grid[0], Exp_RFBenchmark_Denis_moreCells.grid[-1])
 plt.ylim(0, None)
 plt.xlabel('Distance (m)', fontsize = 14)
