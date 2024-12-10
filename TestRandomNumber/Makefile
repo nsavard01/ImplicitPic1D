@@ -1,7 +1,7 @@
 FC = ifx
 COMPILER_C = icx
 CC=mpiifort
-BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -qmkl -mtune=skylake -heap-arrays 8192 -ffloat-store -xHost #-xCORE-AVX512 -mt_mpi 
+BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -qmkl -mtune=skylake -heap-arrays 8192 -xHost #-xCORE-AVX512 -mt_mpi 
 DEBUG = -qmkl -g -traceback -check all -fp-stack-check -warn all #-traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
 OPT= $(BASE)
 BASE_C = -O3 -ipo -xHost -fast -qmkl -qopenmp

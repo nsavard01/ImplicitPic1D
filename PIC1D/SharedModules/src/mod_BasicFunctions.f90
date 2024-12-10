@@ -69,10 +69,10 @@ contains
     subroutine getRandom(x, irand)
         !use Gwenael's function to generate array of random number
         real(real64), intent(in out) :: x(:)
-        integer(int32) :: i
+        integer(c_int64_t) :: i
         integer(int32), intent(in out) :: irand
         do i = 1, size(x)
-            x(i) = ran2(irand)
+            x(i) = pcg32_random_r(irand)
         end do
     end subroutine getRandom
 

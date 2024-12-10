@@ -14,7 +14,7 @@ program mtTest
     type(PCG_type), allocatable :: rand_PCG(:)
     real(wp) :: r, temp
     integer(i4) :: i, j, startTime, endTime, timingRate, iThread
-    integer, parameter :: n = 10**7, numThread = 6, numBins = 200, outer_n = 1000
+    integer, parameter :: n = 10**7, numThread = 6, numBins = 200, outer_n = 100
     integer(int32) :: hist(numBins), thread_irand
     real(real64) :: var, mean
     real(c_double) :: test_c_double
@@ -73,7 +73,6 @@ program mtTest
     ! r = random%genrand64_real3()
     ! write(output_unit, '(E30.16)') r
 
-    var = 0
     mean = 0
     print *, 'starting PCG:'
     print *, 'max_int',max_int
@@ -85,7 +84,7 @@ program mtTest
     do j = 1, outer_n
         do i = 1, n
             var = pcg32_random_r(test_c_int)
-            if (var /= var) then
+            if () then
                 print *, 'bad nan', var
                 stop
             end if

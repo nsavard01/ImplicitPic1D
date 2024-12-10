@@ -12,6 +12,7 @@ print('Loaded modules')
 #%%
 
 print('Loading data')
+exit()
 
 def readBenchmarkResults():
     firstIndx = 0
@@ -129,6 +130,8 @@ CIC_RFBenchmark_Denis_262PPC_128cells_normTime = dataSet('Y:/ImplicitPic1D/Impli
 CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing/')
 CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing/')
 CIC_RFBenchmark_Denis_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_524PPC_256cells_noSmoothing/')
+CIC_RFBenchmark_Denis_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_1048PPC_256cells_noSmoothing/')
+CIC_RFBenchmark_Denis_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_2096PPC_256cells_noSmoothing/')
 
 CIC_RFBenchmark_Denis_131PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_131PPC_128cells_noSmoothing_sinCenter/')
 CIC_RFBenchmark_Denis_262PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_128cells_noSmoothing_sinCenter/')
