@@ -3,4 +3,3 @@
 0 5.6d24 ! Have sonic injection at boundary + refluxing. If 1 first number, then second number is amount m^-2 s^-1, and third is amount macroparticles per injection (after time step completed)
 0 3.d20 ! Have maxwellian injection uniformly in volume. If 1 first number, then second number is amount m^-2 s^-1
 0 200.0d0 ! Have maxwellian heating uniformly among particles. If 1 first number, then second number is fraction of originally calculated del_t
-0 0 0 0 ! temp

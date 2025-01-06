@@ -15,7 +15,7 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
         colors = ['b', 'r', 'g', 'k', 'c', 'm', 'yAve']
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
+            plt.plot(dataSet.grid, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
         plt.xlabel('Distance (m)')
         plt.ylabel('Particle Density (1/m^3)')
         plt.xlim([dataSet.x_min, dataSet.x_max])
@@ -230,7 +230,45 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
             plt.xlim([dataSet.x_min, dataSet.x_max])
             plt.legend(loc='lower center')
             plt.pause(pauseTime)
-            
+
+
+def density_std_plots(dataSet, name, amount, label = ''):
+    num_nodes = dataSet.Nx
+    n = np.zeros((amount, num_nodes))
+    num_diag = 0
+    for y in range(dataSet.numDiag-1, dataSet.numDiag - amount-1, -1):
+        n[num_diag,:] = dataSet.getDensity(name, y)
+        num_diag += 1
+
+    # n_tot = np.mean(n, axis = 0)
+    # n_err = np.max(n, axis = 0) - np.min(n,axis = 0)
+    n_err = np.std(n, axis = 0)
+    # plt.errorbar(dataSet.grid, n_tot, yerr = n_err, fmt = '.')
+    plt.plot(dataSet.grid, n_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
+
+def Efield_std_plots(dataSet, amount, label = ''):
+    E = np.zeros((amount, dataSet.Nx-1))
+    num_diag = 0
+    for y in range(dataSet.numDiag-1, dataSet.numDiag - amount-1, -1):
+        phi = dataSet.getPhi(y)
+        E[num_diag, :] = -np.diff(phi)/np.diff(dataSet.grid)
+        num_diag += 1
+    E_err = np.std(E, axis = 0)
+    plt.plot(0.5 * (dataSet.grid[0:-1] + dataSet.grid[1::]), E_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
+
+def temp_plots(dataSet, name, amount):
+    T = np.zeros((amount, dataSet.Nx-1))
+    num_diag = 0
+    for y in range(dataSet.numDiag-1, dataSet.numDiag - amount-1, -1):
+        Temp = dataSet.getTemp(name,y)
+        T[num_diag, :] = Temp
+        num_diag += 1
+    T_err = np.std(T, axis = 0)
+    plt.plot(0.5 * (dataSet.grid[0:-1] + dataSet.grid[1::]), T_err, 'o-', label=y)
+    plt.xlabel('Distance (m)')
+    plt.ylabel(r'Temperature (eV)')
+    plt.xlim([dataSet.x_min, dataSet.x_max])
+
 def plotPhaseSpace(dataSet, name):
     phaseSpace = dataSet.getPhaseSpace(name)
     plt.scatter(phaseSpace[:,0], phaseSpace[:,1])

@@ -44,7 +44,7 @@ contains
         do j = 1, part%N_p(iThread)
             l_left = INT(part%phaseSpace(1, j, iThread))
             l_right = l_left + 1
-            d = part%phaseSpace(1, j, iThread) - real(l_left)
+            d = part%phaseSpace(1, j, iThread) - real(l_left, kind = 8)
             part%densities(l_left, iThread) = part%densities(l_left, iThread) + (1.0d0-d)
             part%densities(l_right, iThread) = part%densities(l_right, iThread) + d
         end do
@@ -131,7 +131,7 @@ contains
             END SELECT
 
             ! Write density
-            write(char_i, '(I4)'), CurrentDiagStep
+            write(char_i, '(I6)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else

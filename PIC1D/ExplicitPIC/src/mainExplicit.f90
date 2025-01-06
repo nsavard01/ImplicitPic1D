@@ -22,10 +22,10 @@ program BoundPlasmaExample
     
     ! Read initial inputs
     call readInitialInputs('InitialConditions.inp')
-    call initializeRandomGenerators(numThread, stateRan0, stateRanNew, .false.)
+    call initializeRandomGenerators(numThread, stateRan0, state_PCG, .false.)
     call readWorld('Geometry.inp', world, T_e, n_ave)
     call readSolver('Geometry.inp', solver, world)
-    call readChargedParticleInputs('ParticleTypes.inp', stateRan0, T_e, T_i, numThread, world, particleList)
+    call readChargedParticleInputs('ParticleTypes.inp', state_PCG, T_e, T_i, numThread, world, particleList)
     call readNeutralParticleInputs('ParticleTypes.inp', targetParticleList)
     call readNullCollisionInputs('collision.inp', nullCollisionList, particleList, targetParticleList)
     call readInjectionInputs('ParticleInjection.inp', particleList(1)%w_p)
@@ -38,10 +38,10 @@ program BoundPlasmaExample
     if (.not. restartBool) call solver%initialVRewind(particleList, del_t)
     
     ! Solve Simulation
-    call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, stateRan0, simulationTime)
+    call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, state_PCG, simulationTime)
     if (averagingTime /= 0.0d0) then
         print *, "Averaging over", averagingTime, "seconds"
-        call solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, stateRan0, averagingTime, 100)
+        call solveSimulationFinalAverage(solver, particleList, targetParticleList, nullCollisionList, world, del_t, state_PCG, averagingTime, 100)
     end if
 
 

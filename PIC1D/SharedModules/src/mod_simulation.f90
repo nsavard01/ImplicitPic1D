@@ -13,6 +13,7 @@ module mod_simulation
     use mod_particleInjection
     use mod_Scheme
     use mod_nonLinSolvers
+    use iso_c_binding
     use ifport, only: makedirqq
     implicit none
 
@@ -32,7 +33,7 @@ contains
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
         logical, intent(in) :: boolAverage
-        write(char_i, '(I3)') CurrentDiagStep
+        write(char_i, '(I6)') CurrentDiagStep
         if (boolAverage) then
             open(41,file=dirName//'/Phi/phi_Average.dat', form='UNFORMATTED')
         else
@@ -52,7 +53,7 @@ contains
         type(nullCollision), intent(in out) :: nullCollisionList(numberBinaryCollisions)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, simulationTime
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, smoothInt
         integer(int64) :: startTimer, endTimer, startTotal, endTotal, timingRate
         real(real64) :: diagTimeDivision, diagTime, Etotal, chargeTotal, elapsed_time, pastDiagTime, energyLoss, totCollTime, totPotTime, totSolverTime, totMoverTime
@@ -325,7 +326,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, windowNum, intPartV, k, iThread
         real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
         real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss, RF_ave, partV, partE
@@ -360,6 +361,7 @@ contains
         allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
         do while((currentTime - startTime) < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
+            
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
@@ -393,7 +395,7 @@ contains
         do j=1, numberChargedParticles
             !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1
-            particleList(j)%densities(:, iThread) = particleList(j)%densities(:, iThread) /real(i)
+            particleList(j)%densities(:, iThread) = particleList(j)%densities(:, iThread) /real(i, kind = 8)
             !$OMP end parallel
         end do
         ! Ave voltage (including RF)

@@ -9,6 +9,7 @@ module mod_simulation
     use mod_particleInjection
     use mod_targetParticle
     use mod_NullCollision
+    use iso_c_binding
     use omp_lib
     implicit none
 
@@ -111,7 +112,7 @@ contains
         type(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, simulationTime
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: i, j, CurrentDiagStep, diagStepDiff, unitPart1
         real(real64) :: diagTimeDivision, diagTime, elapsedTime, chargeTotal, energyLoss, elapsed_time, momentum_total(3), totMoverTime, totPotTime, totCollTime
         integer(int64) :: startTime, endTime, timingRate, collisionTime, potentialTime, moverTime, startTotal, endTotal
@@ -341,7 +342,7 @@ contains
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
-        integer(int32), intent(in out) :: irand(numThread)
+        integer(c_int64_t), intent(in out) :: irand(numThread)
         integer(int32) :: i, stepsAverage, windowNum, windowDivision, j, k, iThread, intPartV
         real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss, VHist(2*binNumber, numberChargedParticles), EHist(binNumber, numberChargedParticles), partV, partE
         real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), &

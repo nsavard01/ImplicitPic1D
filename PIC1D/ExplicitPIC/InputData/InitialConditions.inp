@@ -4,10 +4,10 @@
 4.0 ! T_e (eV)
 0.025 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-10.0d0 5.d-12  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+10.0d0 1d-11  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 4.d-6 ! amount of time to average final Diagnostics
 ../../../../ExplicitData/  !Save directory
-Exp_RFBenchmark_Denis_moreCells_lowerDen_10xPart_halfTime !save file name
+Exp_RFBenchmark_Denis_moreCells_lowerDen_doublePart !save file name
 no Exp_RFBenchmark_highDensity_EvenMoreResolved_x6 ! Restart(yes/no) and save directory to take from
 END
 

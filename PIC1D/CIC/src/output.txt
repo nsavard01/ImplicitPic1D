@@ -23,8 +23,8 @@
  
  Reading domain inputs:
  ------------------
- Number of nodes:         256
- Number of half nodes:         257
+ Number of nodes:         128
+ Number of half nodes:         129
  Grid length:  6.700000000000000E-002
  gridType:           0
  Left boundary type:           1

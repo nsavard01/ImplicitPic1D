@@ -14,6 +14,8 @@ module mod_nonLinSolvers
     ! Non-linear solvers for implicit PIC
     
     interface
+        ! MKL subroutine to solve under or overdetermined linear system
+        ! can be used 
         subroutine dgels(trans, m, n, nrhs, a, lda, b, ldb, work, lwork, info)
             Character*1, intent(in) :: trans
             integer, intent(in) :: m, n, nrhs, lda, ldb, lwork
@@ -26,6 +28,7 @@ module mod_nonLinSolvers
 
     ! Initialize classes here since nitsol made to work with arrays of numbers instead of objects
     ! For this reason, just make global so nitsol can be used. Suffer potential consequences later
+    ! Generally use AA anyway
     type(Domain) :: globalWorld
     type(Particle), allocatable :: globalParticleList(:)
     type(potentialSolver) :: globalSolver
@@ -35,7 +38,7 @@ module mod_nonLinSolvers
     integer(int32), private :: maxIter, solverType, m_Anderson
     real(real64), private :: Beta_k, eps_r, eps_a
 
-    !allocatable arrays for Anderson Acceleration
+    !allocatable arrays for Anderson Acceleration subroutines, these will be reused so have them initialized into heap arrays
     real(real64), private, allocatable :: Residual_k(:, :), phi_k(:, :), fitMat(:, :)
 
 contains
@@ -89,6 +92,7 @@ contains
 
     subroutine solveDivAmpereAnderson(solver, particleList, world, del_t)
         ! Solve for divergence of ampere using picard iterations with anderson acceleration
+        ! Allows for higher del_t than straight Picard
         type(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
@@ -98,7 +102,7 @@ contains
         integer(int32) :: i, j, index, m_k
         integer(int64) :: startTime, endTime
         
-        ! put constaent source term into solver%rho so don't need to recalculate 
+        ! put constaent source term into solver%rho so don't need to recalculate everytime
         call solver%makeConstSourceTerm(world)
         phi_k(:,1) = solver%phi_f
         call system_clock(startTime)
@@ -113,7 +117,8 @@ contains
         phi_k(:,2) = solver%phi_f
         Residual_k(:,1) = phi_k(:,2) - phi_k(:,1)
         normResidual(1) = SQRT(SUM(Residual_k(:,1)**2))
-        ! Find total convergence criterion
+        ! Find total convergence criterion eps_r * R_init + eps_a * sqrt(N_x)
+        ! sqrt(N_x) so eps_a is properly normalized as we don't divied by sqrt(N_x) when evaluating RMS values of residual
         eps_tol = eps_r * normResidual(1) + eps_a * SQRT(real(NumberXNodes))
         do i = 1, maxIter
             ! store last m iterations with index cycling
@@ -129,6 +134,7 @@ contains
             potTimer = potTimer + endTime - startTime
             Residual_k(:, index) = solver%phi_f - phi_k(:,index)
             normResidual(index) = SQRT(SUM(Residual_k(:, index)**2))
+            ! Check for convergence, done using (phi_k+1 - phi_k)**2 sum
             if (normResidual(index) < eps_tol) then
                 ! Move particles
                 call system_clock(startTime)
@@ -147,17 +153,19 @@ contains
                 else
                     sumPastResiduals = normResidual(MODULO(i-1, m_Anderson+1) + 1)
                 end if
+                ! If stagnating residual then exit so time step can be cut in half
                 if (normResidual(index) > sumPastResiduals) then
                     iterNumPicard = maxIter
                     exit
                 end if
             end if
             
+            ! Form matrix for minimization procedure
             do j = 0, m_k-1
                 fitMat(:,j+1) =  Residual_k(:, index) - Residual_k(:, MODULO(i - m_k + j, m_Anderson+1) + 1)
             end do
             !call dgels('N', NumberXNodes, m_k, 1, fitMat(:, 1:m_k), NumberXNodes, alpha(1:ldb), ldb, work, lwork, info)
-            ! For small m_anderson quicker to solve normal equation
+            ! For small m_anderson quicker to solve normal equation rather than use dgels
             alpha(1:m_k) = solveNormalEquation(fitMat(:, 1:m_k), Residual_k(:, index), NumberXNodes, m_k)
             alpha(m_k+1) = 1.0d0 - SUM(alpha(1:m_k)) 
             ! update next phi_k
@@ -172,7 +180,7 @@ contains
 
     subroutine adaptiveSolveDivAmpereAnderson(solver, particleList, world, del_t, remainDel_t, currDel_t, timeCurrent)
         ! Solve for divergence of ampere's law with picard
-        ! cut del_t in two if non-convergence after maxIter, repeat until convergence
+        ! cut del_t in two if non-convergence after maxIter or is stagnating convergence, repeat until convergence
         type(potentialSolver), intent(in out) :: solver
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
         type(Domain), intent(in) :: world
@@ -190,11 +198,11 @@ contains
             ! Time step is split
             amountTimeSplits = amountTimeSplits + 1
             iterNumAdaptiveSteps = 0
-            !adaptiveJ = 0.0d0
             do while (iterNumPicard == maxIter)
                 currDel_t = currDel_t/2.0d0
                 iterNumAdaptiveSteps = iterNumAdaptiveSteps + 1
                 if (iterNumAdaptiveSteps > 4) then
+                    ! If you have to reduce by 4x, likely something wrong
                     stop "ALREADY REDUCED TIME STEP MORE THAN 3 TIMES, REDUCE INITIAL TIME STEP!!!"
                 end if
                 if (solver%RF_bool) then
@@ -285,6 +293,7 @@ contains
             call system_clock(endTimer)
             moverTimer = moverTimer + endTimer - startTimer
         CASE(1,5,6)
+            ! Issue with convergence, set to maxIter for adaptive time step
             iterNumPicard = maxIter
         CASE default
             print *, "Nitsol error with iterm == ", iterm
@@ -325,6 +334,7 @@ contains
     end subroutine adaptiveSolveDivAmpereJFNK
 
     subroutine writeSolverState(dirName)
+        ! Write solver state 
         character(*), intent(in) :: dirName
         open(15,file=dirName//'/SolverState.dat')
         write(15,'("Solver Type, eps_a, eps_r, m_Anderson, Beta_k, maximum iterations")')
