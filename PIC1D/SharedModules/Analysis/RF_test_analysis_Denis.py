@@ -85,8 +85,13 @@ NGP_RFBenchmark_Denis_131PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/Im
 NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_262PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_524PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing/')
+NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing_PCG = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_1048PPC_256cells_noSmoothing_PCG/')
 NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing/')
+NGP_RFBenchmark_Denis_4192PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_4192PPC_256cells_noSmoothing/')
 NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing_OGTime = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_2096PPC_256cells_noSmoothing_OGTime/')
+
+NGP_RFBenchmark_Denis_1048PPC_1024cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_1048PPC_1024cells_noSmoothing/')
+NGP_RFBenchmark_Denis_1048PPC_1024cells_noSmoothing_OGTime = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_1048PPC_1024cells_noSmoothing_OGTime/')
 
 NGP_RFBenchmark_Denis_262PPC_128cells_noSmoothing_normTime = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_262PPC_128cells_noSmoothing_normTime/')
 
@@ -124,7 +129,6 @@ NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing = dataSet('Y:/Implic
 NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing_PCG = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_1048PPC_256cells_noSmoothing_PCG/')
 NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_2096PPC_256cells_noSmoothing/')
 
-
 NGP_RFBenchmark_Denis_lowerDen_131PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_131PPC_512cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_262PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_262PPC_512cells_noSmoothing/')
 NGP_RFBenchmark_Denis_lowerDen_524PPC_512cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_512cells_noSmoothing/')
@@ -147,12 +151,6 @@ CIC_RFBenchmark_Denis_262PPC_128cells = dataSet('Y:/ImplicitPic1D/ImplicitData/C
 CIC_RFBenchmark_Denis_262PPC_128cells_NoSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_128cells_NoSmoothing/')
 CIC_RFBenchmark_Denis_262PPC_128cells_normTime = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_128cells_normTime/')
 
-CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing/')
-CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing/')
-CIC_RFBenchmark_Denis_524PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_524PPC_256cells_noSmoothing/')
-CIC_RFBenchmark_Denis_1048PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_1048PPC_256cells_noSmoothing/')
-CIC_RFBenchmark_Denis_2096PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_2096PPC_256cells_noSmoothing/')
-CIC_RFBenchmark_Denis_4192PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_4192PPC_256cells_noSmoothing/')
 
 CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_131PPC_256cells_noSmoothing/')
 CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_262PPC_256cells_noSmoothing/')
