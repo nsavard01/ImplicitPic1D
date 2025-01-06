@@ -15,6 +15,7 @@ debug: clean cleanNitsol setDebug main
 setDebug: 
 	@echo "Setting up Debug flags"
 	$(eval BASE = -qmkl -qopenmp -g -heap-arrays 8192 -traceback -check all -fp-stack-check -warn all)
+	$(eval BASE_C = -qmkl -qopenmp -g -Wall)
 	
 
 main: $(OBJ)

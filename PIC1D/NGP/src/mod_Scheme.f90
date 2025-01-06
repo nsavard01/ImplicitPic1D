@@ -131,7 +131,7 @@ contains
             END SELECT
 
             ! Write density
-            write(char_i, '(I6)'), CurrentDiagStep
+            write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else

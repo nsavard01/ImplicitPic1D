@@ -25,3 +25,7 @@ Exp_ICP_test_highDensity_quadPart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitDa
 
 Exp_ICP_test_highDensity_lowPressure = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_test_highDensity_lowPressure/')
 Exp_ICP_test_highDensity_lowPressure_doublePart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_test_highDensity_lowPressure_doublePart/')
+
+
+
+NGP_ICP_test_lowDensity_fullyImplicit = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_test_lowDensity_fullyImplicit/')
