@@ -13,6 +13,7 @@ module mod_NullCollision
     private
     public :: nullCollision, readNullCollisionInputs
     integer(int32), public, protected :: numberBinaryCollisions = 0
+    real(real64), parameter :: sin_third_rot = sin(2.0d0 * pi / 3.0d0), cos_third_rot = cos(2.0d0 * pi / 3.0d0)
     
 
     ! Stores information for each binary collision of charged particle on target particle
@@ -43,8 +44,7 @@ module mod_NullCollision
 contains
 
     type(nullCollision) function nullCollision_constructor(numberReactants, numberCollisions, lengthArrays, red_mass, sumMass, redMassTripleProducts, energyArray, sigmaArray, energyThreshold, collisionType, reactantsIndx, numberProducts, productsIndx) result(self)
-        ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
-        ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
+        ! Construct null Collision object
         integer(int32), intent(in) :: numberCollisions, numberReactants, lengthArrays
         real(real64), intent(in) :: energyArray(lengthArrays), sigmaArray(lengthArrays, numberCollisions), energyThreshold(numberCollisions), red_mass, sumMass, redMassTripleProducts
         integer(int32), intent(in) :: collisionType(numberCollisions), reactantsIndx(numberReactants), numberProducts(numberCollisions), productsIndx(3,numberCollisions)
@@ -80,12 +80,17 @@ contains
         self%energyArray = energyArray
         self%reactantsIndx = reactantsIndx
         do i = 1, numberCollisions
-            ! Go top down in order, assign arrays. This is just to put more 'likely' colliison first when looking at collision probabilities
+            ! Go top down in order, assign arrays. This is just to put more 'likely' collision first when looking at collision probabilities
             j = indxOrder(i)
+            ! array of sigma for each collision
             self%sigmaArray(:, i) = sigmaArray(:, j)
+            ! lower energy threshold
             self%energyThreshold(i) = energyThreshold(j)
+            ! collision type
             self%collisionType(i) = collisionType(j)
+            ! number of products
             self%numberProducts(i) = numberProducts(j)
+            ! identifying indx for each product (in particle list)
             self%productsIndx(:,i) = productsIndx(:,j)
         end do
 
@@ -109,7 +114,7 @@ contains
     end function nullCollision_constructor
 
     subroutine generateCollision(self, particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
-        ! Collision operator on particle for a set of binary operations
+        ! Binary collision operator on particle with background gas
         class(nullCollision), intent(in out) :: self
         integer(int32), intent(in) :: numberChargedParticles, numberBinaryCollisions
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
@@ -126,14 +131,16 @@ contains
         ! Calculate null collision probability to determine percentage of particles to react
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
     
-        if (P_null > 0.5d0) then
-            print *, 'P_null greater than 50%'
+        if (P_null > 0.05d0) then
+            print *, 'P_null greater than 5%'
             stop
         end if
         ! Initialize diagnostics
         energyLoss = 0
         totalCollisions = 0
         totIncidentEnergy = 0
+
+        ! collision of primary particle on target particle
 
         primary_mass = particleList(self%reactantsIndx(1))%mass
         target_mass = targetParticleList(self%reactantsIndx(2))%mass
@@ -157,17 +164,22 @@ contains
             particleIndx = INT((numberTotalParticles) * Rand) + 1
             particleLocation = particleList(self%reactantsIndx(1))%phaseSpace(1, particleIndx, iThread)
             incidentVelocity = particleList(self%reactantsIndx(1))%phaseSpace(2:4, particleIndx, iThread)
+
+            ! Generate velocity for target particle
             targetVelocity = targetParticleList(self%reactantsIndx(2))%generate3DMaxwellianVelocity(irand_thread)
+
+            ! Get relative velocity and center of mass values
             velocity_CM = incidentVelocity - targetVelocity
             speedCM = SQRT(SUM(velocity_CM**2))
             energyCM = SUM(velocity_CM**2) * 0.5d0 * self%reducedMass / e !in eV
             indxLow = 1
             indxHigh = self%lengthArrays
+            ! get index and linear interpolation value (d_value) for sigma array
             if (energyCM < self%minEnergy) then
-                ! take minimum sigma_v
+                ! take minimum sigma
                 d_value = 0.0d0
             else if (energyCM > self%maxEnergy) then
-                ! take maximum sigma_v
+                ! take maximum sigma
                 indxLow = indxHigh -1
                 d_value = 1.0d0
             else
@@ -190,6 +202,7 @@ contains
             do collIdx = 1, self%numberCollisions
                 ! Cycle through each collision and test if in probabilty bracket
                 if (energyCM > self%energyThreshold(collIdx)) then
+                    ! linear interpolation of sigma between lower and higher index
                     sigma_v = (self%sigmaArray(indxLow, collIdx) * (1.0d0 - d_value) + self%sigmaArray(indxHigh, collIdx) * d_value) * speedCM  + sigma_v_low ! accumulate sigma_v
                     collisionBool = (Rand <= sigma_v/self%sigmaVMax) 
                     if (collisionBool) then
@@ -197,11 +210,14 @@ contains
                         totalCollisions(collIdx) = totalCollisions(collIdx) + 1
                         IncidentEnergy = SUM(incidentVelocity**2)
                         totIncidentEnergy(collIdx) = totIncidentEnergy(collIdx) + IncidentEnergy
+                        ! Collision type
                         SELECT CASE (self%collisionType(collIdx))
                         CASE(1)
+                            ! elastic collision
                             call self%elasticExcitCollisionIsotropic(primary_mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
                         CASE(2)
+                            ! ionization
                             call self%ionizationCollisionIsotropic(primary_mass, particleList(self%productsIndx(2, collIdx))%mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity, velocity_CM)
                             !Update total particle count
@@ -215,13 +231,16 @@ contains
                             particleList(self%productsIndx(2, collIdx))%phaseSpace(1, particleList(self%productsIndx(2, collIdx))%N_p(iThread), iThread) = particleLocation
                             energyLoss(collIdx) = energyLoss(collIdx) - SUM(targetVelocity**2) * target_mass - SUM(velocity_CM**2) * primary_mass
                         CASE(3)
+                            ! excitation
                             call self%elasticExcitCollisionIsotropic(primary_mass, target_mass, &
                                 irand_thread, energyCM, self%energyThreshold(collIdx), incidentVelocity, targetVelocity)
                         CASE(4)
+                            ! charge exchange
                             incidentVelocity = targetVelocity
                         CASE(5)
                             continue
                         END SELECT
+                        ! collect energy loss statistics
                         energyLoss(collIdx) = energyLoss(collIdx) + primary_mass * (IncidentEnergy - SUM(incidentVelocity**2))
                         exit
                     end if
@@ -238,6 +257,7 @@ contains
         irand(iThread) = irand_thread
         particleList(self%reactantsIndx(1))%numToCollide(iThread) = numberTotalParticles
         !$OMP end parallel
+        ! accumulate statistics
         self%totalAmountCollisions = self%totalAmountCollisions + totalCollisions
         self%totalEnergyLoss = self%totalEnergyLoss + energyLoss
         self%totalIncidentEnergy = self%totalIncidentEnergy + totIncidentEnergy
@@ -249,67 +269,52 @@ contains
     subroutine ionizationCollisionIsotropic(self, primary_mass, ion_mass, target_mass, irand, energyCM, E_thres, incidentVelocity, targetVelocity, velocityCM)
         ! Ionization subroutine with momentum/energy conservation
         ! Replace incidentVelocity, velocityCM, and targetVelocity with primary electron, secondary electron, and ion velocity
+        ! theta azimuthal angle, phi is inclination
         class(nullCollision), intent(in) :: self
         real(real64), intent(in) :: energyCM, E_thres, primary_mass, ion_mass, target_mass
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3), velocityCM(3)
         integer(c_int64_t), intent(in out) :: irand
-        real(real64) :: speedPerParticle, phi, e_vector(3), u_vector(3), V_cm(3), delE, secTheta, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3)!, E_beginning, E_end, P_end(3)
-        !integer(int32) :: i
+        real(real64) :: speedPerParticle, phi, e_vector(3), u_vector(3), y_vector(3), &
+        V_cm(3), delE, sin_theta_new, cos_theta_new, cos_theta, sin_theta, cos_phi, sin_phi, P_beginning(3)!, E_beginning, E_end, P_end(3)
 
+        !get center of mass quantities
         delE = (energyCM - E_thres)*e
         P_beginning = primary_mass * incidentVelocity + target_mass * targetVelocity
-        
         V_cm = (P_beginning) / (self%sumMass)
     
-        ! Scatter primary particle
+        ! Scatter primary particle isotropically in center of mass frame
         cos_theta = 1.0d0 - 2.0d0*pcg32_random_r(irand)
         phi = pcg32_random_r(irand) * 2.0d0 * pi
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
-        e_vector(1) = cos_theta
-        e_vector(2) = sin_phi * sin_theta
-        e_vector(3) = cos_phi * sin_theta
+        e_vector(1) = cos_phi * sin_theta ! x
+        e_vector(2) = sin_phi * sin_theta ! y
+        e_vector(3) = cos_theta ! z
         speedPerParticle = SQRT(2.0d0 * delE * self%reducedMassIonization / primary_mass**2)
         incidentVelocity = e_vector * speedPerParticle + V_cm
 
-        ! secondary electron scattering
-        cos_theta = COS(2.0d0 * pi/3.0d0)
+        ! get rotation vector rotating by third around theta
+        cos_theta_new = cos_third_rot * cos_theta - sin_third_rot * sin_theta
+        sin_theta_new = cos_theta * sin_third_rot + cos_third_rot * sin_theta
+        y_vector(1) = cos_phi * sin_theta_new ! x
+        y_vector(2) = sin_phi * sin_theta_new ! y
+        y_vector(3) = cos_theta_new ! z
+        
         phi = pcg32_random_r(irand) * 2.0d0 * pi
+        cos_phi = cos(phi)
+        sin_phi = sin(phi)
 
-        call scatterVector(u_vector, e_vector, cos_theta, phi)
+        ! Rotate angle randomly about the primary particle vector
+        ! Source is "Rodrigues' rotation formula" on wikipedia
+        u_vector = -e_vector * cos_third_rot * (cos_phi - 1.0d0) + y_vector* cos_phi + crossProduct(e_vector, y_vector) * sin_phi
 
-        ! Keep in case scatter Vector doesn't work properly
-        ! cos_theta = 1.0d0 - 2.0d0*ran2(irand)
-        ! phi = ran2(irand) * 2.0d0 * pi
-        ! sin_theta = SQRT(1.0d0 - cos_theta**2)
-        ! cos_phi = COS(phi)
-        ! sin_phi = SIN(phi)
-        ! y_vector(1) = cos_theta
-        ! y_vector(2) = sin_phi * sin_theta
-        ! y_vector(3) = cos_phi * sin_theta
-
-        ! x_vector = crossProduct(e_vector, y_vector)
-        ! x_vector = crossProduct(x_vector, e_vector)/SQRT(SUM(x_vector**2))
-       
-        ! cos_theta = COS(2.0d0 * pi/3.0d0)
-        ! sin_theta = SIN(2.0d0 * pi / 3.0d0)
-        ! u_vector = e_vector * cos_theta + x_vector * sin_theta
-        ! print *, 'u vector total:', SUM(u_vector**2)
-        ! print *, 'dot product u_vector and e_vector:', SUM(u_vector * e_vector)
-        ! print *, 'should be:', cos_theta
-        ! print *, 'u_vector is:', u_vector
-
-
-        ! secTheta = ACOS(cos_theta) + 2.0d0 * pi/3.0d0
-        ! u_vector(1) = COS(secTheta)
-        ! u_vector(2) = sin_phi * SIN(secTheta)
-        ! u_vector(3) = cos_phi * SIN(secTheta)
-
+        
+        ! velocity of produced electron
         speedPerParticle = SQRT(2.0d0 * delE * self%reducedMassIonization / m_e**2)
         velocityCM = u_vector * speedPerParticle + V_cm
     
-        ! ion scatter
+        ! ion velocity
         targetVelocity = (P_beginning - primary_mass * incidentVelocity - m_e * velocityCM)/ion_mass
 
         
@@ -387,7 +392,6 @@ contains
         real(real64), intent(in out) :: incidentVelocity(3), targetVelocity(3)
         integer(c_int64_t), intent(in out) :: irand
         real(real64) :: speedPerParticle, phi, e_vector(3), V_cm(3), delE, cos_theta, sin_theta, cos_phi, sin_phi, secTheta, P_beginning(3)!, E_beginning, E_end, P_end(3)
-        !integer(int32) :: i
 
         delE = (energyCM - E_thres)*e
         P_beginning = primary_mass * incidentVelocity + target_mass * targetVelocity
@@ -400,9 +404,11 @@ contains
         sin_theta = SQRT(1.0d0 - cos_theta**2)
         cos_phi = COS(phi)
         sin_phi = SIN(phi)
-        e_vector(1) = cos_theta
-        e_vector(2) = sin_phi * sin_theta
-        e_vector(3) = cos_phi * sin_theta
+        
+        
+        e_vector(1) = cos_phi * sin_theta ! x
+        e_vector(2) = sin_phi * sin_theta ! y
+        e_vector(3) = cos_theta ! z
         speedPerParticle = SQRT(2.0d0 * delE * self%reducedMass / primary_mass**2)
         incidentVelocity = e_vector * speedPerParticle + V_cm
 
@@ -514,6 +520,24 @@ contains
         ENDIF
     end subroutine scatterVector
 
+    subroutine rotate_vector(vector_final, rotation_vector, rotation_axis,cos_theta_angle,phi)
+        ! Remake scatter algorithm for clarity
+        ! Input is e which is initial vector to scatter by angle theta
+        ! theta input is already in cos and sin since might be predetermined input
+        ! Basically make vector with angle theta to e simply by rotating along theta
+        ! Have initial 'base' vector u with vector which to rotate by angle phi
+        ! Source is "Rodrigues' rotation formula" on wikipedia
+        real(real64), intent(in) :: cos_theta_angle, phi
+        real(real64), intent(in) :: rotation_vector(3), rotation_axis(3)
+        real(real64), intent(in out) :: vector_final(3)
+        real(real64) :: cos_phi, sin_phi
+        
+        sin_phi= sin(phi)
+        cos_phi= cos(phi)
+
+        vector_final = -rotation_axis * cos_theta_angle * (cos_phi - 1.0d0) + rotation_vector* cos_phi + crossProduct(rotation_axis, rotation_vector) * sin_phi
+    end subroutine rotate_vector
+
 
     ! --------------------------- Read in collisions --------------------------------------------
 
@@ -547,12 +571,14 @@ contains
         do while (.not. (string(1:3) == 'END' .or. string(1:3) == 'end'))
             collFileName = trim(string)
             inquire(file = '../../CollisionData/'//collFileName, exist = fileExists)
+            ! If collision data file exists
             if (fileExists) then
                 print *, 'Taking reactions from ', collFileName
                 open(20,file='../../CollisionData/'//collFileName, action = 'read')
                 read(20,*) string
                 do while (.not. (string(1:3) == 'END' .or. string(1:3) == 'end'))
                     if( string(1:4).eq.'REAC' .or. string(1:4).eq.'Reac' .or. string(1:4).eq.'reac' ) then
+                        ! add reaction
                         numberCollisions = numberCollisions + 1
                         numberReactants(numberCollisions) = 0
                         numberProducts(numberCollisions) = 0
@@ -571,11 +597,13 @@ contains
                             if (string(i:i) == '>') then
                                 reactantBool = .false.
                             end if
-                
+                            
+                            ! Found particle name in reaction
                             if (higherIndx > lowerIndx) then
                                 foundParticleBool = .false.
                                 lowerIndx = lowerIndx + 1
                                 higherIndx = higherIndx-1
+                                ! Find particle in charged or neutral particles
                                 do j = 1, numberChargedParticles
                                     if (particleList(j)%name == string(lowerIndx:higherIndx)) then
                                         foundParticleBool = .true.
@@ -590,6 +618,7 @@ contains
                                         exit
                                     end if
                                 end do
+                                ! for each found particle add to product or reactant count
                                 if (foundParticleBool) then
                                     if (reactantBool) then
                                         numberReactants(numberCollisions) = numberReactants(numberCollisions) + 1
@@ -630,6 +659,7 @@ contains
                             reactionIndx(numberCollisions) = numberBinaryCollisions
                         end if
 
+                        ! read reaction
                         read(20,*) E_threshold(numberCollisions), tempVar2
                         read(20,*) E_scaling, sigma_scaling
                         read(20,*) string
@@ -672,13 +702,16 @@ contains
         close(10)
 
         if (numberBinaryCollisions > 0) then
+            ! Binary collision for each primary on target set
             allocate(nullCollisionList(numberBinaryCollisions))
             do j = 1, numberBinaryCollisions
+                ! get properties for each binary collision
                 red_mass = particleList(collisionReactantsIndx(1, j))%mass * targetParticleList(collisionReactantsIndx(2, j))%mass / (particleList(collisionReactantsIndx(1, j))%mass + targetParticleList(collisionReactantsIndx(2, j))%mass)
                 sumMass = (particleList(collisionReactantsIndx(1, j))%mass + targetParticleList(collisionReactantsIndx(2, j))%mass)
                 redMassTripleProducts = 0
                 numberCollisionsPerReaction = 0
                 length_concatenate = 0
+                ! accumulate total number of array points for energy/sigma
                 do i = 1, numberCollisions
                     if (reactionIndx(i) == j) then
                         length_concatenate = length_concatenate + numberSigmaPoints(i)
@@ -754,6 +787,7 @@ contains
                         end do
                     end if   
                 end do
+                ! create actual object
                 nullCollisionList(j) = nullCollision(2, h, length_concatenate, red_mass, sumMass, redMassTripleProducts, E_concatenate, sigma_concatenate, E_threshold_array, collisionTypeArray, &
                     collisionReactantsIndx(:,j), numberProductsArray, productsIndxArray)
                 deallocate(sigma_concatenate, collisionTypeArray, E_threshold_array, numberProductsArray, productsIndxArray)

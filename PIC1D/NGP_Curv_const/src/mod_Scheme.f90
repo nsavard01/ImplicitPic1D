@@ -44,7 +44,7 @@ contains
         do j = 1, part%N_p(iThread)
             l_left = INT(part%phaseSpace(1, j, iThread))
             l_right = l_left + 1
-            d = part%phaseSpace(1, j, iThread) - real(l_left, kind = 8)
+            d = part%phaseSpace(1, j, iThread) - real(l_left)
             part%densities(l_left, iThread) = part%densities(l_left, iThread) + (1.0d0-d)
             part%densities(l_right, iThread) = part%densities(l_right, iThread) + d
         end do
@@ -116,22 +116,22 @@ contains
             end if
             SELECT CASE (world%boundaryConditions(1))
             CASE(1,2,4)
-                densities(1) = 2.0d0 * densities(1)/world%dx_dl(1)
+                densities(1) = 2.0d0 * densities(1)/world%nodeVol(1)
             CASE(3)
-                densities(1) = 2.0d0 * densities(1)/(world%dx_dl(1) + world%dx_dl(NumberXHalfNodes))
+                densities(1) = 2.0d0 * densities(1)/(world%nodeVol(1) + world%nodeVol(NumberXNodes))
             END SELECT 
             do j = 2, NumberXHalfNodes
-                densities(j) = 2.0d0 * densities(j) / (world%dx_dl(j-1) + world%dx_dl(j))
+                densities(j) = densities(j) / (world%nodeVol(j))
             end do
             SELECT CASE (world%boundaryConditions(NumberXNodes))
             CASE(1,2,4)
-                densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)/world%dx_dl(NumberXHalfNodes)
+                densities(NumberXNodes) = 2.0d0 * densities(NumberXNodes)/world%nodeVol(NumberXNodes)
             CASE(3)
                 densities(NumberXNodes) = densities(1)
             END SELECT
 
             ! Write density
-            write(char_i, '(I6)'), CurrentDiagStep
+            write(char_i, '(I4)'), CurrentDiagStep
             if (boolAverage) then
                 open(41,file=dirName//'/Density/density_'//particleList(i)%name//"_Average.dat", form='UNFORMATTED')
             else

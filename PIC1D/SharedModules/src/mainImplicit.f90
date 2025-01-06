@@ -10,15 +10,14 @@ program BoundPlasmaExample
     use mod_Scheme
     use mod_particleInjection
     use mod_particleMover
-    ! use mod_collisions
     use mod_nonLinSolvers
     use mod_simulation
     use omp_lib
     implicit none
     
-    integer(int32) :: i, j, iThread, startTime, endTime
-    real(real64) :: remainDel_t, currDel_t, PE_i, KE_i, PE_f, KE_f, Momentum_i(3), Momentum_f(3)
-    real(real64), allocatable :: rho_i(:), J_total(:)
+    ! integer(int32) :: i, j, iThread, startTime, endTime
+    ! real(real64) :: remainDel_t, currDel_t, PE_i, KE_i, PE_f, KE_f, Momentum_i(3), Momentum_f(3)
+    !real(real64), allocatable :: rho_i(:), J_total(:)
     type(targetParticle), allocatable :: targetParticleList(:)
     type(nullCollision), allocatable :: nullCollisionList(:)
 
@@ -39,7 +38,7 @@ program BoundPlasmaExample
     call globalSolver%solveInitialPotential(globalParticleList, globalWorld, startSimulationTime)
     
     
-    ! Used for testing, comment out
+    ! Used for testing single time step, comment out
     ! allocate(rho_i(NumberXNodes), J_total(NumberXHalfNodes))
     ! rho_i = globalSolver%rho
     ! KE_i = 0.0d0

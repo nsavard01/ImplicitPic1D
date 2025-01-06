@@ -177,7 +177,7 @@ contains
     end subroutine generateSaveDirectory
 
     subroutine changeDelT(dt)
-        ! Function to use if del_t needs to be changed
+        ! Subroutine to use if del_t needs to be changed
         real(real64), intent(in) :: dt
         del_t = dt
     end subroutine changeDelT

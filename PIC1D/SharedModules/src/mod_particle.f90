@@ -10,9 +10,9 @@ module mod_particle
 
     private
     public :: Particle, readChargedParticleInputs
-    integer(int32), public, protected :: numberChargedParticles = 0
+    integer(int32), public, protected :: numberChargedParticles = 0 ! number of charged particles total
 
-    ! Particle contains particle properties and stored values in phase space
+    ! Particle contains particle properties and stored values in phase space for each charged particle
     type :: Particle
         character(:), allocatable :: name !name of the particle
         integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:), numToCollide(:) !N_p is the current last index of particle, refIdx and delIdx are number to reflux and delete
@@ -46,8 +46,7 @@ module mod_particle
 contains
 
     type(Particle) function particle_constructor(mass, q, w_p, N_p, finalIdx, particleName, numThread) result(self)
-        ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
-        ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
+        ! Construct particle object
         real(real64), intent(in) :: mass, q, w_p
         integer(int32), intent(in) :: N_p, finalIdx, numThread
         character(*), intent(in) :: particleName
@@ -95,7 +94,9 @@ contains
         iThread = omp_get_thread_num() + 1
         irand_thread = irand(iThread)
         do i = 1, self%N_p(iThread)
+            ! get random position within the domain
             x_pos = pcg32_random_r(irand_thread) * world%L_domain + world%startX
+            ! convert to logical space
             self%phaseSpace(1,i, iThread) = world%getLFromX(x_pos)
         end do
         irand(iThread) = irand_thread
@@ -166,6 +167,7 @@ contains
     subroutine generate3DMaxwellian(self, T, world, irand, alpha, distType, v_drift)
         ! random velocity generator for the particle for temperature T (eV)
         ! Use box-muller method for random guassian variable
+        ! apply to all particles
         class(Particle), intent(in out) :: self
         class(Domain), intent(in) :: world
         real(real64), intent(in) :: T, alpha, v_drift

@@ -11,6 +11,7 @@ module mod_BasicFunctions
     integer(c_int64_t), allocatable :: state_PCG(:) !Random number save state for larger period numbers from PCG
 
     interface 
+        ! Interface for PCG generator run using C
         real(c_double) function pcg32_random_r(state) bind(c)
         use iso_c_binding
         integer(c_int64_t) :: state
@@ -51,7 +52,8 @@ contains
 
     ! --------------- uniform Random Generators -----------------------------
     function ran2(irand) result(res)
-        ! Function from from numerical recipes, basic rng, small period
+        ! Function from from "Numerical recipes in fortran 77", basic rng, small period for 2^9 about
+        ! Called ran0 actually in this book but already used ran2 so keep it
         integer(int32),parameter :: ia_ran2=16807,im_ran2=2147483647,iq_ran2=127773,ir_ran2=2836
         real(real64),parameter :: am_ran2=1.0d0/im_ran2
         integer(int32), intent(in out) :: irand
@@ -69,8 +71,8 @@ contains
     subroutine getRandom(x, irand)
         !use Gwenael's function to generate array of random number
         real(real64), intent(in out) :: x(:)
-        integer(c_int64_t) :: i
-        integer(int32), intent(in out) :: irand
+        integer(int32) :: i
+        integer(c_int64_t), intent(in out) :: irand
         do i = 1, size(x)
             x(i) = pcg32_random_r(irand)
         end do
@@ -91,7 +93,7 @@ contains
             call random_number(rando)
             stateRan0(i) = INT(rando * (huge(i)-1)) + 1 !12345 * i + 11 * (i-1) !
             call random_number(rando)
-            state_PCG(i) = INT((rando-0.5d0) * 2 * (huge(state_PCG(i))), kind = c_int64_t)
+            state_PCG(i) = INT((rando-0.5d0) * 2 * (huge(state_PCG(i)-1)), kind = c_int64_t)
         end do
     end subroutine initializeRandomGenerators
 
@@ -268,6 +270,7 @@ contains
     end function getArrayMean1D
 
     pure function crossProduct(x, y) result(res)
+        ! 3D vector cross product
         real(real64), intent(in) :: x(3), y(3)
         real(real64) :: res(3)
         res(1) = x(2) * y(3) - x(3) * y(2)

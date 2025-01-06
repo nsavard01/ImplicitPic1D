@@ -33,7 +33,7 @@ contains
         character(*), intent(in) :: dirName
         character(len=5) :: char_i
         logical, intent(in) :: boolAverage
-        write(char_i, '(I3)') CurrentDiagStep
+        write(char_i, '(I6)') CurrentDiagStep
         if (boolAverage) then
             open(41,file=dirName//'/Phi/phi_Average.dat', form='UNFORMATTED')
         else
@@ -361,6 +361,7 @@ contains
         allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
         do while((currentTime - startTime) < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
+            
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
@@ -394,7 +395,7 @@ contains
         do j=1, numberChargedParticles
             !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1
-            particleList(j)%densities(:, iThread) = particleList(j)%densities(:, iThread) /real(i)
+            particleList(j)%densities(:, iThread) = particleList(j)%densities(:, iThread) /real(i, kind = 8)
             !$OMP end parallel
         end do
         ! Ave voltage (including RF)
