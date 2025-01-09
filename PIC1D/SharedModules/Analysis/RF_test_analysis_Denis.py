@@ -102,6 +102,7 @@ NGP_RFBenchmark_Denis_lowerDen_131PPC_64cells_noSmoothing_sinCenter = dataSet('Y
 
 NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap/')
 NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap_try = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap_try/')
+NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap_try2 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap_try2/')
 NGP_RFBenchmark_Denis_lowerDen_1048PPC_128cells_noSmoothing_denisMap = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_1048PPC_128cells_noSmoothing_denisMap/')
 NGP_RFBenchmark_Denis_lowerDen_1048PPC_128cells_noSmoothing_denisMap_try = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_1048PPC_128cells_noSmoothing_denisMap_try/')
 NGP_RFBenchmark_Denis_lowerDen_2096PPC_128cells_noSmoothing_denisMap = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_lowerDen_2096PPC_128cells_noSmoothing_denisMap/')
@@ -169,7 +170,6 @@ CIC_RFBenchmark_Denis_2096PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/Impli
 CIC_RFBenchmark_Denis_4192PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_4192PPC_128cells_noSmoothing_sinCenter/')
 
 
-CIC_IASW_Chacon2013_Curv_NoSmooth_32Threads_2delT_halfUniformHalfSin = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_NoSmooth_32Threads_2delT_halfUniformHalfSin/')
 #------------- plots --------------------
 
 plt.figure()

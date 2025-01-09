@@ -102,10 +102,10 @@ contains
     end function domain_constructor
 
 
-    subroutine constructGrid(self, del_x, L_domain, gridType, numEvenCells)
+    subroutine constructGrid(self, del_x, L_domain, gridType, numEvenCells, extra_real)
         ! Construct Grid
         class(Domain), intent(in out) :: self
-        real(real64), intent(in) :: del_x, L_domain
+        real(real64), intent(in) :: del_x, L_domain, extra_real
         integer(int32), intent(in) :: gridType, numEvenCells
         SELECT CASE (gridType)
         CASE(0)
@@ -125,7 +125,7 @@ contains
         CASE(7)
             call self%construct_uniformCenter_InvSineGrid(del_x, L_domain, numEvenCells)
         CASE(8)
-            call self%construct_tanh_grid(del_x, L_domain, numEvenCells)
+            call self%construct_tanh_grid(del_x, L_domain, numEvenCells, extra_real)
         CASE default
             print *, "Gridtype", gridType, "doesn't exist!"
             stop
@@ -249,12 +249,12 @@ contains
         end if
     end subroutine constructHalfSineGrid
 
-    subroutine construct_tanh_grid(self, del_x, L_domain, numEvenCells)
+    subroutine construct_tanh_grid(self, del_x, L_domain, numEvenCells, delta_xi_1)
         ! Thanks to Denis Eremin for providing this mapping
         class(Domain), intent(in out) :: self
-        real(real64), intent(in) :: del_x, L_domain
+        real(real64), intent(in) :: del_x, L_domain, delta_xi_1
         integer(int32), intent(in) :: numEvenCells
-        real(real64) :: delta_xi_1 = 0.05d0, delta_xi_2, xi_pivot, edge_del_x, xi
+        real(real64) :: delta_xi_2, xi_pivot, edge_del_x, xi
         real(real64) :: top, bottom, norm
         integer(int32) :: i, mid_xi
 
@@ -495,7 +495,7 @@ contains
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave
         integer(int32) :: io, leftBoundary, rightBoundary, gridType, intArray(20), i, smoothInt, extra_int
-        real(real64) :: debyeLength, L_domain
+        real(real64) :: debyeLength, L_domain, extra_real
         integer(int32), allocatable :: boundArray(:)
         print *, ""
         print *, "Reading domain inputs:"
@@ -507,7 +507,7 @@ contains
         end if
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) gridType, debyeLength, extra_int
+        read(10, *, IOSTAT = io) gridType, debyeLength, extra_int, extra_real
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) smoothInt
         read(10, *, IOSTAT = io)
@@ -520,7 +520,7 @@ contains
             rightBoundary = 3
         end if
         world = Domain(leftBoundary, rightBoundary)
-        call world % constructGrid(debyeLength, L_domain, gridType, extra_int)
+        call world % constructGrid(debyeLength, L_domain, gridType, extra_int, extra_real)
         if (smoothInt /= 0) world%gridSmoothBool = .true.
         print *, "Number of nodes:", NumberXNodes
         print *, "Number of half nodes:", NumberXHalfNodes
