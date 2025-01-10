@@ -200,9 +200,6 @@ contains
             bottom = 1.0d0 - real(NumberXHalfNodes, kind = 8) * self%min_del_x/ self%L_domain
             top = 1.0d0 + 2.0d0 * self%extra_param * log( cosh((0.5d0 - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )
             delta_xi_2 = self%min_del_x * real(NumberXHalfNodes, kind = 8) * top / self%L_domain / bottom
-
-            print *, xi_pivot, self%extra_param, delta_xi_2
-            stop
             
             
             norm = 1.0d0 + delta_xi_2 + 2.0d0 * self%extra_param * log( cosh((0.5d0 - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )
