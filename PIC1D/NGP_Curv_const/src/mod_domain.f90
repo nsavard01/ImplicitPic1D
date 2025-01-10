@@ -15,7 +15,7 @@ module mod_domain
         real(real64), allocatable :: dx_dl(:) ! l for logical, cell sizes
         real(real64), allocatable :: nodeVol(:) ! node volume, size of 
         integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary conditions, node indices divided into threads for OpenMP
-        real(real64) :: L_domain, startX, endX, min_del_x
+        real(real64) :: L_domain, startX, endX, min_del_x, extra_param
         integer(int32) :: numThreadNodeIndx, numThreadHalfNodeIndx, num_even_edge_cells, grid_type
         logical :: gridSmoothBool
 
@@ -34,10 +34,10 @@ module mod_domain
 
 contains
 
-    type(Domain) function domain_constructor(leftBoundary, rightBoundary, min_del_x, grid_type, num_even_edge_cells, L_domain) result(self)
+    type(Domain) function domain_constructor(leftBoundary, rightBoundary, min_del_x, grid_type, num_even_edge_cells, L_domain, extra_real) result(self)
         ! Construct domain object
         integer(int32), intent(in) :: leftBoundary, rightBoundary, num_even_edge_cells, grid_type
-        real(real64), intent(in) :: min_del_x, L_domain
+        real(real64), intent(in) :: min_del_x, L_domain, extra_real
         integer(int32) :: i, k, spacingThread, modThread
         allocate(self % grid(NumberXNodes), self % dx_dl(NumberXHalfNodes), self % nodeVol(NumberXNodes), self%boundaryConditions(NumberXNodes))
         self % grid = (/(i, i=1, NumberXNodes)/)
@@ -49,6 +49,7 @@ contains
         self%num_even_edge_cells = num_even_edge_cells
         self%grid_type = grid_type
         self%min_del_x = min_del_x
+        self%extra_param = extra_real
         self%boundaryConditions(1) = leftBoundary
         self%boundaryConditions(NumberXNodes) = rightBoundary
         if (leftBoundary == 3 .or. rightBoundary == 3) then
@@ -102,6 +103,8 @@ contains
             self%grid(1 + self%num_even_edge_cells) = self%min_del_x
             self%grid(NumberXNodes - self%num_even_edge_cells) = self%L_domain - self%min_del_x
             self%min_del_x = self%min_del_x / self%num_even_edge_cells
+        else if (self%grid_type == 8) then
+            self%min_del_x = self%min_del_x / self%num_even_edge_cells
         end if
         
         do i = 2, NumberXHalfNodes
@@ -111,10 +114,10 @@ contains
         do i = 1, NumberXHalfNodes
             self%dx_dl(i) = self%get_jacobian(real(i, kind = 8) + 0.5d0)
         end do
+
         do i = 1, NumberXNodes
             self%nodeVol(i) = self%get_jacobian(real(i, kind = 8))
         end do
-        
 
     end function domain_constructor
 
@@ -123,6 +126,7 @@ contains
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: xi
         real(real64) :: res, N_cells, length_scale
+        real(real64) :: xi_pivot, delta_xi_2, top, bottom, norm, xi_other, mid_l
 
         select case (self%grid_type)
         case(0)
@@ -140,6 +144,26 @@ contains
                 res = self%min_del_x
             end if
 
+        case(8)
+            mid_l = 0.5d0 * real(NumberXHalfNodes, kind = 8) + 1.0d0
+            xi_pivot = self%num_even_edge_cells / real(NumberXHalfNodes, kind = 8)
+            bottom = 1.0d0 - real(NumberXHalfNodes, kind = 8) * self%min_del_x/ self%L_domain
+            top = 1.0d0 + 2.0d0 * self%extra_param * log( cosh((0.5d0 - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )
+            delta_xi_2 = self%min_del_x * real(NumberXHalfNodes, kind = 8) * top / self%L_domain / bottom
+
+            norm = real(NumberXHalfNodes, kind = 8) * (1.0d0 + delta_xi_2 + 2.0d0 * self%extra_param * log( cosh((0.5d0 - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )) / self%L_domain
+            if (xi < mid_l) then
+                xi_other = xi - 1.0d0
+                top = (1.0d0 + delta_xi_2)
+                bottom = tanh(( xi_other/real(NumberXHalfNodes, kind = 8) - xi_pivot) / self%extra_param)
+                res = (top + bottom) / norm
+            else
+                xi_other = real(NumberXHalfNodes) - xi+1.0d0
+                top = (1.0d0 + delta_xi_2)
+                bottom = tanh(( xi_other/real(NumberXHalfNodes, kind = 8) - xi_pivot) / self%extra_param)
+                res = (top + bottom) / norm
+            end if
+
         end select
     end function get_jacobian
 
@@ -149,6 +173,7 @@ contains
         class(Domain), intent(in) :: self
         real(real64), intent(in) :: l
         real(real64) :: x, N_cells, length_scale
+        real(real64) :: xi_pivot, delta_xi_2, top, bottom, norm, xi, mid_l
 
         select case (self%grid_type)
         case(0)
@@ -169,6 +194,30 @@ contains
             else
                 x = self%endX - (real(NumberXNodes, kind = 8) - l) * self%min_del_x
             end if
+        case(8)
+            mid_l = 0.5d0 * real(NumberXHalfNodes, kind = 8) + 1.0d0
+            xi_pivot = self%num_even_edge_cells / real(NumberXHalfNodes, kind = 8)
+            bottom = 1.0d0 - real(NumberXHalfNodes, kind = 8) * self%min_del_x/ self%L_domain
+            top = 1.0d0 + 2.0d0 * self%extra_param * log( cosh((0.5d0 - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )
+            delta_xi_2 = self%min_del_x * real(NumberXHalfNodes, kind = 8) * top / self%L_domain / bottom
+
+            print *, xi_pivot, self%extra_param, delta_xi_2
+            stop
+            
+            
+            norm = 1.0d0 + delta_xi_2 + 2.0d0 * self%extra_param * log( cosh((0.5d0 - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )
+            if (l < mid_l) then
+                xi = l - 1.0d0
+                top = (1.0d0 + delta_xi_2) * xi / real(NumberXHalfNodes, kind = 8)
+                bottom = self%extra_param * log( cosh((xi/real(NumberXHalfNodes, kind = 8) - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )
+                x = self%L_domain * (top + bottom) / norm
+            else
+                xi = real(NumberXHalfNodes) - l+1.0d0
+                top = (1.0d0 + delta_xi_2) * xi / real(NumberXHalfNodes, kind = 8)
+                bottom = self%extra_param * log( cosh((xi/real(NumberXHalfNodes, kind = 8) - xi_pivot) / self%extra_param) / cosh( xi_pivot / self%extra_param ) )
+                x = self%L_domain * (1.0d0 - (top + bottom)/norm)
+            end if
+
         end select
 
     end function getXFromL
@@ -253,7 +302,7 @@ contains
         character(len=*), intent(in) :: GeomFilename
         real(real64), intent(in) :: T_e, n_ave
         integer(int32) :: io, leftBoundary, rightBoundary, gridType, intArray(20), i, smoothInt, extra_int
-        real(real64) :: debyeLength, L_domain
+        real(real64) :: debyeLength, L_domain, extra_real
         integer(int32), allocatable :: boundArray(:)
         print *, ""
         print *, "Reading domain inputs:"
@@ -265,7 +314,7 @@ contains
         end if
         read(10, *, IOSTAT = io) NumberXNodes
         read(10, *, IOSTAT = io) L_domain
-        read(10, *, IOSTAT = io) gridType, debyeLength, extra_int
+        read(10, *, IOSTAT = io) gridType, debyeLength, extra_int, extra_real
         read(10, *, IOSTAT = io) leftBoundary, rightBoundary
         read(10, *, IOSTAT = io) smoothInt
         read(10, *, IOSTAT = io)
@@ -277,7 +326,7 @@ contains
             leftBoundary = 3
             rightBoundary = 3
         end if
-        world = Domain(leftBoundary, rightBoundary, debyeLength, gridType, extra_int, L_domain)
+        world = Domain(leftBoundary, rightBoundary, debyeLength, gridType, extra_int, L_domain, extra_real)
         if (smoothInt /= 0) world%gridSmoothBool = .true.
         print *, "Number of nodes:", NumberXNodes
         print *, "Number of half nodes:", NumberXHalfNodes

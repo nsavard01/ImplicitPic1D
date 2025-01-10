@@ -15,7 +15,8 @@ module mod_domain
         real(real64), allocatable :: dx_dl(:) ! l for logical, cell sizes
         real(real64), allocatable :: nodeVol(:) ! node volume, size of 
         integer(int32), allocatable :: boundaryConditions(:), threadNodeIndx(:,:), threadHalfNodeIndx(:,:) ! Boundary conditions, node indices divided into threads for OpenMP
-        real(real64) :: L_domain, startX, endX, min_del_x
+        real(real64) :: L_domain, startX, endX
+        real(real64), allocatable :: curv_params(:)
         integer(int32) :: numThreadNodeIndx, numThreadHalfNodeIndx, num_even_edge_cells, grid_type
         logical :: gridSmoothBool
 
