@@ -217,8 +217,8 @@ contains
       
         J_particles_heat = species%q_times_wp * v_sum / (power_right_bound_x - power_left_bound_x)
         
-        v_ave_heat = v_sum / number_part
-        Efield_RF_energy = (v_sum * species%q * Efield_RF_past * del_t + number_part * 0.5d0 * species%q**2 * Efield_Rf_past**2 * del_t**2 / species%mass) ! Joules
+        v_ave_heat = v_sum / real(number_part, kind = 8)
+        Efield_RF_energy = (v_sum * species%q * Efield_RF_past * del_t + real(number_part, kind = 8) * 0.5d0 * species%q**2 * Efield_Rf_past**2 * del_t**2 / species%mass) ! Joules
    
         Efield_RF_past = Efield_future
         
@@ -251,7 +251,7 @@ contains
         end do
         !$OMP end parallel
 
-        other_coeff = 0.5d0 * species%q * species%q_times_wp * number_part * del_t**2 / (power_right_bound_x - power_left_bound_x) / species%mass / eps_0
+        other_coeff = 0.5d0 * species%q * species%q_times_wp * real(number_part, kind = 8) * del_t**2 / (power_right_bound_x - power_left_bound_x) / species%mass / eps_0
         Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 - &
             species%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + &
                 (1.0d0 - other_coeff) * Efield_RF_past
@@ -272,8 +272,8 @@ contains
 
         J_particles_heat = species%q_times_wp * (v_sum + del_v) / (power_right_bound_x - power_left_bound_x)
         
-        v_ave_heat = (v_sum + del_v) / number_part
-        Efield_RF_energy = 0.5d0 * species%mass * (2 * del_v * v_sum + number_part * del_v**2) ! Joules
+        v_ave_heat = (v_sum + del_v) / real(number_part, kind = 8)
+        Efield_RF_energy = 0.5d0 * species%mass * (2 * del_v * v_sum + real(number_part, kind = 8) * del_v**2) ! Joules
    
         Efield_RF_past = Efield_future
         

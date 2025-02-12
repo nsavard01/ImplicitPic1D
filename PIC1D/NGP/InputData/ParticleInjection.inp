@@ -1,6 +1,6 @@
 0 ! Have lost particles on boundary re-injected uniformly (0 = no, 1 = yes)
 0 ! Have particles reflected on Neuman-boundary refluxed with initial temperature
-0, 5.6d24 ! Have sonic injection at boundary + refluxing. If 1 first number, then second number is amount m^-2 s^-1
-0, 3.d20 ! Have maxwellian injection uniformly in volume. If 1 first number, then second number is amount m^-2 s^-1
-0, 100.0d0 ! Have maxwellian heating uniformly among particles. If 1 first number, then second number is fraction of originally calculated del_t
-0 0 0 0 ! Temp
+0 5.6d24 ! Have sonic injection at boundary + refluxing. If 1 first number, then second number is amount m^-2 s^-1
+0 3.d20 ! Have maxwellian injection uniformly in volume. If 1 first number, then second number is amount m^-2 s^-1
+0 100.0d0 ! Have maxwellian heating uniformly among particles. If 1 first number, then second number is fraction of originally calculated del_t
+13.56d6 3000 0.01675 0.05025 ! Temp

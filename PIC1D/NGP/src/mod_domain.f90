@@ -121,7 +121,7 @@ contains
         CASE(5)
             call self%constructInvSineGrid(del_x, L_domain)
         CASE(6)
-            call self%construct_even_grid_doubling_region(del_x, L_domain, numEvenCells)
+            call self%construct_even_grid_doubling_region(del_x, L_domain, numEvenCells, extra_real)
         CASE(7)
             call self%construct_uniformCenter_InvSineGrid(del_x, L_domain, numEvenCells)
         CASE(8)
@@ -348,46 +348,69 @@ contains
 
     end subroutine constructHalfEvenHalfSinusoid
 
-    subroutine construct_even_grid_doubling_region(self, del_x, L_domain, numEvenEdgeCells)
+    subroutine construct_even_grid_doubling_region(self, min_del_x, L_domain, numEvenEdgeCells, max_factor)
         ! Half of grid cells used for even cells on either side up to del_x
         ! Other half used to center, have increasing cell size until cell are at maximum doubled
         class(Domain), intent(in out) :: self
-        real(real64), intent(in) :: del_x, L_domain
+        real(real64), intent(in) :: min_del_x, L_domain, max_factor
         integer(int32), intent(in) :: numEvenEdgeCells
-        integer(int32) :: numMiddleCells, numberIncreaseCells, num_center_even_cells, i
-        real(real64) :: edge_del_x, middle_L, middle_del_x, center_even_L
-        numMiddleCells = NumberXNodes-1 - 2 * numEvenEdgeCells
-        edge_del_x = del_x/numEvenEdgeCells
-        middle_L = L_domain - 2.0d0 * del_x
-        numberIncreaseCells = 0
-        middle_del_x = middle_L/numMiddleCells
-        self%grid = 0.0d0
-        do while (middle_del_x > (2**numberIncreaseCells) * edge_del_x) 
-            numberIncreaseCells = numberIncreaseCells + 1
-            center_even_L = middle_L - 2.0d0 * (2**(numberIncreaseCells+1)-2) * edge_del_x
-            num_center_even_cells = numMiddleCells - 2 * numberIncreaseCells
-            middle_del_x = center_even_L/num_center_even_cells
+        integer(int32) :: num_max_cells, i, factor_power
+        real(real64) :: middle_L, edge_L, num_max_cell_real, max_del_x, doubled_total_L, temp_real
+        edge_L = min_del_x * real(numEvenEdgeCells, kind = 8)
+        middle_L = L_domain - 2.0d0 * edge_L
+        factor_power = NINT(log(max_factor)/log(2.0d0))
+        max_del_x = max_factor * min_del_x
+
+        ! Just take from file, this is for benchmark and no need to take more time to get algorithm to create the map
+        open(10,file='../../SharedModules/Analysis/ec-pic_ccp_data_for_nicolas/ccp_30cm_30mTorr_1000V_ec_refined32_ion_density.dat')
+        do i = 1, NumberXNodes
+            read(10, *) temp_real
+            self%grid(i) = temp_real
         end do
-        numberIncreaseCells = numberIncreaseCells -1
-        center_even_L = middle_L - 2.0d0 * (2**(numberIncreaseCells+1)-2) * edge_del_x
-        num_center_even_cells = numMiddleCells - 2 * numberIncreaseCells
-        middle_del_x = center_even_L/num_center_even_cells
+        close(10)
+
+        if (abs(self%grid(NumberXNodes) - L_domain) / L_domain > 1.d-6) then
+            print *, 'For doubling grid for comparison to Tasman paper, incorrect grid end!'
+            stop
+        end if
+       
+
         
-        self%grid(1) = 0.0d0
-        self%grid(NumberXNodes) = L_domain
-        do i = 1, numEvenEdgeCells
-            self%grid(i+1) = self%grid(i) + edge_del_x
-            self%grid(NumberXNodes-i) = self%grid(NumberXNodes-i+1) - edge_del_x
-        end do
+        ! numMiddleCells = NumberXNodes-1 - 2 * numEvenEdgeCells
+        ! edge_del_x = del_x/numEvenEdgeCells
+        ! print *, edge_del_x
+        ! middle_L = L_domain - 2.0d0 * del_x
+        ! print *, middle_L
+        ! stop
+        ! numberIncreaseCells = 0
+        ! middle_del_x = middle_L/numMiddleCells
+        ! self%grid = 0.0d0
+        ! do while (middle_del_x > (2**numberIncreaseCells) * edge_del_x) 
+        !     numberIncreaseCells = numberIncreaseCells + 1
+        !     center_even_L = middle_L - 2.0d0 * (2**(numberIncreaseCells+1)-2) * edge_del_x
+        !     num_center_even_cells = numMiddleCells - 2 * numberIncreaseCells
+        !     middle_del_x = center_even_L/num_center_even_cells
+        ! end do
+        ! numberIncreaseCells = numberIncreaseCells -1
+        ! center_even_L = middle_L - 2.0d0 * (2**(numberIncreaseCells+1)-2) * edge_del_x
+        ! num_center_even_cells = numMiddleCells - 2 * numberIncreaseCells
+        ! middle_del_x = center_even_L/num_center_even_cells
+        
+        ! self%grid(1) = 0.0d0
+        ! self%grid(NumberXNodes) = L_domain
+        ! do i = 1, numEvenEdgeCells
+        !     self%grid(i+1) = self%grid(i) + edge_del_x
+        !     self%grid(NumberXNodes-i) = self%grid(NumberXNodes-i+1) - edge_del_x
+        ! end do
 
-        do i = 1, numberIncreaseCells
-            self%grid(numEvenEdgeCells + i + 1) = self%grid(numEvenEdgeCells + i) + (2**i) * edge_del_x
-            self%grid(NumberXNodes-numEvenEdgeCells - i) = self%grid(NumberXNodes-numEvenEdgeCells - i + 1) - (2**i) * edge_del_x
-        end do
+        ! do i = 1, numberIncreaseCells
+        !     self%grid(numEvenEdgeCells + i + 1) = self%grid(numEvenEdgeCells + i) + (2**i) * edge_del_x
+        !     self%grid(NumberXNodes-numEvenEdgeCells - i) = self%grid(NumberXNodes-numEvenEdgeCells - i + 1) - (2**i) * edge_del_x
+        ! end do
 
-        do i = numEvenEdgeCells + numberIncreaseCells + 2, NumberXNodes - numEvenEdgeCells - numberIncreaseCells - 1
-            self%grid(i) = self%grid(i-1) + middle_del_x
-        end do
+        ! do i = numEvenEdgeCells + numberIncreaseCells + 2, NumberXNodes - numEvenEdgeCells - numberIncreaseCells - 1
+        !     self%grid(i) = self%grid(i-1) + middle_del_x
+        ! end do
 
     end subroutine construct_even_grid_doubling_region
 

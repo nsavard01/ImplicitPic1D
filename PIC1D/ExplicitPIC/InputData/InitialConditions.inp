@@ -1,13 +1,13 @@
 32 ! number of processors
-7.374631268436578e-05 0.0d0 ! simulation time
+1d-05 0.0d0 ! simulation time
 1.d17 ! Initial number density (1/m^3) of electrons
 4.0 ! T_e (eV)
 0.025 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-1.0d0 5.761430678466077e-12  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-7.374631268436579e-06 ! amount of time to average final Diagnostics
+10.d0 1.0d-11  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+1d-06 ! amount of time to average final Diagnostics
 ../../../../ExplicitData/  !Save directory
-Exp_ICP_test_highDensity_lowPressure_12800delT !save file name
+Exp_ICP_highDensity_lowPressure_50MHz_1500cells_2000delT_128PPC !save file name
 no Exp_RFBenchmark_highDensity_EvenMoreResolved_x6 ! Restart(yes/no) and save directory to take from
 END
 

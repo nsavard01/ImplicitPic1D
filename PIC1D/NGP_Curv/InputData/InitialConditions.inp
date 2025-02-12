@@ -4,9 +4,9 @@
 4.0d0 ! T_e (eV)
 0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-10.0d0 5d-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-4.d-6 ! amount of time to average final Diagnostics
+10.0d0 1.d-10 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+8.d-6 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-NGP_RFBenchmark_Denis_131PPC_128cells_noSmoothing_sinCenter_Curv !save file name
+NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap_try2_Curv !save file name
 no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
 END

@@ -15,28 +15,28 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
         colors = ['b', 'r', 'g', 'k', 'c', 'm', 'yAve']
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
-        plt.xlabel('Distance (m)')
+            plt.plot(dataSet.grid * 1e2, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
+        plt.xlabel('Distance (cm)')
         plt.ylabel('Particle Density (1/m^3)')
-        plt.xlim([dataSet.x_min, dataSet.x_max])
+        plt.xlim([dataSet.x_min, dataSet.x_max * 1e2])
         plt.legend(loc = 'best')
     else:
         if name not in dataSet.particles.keys():
             raise Warning("For average density, particle", name, "does not exist in the dataSet!")
         else:
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = linestyle, marker = marker, markersize = 2, label = label)
-            plt.xlabel('Distance (m)')
+            plt.plot(dataSet.grid * 1e2, n,  linestyle = linestyle, marker = marker, markersize = 2, label = label)
+            plt.xlabel('Distance (cm)')
             plt.ylabel(name + ' Density (1/m^3)')
-            plt.xlim([dataSet.x_min, dataSet.x_max])
+            plt.xlim([dataSet.x_min, dataSet.x_max*1e2])
  
 def plotAvePhi(dataSet, label = '', marker = 'o', linestyle = '--'):
 
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
-    plt.xlabel('Distance (m)')
+    plt.plot(dataSet.grid*1e2, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
+    plt.xlabel('Distance (cm)')
     plt.ylabel('Potential (V)')
-    plt.xlim([dataSet.x_min, dataSet.x_max])
+    plt.xlim([dataSet.x_min, dataSet.x_max*1e2])
     plt.show()
     
 def maxwellEDVF(x, T):
@@ -244,7 +244,7 @@ def density_std_plots(dataSet, name, amount, label = ''):
     # n_err = np.max(n, axis = 0) - np.min(n,axis = 0)
     n_err = np.std(n, axis = 0)
     # plt.errorbar(dataSet.grid, n_tot, yerr = n_err, fmt = '.')
-    plt.plot(dataSet.grid, n_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
+    plt.plot(dataSet.grid * 1e2, n_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
 
 def Efield_std_plots(dataSet, amount, label = ''):
     E = np.zeros((amount, dataSet.Nx-1))
@@ -254,7 +254,7 @@ def Efield_std_plots(dataSet, amount, label = ''):
         E[num_diag, :] = -np.diff(phi)/np.diff(dataSet.grid)
         num_diag += 1
     E_err = np.std(E, axis = 0)
-    plt.plot(0.5 * (dataSet.grid[0:-1] + dataSet.grid[1::]), E_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
+    plt.plot(0.5 * (dataSet.grid[0:-1] + dataSet.grid[1::]) * 1e2, E_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
 
 def temp_plots(dataSet, name, amount):
     T = np.zeros((amount, dataSet.Nx-1))

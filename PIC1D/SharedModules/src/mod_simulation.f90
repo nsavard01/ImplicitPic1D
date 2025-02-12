@@ -165,7 +165,7 @@ contains
                 potentialTime = potentialTime + (endTimer - startTimer)
                 call system_clock(startTimer)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-                if (EField_heating_bool) call Efield_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
+                if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)
@@ -202,7 +202,7 @@ contains
                 
                 call system_clock(startTimer)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-                if (EField_heating_bool) call Efield_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
+                if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)
@@ -365,7 +365,7 @@ contains
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
             
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-            if (EField_heating_bool) call Efield_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
+            if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)
@@ -373,10 +373,12 @@ contains
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
             end do
-            call loadParticleDensity(particleList, world, .false.)
-            call solver%aveRFVoltage(.true., phi_average, RF_ave, i, world)
+            if (remainDel_t == del_t) then
+                call loadParticleDensity(particleList, world, .false.)
+                call solver%aveRFVoltage(.true., phi_average, RF_ave, i, world)
+                i = i + 1
+            end if
             currentTime = currentTime + currDel_t
-            i = i + 1
             windowNum = windowNum + 1
             wallLoss(windowNum) = 0.0d0
             do j = 1, numberChargedParticles
@@ -474,6 +476,8 @@ contains
         ! Either over 50/omega_pe or over an RF period for averaging distribution function
         if (solver%RF_bool) then
             checkTimeDivision = 2.0d0 * pi / solver%RF_rad_frequency
+        else if (EField_heating_bool) then
+            checkTimeDivision = 1.0d0 / Efield_heating_freq
         else
             checkTimeDivision = 50.0d0 * del_t/fractionFreq
         end if
@@ -484,7 +488,7 @@ contains
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-            if (EField_heating_bool) call Efield_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
+            if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)
@@ -492,27 +496,29 @@ contains
             do j = 1, numberBinaryCollisions
                 call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, currDel_t)
             end do
-            !$OMP parallel private(iThread, j, k, partV, intPartV, partE) reduction(+:VHist, EHist)
-            iThread = omp_get_thread_num() + 1
-            do j = 1, numberChargedParticles
-                do k = 1, particleList(j)%N_p(iThread)
-                    partV = particleList(j)%phaseSpace(2, k, iThread) * (2.0d0 * binNumber - 1) / 2.0d0 / VMax(j) + binNumber + 0.5d0
-                    if (partV > 1 .and. partV < binNumber*2) then
-                        intPartV = INT(partV)
-                        VHist(intPartV, j) = VHist(intPartV, j) + (1.0d0 - (partV - intPartV))
-                        VHist(intPartV+1, j) = VHist(intPartV + 1, j) + partV - intPartV
-                    end if
-                    partE = SUM(particleList(j)%phaseSpace(2:4, k, iThread)**2)
-                    if (partE > Emin(j) .and. partE < EMax(j)) then
-                        partV = (LOG(partE) - Emin_log(j))/diffE(j) + 1.0d0
-                        intPartV = INT(partV)
-                        partV = partV - intPartV
-                        EHist(intPartV, j) = EHist(intPartV, j) + (1.0d0 - partV)
-                        EHist(intPartV+1, j) = EHist(intPartV + 1, j) + partV
-                    end if
+            if (remainDel_t == del_t) then
+                !$OMP parallel private(iThread, j, k, partV, intPartV, partE) reduction(+:VHist, EHist)
+                iThread = omp_get_thread_num() + 1
+                do j = 1, numberChargedParticles
+                    do k = 1, particleList(j)%N_p(iThread)
+                        partV = particleList(j)%phaseSpace(2, k, iThread) * (2.0d0 * binNumber - 1) / 2.0d0 / VMax(j) + binNumber + 0.5d0
+                        if (partV > 1 .and. partV < binNumber*2) then
+                            intPartV = INT(partV)
+                            VHist(intPartV, j) = VHist(intPartV, j) + (1.0d0 - (partV - intPartV))
+                            VHist(intPartV+1, j) = VHist(intPartV + 1, j) + partV - intPartV
+                        end if
+                        partE = SUM(particleList(j)%phaseSpace(2:4, k, iThread)**2)
+                        if (partE > Emin(j) .and. partE < EMax(j)) then
+                            partV = (LOG(partE) - Emin_log(j))/diffE(j) + 1.0d0
+                            intPartV = INT(partV)
+                            partV = partV - intPartV
+                            EHist(intPartV, j) = EHist(intPartV, j) + (1.0d0 - partV)
+                            EHist(intPartV+1, j) = EHist(intPartV + 1, j) + partV
+                        end if
+                    end do
                 end do
-            end do
-            !$OMP end parallel
+                !$OMP end parallel
+            end if
             currentTime = currentTime + currDel_t
         end do
         ! Save particle distribution data
