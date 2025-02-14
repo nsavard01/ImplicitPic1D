@@ -80,7 +80,7 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part, d_half, E_right, E_left, accel
+        real(real64) :: l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part, d_half, E_right, E_left, accel, del_tau_min
         integer(int32) :: j, i, k, l_cell, iThread, l_boundary, numIter, leftThreadIndx, rightThreadIndx
 
         f_tol = del_t * 1.d-10
@@ -90,7 +90,7 @@ contains
         do j = 1, numberChargedParticles
             particleTimeStep(:, j) = 0.1d0 * world%dx_dl / SQRT(ABS(particleList(j)%q_over_m * (solver%EField(1:NumberXNodes) - solver%EField(2:NumberXHalfNodes))))
         end do
-        !$OMP parallel private(iThread, i, j, k, l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, &
+        !$OMP parallel private(iThread, i, j, k, l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, del_tau_min, &
         !$OMP&        dx_dl, l_boundary, numIter, J_part, d_half, leftThreadIndx, rightThreadIndx, E_right, E_left, accel)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles 
@@ -103,13 +103,14 @@ contains
                 timePassed = 0.0d0
                 ! Very small probability particle trajectories end on boundaries, so look along cell to determine
                 l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
+                E_left = solver%EField(l_cell)
+                E_right = solver%EField(l_cell+1)
+                dx_dl = world%dx_dl(l_cell)
+                ! Calculate maximum substep 
+                del_tau_min = particleTimeStep(l_cell,j)
                 del_tau = del_t
                 do while(del_tau > f_tol)
-                    E_left = solver%EField(l_cell)
-                    E_right = solver%EField(l_cell+1)
-                    dx_dl = world%dx_dl(l_cell)
-                    ! Calculate maximum substep 
-                    del_tau = MIN(del_tau, particleTimeStep(l_cell,j))
+                    del_tau = MIN(del_tau, del_tau_min)
                     l_f_prev = l_sub
                     ! Use previous estimate of l_f to find new l_f
                     d_half = l_sub - real(l_cell, kind = 8)
@@ -166,6 +167,11 @@ contains
                             l_f = REAL(ABS(l_boundary - NumberXHalfNodes - 1))
                             l_cell = ABS(l_cell - NumberXHalfNodes)
                         END SELECT
+                        E_left = solver%EField(l_cell)
+                        E_right = solver%EField(l_cell+1)
+                        dx_dl = world%dx_dl(l_cell)
+                        ! Calculate maximum substep 
+                        del_tau_min = particleTimeStep(l_cell,j)
                     end if
                     timePassed = timePassed + del_tau
                     del_tau = del_t - timePassed
@@ -218,7 +224,7 @@ contains
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
-        real(real64) :: l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, d_half, dx_dl, E_right, E_left, accel
+        real(real64) :: l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, d_half, dx_dl, E_right, E_left, accel, del_tau_min
         integer(int32) :: j, i, k,l_cell, iThread, l_boundary, numSubStepAve(numberChargedParticles), numIter, funcEvalCounter(numberChargedParticles), delIdx, refIdx, N_p
         logical :: refluxedBool, convergeTimeBool
         f_tol = del_t * 1.d-10
@@ -230,7 +236,7 @@ contains
             particleTimeStep(:, j) = 0.1d0 * world%dx_dl / SQRT(ABS(particleList(j)%q_over_m * (solver%EField(1:NumberXNodes) - solver%EField(2:NumberXHalfNodes))))
         end do
         ! Make counters private, otherwise have false sharing which causes significant slowdown! In general, keep variables private whenever possible
-        !$OMP parallel private(iThread, i, j, k,l_f, l_f_prev, l_sub, v_sub, v_f, d_half, timePassed, del_tau, l_cell, &
+        !$OMP parallel private(iThread, i, j, k,l_f, l_f_prev, l_sub, v_sub, v_f, d_half, timePassed, del_tau, l_cell, del_tau_min,&
         !$OMP&    dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, N_p, convergeTimeBool, E_right, E_left, accel) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
@@ -246,18 +252,18 @@ contains
                 l_sub = particleList(j)%phaseSpace(1,i,iThread)
                 timePassed = 0.0d0
                 l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
-                refluxedBool = .false.
+                E_left = solver%EField(l_cell)
+                E_right = solver%EField(l_cell+1)
+                dx_dl = world%dx_dl(l_cell)
+                ! Calculate maximum substep 
+                del_tau_min = particleTimeStep(l_cell,j)
                 del_tau = del_t
+                refluxedBool = .false.
                 convergeTimeBool = .true.
                 do while(convergeTimeBool)
                     ! accumulate statistics for num sub steps
                     numSubStepAve(j) = numSubStepAve(j) + 1
-                    
-                    E_left = solver%EField(l_cell)
-                    E_right = solver%EField(l_cell+1)
-                    dx_dl = world%dx_dl(l_cell)
-                    ! Calculate maximum substep 
-                    del_tau = MIN(del_tau, particleTimeStep(l_cell,j))
+                    del_tau = MIN(del_tau, del_tau_min)
                     l_f_prev = l_sub
                     ! Use previous estimate of l_f to find new l_f
                     d_half = l_sub - real(l_cell, kind = 8)
@@ -329,6 +335,11 @@ contains
                             l_f = REAL(ABS(l_boundary - NumberXHalfNodes - 1))
                             l_cell = ABS(l_cell - NumberXHalfNodes)
                         END SELECT
+                        E_left = solver%EField(l_cell)
+                        E_right = solver%EField(l_cell+1)
+                        dx_dl = world%dx_dl(l_cell)
+                        ! Calculate maximum substep 
+                        del_tau_min = particleTimeStep(l_cell,j)
                     end if
                     timePassed = timePassed + del_tau
                     del_tau = del_t - timePassed
