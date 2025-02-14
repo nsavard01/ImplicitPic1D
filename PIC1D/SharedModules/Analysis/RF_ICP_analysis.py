@@ -47,6 +47,7 @@ NGP_ICP_highPressure_200Cells_uniform_2500delT_400PPC = dataSet('Y:/ImplicitPic1
 NGP_ICP_highPressure_200Cells_uniform_2500delT_800PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_800PPC/')
 NGP_ICP_highPressure_200Cells_uniform_2500delT_1600PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_1600PPC/')
 NGP_ICP_highPressure_200Cells_uniform_2500delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_3200PPC/')
+NGP_ICP_highPressure_200Cells_uniform_2500delT_6400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_6400PPC/')
 
 NGP_ICP_highPressure_128Cells_sinusoid_2500delT_100PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_128Cells_sinusoid_2500delT_100PPC/')
 NGP_ICP_highPressure_128Cells_sinusoid_2500delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_128Cells_sinusoid_2500delT_200PPC/')
@@ -111,6 +112,7 @@ Exp_ICP_highDensity_lowPressure_standRF_7000delT_1600PPC = dataSetExplicit('Y:/I
 Exp_ICP_highDensity_lowPressure_standRF_7000delT_3200PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_7000delT_3200PPC/')
 Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC/')
 
+Exp_ICP_highDensity_lowPressure_standRF_1100cells_4000delT_64PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1100cells_4000delT_64PPC/')
 Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC/')
 Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_implicit = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_implicit/')
 # Exp_ICP_highDensity_lowPressure = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure/')
@@ -220,6 +222,17 @@ plotAveDensity(NGP_ICP_lowPressure_200Cells_uniform_640delT_3200PPC, 'He+',label
 plotAveDensity(NGP_ICP_lowPressure_200Cells_uniform_640delT_6400PPC, 'He+',label = 'NGP 6400 PPC')
 plt.legend(loc = 'lower center')
 plt.savefig('RF_ICP/NGP_ICP_lowPress_density_uniform.png')
+
+
+# -------------------- Trends between two --------------------------------------------
+plt.figure()
+plotAveDensity(Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC, 'He+', label = 'Exp Res. low press')
+plotAveDensity(Exp_ICP_highDensity_highPressure_standRF_2500cells_10000delT_3200PPC, 'He+', label = 'Exp Res. high press')
+plotAveDensity(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_6400PPC, 'He+', label = 'NGP low press 6400 PPC')
+plotAveDensity(NGP_ICP_highPressure_128Cells_sinusoid_2500delT_100PPC, 'He+', label = 'NGP high press 100 PPC')
+plt.legend(loc = 'lower center')
+
+
 
 # ------------------------------------- 2/3 domain
 

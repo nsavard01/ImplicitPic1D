@@ -80,9 +80,8 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         !a and c correspond to quadratic equations | l_alongV is nearest integer boundary along velocity component, away is opposite
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part, d_half
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, leftThreadIndx, rightThreadIndx
-        logical :: FutureAtBoundaryBool
+        real(real64) :: l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, J_part, d_half, E_right, E_left, accel
+        integer(int32) :: j, i, k, l_cell, iThread, l_boundary, numIter, leftThreadIndx, rightThreadIndx
 
         f_tol = del_t * 1.d-10
         ! Solve for current iteration of E^n+1/2
@@ -91,8 +90,8 @@ contains
         do j = 1, numberChargedParticles
             particleTimeStep(:, j) = 0.1d0 * world%dx_dl / SQRT(ABS(particleList(j)%q_over_m * (solver%EField(1:NumberXNodes) - solver%EField(2:NumberXHalfNodes))))
         end do
-        !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
-        !$OMP&        dx_dl, l_boundary, numIter, J_part, d_half, leftThreadIndx, rightThreadIndx)
+        !$OMP parallel private(iThread, i, j, k, l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, &
+        !$OMP&        dx_dl, l_boundary, numIter, J_part, d_half, leftThreadIndx, rightThreadIndx, E_right, E_left, accel)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles 
         ! Reset workspace for specific thread for adding J to domain
@@ -106,19 +105,45 @@ contains
                 l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
                 del_tau = del_t
                 do while(del_tau > f_tol)
-                    
+                    E_left = solver%EField(l_cell)
+                    E_right = solver%EField(l_cell+1)
                     dx_dl = world%dx_dl(l_cell)
                     ! Calculate maximum substep 
                     del_tau = MIN(del_tau, particleTimeStep(l_cell,j))
-                    call particleSubStepPicard(l_sub-real(l_cell), v_sub, l_f, v_f, d_half, del_tau, solver%EField(l_cell), solver%EField(l_cell+1), dx_dl, &
-                        particleList(j)%q_over_m, l_cell, FutureAtBoundaryBool, l_boundary, numIter)
+                    l_f_prev = l_sub
+                    ! Use previous estimate of l_f to find new l_f
+                    d_half = l_sub - real(l_cell, kind = 8)
+                    accel = particleList(j)%q_over_m * (E_left * (1.0d0 - d_half) + E_right * d_half)
+                    v_f = v_sub + accel * del_tau/dx_dl
+                    l_f = l_sub + 0.5d0 * (v_sub + v_f) * del_tau / dx_dl
+                    do while (abs(l_f - l_f_prev) > 1.d-10)
+                        l_f_prev = l_f
+                        ! Use previous estimate of l_f to find new l_f
+                        d_half = 0.5d0 * (l_sub + l_f_prev) - real(l_cell, kind = 8)
+                        accel = particleList(j)%q_over_m * (E_left * (1.0d0 - d_half) + E_right * d_half)
+                        v_f = v_sub + accel * del_tau/dx_dl
+                        l_f = l_sub + 0.5d0 * (v_sub + v_f) * del_tau / dx_dl
+                        l_f = max(min(l_f, real(l_cell+1, kind = 8)), real(l_cell, kind = 8))
+                    end do
+                    !numIter = i
+                  
                     
                     ! Add to J
                     J_part = l_f - l_sub
                     particleList(j)%workSpace(l_cell, iThread) = particleList(j)%workSpace(l_cell, iThread) + (1.0d0-d_half) * J_part
                     particleList(j)%workSpace(l_cell + 1, iThread) = particleList(j)%workSpace(l_cell + 1, iThread) + J_part * d_half
                     
-                    if (FutureAtBoundaryBool) then
+                    if (l_f == l_cell .or. l_f == l_cell + 1) then
+                        if (l_f /= l_sub) then
+                            v_f = SIGN(1.0d0, v_f + v_sub) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
+                            del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_sub + v_f)
+                            ! numIter = numIter + 1
+                        else
+                            ! In the case that the particle goes back to starting position on boundary
+                            del_tau = -2.0d0 * v_sub * dx_dl/accel
+                            v_f = -v_sub
+                        end if
+                        l_boundary = int(l_f)
                         ! Determine new cell based on boundary particle is on
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)
@@ -193,9 +218,9 @@ contains
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, d_half, dx_dl
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numSubStepAve(numberChargedParticles), numIter, funcEvalCounter(numberChargedParticles), delIdx, refIdx, N_p
-        logical :: FutureAtBoundaryBool, refluxedBool, convergeTimeBool
+        real(real64) :: l_f, l_f_prev, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, d_half, dx_dl, E_right, E_left, accel
+        integer(int32) :: j, i, k,l_cell, iThread, l_boundary, numSubStepAve(numberChargedParticles), numIter, funcEvalCounter(numberChargedParticles), delIdx, refIdx, N_p
+        logical :: refluxedBool, convergeTimeBool
         f_tol = del_t * 1.d-10
         ! Initialize counters for function evaluations and substep number
         numSubStepAve = 0
@@ -205,8 +230,8 @@ contains
             particleTimeStep(:, j) = 0.1d0 * world%dx_dl / SQRT(ABS(particleList(j)%q_over_m * (solver%EField(1:NumberXNodes) - solver%EField(2:NumberXHalfNodes))))
         end do
         ! Make counters private, otherwise have false sharing which causes significant slowdown! In general, keep variables private whenever possible
-        !$OMP parallel private(iThread, i, j,l_f, l_sub, v_sub, v_f, d_half, timePassed, del_tau, l_cell, FutureAtBoundaryBool, &
-        !$OMP&    dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
+        !$OMP parallel private(iThread, i, j, k,l_f, l_f_prev, l_sub, v_sub, v_f, d_half, timePassed, del_tau, l_cell, &
+        !$OMP&    dx_dl, l_boundary, numIter, delIdx, refIdx, refluxedBool, N_p, convergeTimeBool, E_right, E_left, accel) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             !initialize deletion index at dirichlet boundaries and reflux if applicable to neumann boundaries
@@ -228,13 +253,43 @@ contains
                     ! accumulate statistics for num sub steps
                     numSubStepAve(j) = numSubStepAve(j) + 1
                     
+                    E_left = solver%EField(l_cell)
+                    E_right = solver%EField(l_cell+1)
                     dx_dl = world%dx_dl(l_cell)
-                    del_tau = MIN(del_tau, particleTimeStep(l_cell, j))
-                    call particleSubStepPicard(l_sub - real(l_cell), v_sub, l_f, v_f, d_half, del_tau, solver%EField(l_cell), solver%EField(l_cell+1), dx_dl, &
-                        particleList(j)%q_over_m, l_cell, FutureAtBoundaryBool, l_boundary, numIter)
+                    ! Calculate maximum substep 
+                    del_tau = MIN(del_tau, particleTimeStep(l_cell,j))
+                    l_f_prev = l_sub
+                    ! Use previous estimate of l_f to find new l_f
+                    d_half = l_sub - real(l_cell, kind = 8)
+                    accel = particleList(j)%q_over_m * (E_left * (1.0d0 - d_half) + E_right * d_half)
+                    v_f = v_sub + accel * del_tau/dx_dl
+                    l_f = l_sub + 0.5d0 * (v_sub + v_f) * del_tau / dx_dl
+                    k = 1
+                    do while (abs(l_f - l_f_prev) > 1.d-10)
+                        l_f_prev = l_f
+                        ! Use previous estimate of l_f to find new l_f
+                        d_half = 0.5d0 * (l_sub + l_f_prev) - real(l_cell, kind = 8)
+                        accel = particleList(j)%q_over_m * (E_left * (1.0d0 - d_half) + E_right * d_half)
+                        v_f = v_sub + accel * del_tau/dx_dl
+                        l_f = l_sub + 0.5d0 * (v_sub + v_f) * del_tau / dx_dl
+                        l_f = max(min(l_f, real(l_cell+1, kind = 8)), real(l_cell, kind = 8))
+                        k = k + 1
+                    end do
+                    numIter = k
+                
                     ! Accumulate functional evaluation counter for each picard iteration
                     funcEvalCounter(j) = funcEvalCounter(j) + numIter
-                    if (FutureAtBoundaryBool) then
+                    if (l_f == l_cell .or. l_f == l_cell + 1) then
+                        if (l_f /= l_sub) then
+                            v_f = SIGN(1.0d0, v_sub + v_f) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
+                            del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_sub + v_f)
+                            funcEvalCounter(j) = funcEvalCounter(j) + 1
+                        else
+                            ! In the case that the particle goes back to starting position on boundary
+                            del_tau = -2.0d0 * v_sub * dx_dl/accel
+                            v_f = -v_sub
+                        end if
+                        l_boundary = int(l_f)
                         ! Boundaries similar to deposit J
                         SELECT CASE (world%boundaryConditions(l_boundary))
                         CASE(0)

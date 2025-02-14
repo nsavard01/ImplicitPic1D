@@ -32,7 +32,7 @@ Domain::Domain(const std::string& filename)
         }
         line_count++;
     }
-        
+    file.close();
     int i;
     grid.resize(number_nodes);
     boundary_conditions.resize(number_nodes);
@@ -55,6 +55,7 @@ Domain::Domain(const std::string& filename)
     std::cout << "Grid length: " << L_domain << std::endl;
     std::cout << "delta x is: " << del_X << std::endl;
     std::cout << "-----------------------"  << std::endl;
+    
 }
 
 double Domain::get_x_from_xi(double xi) {

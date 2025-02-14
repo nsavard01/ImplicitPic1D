@@ -22,7 +22,17 @@ void read_particle_inputs(const std::string& filename){
     std::string line;
     int line_count = 0;
     while (std::getline(file, line)) {
-        std::cout << line << std::endl;
+        if (line.find("ELECTRONS") != std::string::npos){
+            std::getline(file, line);
+            std::getline(file, line);
+            std::getline(file, line);
+            std::istringstream iss(line);
+            std::string name;
+            int num_part_thread, factor;
+            iss >> name >> num_part_thread >> factor;
+            std::cout << name << " " << num_part_thread << " " << factor << std::endl;
+            std::getline(file, line);
+        }
         // std::istringstream iss(line);
         // if (line.find("END") != std::string::npos) break; // Stop at END marker
         
@@ -36,7 +46,7 @@ void read_particle_inputs(const std::string& filename){
         // }
         line_count++;
     }
-
+    file.close();
 
     
 
