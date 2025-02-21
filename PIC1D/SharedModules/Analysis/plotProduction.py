@@ -77,6 +77,19 @@ def plotAveEDF(dataSet, name, CurveFit = False, label = ''):
         plt.xlabel('Particle Energy (eV)')
 
 
+def plotWallCurrent(data_point_array, particle_name, dataset_list, label = ""):
+    if (data_point_array.size != len(dataset_list)):
+        raise Exception("Error in size data array vs number of data sets")
+
+
+    val_array = np.zeros(data_point_array.size)
+    for j in range(data_point_array.size):
+        dataset = dataset_list[j]
+        val_array[j] = (dataset.particles[particle_name]['aveDiag']['leftCurrLoss'].values[0] + dataset.particles[particle_name]['aveDiag']['rightCurrLoss'].values[0])
+
+    plt.plot(data_point_array, val_array, 'o-', label = label)
+
+
 def plotAveEPF(dataSet, name, lower_limit = 0.2, label = '', marker = 'o', linestyle = '--'):
     EHist, Ebin = dataSet.getAveEDF(name)
     EHist = EHist/Ebin

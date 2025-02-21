@@ -8,7 +8,8 @@
 #include "global_inputs.h"
 #include "domain.h"
 #include "particle.h"
-
+#include "target_particle.h"
+#include "null_collision.h"
 
 int main() {
     int thread_id, i;
@@ -16,33 +17,28 @@ int main() {
     double sum = 0.0;
     double var = 0.0;
     double val;
-    number_nodes = 101;
     
+    global_inputs::read_global_inputs("../InputData/InitialConditions.inp");
+    initialize_pcg(false);
     Domain world("../InputData/Geometry.inp");
-    read_particle_inputs("../InputData/ParticleTypes.inp");
-    omp_set_num_threads(2);
-    #pragma omp parallel private(thread_id, i, val) reduction(+:sum, var)
-    {   
-        thread_id = omp_get_thread_num();
-        // // Initialize PRNG state for each thread
-        initialize_pcg(false); 
-        // cg_state = static_cast<uint64_t>(12345 + thread_id);
-        // #pragma omp critical
-        // {
-           
-        // }
-        
-        
+    std::vector<Particle> particle_list = read_particle_inputs("../InputData/ParticleTypes.inp", world);
+    std::vector<Target_Particle> target_particle_list = read_target_particle_inputs("../InputData/ParticleTypes.inp");
+    read_null_collision_inputs("../InputData/collision.inp", particle_list, target_particle_list);
+    
+    #pragma omp parallel private(i,val) reduction(+:sum,var)
+    {
+        for (i=0; i < 10000; i++){
+            val = pcg32_random_r();
+            sum += val;
+            var += (val - 0.5) * (val - 0.5);
+        }
         #pragma omp critical
         {
-            for (int i = 0; i < number_stats; i++) {
-            std::cout << "Thread " << thread_id << " has val " << pcg32_random_r() << std::endl;
-    
+            std::cout <<"local sum thread " << omp_get_thread_num() << " is " << sum / (10000.0) << std::endl;
+            std::cout <<"local std thread " << omp_get_thread_num() << " is " << std::sqrt(var/10000.0) << std::endl;
         }
-        
-        }
-        
     }
-
+    std::cout << "Total average "<< sum / (10000.0) /omp_get_max_threads() << std::endl;
+    std::cout << "Total std "<< std::sqrt(var / (10000.0) /omp_get_max_threads()) << std::endl;
     return 0;
 }

@@ -329,13 +329,12 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
         integer(c_int64_t), intent(in out) :: irand(numThread)
-        integer(int32) :: i, j, windowNum, intPartV, k, iThread
+        integer(int32) :: i, j, intPartV, k, iThread
         real(real64) :: startTime, phi_average(NumberXNodes), currDel_t, remainDel_t
         real(real64) :: chargeLossTotal, ELossTotal, lastCheckTime, checkTimeDivision, meanLoss, stdLoss, RF_ave, partV, partE
         real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), &
         E_grid(binNumber, numberChargedParticles), diffE(numberChargedParticles), Emin_log(numberChargedParticles), VHist(2*binNumber, numberChargedParticles), &
         EHist(binNumber, numberChargedParticles)
-        real(real64), allocatable :: wallLoss(:)
         
         ! Initialize accumulation data
         do i = 1, numberChargedParticles
@@ -358,9 +357,8 @@ contains
         remainDel_t = del_t
         lastCheckTime = startTime
         checkTimeDivision = 200.0d0 * del_t/fractionFreq
-        windowNum = 0
         RF_ave = 0
-        allocate(wallLoss(2 * INT(checkTimeDivision/del_t)))
+
         do while((currentTime - startTime) < averagingTime)
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
             
@@ -379,22 +377,8 @@ contains
                 i = i + 1
             end if
             currentTime = currentTime + currDel_t
-            windowNum = windowNum + 1
-            wallLoss(windowNum) = 0.0d0
-            do j = 1, numberChargedParticles
-                wallLoss(windowNum) = wallLoss(windowNum) + SUM(particleList(j)%energyLoss)
-            end do
-            wallLoss(windowNum) = wallLoss(windowNum)/(currentTime - startTime)
-            if ((currentTime - lastCheckTime) > checkTimeDivision) then
-                meanLoss = SUM(wallLoss(1:windowNum))/real(windowNum)
-                stdLoss = SQRT(SUM( (wallLoss(1:windowNum) - meanLoss)**2 )/real(windowNum))
-                ! If std_dev / mean of wall loss small enough, then has reached equilibrium
-                if (stdLoss/meanLoss < 1d-6) exit
-                windowNum = 0
-                lastCheckTime = currentTime
-            end if
+            
         end do
-        deallocate(wallLoss)
         print *, "Averaging finished over", (currentTime - startTime), 'simulation time (s)'
         ! Average densities
         do j=1, numberChargedParticles
@@ -402,6 +386,13 @@ contains
             iThread = omp_get_thread_num() + 1
             particleList(j)%densities(:, iThread) = particleList(j)%densities(:, iThread) /real(i, kind = 8)
             !$OMP end parallel
+            open(22,file=directoryName//'/ParticleAveDiagnostic_'//particleList(j)%name//'.dat')
+            write(22, '("Left curr (A/m^2), right curr (A/m^2), left power (W/m^2), right power (W/m^2)")')
+            write(22,"(4(es16.8, 1x))") particleList(j)%accumWallLoss(1) * particleList(j)%q_times_wp /(currentTime-startTime), &
+                particleList(j)%accumWallLoss(2) * particleList(j)%q_times_wp /(currentTime-startTime), &
+                particleList(j)%accumEnergyLoss(1)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime-startTime), &
+                particleList(j)%accumEnergyLoss(2)* particleList(j)%mass * particleList(j)%w_p * 0.5d0/(currentTime-startTime)
+            close(22)
         end do
         ! Ave voltage (including RF)
         call solver%aveRFVoltage(.false., phi_average, RF_ave, i, world)

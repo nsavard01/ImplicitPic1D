@@ -832,7 +832,7 @@ UPDATED: 2010-11-13 12:22:01
 REACTION
 [He+]+[He]->[He+]+[He]
  0.    0.  
- 1.    1.d-20
+ 1.    1.e-20
 CHARGEEXCHANGE
 SPECIES: He^+ / He
 PROCESS: He+ + He -> , Backscat
@@ -949,7 +949,7 @@ Energy (eV) | Cross section (m2)
 REACTION
 [He+]+[He]->[He+]+[He]
  0.    0.  
- 1.    1.d-20
+ 1.    1.e-20
 ELASTIC
 PROCESS: He+ + He -> , Isotropic
 PARAM.:  Mi = 4.0026, Mi/M = 1, complete set

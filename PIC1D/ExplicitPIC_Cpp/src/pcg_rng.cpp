@@ -11,18 +11,23 @@ static uint64_t pcg_state;
 
 void initialize_pcg(bool pre_determined) {
     uint64_t seed;
-    int thread_id = omp_get_thread_num();
-    if (pre_determined) {
-        seed = thread_id*multiplier + increment;
-    }
-    else {
-        thread_local std::random_device rd;
-        thread_local std::mt19937_64 rng(rd());
-        std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
-        seed = dist(rng);
-    }
+    int thread_id;
+    #pragma omp parallel private(seed, thread_id) 
+    {
     
-    pcg_state = seed; // Unique seed per thread
+        thread_id = omp_get_thread_num();
+        if (pre_determined) {
+            seed = thread_id*multiplier + increment;
+        }
+        else {
+            thread_local std::random_device rd;
+            thread_local std::mt19937_64 rng(rd());
+            std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
+            seed = dist(rng);
+        }
+        
+        pcg_state = seed; // Unique seed per thread
+    }
 }
 
 double pcg32_random_r()

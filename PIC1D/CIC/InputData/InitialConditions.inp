@@ -7,6 +7,6 @@
 10.d0 1.1522861356932154e-10 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
 7.374631268436579e-06 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-CIC_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC !save file name
+CIC_ICP_lowPressure_2thirdsDomain_48Cells_sinusoid_640delT_64PPC_epsneg4 !save file name
 no NGP_RFBenchmark_Denis_lowerDen_262PPC_256cells_noSmoothing ! Restart(yes/no) and save directory to take from
 END

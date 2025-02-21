@@ -15,8 +15,8 @@ public:
 
     // Constructor declaration
     Domain(const std::string& filename);
-    double get_x_from_xi(double xi);
-    double get_xi_from_x(double xi);
+    double get_x_from_xi(double xi) const;
+    double get_xi_from_x(double xi) const;
     // Method declaration
     void readWorld();
 };

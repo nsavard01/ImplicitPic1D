@@ -1,5 +1,5 @@
-128 ! number of grid nodes
-0.067 ! Domain length in meters, 0.0002572099123144409d0 for two stream
+48 ! number of grid nodes
+0.05025 ! Domain length in meters, 0.0002572099123144409d0 for two stream
 1 0.00005 40 0.05 ! (0 == even grid, 1 = sinusoidal grid. 2 = half-grid, 3= exp-grid), size smallest grid (take max of this value or debye length)
 1 1 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 = RF-Dirichlet)
 0 ! 1 = smoothing, else no smoothing
