@@ -17,7 +17,7 @@ public:
     std::string name;
     double accum_energy_loss[2];
     size_t final_idx;
-    std::vector<uint32_t> number_particles;
+    std::vector<uint32_t> number_particles, number_collidable_particles;
     std::vector<std::vector<double>> phase_space, work_space, momentum_loss, energy_loss, wall_loss;
     std::vector<double> densities;  // Flattened 3D array
     Particle(double mass_in, double charge_in, uint32_t number_in, size_t final_in, std::string name_in);

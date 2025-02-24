@@ -23,6 +23,7 @@ Particle::Particle(double mass_in, double charge_in, uint32_t number_in, size_t 
     accum_wall_loss[0] = accum_wall_loss[1] = 0;
     accum_energy_loss[0] = accum_energy_loss[0] = 0.0;
     number_particles.resize(number_threads);
+    number_collidable_particles.resize(number_threads);
     size_t expanded_size = static_cast<size_t>(4) * final_idx;
     phase_space.resize(number_threads);
     work_space.resize(number_threads);
@@ -31,6 +32,7 @@ Particle::Particle(double mass_in, double charge_in, uint32_t number_in, size_t 
     wall_loss.resize(number_threads);
     for (i = 0; i < number_threads; i++){
         number_particles[i] = number_in;
+        number_collidable_particles[i] = number_in;
         phase_space[i].resize(expanded_size, 0.0);
         work_space[i].resize(global_inputs::number_nodes, 0.0);
         momentum_loss[i].resize(2);

@@ -7,7 +7,7 @@
 
 
 namespace global_inputs {
-    int number_omp_threads, number_nodes, number_cells, number_charged_particles, number_diagnostic_steps, number_target_particles, number_primary_colliders;
+    int number_omp_threads, number_nodes, number_cells, number_charged_particles, number_diagnostic_steps, number_target_particles, number_binary_collisions;
     double temp_electrons, temp_ions, initial_density;
     double time_step, averaging_time, simulation_time, start_simulation_time;
     std::string save_folder, save_filename;

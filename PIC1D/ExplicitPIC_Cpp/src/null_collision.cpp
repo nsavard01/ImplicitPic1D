@@ -1,25 +1,90 @@
 #include "null_collision.h"
 #include <regex>
+#include <cstdlib>
+#include <omp.h>
+#include <algorithm>
 
 
-void read_null_collision_inputs(const std::string& filename, const std::vector<Particle> &particle_list, const std::vector<Target_Particle> &target_particle_list){
+Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::vector<int> reactant_idx, 
+    const std::vector<std::vector<double>> &sigma_array, 
+    const std::vector<double> &energy_array, const std::vector<double> &energy_threshold,
+    const std::vector<int> &collision_type, const std::vector<std::vector<int>> &products_indx, double mass_inputs[3])
+    {
+    this->number_collisions = number_collisions;
+    this->length_arrays = length_arrays;
+    this->reactant_idx[0] = reactant_idx[0];
+    this->reactant_idx[1] = reactant_idx[1];
+    this->sigma_array = sigma_array;
+    this->energy_array = energy_array;
+    this->energy_threshold = energy_threshold;
+    this->collision_type = collision_type;
+    this->products_indx = products_indx;
+    this->reduced_mass = mass_inputs[0];
+    this->mass_sum = mass_inputs[1];
+    this->reduced_mass_triple = mass_inputs[2];
+    this->min_energy = this->energy_array[0];
+    this->max_energy = this->energy_array.back();
+
+    // std::vector<double> sigma_v_max_array(this->number_collisions);
+    // double v_r, sum_sigma;
+
+    int l, u;
+    this->sigma_v_max = 0.0;
+    double sum_sigma, v_r;
+    for (l=0;l<this->length_arrays;l++){
+        sum_sigma = 0.0;
+        v_r = std::sqrt(2.0 * this->energy_array[l] * Constants::elementary_charge / this->reduced_mass);
+        for (u=0;u<this->number_collisions; u++){
+            sum_sigma += this->sigma_array[u][l];
+        }
+        this->sigma_v_max = std::max(this->sigma_v_max, sum_sigma * v_r);
+    }
+    std::cout << "------------------------------ " << std::endl;
+    std::cout << "Primary particle is idx is " << this->reactant_idx[0] << " " << this->reactant_idx[1] << std::endl;
+    std::cout << "Amount of collisions is " << this->number_collisions << std::endl;
+    std::cout << "Reduced mass: " << this->reduced_mass << std::endl;
+    std::cout << "Sum mass: " << this->mass_sum << std::endl;
+    std::cout << "Reduced mass triple product: " << this->reduced_mass_triple << std::endl;
+    std::cout << "Sigma_v_max: " << this->sigma_v_max << std::endl;
+    std::cout << "----- " << std::endl;
+    std::cout << std::endl;
+    for (l=0; l<this->number_collisions;l++){
+        std::cout << "Collision # " << l << std::endl;
+        std::cout << "Collision type integer is " << this->collision_type[l] << std::endl;
+        std::cout << "Threshold energy (eV) " << this->energy_threshold[l] << std::endl;
+        std::cout << "Products indices are: ";
+        for (u=0;u<this->products_indx[l].size();u++){
+            std::cout << this->products_indx[l][u] << " ";
+        }
+        std::cout << std::endl;
+        // std::cout << std::endl;
+        // for (u=0; u < this->length_arrays;u++){
+        //     std::cout << this->energy_array[u] << " " << this->sigma_array[l][u] << std::endl;  
+        // }
+        std::cout << "----- " << std::endl;
+        std::cout << std::endl;
+    }
+    std::cout << "------------------------------ " << std::endl;
+    
+ 
+}
+
+
+std::vector<Null_Collision> read_null_collision_inputs(const std::string& filename, const std::vector<Particle> &particle_list, const std::vector<Target_Particle> &target_particle_list){
     std::cout << " "<< std::endl;
     std::cout << "Reading null collision inputs "<< std::endl;
     std::cout << "---------------------------------------- "<< std::endl;
     std::ifstream file(filename);
     if (!file) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
-        return;
     }
 
-    int number_primary_particles = 0;
-    std::vector<int> particle_primary_idx;
-    std::vector<std::vector<int>> target_indices;
+    global_inputs::number_binary_collisions = 0;
+    std::vector<std::vector<int>> reactant_idx;
     std::vector<std::vector<std::vector<int>>> product_indices;
-    std::vector<int> number_energy_points;
     std::vector<int> number_collisions_per_primary;
     std::vector<std::vector<int>> collision_type_per_primary;
-    std::vector<std::vector<int>> product_idx_per_primary;
+    std::vector<std::vector<double>> E_threshold_per_primary_collision;
     std::vector<std::vector<std::vector<double>>> energy_arrays;
     std::vector<std::vector<std::vector<double>>> sigma_arrays;
     double E_threshold, temp_var, E_scaling, sigma_scaling;
@@ -35,7 +100,6 @@ void read_null_collision_inputs(const std::string& filename, const std::vector<P
         std::ifstream coll_file(coll_filename);
         if (!coll_file) {
             std::cerr << "Error: Unable to open file" << coll_filename << std::endl;
-            return;
         }
         std::getline(coll_file, line);
         while (line.find("END") == std::string::npos) {
@@ -53,7 +117,7 @@ void read_null_collision_inputs(const std::string& filename, const std::vector<P
                 std::smatch match;
                 int primary_idx, target_idx; 
                 int coll_idx;
-                bool primary_exists = false;
+                bool binary_exists = false;
                 int i;
                 // Get indices of the primary and target particle
                 while (std::regex_search(reactant_string, match, pattern)){
@@ -75,20 +139,18 @@ void read_null_collision_inputs(const std::string& filename, const std::vector<P
             
                 
            
-                for (coll_idx=0;coll_idx<number_primary_particles;coll_idx++){
-                    if (particle_primary_idx[coll_idx] == primary_idx){
-                        primary_exists = true;
+                for (coll_idx=0;coll_idx<global_inputs::number_binary_collisions;coll_idx++){
+                    if (reactant_idx[coll_idx][0] == primary_idx && reactant_idx[coll_idx][1] == target_idx){
+                        binary_exists = true;
                         break;
                     }
                 }
-                if (!primary_exists){
-                    number_primary_particles += 1;
-                    particle_primary_idx.push_back(primary_idx);
-                    target_indices.push_back({target_idx});
+                if (!binary_exists){
+                    global_inputs::number_binary_collisions++;
+                    reactant_idx.push_back({primary_idx, target_idx});
                     number_collisions_per_primary.push_back({1});
                 }
                 else {
-                    target_indices[coll_idx].push_back(target_idx);
                     number_collisions_per_primary[coll_idx]++;
                 }
 
@@ -130,10 +192,10 @@ void read_null_collision_inputs(const std::string& filename, const std::vector<P
                     collision_type = 3;
                     // make sure primary particle is first, then followed by by-product
                     for (i=0;i<3;i++){
-                        if (primary_idx == local_product_indx[i]){
+                        if (reactant_idx[coll_idx][0] == local_product_indx[i]){
                             // switch primary to front
                             local_product_indx[3] = local_product_indx[0];
-                            local_product_indx[0] = primary_idx;
+                            local_product_indx[0] = reactant_idx[coll_idx][0];
                             local_product_indx[i] = local_product_indx[3];
                             break;
                         }
@@ -151,13 +213,15 @@ void read_null_collision_inputs(const std::string& filename, const std::vector<P
                 } else if (coll_string == "CHARGEEXCHANGE"){
                     collision_type = 4;
                 }
-                if (!primary_exists){
+                if (!binary_exists){
                     collision_type_per_primary.push_back({collision_type});
+                    E_threshold_per_primary_collision.push_back({E_threshold});
                     product_indices.push_back({local_product_indx});
                 }
                 else {
                     collision_type_per_primary[coll_idx].push_back(collision_type);
                     product_indices[coll_idx].push_back(local_product_indx);
+                    E_threshold_per_primary_collision[coll_idx].push_back(E_threshold);
                 }
                 
                 std::getline(coll_file, line);
@@ -178,7 +242,7 @@ void read_null_collision_inputs(const std::string& filename, const std::vector<P
                 }
                 // find which particle indices they match to
                 
-                if (!primary_exists){
+                if (!binary_exists){
                     energy_arrays.push_back({local_energy_array});
                     sigma_arrays.push_back({local_sigma_array});
                 }
@@ -191,133 +255,154 @@ void read_null_collision_inputs(const std::string& filename, const std::vector<P
             }
             std::getline(coll_file, line);
         }
-        
-        int k, l, u;
-        std::cout << "number primary particles " << number_primary_particles << " is " << particle_primary_idx.size() << std::endl;
-        for (k=0; k<number_primary_particles; k++){
-            std::cout << "------------------------------ " << std::endl;
-            std::cout << "Primary particle " << k << " is " << particle_list[particle_primary_idx[k]].name << std::endl;
-            std::cout << "Amount of collisions is " << number_collisions_per_primary[k] << std::endl;
-            for (l=0; l<collision_type_per_primary[k].size();l++){
-                std::cout << "Collision type is " << collision_type_per_primary[k][l] << std::endl;
-                std::cout << "Product indices are: " << std::endl;
-                for (u=0; u < product_indices[k][l].size();u++){
-                    std::cout << product_indices[k][l][u] << std::endl;  
-                }
-            }
-            std::cout << "------------------------------ " << std::endl;
-        }
         coll_file.close();
+        
         std::getline(file, line);
     }
     file.close();
-    // std::vector<Particle> particle_list;
-    // int count_number_particles = 0;
-    // std::string line;
-    // // First check which particles exist and how many there are
-    // while (std::getline(file, line)) {
-    //     if (line.find("ELECTRONS") != std::string::npos){
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         std::istringstream iss(line);
-    //         std::string name;
-    //         std::cout << "Found electron"<< std::endl;
-    //         uint32_t num_part_thread;
-    //         size_t factor;
-    //         iss >> name >> num_part_thread >> factor;
-    //         std::cout << name << " " << num_part_thread << " " << factor << std::endl;
-    //         std::getline(file, line);
-    //         count_number_particles++;
-    //     }
 
-    //     if (line.find("IONS") != std::string::npos){
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         while (line.find("-------") == std::string::npos) {
-    //             std::istringstream iss(line);
-    //             std::string name;
-    //             std::cout << "Found ions"<< std::endl;
-    //             uint32_t num_part_thread;
-    //             double mass_in, charge_in;
-    //             size_t factor;
-    //             iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
-    //             std::cout << name << " " << " " << mass_in << " " << charge_in << " " << num_part_thread << " " << factor << std::endl;
-    //             std::getline(file, line);
-    //             count_number_particles++;
-    //         }
-    //     }
-    // }
+    // Concatenate into final energy/sigma arrays
+    std::vector<int> number_energy_points(global_inputs::number_binary_collisions);
+    std::vector<std::vector<double>> total_energy_array(global_inputs::number_binary_collisions);
+    std::vector<std::vector<std::vector<double>>> total_sigma_array(global_inputs::number_binary_collisions);
+    int k, l, u;
+    for (k=0; k<global_inputs::number_binary_collisions; k++){
+        
+        std::vector<int> current_indx_collision_array(collision_type_per_primary[k].size(), 0);
+        total_sigma_array[k].resize(collision_type_per_primary[k].size());
+        bool not_finished = true;
+        double curr_min_value;
+        // Find current minimum energy value
+        // concatenate energy array
+        int l_indx;
+        while (not_finished) {
+            not_finished = false;
+            for (l=0; l<collision_type_per_primary[k].size();l++){
+                if (current_indx_collision_array[l] < energy_arrays[k][l].size()) {
+                    if (!not_finished) {
+                        // first usable index is min value
+                        curr_min_value = energy_arrays[k][l][current_indx_collision_array[l]];
+                        l_indx = l;
+                        not_finished = true;
+                    } else {
+                        if (energy_arrays[k][l][current_indx_collision_array[l]] < curr_min_value){
+                            curr_min_value = energy_arrays[k][l][current_indx_collision_array[l]];
+                            l_indx = l;
+                        } else if (energy_arrays[k][l][current_indx_collision_array[l]] == curr_min_value) {
+                            // if equal, since we already have a value we can use, we just increase the index for that collision array
+                            current_indx_collision_array[l]++;
+                        }
+                    }
+                } 
+            }
+            if (not_finished) {
+                total_energy_array[k].push_back(curr_min_value);
+                current_indx_collision_array[l_indx]++;
+            }
+            // for (l=0; l<collision_type_per_primary[k].size();l++){
+            //     std::cout <<  current_indx_collision_array[l] << " ";
+            // }
+            // std::cout <<  std::endl;
+        }
+        
+        // Now interpolate to sigma array for each collision
+        for (l=0; l<collision_type_per_primary[k].size();l++){
+            int lower_idx = 0;
+            double interp_d;
+            total_sigma_array[k][l].resize(total_energy_array[k].size());
+            for (u = 0; u < total_energy_array[k].size();u++){
+                curr_min_value = total_energy_array[k][u];
+                if (curr_min_value < E_threshold_per_primary_collision[k][l]) {
+                    // outside of lower energy array
+                    total_sigma_array[k][l][u] = 0.0;
+                } else if (curr_min_value < energy_arrays[k][l].back()) {
+                    while (energy_arrays[k][l][lower_idx] <= curr_min_value){
+                        lower_idx++;
+                    }
+                    lower_idx--;
+                    if (energy_arrays[k][l][lower_idx] == curr_min_value){
+                        total_sigma_array[k][l][u] = sigma_arrays[k][l][lower_idx];
+                    } else{
+                        temp_var = curr_min_value - energy_arrays[k][l][lower_idx];
+                        interp_d = temp_var / (energy_arrays[k][l][lower_idx+1] - energy_arrays[k][l][lower_idx]);
+                        // linear interpolate sigma
+                        total_sigma_array[k][l][u] = sigma_arrays[k][l][lower_idx] * (1.0 - interp_d) + sigma_arrays[k][l][lower_idx+1] * (interp_d);
+                    }
+                } else {
+                    // outside of max energy, set to maximum sigma
+                    total_sigma_array[k][l][u] = sigma_arrays[k][l].back();
+                }
+            }
+        }
+        number_energy_points[k] = total_energy_array[k].size();
+
+    }
+
+    // Sort collisions on most likely collisions based on sigma * v
+    // Just create new in memory, will be deallocated
+    std::vector<std::vector<std::vector<int>>> product_indices_sorted = product_indices;
+    std::vector<std::vector<int>> collision_type_per_primary_sorted = collision_type_per_primary;
+    std::vector<std::vector<double>> E_threshold_per_primary_collision_sorted = E_threshold_per_primary_collision;
+    std::vector<std::vector<std::vector<double>>> total_sigma_array_sorted = total_sigma_array;
+    for (k=0; k<global_inputs::number_binary_collisions; k++){
+        std::vector<double> sigma_v_max(number_collisions_per_primary[k]);
+        double v_r;
+        std::vector<int> indices(number_collisions_per_primary[k]); //index for sorting
+        for (u=0;u<number_collisions_per_primary[k]; u++) {
+            indices[u] = u;
+            int p;
+            // Find maximum
+            sigma_v_max[u] = 0.0;
+            for (p=0;p<total_energy_array[k].size();p++) {
+                v_r = std::sqrt(total_energy_array[k][p]); // v propto sqrt(E), since same binary collisions
+                sigma_v_max[u] = std::max(sigma_v_max[u], v_r * total_sigma_array[k][u][p]);
+            }
+        }
+        
+        // sort indicies based on sigma_v_max
+        std::sort(indices.begin(), indices.end(), [&sigma_v_max](int i, int j) {
+            return sigma_v_max[i] < sigma_v_max[j];});
+
+        // Reorder collisions based on new index order from sigma_v_max
+        int p = 0;
+        int idx;
+        for (u=number_collisions_per_primary[k]-1;u>=0;u--){
+            // place current index into temp array, swap arrays
+            idx = indices[u];
+            product_indices_sorted[k][p] = product_indices[k][idx];
+            collision_type_per_primary_sorted[k][p] = collision_type_per_primary[k][idx];
+            E_threshold_per_primary_collision_sorted[k][p] = E_threshold_per_primary_collision[k][idx];
+            total_sigma_array_sorted[k][p] = total_sigma_array[k][idx];
+            p++;        
+        }
+    }
+
+
+    std::vector<Null_Collision> binary_collision_list;
+    binary_collision_list.reserve(global_inputs::number_binary_collisions);
+    std::cout << "number binary collisions " << global_inputs::number_binary_collisions << std::endl;
+    double mass_inputs[3];
+    double mass_1, mass_2;
+    for (k=0; k<global_inputs::number_binary_collisions; k++){
+        // Save mass values
+        mass_1 = particle_list[reactant_idx[k][0]].mass;
+        mass_2 = target_particle_list[reactant_idx[k][1]].mass;
+        mass_inputs[0] = (mass_1 * mass_2)/(mass_1 + mass_2);
+        mass_inputs[1] = (mass_1 + mass_2);
+        mass_inputs[2] = 0.0;
+        int u;
+        for (u=0;u<number_collisions_per_primary[k]; u++) {
+            if (collision_type_per_primary_sorted[k][u] == 3) {
+                mass_2 = particle_list[product_indices_sorted[k][u][1]].mass;
+                mass_inputs[2] = 1.0/(1.0/mass_1 + 1.0/mass_2 + 1.0/Constants::electron_mass);
+                break;
+            }
+        }
+        binary_collision_list.emplace_back(number_collisions_per_primary[k], number_energy_points[k], reactant_idx[k], 
+            total_sigma_array_sorted[k], total_energy_array[k], E_threshold_per_primary_collision_sorted[k],
+            collision_type_per_primary_sorted[k], product_indices_sorted[k], mass_inputs);
+    }
     
-    // global_inputs::number_charged_particles = count_number_particles;
-    // std::cout << global_inputs::number_charged_particles << std::endl;
-    // particle_list.reserve(global_inputs::number_charged_particles);
-    // // get electrons
-    // file.clear();
-    // file.seekg(0, std::ios::beg);
-    // while (std::getline(file, line)) {
-    //     if (line.find("ELECTRONS") != std::string::npos){
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         std::istringstream iss(line);
-    //         std::string name;
-    //         uint32_t num_part_thread;
-    //         size_t factor;
-    //         iss >> name >> num_part_thread >> factor;
-    //         factor = factor * static_cast<size_t>(num_part_thread);
-    //         particle_list.emplace_back(Constants::electron_mass, -Constants::elementary_charge, num_part_thread, factor, name);
-    //         std::getline(file, line);
-    //     }
-    // }
-
-    // file.clear();
-    // file.seekg(0, std::ios::beg);
-    // while (std::getline(file, line)) {
-    //     if (line.find("IONS") != std::string::npos){
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         std::getline(file, line);
-    //         while (line.find("-------") == std::string::npos) {
-    //             std::istringstream iss(line);
-    //             std::string name;
-    //             uint32_t num_part_thread;
-    //             double mass_in, charge_in;
-    //             size_t factor;
-    //             iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
-    //             factor = factor * static_cast<size_t>(num_part_thread);
-    //             mass_in = mass_in * Constants::mass_amu - charge_in * Constants::electron_mass;
-    //             charge_in = charge_in * Constants::elementary_charge;
-    //             particle_list.emplace_back(mass_in, charge_in, num_part_thread, factor, name);
-    //             std::getline(file, line);
-    //         }
-    //     }
-    // }
-    // file.close();
-
-    // int i;
-    // double T_ave;
-    // for (i = 0; i < global_inputs::number_charged_particles; i++){
-    //     particle_list[i].initialize_weight(global_inputs::initial_density, world.L_domain);
-    //     if (particle_list[i].mass == Constants::electron_mass) {
-    //         T_ave = global_inputs::temp_electrons;
-    //     }
-    //     else {
-    //         T_ave = global_inputs::temp_ions;
-    //     }
-    //     particle_list[i].initialize_rand_uniform(T_ave, world);
-    //     std::cout << "Particle #: " << i << std::endl;
-    //     std::cout << "Name: " << particle_list[i].name << std::endl;
-    //     std::cout << "Mass: " << particle_list[i].mass << std::endl;
-    //     std::cout << "Charge: " << particle_list[i].charge << std::endl;
-    //     std::cout << "Weight: " << particle_list[i].weight << std::endl;
-    //     std::cout << "Number of particles per thread: " << particle_list[i].number_particles[0] << std::endl;
-    //     std::cout << "Allocated total amount of particles per thread " << particle_list[i].final_idx << std::endl;
-    //     std::cout << "Averge KE: " << particle_list[i].get_KE_ave() << std::endl;
-    //     std::cout << "----------------- " << std::endl;
-    // }
-
-    
+    return binary_collision_list;
 
 }

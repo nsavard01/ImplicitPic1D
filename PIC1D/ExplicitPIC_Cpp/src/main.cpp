@@ -23,7 +23,7 @@ int main() {
     Domain world("../InputData/Geometry.inp");
     std::vector<Particle> particle_list = read_particle_inputs("../InputData/ParticleTypes.inp", world);
     std::vector<Target_Particle> target_particle_list = read_target_particle_inputs("../InputData/ParticleTypes.inp");
-    read_null_collision_inputs("../InputData/collision.inp", particle_list, target_particle_list);
+    std::vector<Null_Collision> binary_collision_list = read_null_collision_inputs("../InputData/collision.inp", particle_list, target_particle_list);
     
     #pragma omp parallel private(i,val) reduction(+:sum,var)
     {
