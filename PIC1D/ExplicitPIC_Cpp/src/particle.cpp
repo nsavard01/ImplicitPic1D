@@ -8,6 +8,7 @@
 #include <sstream>
 #include <math.h>
 #include <numeric>
+#include <algorithm>
 
 
 Particle::Particle(double mass_in, double charge_in, uint32_t number_in, size_t final_in, std::string name_in)
@@ -79,6 +80,24 @@ void Particle::initialize_rand_uniform(double T_ave, const Domain& world) {
         }
         
     }
+}
+
+void Particle::interpolate_particles(){
+    
+    int thread_id = omp_get_thread_num();
+    size_t part_num;
+    size_t number_particles = this->number_particles[thread_id];
+    double d, xi;
+    size_t xi_left, xi_right;
+    std::fill(this->work_space[thread_id].begin(), this->work_space[thread_id].end(), 0.0);
+    for (part_num = 0; part_num < number_particles; part_num++){
+        xi = this->phase_space[thread_id][part_num * 4];
+        xi_left = static_cast<size_t>(xi);
+        xi_right = xi_left+1;
+        d = xi - xi_left;
+        this->work_space[thread_id][xi_left] += (1.0 - d);
+        this->work_space[thread_id][xi_right] += d;
+    }   
 }
 
 double Particle::get_KE_ave() const{

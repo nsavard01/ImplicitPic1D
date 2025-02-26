@@ -12,6 +12,8 @@ public:
 
     // Boundary conditions and threading indices
     std::vector<int> boundary_conditions;
+    std::vector<std::vector<int>> thread_node_indx;
+    int num_thread_node_indx;
 
     // Constructor declaration
     Domain(const std::string& filename);

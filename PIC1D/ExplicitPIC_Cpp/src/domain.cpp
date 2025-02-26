@@ -43,6 +43,27 @@ Domain::Domain(const std::string& filename)
         grid[i] = grid[i-1] + del_X;
     }
 
+    if (global_inputs::number_omp_threads < global_inputs::number_nodes){
+        this->num_thread_node_indx = global_inputs::number_omp_threads;
+    } else {
+        this->num_thread_node_indx = global_inputs::number_nodes;
+    }
+    this->thread_node_indx.resize(this->num_thread_node_indx);
+    int spacing_thread = global_inputs::number_nodes/this->num_thread_node_indx - 1;
+    int mod_thread = global_inputs::number_nodes % this->num_thread_node_indx;
+    int k = 0;
+    for (int i =0; i < this->num_thread_node_indx;i++){
+        this->thread_node_indx[i].resize(2);
+        this->thread_node_indx[i][0] = k;
+        if (i <= mod_thread-1) {
+            k = k + spacing_thread + 1;
+        } else {
+            k = k + spacing_thread;
+        }
+        this->thread_node_indx[i][1] = k;
+        k++;
+    }
+
     std::cout << "Left boundary type: " << boundary_conditions[0] << std::endl;
     std::cout << "Right boundary type: " << boundary_conditions[global_inputs::number_nodes-1] << std::endl;
     std::cout << "Grid length: " << L_domain << std::endl;

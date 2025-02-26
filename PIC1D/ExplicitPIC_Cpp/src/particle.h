@@ -25,6 +25,7 @@ public:
     void initialize_rand_uniform(double T_ave, const Domain& world);
     double get_KE_ave() const;
     double get_KE_total() const;
+    void interpolate_particles();
     // Accessor for 3D indexing
 };
 std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world);
