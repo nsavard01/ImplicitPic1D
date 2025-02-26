@@ -24,6 +24,7 @@ public:
     void initialize_weight(double n_ave, double L_domain);
     void initialize_rand_uniform(double T_ave, const Domain& world);
     double get_KE_ave() const;
+    double get_KE_total() const;
     // Accessor for 3D indexing
 };
 std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world);

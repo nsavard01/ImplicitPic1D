@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <omp.h>
 #include <algorithm>
+#include <numeric>
+
+
 
 
 Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::vector<int> reactant_idx, 
@@ -12,8 +15,8 @@ Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::ve
     {
     this->number_collisions = number_collisions;
     this->length_arrays = length_arrays;
-    this->reactant_idx[0] = reactant_idx[0];
-    this->reactant_idx[1] = reactant_idx[1];
+    this->primary_idx = reactant_idx[0];
+    this->target_idx = reactant_idx[1];
     this->sigma_array = sigma_array;
     this->energy_array = energy_array;
     this->energy_threshold = energy_threshold;
@@ -25,8 +28,10 @@ Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::ve
     this->min_energy = this->energy_array[0];
     this->max_energy = this->energy_array.back();
 
-    // std::vector<double> sigma_v_max_array(this->number_collisions);
-    // double v_r, sum_sigma;
+    this->total_incident_energy.resize(this->number_collisions, 0.0);
+    this->total_energy_loss.resize(this->number_collisions, 0.0);
+    this->total_amount_collisions.resize(this->number_collisions, 0);
+    this->total_amount_collidable_particles = 0;
 
     int l, u;
     this->sigma_v_max = 0.0;
@@ -40,7 +45,7 @@ Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::ve
         this->sigma_v_max = std::max(this->sigma_v_max, sum_sigma * v_r);
     }
     std::cout << "------------------------------ " << std::endl;
-    std::cout << "Primary particle is idx is " << this->reactant_idx[0] << " " << this->reactant_idx[1] << std::endl;
+    std::cout << "Primary particle is idx is " << this->primary_idx << " " << this->target_idx << std::endl;
     std::cout << "Amount of collisions is " << this->number_collisions << std::endl;
     std::cout << "Reduced mass: " << this->reduced_mass << std::endl;
     std::cout << "Sum mass: " << this->mass_sum << std::endl;
@@ -69,6 +74,239 @@ Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::ve
  
 }
 
+void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_list, std::vector<Target_Particle> &target_particle_list, double time_step){
+    
+    
+    Particle& primary_particle = particle_list[primary_idx];
+    Target_Particle& target_particle = target_particle_list[target_idx];
+    double primary_mass = primary_particle.mass;
+    double target_mass = target_particle.mass;
+    int number_threads = omp_get_max_threads();
+    std::vector<std::vector<size_t>> total_collisions(number_threads);
+    std::vector<std::vector<double>> energy_loss(number_threads), total_incident_energy(number_threads);
+    int i;
+    for (i=0;i<number_threads;i++){
+        total_collisions[i].resize(this->number_collisions, 0);
+        energy_loss[i].resize(this->number_collisions, 0.0);
+        total_incident_energy[i].resize(this->number_collisions,0.0);
+    }
+    this->total_amount_collidable_particles += std::accumulate(primary_particle.number_collidable_particles.begin(),
+        primary_particle.number_collidable_particles.end(), 0);
+
+    double P_null = 1.0 - std::exp(-this->sigma_v_max * target_particle.density * time_step);
+    if (P_null > 0.05){
+        std::cout << "P_null greater than 5% " << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        int iter, coll_idx;
+        size_t number_total_particles = primary_particle.number_collidable_particles[thread_id];
+        double number_selected_real = P_null * static_cast<double>(number_total_particles);
+        size_t number_selected = static_cast<size_t>(number_selected_real);
+        double Rand = pcg32_random_r();
+        if (Rand < (number_selected_real - number_selected)) {
+            number_selected++;
+        }
+        
+        size_t particle_indx, indx_low, indx_high, indx_middle, end_indx;
+        double particle_location, incident_velocity[3], target_velocity[3], velocity_CM[3], speed_CM, energy_CM, interp_d,
+            sigma_v, incident_energy, del_E;
+        for (size_t part_num=0;part_num<number_selected;part_num++){
+            particle_indx = static_cast<size_t>(number_total_particles * pcg32_random_r()) * 4;
+            particle_location = primary_particle.phase_space[thread_id][particle_indx];
+            incident_velocity[0] = primary_particle.phase_space[thread_id][particle_indx+1];
+            incident_velocity[1] = primary_particle.phase_space[thread_id][particle_indx+2];
+            incident_velocity[2] = primary_particle.phase_space[thread_id][particle_indx+3];
+            target_particle.generate_maxwellian_velocity(target_velocity);
+            speed_CM = 0.0;
+            for (iter=0;iter<3;iter++){
+                velocity_CM[iter] = incident_velocity[iter] - target_velocity[iter];
+                speed_CM += velocity_CM[iter] * velocity_CM[iter];
+            }
+            energy_CM = speed_CM * 0.5 * this->reduced_mass / Constants::elementary_charge;
+            speed_CM = std::sqrt(speed_CM);
+            indx_low = 0;
+            indx_high = this->length_arrays-1;
+            if (energy_CM <= this->min_energy){
+                interp_d = 0.0;
+            } else if (energy_CM >= this->max_energy) {
+                indx_low = indx_high-1;
+                interp_d = 1.0;
+            } else {
+                while (indx_low != indx_high-1) {
+                    indx_middle = (indx_low + indx_high)/2;
+                    if (this->energy_array[indx_middle] < energy_CM) {
+                        indx_low = indx_middle;
+                    } else if (this->energy_array[indx_middle] > energy_CM) {
+                        indx_high = indx_middle;
+                    } else {
+                        indx_low = indx_middle;
+                        indx_high = indx_low + 1;
+                    }
+                }
+                interp_d = (energy_CM - this->energy_array[indx_low])/(this->energy_array[indx_high] - this->energy_array[indx_low]);
+            }
+            Rand = pcg32_random_r();
+            sigma_v = 0.0;
+            for (coll_idx=0;coll_idx<this->number_collisions;coll_idx++){
+                if (energy_CM > this->energy_threshold[coll_idx]) {
+                    sigma_v += (this->sigma_array[coll_idx][indx_low] * (1.0 - interp_d) + this->sigma_array[coll_idx][indx_high] * interp_d) * speed_CM;
+                    if (Rand <= sigma_v/this->sigma_v_max) {
+                        total_collisions[thread_id][coll_idx]++;
+                        incident_energy = incident_velocity[0]*incident_velocity[0] + incident_velocity[1]*incident_velocity[1] + incident_velocity[2]*incident_velocity[2];
+                        total_incident_energy[thread_id][coll_idx] += incident_energy;
+                        del_E = (energy_CM - this->energy_threshold[coll_idx]) * Constants::elementary_charge;
+                        switch (this->collision_type[coll_idx]) {
+                            case 1:
+                                this->double_product_isotropic(primary_mass, target_mass, del_E, incident_velocity, target_velocity);
+                                break;
+                            case 2:
+                                int secondary_product_idx = this->products_indx[coll_idx][1];
+                                int third_product_idx = this->products_indx[coll_idx][2];
+                                Particle& secondary_particle = particle_list[secondary_product_idx];
+                                Particle& third_particle = particle_list[third_product_idx];
+                                this->triple_product_isotropic(primary_mass, secondary_particle.mass, target_mass, del_E, 
+                                    incident_velocity, target_velocity, velocity_CM);
+                                third_particle.number_particles[thread_id]++;
+                                secondary_particle.number_particles[thread_id]++;
+
+                                // electron set
+                                size_t third_idx = third_particle.number_particles[thread_id]-1;
+                                size_t secondary_idx = secondary_particle.number_particles[thread_id]-1;
+                                third_particle.phase_space[thread_id][third_idx*4] = particle_location;
+                                for (iter=0;iter<3;iter++){
+                                    third_particle.phase_space[thread_id][third_idx*4+iter+1] = velocity_CM[iter];
+                                }
+
+                                // ion set
+                                secondary_particle.phase_space[thread_id][secondary_idx*4] = particle_location;
+                                for (iter=0;iter<3;iter++){
+                                    secondary_particle.phase_space[thread_id][secondary_idx*4+iter+1] = target_velocity[iter];
+                                }
+                                energy_loss[thread_id][coll_idx] += (- third_particle.mass * (velocity_CM[0]*velocity_CM[0] +
+                                    velocity_CM[1]*velocity_CM[1] + velocity_CM[2]*velocity_CM[2]) - secondary_particle.mass * (target_velocity[0]*target_velocity[0] + 
+                                    target_velocity[1]*target_velocity[1] + target_velocity[2]*target_velocity[2]));
+                                break;
+                            case 3:
+                                this->double_product_isotropic(primary_mass, target_mass, del_E, incident_velocity, target_velocity);
+                                break;
+                            case 4:
+                                incident_velocity[0] = target_velocity[0];
+                                incident_velocity[1] = target_velocity[1];
+                                incident_velocity[2] = target_velocity[2];
+                                break;
+                        }
+                        
+                        energy_loss[thread_id][coll_idx] += primary_mass * (incident_energy - incident_velocity[0]*incident_velocity[0] - 
+                            incident_velocity[1]*incident_velocity[1] - incident_velocity[2]*incident_velocity[2]);
+                        break;
+                    }
+                }
+            }
+            // switch particles location
+            end_indx = (number_total_particles-1)*4;
+            for (iter=0;iter<4;iter++)  {
+                primary_particle.phase_space[thread_id][particle_indx+iter] = primary_particle.phase_space[thread_id][end_indx+iter];
+            }
+            primary_particle.phase_space[thread_id][end_indx] = particle_location;
+            for (iter=0;iter<3;iter++)  {
+                primary_particle.phase_space[thread_id][end_indx+iter+1] = incident_velocity[iter];
+            }
+            number_total_particles--;
+        }
+        primary_particle.number_collidable_particles[thread_id] = number_total_particles;
+    }
+    int iter;
+    
+    for (i = 0;i<number_threads;i++) {
+        for (iter=0;iter<this->number_collisions;iter++){
+            this->total_incident_energy[iter] += total_incident_energy[i][iter];
+            this->total_energy_loss[iter] += energy_loss[i][iter];
+            this->total_amount_collisions[iter] += total_collisions[i][iter];
+        }
+    }
+  
+
+}
+
+
+
+inline void Null_Collision::double_product_isotropic(const double &primary_mass, const double &target_mass, const double &del_E, double (&incident_velocity)[3], double (&target_velocity)[3]) {
+    
+    double e_vector[3];
+    double cos_theta, speed_per_particle, phi, sin_theta, cos_phi, sin_phi, P_beginning, V_cm;
+    int i;
+
+    speed_per_particle = std::sqrt(2.0 * del_E * this->reduced_mass / primary_mass/primary_mass);
+
+    cos_theta = 1.0 - 2.0 * pcg32_random_r();
+    phi = pcg32_random_r() * 2.0 * M_PI;
+    sin_theta = std::sqrt(1.0 - cos_theta*cos_theta);
+    cos_phi = std::cos(phi);
+    sin_phi = std::sin(phi);
+    
+
+    e_vector[0] = cos_phi * sin_theta;
+    e_vector[1] = sin_phi * sin_theta;
+    e_vector[2] = cos_theta;
+
+    for (i=0;i<3;i++){
+        P_beginning = primary_mass * incident_velocity[i] + target_mass * target_velocity[i];
+        V_cm = P_beginning/this->mass_sum;
+        incident_velocity[i] = e_vector[i] * speed_per_particle + V_cm;
+        target_velocity[i] = (P_beginning - primary_mass * incident_velocity[i])/target_mass;
+    }
+
+}
+
+inline void Null_Collision::triple_product_isotropic(const double &primary_mass, const double &ion_mass, const double &target_mass, const double &del_E, 
+    double (&incident_velocity)[3], double (&target_velocity)[3], double (&third_velocity)[3]) {
+    
+    double e_vector[3], y_vector[3], u_vector[3];
+    double cos_theta, speed_per_particle, phi, sin_theta, cos_phi, sin_phi, cos_theta_new, sin_theta_new, speed_electron, P_beginning, V_cm;
+    int i;
+
+    speed_per_particle = std::sqrt(2.0 * del_E * this->reduced_mass_triple / primary_mass/primary_mass);
+
+    cos_theta = 1.0 - 2.0 * pcg32_random_r();
+    phi = pcg32_random_r() * 2.0 * M_PI;
+    sin_theta = std::sqrt(1.0 - cos_theta*cos_theta);
+    cos_phi = std::cos(phi);
+    sin_phi = std::sin(phi);
+    e_vector[0] = cos_phi * sin_theta;
+    e_vector[1] = sin_phi * sin_theta;
+    e_vector[2] = cos_theta;
+
+    cos_theta_new = Constants::cos_third_rot * cos_theta - Constants::sin_third_rot * sin_theta;
+    sin_theta_new = cos_theta * Constants::sin_third_rot + Constants::cos_third_rot * sin_theta;
+    y_vector[0] = cos_phi * sin_theta_new;
+    y_vector[1] = sin_phi * sin_theta_new;
+    y_vector[2] = cos_theta_new;
+
+    phi = pcg32_random_r() * 2.0 * M_PI;
+    cos_phi = std::cos(phi);
+    sin_phi = std::sin(phi);
+
+    u_vector[0] = e_vector[1] * y_vector[2] - e_vector[2] * y_vector[1];
+    u_vector[1] = e_vector[2] * y_vector[0] - e_vector[0] * y_vector[2];
+    u_vector[2] = e_vector[0] * y_vector[1] - e_vector[1] * y_vector[0];
+
+    speed_electron = std::sqrt(2.0 * del_E * this->reduced_mass_triple/ Constants::electron_mass/Constants::electron_mass);
+
+    for (i=0;i<3;i++){
+        u_vector[i] = -e_vector[i] * Constants::cos_third_rot * (cos_phi - 1.0) + y_vector[i] * cos_phi + u_vector[i] * sin_phi;
+        P_beginning = primary_mass * incident_velocity[i] + target_mass * target_velocity[i];
+        V_cm = P_beginning/this->mass_sum;
+        incident_velocity[i] = e_vector[i] * speed_per_particle + V_cm;
+        third_velocity[i] = u_vector[i] * speed_electron + V_cm;
+        target_velocity[i] = (P_beginning - primary_mass * incident_velocity[i] - Constants::electron_mass * third_velocity[i])/ion_mass;
+    }
+
+
+}
 
 std::vector<Null_Collision> read_null_collision_inputs(const std::string& filename, const std::vector<Particle> &particle_list, const std::vector<Target_Particle> &target_particle_list){
     std::cout << " "<< std::endl;
@@ -187,9 +425,9 @@ std::vector<Null_Collision> read_null_collision_inputs(const std::string& filena
                 if (coll_string == "ELASTIC") {
                     collision_type = 1;
                 } else if (coll_string == "EXCITATION"){
-                    collision_type = 2;
-                } else if (coll_string == "IONIZATION"){
                     collision_type = 3;
+                } else if (coll_string == "IONIZATION"){
+                    collision_type = 2;
                     // make sure primary particle is first, then followed by by-product
                     for (i=0;i<3;i++){
                         if (reactant_idx[coll_idx][0] == local_product_indx[i]){

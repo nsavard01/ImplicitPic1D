@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <math.h>
+#include <numeric>
 
 
 Particle::Particle(double mass_in, double charge_in, uint32_t number_in, size_t final_in, std::string name_in)
@@ -35,9 +36,9 @@ Particle::Particle(double mass_in, double charge_in, uint32_t number_in, size_t 
         number_collidable_particles[i] = number_in;
         phase_space[i].resize(expanded_size, 0.0);
         work_space[i].resize(global_inputs::number_nodes, 0.0);
-        momentum_loss[i].resize(2);
-        energy_loss[i].resize(2);
-        wall_loss[i].resize(2);
+        momentum_loss[i].resize(2, 0);
+        energy_loss[i].resize(2, 0);
+        wall_loss[i].resize(2, 0);
     }
     
  
@@ -46,13 +47,14 @@ Particle::Particle(double mass_in, double charge_in, uint32_t number_in, size_t 
 
 
 void Particle::initialize_weight(double n_ave, double L_domain) {
-    double total_part;
+    size_t total_part;
     int i;
-    total_part = 0.0;
-    for (i = 0; i < global_inputs::number_omp_threads; i++){
-       total_part += static_cast<double>(number_particles[i]);
+    int number_threads = omp_get_max_threads();
+    total_part = 0;
+    for (i = 0; i < number_threads; i++){
+       total_part += this->number_particles[i];
     }
-    weight = n_ave * L_domain / total_part;
+    weight = n_ave * L_domain / static_cast<double>(total_part);
     q_times_wp = charge * weight;
 }
 
@@ -100,6 +102,25 @@ double Particle::get_KE_ave() const{
     return sum * this->mass * 0.5 / num_part_total / Constants::elementary_charge;
 }
 
+double Particle::get_KE_total() const{
+    // in eV
+    double sum = 0.0;
+    #pragma omp parallel reduction(+:sum)
+    {   
+        int thread_id = omp_get_thread_num();
+        double v_x, v_y, v_z;
+        size_t part_num;
+        for (part_num = 0; part_num < this->number_particles[thread_id]; part_num++){
+            v_x = this->phase_space[thread_id][part_num * 4 + 1];
+            v_y = this->phase_space[thread_id][part_num * 4 + 2];
+            v_z = this->phase_space[thread_id][part_num * 4 + 3];
+            sum += v_x * v_x + v_y*v_y + v_z * v_z;
+        }
+    }
+    
+    return sum * this->mass * 0.5 * this->weight;
+}
+
 
 
 std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world){
@@ -121,7 +142,6 @@ std::vector<Particle> read_particle_inputs(const std::string& filename, const Do
             std::getline(file, line);
             std::istringstream iss(line);
             std::string name;
-            std::cout << "Found electron"<< std::endl;
             uint32_t num_part_thread;
             size_t factor;
             iss >> name >> num_part_thread >> factor;
@@ -137,7 +157,6 @@ std::vector<Particle> read_particle_inputs(const std::string& filename, const Do
             while (line.find("-------") == std::string::npos) {
                 std::istringstream iss(line);
                 std::string name;
-                std::cout << "Found ions"<< std::endl;
                 uint32_t num_part_thread;
                 double mass_in, charge_in;
                 size_t factor;
@@ -211,7 +230,9 @@ std::vector<Particle> read_particle_inputs(const std::string& filename, const Do
         std::cout << "Mass: " << particle_list[i].mass << std::endl;
         std::cout << "Charge: " << particle_list[i].charge << std::endl;
         std::cout << "Weight: " << particle_list[i].weight << std::endl;
-        std::cout << "Number of particles per thread: " << particle_list[i].number_particles[0] << std::endl;
+        size_t tot_sum = std::accumulate(particle_list[i].number_particles.begin(),
+            particle_list[i].number_particles.end(), 0);
+        std::cout << "total number of particles: " << tot_sum << std::endl;
         std::cout << "Allocated total amount of particles per thread " << particle_list[i].final_idx << std::endl;
         std::cout << "Averge KE: " << particle_list[i].get_KE_ave() << std::endl;
         std::cout << "----------------- " << std::endl;

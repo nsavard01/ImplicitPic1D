@@ -459,4 +459,8 @@ plt.xlabel(r'Particle-per-cell')
 plt.savefig('RF_ICP/ICP_domainComp_current.png')
 
 
+#-------------------------------- low pressure cut J in 3/4 -------------------------
+
+Exp_ICP_highDensity_lowPressure_standRF_cutJ_7000delT_100PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_cutJ_7000delT_100PPC/')
+Exp_ICP_highDensity_lowPressure_standRF_cutJ_7000delT_400PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_cutJ_7000delT_400PPC/')
 

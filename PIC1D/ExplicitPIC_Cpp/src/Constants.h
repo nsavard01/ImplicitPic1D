@@ -9,6 +9,7 @@ namespace Constants {
     constexpr double mu_0 = 1.25663706212e-6; // Vacuum permeability (N/A^2)
     constexpr double mass_amu = 1.66053906660e-27; // kg
     constexpr double k_boltz = 1.380649e-23; // m^2 kg s^-2 K^-1
+    extern const double cos_third_rot, sin_third_rot;
 }
 
 #endif // CONSTANTS_H
