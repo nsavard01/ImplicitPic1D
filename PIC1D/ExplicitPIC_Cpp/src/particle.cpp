@@ -11,35 +11,35 @@
 #include <algorithm>
 
 
-Particle::Particle(double mass_in, double charge_in, uint32_t number_in, size_t final_in, std::string name_in)
+Particle::Particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in)
     {
     int number_threads = omp_get_max_threads();
     int i;
-    name = name_in;
-    mass = mass_in;
-    charge = charge_in;
-    weight = 0.0;
-    q_over_m = charge/mass;
-    q_times_wp = 0.0;
-    final_idx = final_in;
-    accum_wall_loss[0] = accum_wall_loss[1] = 0;
-    accum_energy_loss[0] = accum_energy_loss[0] = 0.0;
-    number_particles.resize(number_threads);
-    number_collidable_particles.resize(number_threads);
+    this->name = name_in;
+    this->mass = mass_in;
+    this->charge = charge_in;
+    this->weight = 0.0;
+    this->q_over_m = charge_in/mass_in;
+    this->q_times_wp = 0.0;
+    this->final_idx = final_in;
+    this->accum_wall_loss[0] = this->accum_wall_loss[1] = 0;
+    this->accum_energy_loss[0] = this->accum_energy_loss[0] = 0.0;
+    this->number_particles.resize(number_threads);
+    this->number_collidable_particles.resize(number_threads);
     size_t expanded_size = static_cast<size_t>(4) * final_idx;
-    phase_space.resize(number_threads);
-    work_space.resize(number_threads);
-    momentum_loss.resize(number_threads);
-    energy_loss.resize(number_threads);
-    wall_loss.resize(number_threads);
+    this->phase_space.resize(number_threads);
+    this->work_space.resize(number_threads);
+    this->momentum_loss.resize(number_threads);
+    this->energy_loss.resize(number_threads);
+    this->wall_loss.resize(number_threads);
     for (i = 0; i < number_threads; i++){
-        number_particles[i] = number_in;
-        number_collidable_particles[i] = number_in;
-        phase_space[i].resize(expanded_size, 0.0);
-        work_space[i].resize(global_inputs::number_nodes, 0.0);
-        momentum_loss[i].resize(2, 0);
-        energy_loss[i].resize(2, 0);
-        wall_loss[i].resize(2, 0);
+        this->number_particles[i] = number_in;
+        this->number_collidable_particles[i] = number_in;
+        this->phase_space[i].resize(expanded_size, 0.0);
+        this->work_space[i].resize(global_inputs::number_nodes, 0.0);
+        this->momentum_loss[i].resize(2, 0);
+        this->energy_loss[i].resize(2, 0);
+        this->wall_loss[i].resize(2, 0);
     }
     
  
@@ -55,8 +55,8 @@ void Particle::initialize_weight(double n_ave, double L_domain) {
     for (i = 0; i < number_threads; i++){
        total_part += this->number_particles[i];
     }
-    weight = n_ave * L_domain / static_cast<double>(total_part);
-    q_times_wp = charge * weight;
+    this->weight = n_ave * L_domain / static_cast<double>(total_part);
+    this->q_times_wp = this->charge * this->weight;
 }
 
 void Particle::initialize_rand_uniform(double T_ave, const Domain& world) {
@@ -85,19 +85,20 @@ void Particle::initialize_rand_uniform(double T_ave, const Domain& world) {
 void Particle::interpolate_particles(){
     
     int thread_id = omp_get_thread_num();
-    size_t part_num;
-    size_t number_particles = this->number_particles[thread_id];
+    size_t last_idx = this->number_particles[thread_id]*4;
     double d, xi;
     size_t xi_left, xi_right;
-    std::fill(this->work_space[thread_id].begin(), this->work_space[thread_id].end(), 0.0);
-    for (part_num = 0; part_num < number_particles; part_num++){
-        xi = this->phase_space[thread_id][part_num * 4];
-        xi_left = static_cast<size_t>(xi);
+    std::vector<double>& work_space = this->work_space[thread_id];
+    std::vector<double>& phase_space = this->phase_space[thread_id];
+    std::fill(work_space.begin(), work_space.end(), 0.0);
+    for (size_t part_indx = 0; part_indx < last_idx; part_indx += 4){
+        xi = phase_space[part_indx];
+        xi_left = int(xi);
         xi_right = xi_left+1;
         d = xi - xi_left;
-        this->work_space[thread_id][xi_left] += (1.0 - d);
-        this->work_space[thread_id][xi_right] += d;
-    }   
+        work_space[xi_left] += (1.0 - d);
+        work_space[xi_right] += d;
+    } 
 }
 
 double Particle::get_KE_ave() const{
@@ -138,6 +139,22 @@ double Particle::get_KE_total() const{
     }
     
     return sum * this->mass * 0.5 * this->weight;
+}
+
+double Particle::get_momentum_total() const{
+    double sum = 0.0;
+    #pragma omp parallel reduction(+:sum)
+    {   
+        int thread_id = omp_get_thread_num();
+        double v_x;
+        size_t last_idx = this->number_particles[thread_id]*4;
+        for (size_t part_idx = 0; part_idx < last_idx; part_idx += 4){
+            v_x = this->phase_space[thread_id][part_idx+1];
+            sum += v_x;
+        }
+    }
+    
+    return sum * this->mass;
 }
 
 
@@ -200,7 +217,7 @@ std::vector<Particle> read_particle_inputs(const std::string& filename, const Do
             std::getline(file, line);
             std::istringstream iss(line);
             std::string name;
-            uint32_t num_part_thread;
+            size_t num_part_thread;
             size_t factor;
             iss >> name >> num_part_thread >> factor;
             factor = factor * static_cast<size_t>(num_part_thread);
@@ -219,7 +236,7 @@ std::vector<Particle> read_particle_inputs(const std::string& filename, const Do
             while (line.find("-------") == std::string::npos) {
                 std::istringstream iss(line);
                 std::string name;
-                uint32_t num_part_thread;
+                size_t num_part_thread;
                 double mass_in, charge_in;
                 size_t factor;
                 iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;

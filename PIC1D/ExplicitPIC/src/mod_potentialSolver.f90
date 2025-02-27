@@ -306,12 +306,12 @@ contains
                         particleList(j)%momentumLoss(1,iThread) = particleList(j)%momentumLoss(1,iThread) + v_prime
                         delIdx = delIdx + 1
                     CASE(2)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 - partLoc
-                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                        partLoc = 2.0d0 - partLoc
+                        v_prime = -v_prime
                         refIdx = refIdx + 1
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc - 2.0d0, real(NumberXNodes, kind = real64)) + 1
+                        partLoc = MODULO(partLoc - 2.0d0, real(NumberXNodes, kind = real64)) + 1
                     END SELECT
                 else if ((partLoc >= NumberXNodes)) then
                     SELECT CASE (world%boundaryConditions(NumberXNodes))
@@ -321,14 +321,15 @@ contains
                         particleList(j)%momentumLoss(2,iThread) = particleList(j)%momentumLoss(2,iThread) + v_prime
                         delIdx = delIdx + 1
                     CASE(2)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = 2.0d0 * NumberXNodes - partLoc
-                        particleList(j)%phaseSpace(2, i-delIdx, iThread) = -v_prime
+                        partLoc = 2.0d0 * NumberXNodes - partLoc
+                        v_prime = -v_prime
                         refIdx = refIdx + 1
                         particleList(j)%refRecordIdx(refIdx, iThread) = i - delIdx
                     CASE(3)
-                        particleList(j)%phaseSpace(1, i-delIdx, iThread) = MODULO(partLoc, real(NumberXNodes, kind = real64)) + 1
+                        partLoc = MODULO(partLoc, real(NumberXNodes, kind = real64)) + 1
                     END SELECT
-                else
+                end if
+                if (partLoc > 1 .and. partLoc < NumberXNodes) then
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = partLoc
                     particleList(j)%phaseSpace(2, i-delIdx, iThread) = v_prime
                     particleList(j)%phaseSpace(3:4, i-delIdx, iThread) = particleList(j)%phaseSpace(3:4, i, iThread)

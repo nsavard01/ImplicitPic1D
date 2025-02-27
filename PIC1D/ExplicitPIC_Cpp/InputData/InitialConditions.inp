@@ -1,8 +1,8 @@
-6 ! number of processors
+16 ! number of processors
 100 ! number of cells
 3.687315634218289e-5 0.0d0 ! simulation time
 1.e17 ! Initial number density (1/m^3) of electrons
-50.0 ! T_e (eV)
+4.0 ! T_e (eV)
 0.025 ! T_i (eV)
 20 ! number of diagnostic data dumps    
 1.0 1.8436578171091445e-11  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two

@@ -17,15 +17,17 @@ public:
     std::string name;
     double accum_energy_loss[2];
     size_t final_idx;
-    std::vector<uint32_t> number_particles, number_collidable_particles;
-    std::vector<std::vector<double>> phase_space, work_space, momentum_loss, energy_loss, wall_loss;
+    std::vector<size_t> number_particles, number_collidable_particles;
+    std::vector<std::vector<double>> phase_space, work_space, momentum_loss, energy_loss;
+    std::vector<std::vector<int>> wall_loss;
     std::vector<double> densities;  // Flattened 3D array
-    Particle(double mass_in, double charge_in, uint32_t number_in, size_t final_in, std::string name_in);
+    Particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in);
     void initialize_weight(double n_ave, double L_domain);
     void initialize_rand_uniform(double T_ave, const Domain& world);
     double get_KE_ave() const;
     double get_KE_total() const;
     void interpolate_particles();
+    double get_momentum_total() const;
     // Accessor for 3D indexing
 };
 std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world);
