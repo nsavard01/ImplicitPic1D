@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <omp.h>
+#include <mpi.h>
 #include "Constants.h"
 
 Potential_Solver::Potential_Solver(){
@@ -23,28 +24,33 @@ void Potential_Solver::read_from_file(const std::string& filename, const Domain&
     this->RF_half_amplitude = 0.0;
     this->rho_const = 0.0;
     double left_voltage, right_voltage, RF_frequency;
-    std::ifstream file(filename);
-    if (!file) {
-        std::cerr << "Error: Unable to open file " << filename << std::endl;
-        return;
-    }
-    
     std::string line;
     if (Constants::mpi_rank==0){
         std::cout << " "  << std::endl;
         std::cout << "Reading potential inputs: "  << std::endl;
         std::cout << "-------------------------- "  << std::endl;
     }
-    std::getline(file, line);  
-    std::getline(file, line);
-    std::getline(file, line);
-    std::istringstream iss(line);
-    iss >> left_voltage >> right_voltage;
-    iss.clear();
-    std::getline(file, line);
-    iss.str(line);
-    iss >> RF_frequency;
-    file.close();
+
+    for (int rank_num=0;rank_num < Constants::mpi_size; rank_num++) {
+        if (rank_num == Constants::mpi_rank) {
+            std::ifstream file(filename);
+            if (!file) {
+                std::cerr << "Error: Unable to open file " << filename << std::endl;
+                return;
+            }
+            
+            std::getline(file, line);  
+            std::getline(file, line);
+            std::getline(file, line);
+            std::istringstream iss(line);
+            iss >> left_voltage >> right_voltage;
+            iss.clear();
+            std::getline(file, line);
+            iss.str(line);
+            iss >> RF_frequency;
+            file.close();
+        }
+    }
 
     if (world.boundary_conditions[0] == 1) {this->phi[0] = left_voltage;}
     if (world.boundary_conditions[0] == 4) {this->RF_half_amplitude = left_voltage;}
@@ -131,6 +137,8 @@ void Potential_Solver::deposit_rho(std::vector<Particle> &particle_list, const D
             }
         }
     }
+    // Now reduce the rho vector  across all ranks
+    MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), global_inputs::number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
 void Potential_Solver::solve_potential_tridiag(const Domain& world, const double& time) {

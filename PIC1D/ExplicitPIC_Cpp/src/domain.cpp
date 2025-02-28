@@ -4,6 +4,7 @@
 #include "global_inputs.h"
 #include <fstream>
 #include <sstream>
+#include <mpi.h>
 
 Domain::Domain(){
 
@@ -11,12 +12,6 @@ Domain::Domain(){
 
 void Domain::read_from_file(const std::string& filename)
     {
-    std::ifstream file(filename);
-    if (!file) {
-        std::cerr << "Error: Unable to open file " << filename << std::endl;
-        return;
-    }
-    
     std::string line;
     int left, right;
     if (Constants::mpi_rank == 0) {
@@ -24,25 +19,38 @@ void Domain::read_from_file(const std::string& filename)
         std::cout << "Reading domain inputs: "  << std::endl;
         std::cout << "-------------------------- "  << std::endl;
     }
-    std::getline(file, line);
-    std::istringstream iss(line);
-    iss >> L_domain;
-    iss.clear();
-    std::getline(file, line);
-    iss.str(line);
-    iss >> left >> right;
-    file.close();
+
+    for (int rank_num=0;rank_num<Constants::mpi_size; rank_num++) {
+        if (rank_num == Constants::mpi_rank) {
+            std::ifstream file(filename);
+            if (!file) {
+                std::cerr << "Error: Unable to open file " << filename << std::endl;
+                return;
+            }
+            
+        
+            std::getline(file, line);
+            std::istringstream iss(line);
+            iss >> this->L_domain;
+            iss.clear();
+            std::getline(file, line);
+            iss.str(line);
+            iss >> left >> right;
+            file.close();
+        }
+    }
+
     int i;
     grid.resize(global_inputs::number_nodes);
     boundary_conditions.resize(global_inputs::number_nodes);
     grid[0] = 0.0;
-    grid[global_inputs::number_nodes-1] = L_domain;
+    grid[global_inputs::number_nodes-1] = this->L_domain;
     boundary_conditions[0] = left;
     boundary_conditions[global_inputs::number_nodes-1] = right;
 
     
     // Initialize grid spacing
-    del_X = L_domain / static_cast<double>(global_inputs::number_nodes-1);
+    this->del_X = this->L_domain / static_cast<double>(global_inputs::number_nodes-1);
     for (i = 1; i < global_inputs::number_nodes-1; i++){
         boundary_conditions[i] = 0;
         grid[i] = grid[i-1] + del_X;

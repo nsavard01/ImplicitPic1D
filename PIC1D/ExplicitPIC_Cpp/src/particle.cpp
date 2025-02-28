@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <math.h>
+#include <mpi.h>
 #include <numeric>
 #include <algorithm>
 
@@ -118,7 +119,8 @@ double Particle::get_KE_ave() const{
         }
         num_part_total += this->number_particles[thread_id];
     }
-    
+    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &num_part_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return sum * this->mass * 0.5 / num_part_total / Constants::elementary_charge;
 }
 
@@ -137,7 +139,7 @@ double Particle::get_KE_total() const{
             sum += v_x * v_x + v_y*v_y + v_z * v_z;
         }
     }
-    
+    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return sum * this->mass * 0.5 * this->weight;
 }
 
@@ -153,102 +155,106 @@ double Particle::get_momentum_total() const{
             sum += v_x;
         }
     }
-    
-    return sum * this->mass;
+    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    return sum * this->mass;;
 }
 
 
 
 std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world){
-    std::cout << " "<< std::endl;
-    std::cout << "Reading charged particle inputs "<< std::endl;
-    std::cout << "---------------------------------------- "<< std::endl;
-    std::ifstream file(filename);
-    if (!file) {
-        std::cerr << "Error: Unable to open file " << filename << std::endl;
+    if (Constants::mpi_rank == 0) {
+        std::cout << " "<< std::endl;
+        std::cout << "Reading charged particle inputs "<< std::endl;
+        std::cout << "---------------------------------------- "<< std::endl;
     }
     std::vector<Particle> particle_list;
     int count_number_particles = 0;
     std::string line;
-    // First check which particles exist and how many there are
-    while (std::getline(file, line)) {
-        if (line.find("ELECTRONS") != std::string::npos){
-            std::getline(file, line);
-            std::getline(file, line);
-            std::getline(file, line);
-            std::istringstream iss(line);
-            std::string name;
-            uint32_t num_part_thread;
-            size_t factor;
-            iss >> name >> num_part_thread >> factor;
-            std::cout << name << " " << num_part_thread << " " << factor << std::endl;
-            std::getline(file, line);
-            count_number_particles++;
-        }
-
-        if (line.find("IONS") != std::string::npos){
-            std::getline(file, line);
-            std::getline(file, line);
-            std::getline(file, line);
-            while (line.find("-------") == std::string::npos) {
-                std::istringstream iss(line);
-                std::string name;
-                uint32_t num_part_thread;
-                double mass_in, charge_in;
-                size_t factor;
-                iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
-                std::cout << name << " " << " " << mass_in << " " << charge_in << " " << num_part_thread << " " << factor << std::endl;
-                std::getline(file, line);
-                count_number_particles++;
+    for (int rank_num = 0;rank_num < Constants::mpi_size;rank_num++) {
+        if (rank_num == Constants::mpi_rank) {
+            std::ifstream file(filename);
+            if (!file) {
+                std::cerr << "Error: Unable to open file " << filename << std::endl;
             }
-        }
-    }
-    
-    global_inputs::number_charged_particles = count_number_particles;
-    std::cout << global_inputs::number_charged_particles << std::endl;
-    particle_list.reserve(global_inputs::number_charged_particles);
-    // get electrons
-    file.clear();
-    file.seekg(0, std::ios::beg);
-    while (std::getline(file, line)) {
-        if (line.find("ELECTRONS") != std::string::npos){
-            std::getline(file, line);
-            std::getline(file, line);
-            std::getline(file, line);
-            std::istringstream iss(line);
-            std::string name;
-            size_t num_part_thread;
-            size_t factor;
-            iss >> name >> num_part_thread >> factor;
-            factor = factor * static_cast<size_t>(num_part_thread);
-            particle_list.emplace_back(Constants::electron_mass, -Constants::elementary_charge, num_part_thread, factor, name);
-            std::getline(file, line);
-        }
-    }
+            
+            // First check which particles exist and how many there are
+            while (std::getline(file, line)) {
+                if (line.find("ELECTRONS") != std::string::npos){
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    std::string name;
+                    uint32_t num_part_thread;
+                    size_t factor;
+                    iss >> name >> num_part_thread >> factor;
+                    std::getline(file, line);
+                    count_number_particles++;
+                }
 
-    file.clear();
-    file.seekg(0, std::ios::beg);
-    while (std::getline(file, line)) {
-        if (line.find("IONS") != std::string::npos){
-            std::getline(file, line);
-            std::getline(file, line);
-            std::getline(file, line);
-            while (line.find("-------") == std::string::npos) {
-                std::istringstream iss(line);
-                std::string name;
-                size_t num_part_thread;
-                double mass_in, charge_in;
-                size_t factor;
-                iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
-                factor = factor * static_cast<size_t>(num_part_thread);
-                mass_in = mass_in * Constants::mass_amu - charge_in * Constants::electron_mass;
-                charge_in = charge_in * Constants::elementary_charge;
-                particle_list.emplace_back(mass_in, charge_in, num_part_thread, factor, name);
-                std::getline(file, line);
+                if (line.find("IONS") != std::string::npos){
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    while (line.find("-------") == std::string::npos) {
+                        std::istringstream iss(line);
+                        std::string name;
+                        uint32_t num_part_thread;
+                        double mass_in, charge_in;
+                        size_t factor;
+                        iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
+                        std::getline(file, line);
+                        count_number_particles++;
+                    }
+                }
             }
+            
+            global_inputs::number_charged_particles = count_number_particles;
+            particle_list.reserve(global_inputs::number_charged_particles);
+            // get electrons
+            file.clear();
+            file.seekg(0, std::ios::beg);
+            while (std::getline(file, line)) {
+                if (line.find("ELECTRONS") != std::string::npos){
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    std::string name;
+                    size_t num_part_thread;
+                    size_t factor;
+                    iss >> name >> num_part_thread >> factor;
+                    factor = factor * static_cast<size_t>(num_part_thread);
+                    particle_list.emplace_back(Constants::electron_mass, -Constants::elementary_charge, num_part_thread, factor, name);
+                    std::getline(file, line);
+                }
+            }
+
+            file.clear();
+            file.seekg(0, std::ios::beg);
+            while (std::getline(file, line)) {
+                if (line.find("IONS") != std::string::npos){
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    while (line.find("-------") == std::string::npos) {
+                        std::istringstream iss(line);
+                        std::string name;
+                        size_t num_part_thread;
+                        double mass_in, charge_in;
+                        size_t factor;
+                        iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
+                        factor = factor * static_cast<size_t>(num_part_thread);
+                        mass_in = mass_in * Constants::mass_amu - charge_in * Constants::electron_mass;
+                        charge_in = charge_in * Constants::elementary_charge;
+                        particle_list.emplace_back(mass_in, charge_in, num_part_thread, factor, name);
+                        std::getline(file, line);
+                    }
+                }
+            }
+            file.close();
         }
     }
-    file.close();
 
     int i;
     double T_ave;
@@ -261,17 +267,24 @@ std::vector<Particle> read_particle_inputs(const std::string& filename, const Do
             T_ave = global_inputs::temp_ions;
         }
         particle_list[i].initialize_rand_uniform(T_ave, world);
-        std::cout << "Particle #: " << i << std::endl;
-        std::cout << "Name: " << particle_list[i].name << std::endl;
-        std::cout << "Mass: " << particle_list[i].mass << std::endl;
-        std::cout << "Charge: " << particle_list[i].charge << std::endl;
-        std::cout << "Weight: " << particle_list[i].weight << std::endl;
+        if (Constants::mpi_rank == 0) {
+            std::cout << "Particle #: " << i << std::endl;
+            std::cout << "Name: " << particle_list[i].name << std::endl;
+            std::cout << "Mass: " << particle_list[i].mass << std::endl;
+            std::cout << "Charge: " << particle_list[i].charge << std::endl;
+            std::cout << "Weight: " << particle_list[i].weight << std::endl;
+        }
         size_t tot_sum = std::accumulate(particle_list[i].number_particles.begin(),
             particle_list[i].number_particles.end(), 0);
-        std::cout << "total number of particles: " << tot_sum << std::endl;
-        std::cout << "Allocated total amount of particles per thread " << particle_list[i].final_idx << std::endl;
-        std::cout << "Averge KE: " << particle_list[i].get_KE_ave() << std::endl;
-        std::cout << "----------------- " << std::endl;
+        MPI_Allreduce(MPI_IN_PLACE, &tot_sum, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+        double ave_KE = particle_list[i].get_KE_ave();
+        if (Constants::mpi_rank == 0) {
+            std::cout << "total number of particles: " << tot_sum << std::endl;
+            std::cout << "Allocated total amount of particles per thread " << particle_list[i].final_idx << std::endl;
+            std::cout << "Averge KE: " << ave_KE << std::endl;
+            std::cout << "----------------- " << std::endl;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     return particle_list;

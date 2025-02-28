@@ -24,47 +24,53 @@ std::vector<Target_Particle> read_target_particle_inputs(const std::string& file
         std::cout << "Reading Target Particles " << std::endl;
         std::cout << " -------------------------------- " << std::endl;
     }
-    std::ifstream file(filename);
-    if (!file) {
-        std::cerr << "Error: Unable to open file " << filename << std::endl;
-    }
     std::vector<Target_Particle> target_particle_list;
     int count_number_particles = 0;
-    std::string line;
-    // First check which particles exist and how many there are
-    while (std::getline(file, line)) {
-        if (line.find("NEUTRALS") != std::string::npos){
-            std::getline(file, line);
-            std::getline(file, line);
-            std::getline(file, line);
-            while (line.find("-------") == std::string::npos) {
-                std::getline(file, line);
-                count_number_particles++;
+
+    for (int rank_num = 0;rank_num < Constants::mpi_size; rank_num++){
+        if (rank_num == Constants::mpi_rank) {
+            std::ifstream file(filename);
+            if (!file) {
+                std::cerr << "Error: Unable to open file " << filename << std::endl;
             }
+            
+            std::string line;
+            // First check which particles exist and how many there are
+            while (std::getline(file, line)) {
+                if (line.find("NEUTRALS") != std::string::npos){
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    while (line.find("-------") == std::string::npos) {
+                        std::getline(file, line);
+                        count_number_particles++;
+                    }
+                }
+            }
+            file.clear();
+            file.seekg(0, std::ios::beg);
+            global_inputs::number_target_particles = count_number_particles;
+            target_particle_list.reserve(global_inputs::number_target_particles);
+            while (std::getline(file, line)) {
+                if (line.find("NEUTRALS") != std::string::npos){
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    std::getline(file, line);
+                    while (line.find("-------") == std::string::npos) {
+                        std::istringstream iss(line);
+                        std::string name;
+                        double mass_in, temp_in, density_in;
+                        iss >> name >> mass_in >> temp_in >> density_in;
+                        mass_in = mass_in * Constants::mass_amu;
+                        target_particle_list.emplace_back(mass_in, temp_in, density_in, name);
+                        std::getline(file, line);
+                    }
+                }
+            }
+            
+            file.close();
         }
     }
-    file.clear();
-    file.seekg(0, std::ios::beg);
-    global_inputs::number_target_particles = count_number_particles;
-    target_particle_list.reserve(global_inputs::number_target_particles);
-    while (std::getline(file, line)) {
-        if (line.find("NEUTRALS") != std::string::npos){
-            std::getline(file, line);
-            std::getline(file, line);
-            std::getline(file, line);
-            while (line.find("-------") == std::string::npos) {
-                std::istringstream iss(line);
-                std::string name;
-                double mass_in, temp_in, density_in;
-                iss >> name >> mass_in >> temp_in >> density_in;
-                mass_in = mass_in * Constants::mass_amu;
-                target_particle_list.emplace_back(mass_in, temp_in, density_in, name);
-                std::getline(file, line);
-            }
-        }
-    }
-    
-    file.close();
 
     int i;
     if (Constants::mpi_rank==0) {

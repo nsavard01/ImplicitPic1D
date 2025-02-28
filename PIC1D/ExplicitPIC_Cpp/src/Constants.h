@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <mpi.h>
+
 namespace Constants {
     constexpr double speed_of_light = 299792458.0; // m/s
     constexpr double electron_mass = 9.1093837015e-31; // kg
@@ -11,6 +13,7 @@ namespace Constants {
     constexpr double k_boltz = 1.380649e-23; // m^2 kg s^-2 K^-1
     extern const double cos_third_rot, sin_third_rot;
     extern int mpi_rank, mpi_size;
+    extern MPI_Datatype mpi_size_t_type;
 }
 
 #endif // CONSTANTS_H

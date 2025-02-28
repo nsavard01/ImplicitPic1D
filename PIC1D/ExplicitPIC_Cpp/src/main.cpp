@@ -25,27 +25,29 @@ int main(int argc, char** argv) {
     Potential_Solver solver;
     std::vector<Target_Particle> target_particle_list;
     std::vector<Null_Collision> binary_collision_list;
-    MPI_Barrier(MPI_COMM_WORLD);
-    // Each mpi rank reads inputs independently to avoid issue with simultaneous reading
-    for (i=0;i<Constants::mpi_size;i++){
-        if (i == Constants::mpi_rank) {
-            global_inputs::read_global_inputs("../InputData/InitialConditions.inp");
-            initialize_pcg(false);
-            world.read_from_file("../InputData/Geometry.inp");
-            particle_list = read_particle_inputs("../InputData/ParticleTypes.inp", world);
-            solver.read_from_file("../InputData/Geometry.inp", world);
-            target_particle_list = read_target_particle_inputs("../InputData/ParticleTypes.inp");
-            binary_collision_list = read_null_collision_inputs("../InputData/collision.inp", particle_list, target_particle_list);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
+    global_inputs::read_global_inputs("../InputData/InitialConditions.inp");
+    initialize_pcg(false);
+    world.read_from_file("../InputData/Geometry.inp");
+    particle_list = read_particle_inputs("../InputData/ParticleTypes.inp", world);
+    solver.read_from_file("../InputData/Geometry.inp", world);
+    target_particle_list = read_target_particle_inputs("../InputData/ParticleTypes.inp");
+    binary_collision_list = read_null_collision_inputs("../InputData/collision.inp", particle_list, target_particle_list);
+    
     solver.deposit_rho(particle_list, world);
     solver.solve_potential_tridiag(world, 0.0);
     solver.make_EField(world);
     solver.initial_v_rewind(particle_list, global_inputs::time_step);
-    
+    double P_before = 0.0;
+    for (i=0;i<global_inputs::number_charged_particles;i++){
+        P_before += particle_list[i].get_momentum_total();
+    }
+    if (Constants::mpi_rank == 0) {std::cout << "P_before " << P_before << std::endl;}
     solver.move_particles(particle_list, world, global_inputs::time_step);
-    
+    double P_after = 0.0;
+    for (i=0;i<global_inputs::number_charged_particles;i++){
+        P_after += particle_list[i].get_momentum_total();
+    }
+    if (Constants::mpi_rank == 0 ) {std::cout << "P_after " << P_after << std::endl;}
 
     // for (i=0;i<global_inputs::number_binary_collisions;i++){
     //     binary_collision_list[i].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);

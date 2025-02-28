@@ -4,6 +4,7 @@
 #include <sstream>
 #include <omp.h>
 #include "Constants.h"
+#include <mpi.h>
 
 
 namespace global_inputs {
@@ -13,80 +14,96 @@ namespace global_inputs {
     std::string save_folder, save_filename;
 
     void read_global_inputs(const std::string& filename){
-        std::ifstream file(filename);
-        if (!file) {
-            std::cerr << "Error: Unable to open file " << filename << std::endl;
-            return;
-        }
         double temp_real;
-        std::string line;
-        if (Constants::mpi_rank==0) {
-            std::cout << "Reading global inputs: "  << std::endl;
-            std::cout << "-------------------------- "  << std::endl;
+        for (int rank_num = 0; rank_num < Constants::mpi_size; rank_num++) {
+            // Read one by one for each  mpi_rank
+            if (rank_num == Constants::mpi_rank) {
+                std::ifstream file(filename);
+                if (!file) {
+                    std::cerr << "Error: Unable to open file " << filename << std::endl;
+                    return;
+                }
+                std::string line;
+                if (Constants::mpi_rank==0) {
+                    std::cout << "Reading global inputs: "  << std::endl;
+                    std::cout << "-------------------------- "  << std::endl;
+                }
+                std::getline(file, line);
+                std::istringstream iss(line);
+                iss >> number_omp_threads;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> number_cells;
+                iss.clear();
+                number_nodes = number_cells + 1;
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> simulation_time >> start_simulation_time;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> initial_density;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> temp_electrons;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> temp_ions;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> number_diagnostic_steps;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> temp_real >> time_step;
+                iss.clear();
+
+                temp_real = temp_real / std::sqrt(initial_density * Constants::elementary_charge * Constants::elementary_charge / Constants::electron_mass / Constants::epsilon_0);
+                time_step = std::min(temp_real, time_step);
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> averaging_time;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> save_folder;
+                iss.clear();
+
+                std::getline(file, line);
+                iss.str(line);
+                iss >> save_filename;
+                iss.clear();
+
+                
+                
+                file.close();
+            }
         }
-        std::getline(file, line);
-        std::istringstream iss(line);
-        iss >> number_omp_threads;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> number_cells;
-        iss.clear();
-        number_nodes = number_cells + 1;
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> simulation_time >> start_simulation_time;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> initial_density;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> temp_electrons;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> temp_ions;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> number_diagnostic_steps;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> temp_real >> time_step;
-        iss.clear();
-
-        temp_real = temp_real / std::sqrt(initial_density * Constants::elementary_charge * Constants::elementary_charge / Constants::electron_mass / Constants::epsilon_0);
-        time_step = std::min(temp_real, time_step);
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> averaging_time;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> save_folder;
-        iss.clear();
-
-        std::getline(file, line);
-        iss.str(line);
-        iss >> save_filename;
-        iss.clear();
-
-        
-        
-        file.close();
         omp_set_num_threads(number_omp_threads);
+        // Determine mpi data type
+        if (sizeof(size_t) == sizeof(unsigned int)) {
+            Constants::mpi_size_t_type = MPI_UNSIGNED;
+        } else if (sizeof(size_t) == sizeof(unsigned long)) {
+            Constants::mpi_size_t_type = MPI_UNSIGNED_LONG;
+        } else if (sizeof(size_t) == sizeof(unsigned long long)) {
+            Constants::mpi_size_t_type = MPI_UNSIGNED_LONG_LONG;
+        } else {
+            std::cerr << "Unsupported size_t type!" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
         if (Constants::mpi_rank == 0) {
             std::cout << "Number of mpi ranks: " << Constants::mpi_size << std::endl;
             std::cout << "Number openmp threads: " << omp_get_max_threads() << std::endl;

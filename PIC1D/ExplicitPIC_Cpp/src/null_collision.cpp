@@ -317,10 +317,6 @@ std::vector<Null_Collision> read_null_collision_inputs(const std::string& filena
         std::cout << "Reading null collision inputs "<< std::endl;
         std::cout << "---------------------------------------- "<< std::endl;
     }
-    std::ifstream file(filename);
-    if (!file) {
-        std::cerr << "Error: Unable to open file " << filename << std::endl;
-    }
 
     global_inputs::number_binary_collisions = 0;
     std::vector<std::vector<int>> reactant_idx;
@@ -332,178 +328,185 @@ std::vector<Null_Collision> read_null_collision_inputs(const std::string& filena
     std::vector<std::vector<std::vector<double>>> sigma_arrays;
     double E_threshold, temp_var, E_scaling, sigma_scaling;
 
-    std::string line;
-    std::getline(file, line);
-    while (line.find("END") == std::string::npos) {
-        std::istringstream iss(line);
-        std::string coll_filename;
-        iss >> coll_filename;
-        coll_filename = "../../CollisionData/" + coll_filename;
-        if (Constants::mpi_rank==0) {std::cout << "Open file: " << coll_filename << std::endl;}
-        std::ifstream coll_file(coll_filename);
-        if (!coll_file) {
-            std::cerr << "Error: Unable to open file" << coll_filename << std::endl;
-        }
-        std::getline(coll_file, line);
-        while (line.find("END") == std::string::npos) {
-            if (line.find("REACTION") != std::string::npos) {
-                std::string reaction_string;
-                std::getline(coll_file, line);
-                iss.clear();
-                iss.str(line);
-                iss >> reaction_string;
-                if (Constants::mpi_rank==0) {std::cout << reaction_string << std::endl;}
-                size_t arrow_pos = reaction_string.find("->");
-                std::string reactant_string = reaction_string.substr(0,arrow_pos);
-                std::string product_string = reaction_string.substr(arrow_pos+2);
-                std::regex pattern(R"(\[([^\]]+)\])");
-                std::smatch match;
-                int primary_idx, target_idx; 
-                int coll_idx;
-                bool binary_exists = false;
-                int i;
-                // Get indices of the primary and target particle
-                while (std::regex_search(reactant_string, match, pattern)){
-                    
-                    for (i=0;i<global_inputs::number_charged_particles;i++){
-                        if (particle_list[i].name == match[1]){
-                            primary_idx = i;     
-                            break;
-                        }
-                    }
-                    for (i=0;i<global_inputs::number_target_particles;i++){
-                        if (target_particle_list[i].name == match[1]){
-                            target_idx = i;
-                            break;
-                        }
-                    }
-                    reactant_string = match.suffix().str();
-                }
-            
-                
-           
-                for (coll_idx=0;coll_idx<global_inputs::number_binary_collisions;coll_idx++){
-                    if (reactant_idx[coll_idx][0] == primary_idx && reactant_idx[coll_idx][1] == target_idx){
-                        binary_exists = true;
-                        break;
-                    }
-                }
-                if (!binary_exists){
-                    global_inputs::number_binary_collisions++;
-                    reactant_idx.push_back({primary_idx, target_idx});
-                    number_collisions_per_primary.push_back({1});
-                }
-                else {
-                    number_collisions_per_primary[coll_idx]++;
-                }
-
-                std::vector<int> local_product_indx;
-                while (std::regex_search(product_string, match, pattern)){
-                    for (i=0;i<global_inputs::number_charged_particles;i++){
-                        if (particle_list[i].name == match[1]){
-                            local_product_indx.push_back(i);
-                        }
-                    }
-                    for (i=0;i<global_inputs::number_target_particles;i++){
-                        if (target_particle_list[i].name == match[1]){
-                            target_idx = i;
-                        }
-                    }
-                    product_string = match.suffix().str();
-                }
-                local_product_indx.push_back(target_idx); // put target index as last
-                
-                std::getline(coll_file, line);
-                iss.clear();
-                iss.str(line);
-                iss >> E_threshold >> temp_var;
-                std::getline(coll_file, line);
-                iss.clear();
-                iss.str(line);
-                iss >> E_scaling >> sigma_scaling;
-                std::string coll_string;
-                std::getline(coll_file, line);
-                iss.clear();
-                iss.str(line);
-                iss >> coll_string;
-                int collision_type = 0;
-                if (coll_string == "ELASTIC") {
-                    collision_type = 1;
-                } else if (coll_string == "EXCITATION"){
-                    collision_type = 3;
-                } else if (coll_string == "IONIZATION"){
-                    collision_type = 2;
-                    // make sure primary particle is first, then followed by by-product
-                    for (i=0;i<3;i++){
-                        if (reactant_idx[coll_idx][0] == local_product_indx[i]){
-                            // switch primary to front
-                            local_product_indx[3] = local_product_indx[0];
-                            local_product_indx[0] = reactant_idx[coll_idx][0];
-                            local_product_indx[i] = local_product_indx[3];
-                            break;
-                        }
-                    }
-                    for (i=1;i<3;i++){
-                        if (particle_list[local_product_indx[i]].mass == Constants::electron_mass){
-                            // switch electron to back
-                            local_product_indx[3] = local_product_indx[2];
-                            local_product_indx[2] = local_product_indx[i];
-                            local_product_indx[i] = local_product_indx[3];
-                            break;
-                        }
-                    }
-                    local_product_indx.pop_back();
-                } else if (coll_string == "CHARGEEXCHANGE"){
-                    collision_type = 4;
-                }
-                if (!binary_exists){
-                    collision_type_per_primary.push_back({collision_type});
-                    E_threshold_per_primary_collision.push_back({E_threshold});
-                    product_indices.push_back({local_product_indx});
-                }
-                else {
-                    collision_type_per_primary[coll_idx].push_back(collision_type);
-                    product_indices[coll_idx].push_back(local_product_indx);
-                    E_threshold_per_primary_collision[coll_idx].push_back(E_threshold);
-                }
-                
-                std::getline(coll_file, line);
-                while (line.find("---------") == std::string::npos) {
-                    std::getline(coll_file, line);
-                }
-                double energy_point, sigma_point;
-                std::vector<double> local_energy_array;
-                std::vector<double> local_sigma_array;
-                std::getline(coll_file, line);
-                while (line.find("---------") == std::string::npos) {
-                    iss.clear();
-                    iss.str(line);
-                    iss >> energy_point >> sigma_point;
-                    local_energy_array.push_back(energy_point * E_scaling);
-                    local_sigma_array.push_back(sigma_point * sigma_scaling);
-                    std::getline(coll_file, line);
-                }
-                // find which particle indices they match to
-                
-                if (!binary_exists){
-                    energy_arrays.push_back({local_energy_array});
-                    sigma_arrays.push_back({local_sigma_array});
-                }
-                else {
-                    energy_arrays[coll_idx].push_back(local_energy_array);
-                    sigma_arrays[coll_idx].push_back(local_sigma_array);
-                }
-
-
+    for (int rank_num = 0;rank_num < Constants::mpi_size; rank_num++) {
+        if (rank_num == Constants::mpi_rank){
+            std::ifstream file(filename);
+            if (!file) {
+                std::cerr << "Error: Unable to open file " << filename << std::endl;
             }
-            std::getline(coll_file, line);
-        }
-        coll_file.close();
-        
-        std::getline(file, line);
-    }
-    file.close();
+            std::string line;
+            std::getline(file, line);
+            while (line.find("END") == std::string::npos) {
+                std::istringstream iss(line);
+                std::string coll_filename;
+                iss >> coll_filename;
+                coll_filename = "../../CollisionData/" + coll_filename;
+                if (Constants::mpi_rank==0) {std::cout << "Open file: " << coll_filename << std::endl;}
+                std::ifstream coll_file(coll_filename);
+                if (!coll_file) {
+                    std::cerr << "Error: Unable to open file" << coll_filename << std::endl;
+                }
+                std::getline(coll_file, line);
+                while (line.find("END") == std::string::npos) {
+                    if (line.find("REACTION") != std::string::npos) {
+                        std::string reaction_string;
+                        std::getline(coll_file, line);
+                        iss.clear();
+                        iss.str(line);
+                        iss >> reaction_string;
+                        if (Constants::mpi_rank==0) {std::cout << reaction_string << std::endl;}
+                        size_t arrow_pos = reaction_string.find("->");
+                        std::string reactant_string = reaction_string.substr(0,arrow_pos);
+                        std::string product_string = reaction_string.substr(arrow_pos+2);
+                        std::regex pattern(R"(\[([^\]]+)\])");
+                        std::smatch match;
+                        int primary_idx, target_idx; 
+                        int coll_idx;
+                        bool binary_exists = false;
+                        int i;
+                        // Get indices of the primary and target particle
+                        while (std::regex_search(reactant_string, match, pattern)){
+                            
+                            for (i=0;i<global_inputs::number_charged_particles;i++){
+                                if (particle_list[i].name == match[1]){
+                                    primary_idx = i;     
+                                    break;
+                                }
+                            }
+                            for (i=0;i<global_inputs::number_target_particles;i++){
+                                if (target_particle_list[i].name == match[1]){
+                                    target_idx = i;
+                                    break;
+                                }
+                            }
+                            reactant_string = match.suffix().str();
+                        }
+                    
+                        
+                
+                        for (coll_idx=0;coll_idx<global_inputs::number_binary_collisions;coll_idx++){
+                            if (reactant_idx[coll_idx][0] == primary_idx && reactant_idx[coll_idx][1] == target_idx){
+                                binary_exists = true;
+                                break;
+                            }
+                        }
+                        if (!binary_exists){
+                            global_inputs::number_binary_collisions++;
+                            reactant_idx.push_back({primary_idx, target_idx});
+                            number_collisions_per_primary.push_back({1});
+                        }
+                        else {
+                            number_collisions_per_primary[coll_idx]++;
+                        }
 
+                        std::vector<int> local_product_indx;
+                        while (std::regex_search(product_string, match, pattern)){
+                            for (i=0;i<global_inputs::number_charged_particles;i++){
+                                if (particle_list[i].name == match[1]){
+                                    local_product_indx.push_back(i);
+                                }
+                            }
+                            for (i=0;i<global_inputs::number_target_particles;i++){
+                                if (target_particle_list[i].name == match[1]){
+                                    target_idx = i;
+                                }
+                            }
+                            product_string = match.suffix().str();
+                        }
+                        local_product_indx.push_back(target_idx); // put target index as last
+                        
+                        std::getline(coll_file, line);
+                        iss.clear();
+                        iss.str(line);
+                        iss >> E_threshold >> temp_var;
+                        std::getline(coll_file, line);
+                        iss.clear();
+                        iss.str(line);
+                        iss >> E_scaling >> sigma_scaling;
+                        std::string coll_string;
+                        std::getline(coll_file, line);
+                        iss.clear();
+                        iss.str(line);
+                        iss >> coll_string;
+                        int collision_type = 0;
+                        if (coll_string == "ELASTIC") {
+                            collision_type = 1;
+                        } else if (coll_string == "EXCITATION"){
+                            collision_type = 3;
+                        } else if (coll_string == "IONIZATION"){
+                            collision_type = 2;
+                            // make sure primary particle is first, then followed by by-product
+                            for (i=0;i<3;i++){
+                                if (reactant_idx[coll_idx][0] == local_product_indx[i]){
+                                    // switch primary to front
+                                    local_product_indx[3] = local_product_indx[0];
+                                    local_product_indx[0] = reactant_idx[coll_idx][0];
+                                    local_product_indx[i] = local_product_indx[3];
+                                    break;
+                                }
+                            }
+                            for (i=1;i<3;i++){
+                                if (particle_list[local_product_indx[i]].mass == Constants::electron_mass){
+                                    // switch electron to back
+                                    local_product_indx[3] = local_product_indx[2];
+                                    local_product_indx[2] = local_product_indx[i];
+                                    local_product_indx[i] = local_product_indx[3];
+                                    break;
+                                }
+                            }
+                            local_product_indx.pop_back();
+                        } else if (coll_string == "CHARGEEXCHANGE"){
+                            collision_type = 4;
+                        }
+                        if (!binary_exists){
+                            collision_type_per_primary.push_back({collision_type});
+                            E_threshold_per_primary_collision.push_back({E_threshold});
+                            product_indices.push_back({local_product_indx});
+                        }
+                        else {
+                            collision_type_per_primary[coll_idx].push_back(collision_type);
+                            product_indices[coll_idx].push_back(local_product_indx);
+                            E_threshold_per_primary_collision[coll_idx].push_back(E_threshold);
+                        }
+                        
+                        std::getline(coll_file, line);
+                        while (line.find("---------") == std::string::npos) {
+                            std::getline(coll_file, line);
+                        }
+                        double energy_point, sigma_point;
+                        std::vector<double> local_energy_array;
+                        std::vector<double> local_sigma_array;
+                        std::getline(coll_file, line);
+                        while (line.find("---------") == std::string::npos) {
+                            iss.clear();
+                            iss.str(line);
+                            iss >> energy_point >> sigma_point;
+                            local_energy_array.push_back(energy_point * E_scaling);
+                            local_sigma_array.push_back(sigma_point * sigma_scaling);
+                            std::getline(coll_file, line);
+                        }
+                        // find which particle indices they match to
+                        
+                        if (!binary_exists){
+                            energy_arrays.push_back({local_energy_array});
+                            sigma_arrays.push_back({local_sigma_array});
+                        }
+                        else {
+                            energy_arrays[coll_idx].push_back(local_energy_array);
+                            sigma_arrays[coll_idx].push_back(local_sigma_array);
+                        }
+
+
+                    }
+                    std::getline(coll_file, line);
+                }
+                coll_file.close();
+                
+                std::getline(file, line);
+            }
+            file.close();
+        }
+    }
     // Concatenate into final energy/sigma arrays
     std::vector<int> number_energy_points(global_inputs::number_binary_collisions);
     std::vector<std::vector<double>> total_energy_array(global_inputs::number_binary_collisions);
