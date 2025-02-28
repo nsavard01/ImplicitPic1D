@@ -16,11 +16,10 @@ public:
     int num_thread_node_indx;
 
     // Constructor declaration
-    Domain(const std::string& filename);
+    Domain();
+    void read_from_file(const std::string& filename);
     double get_x_from_xi(double xi) const;
     double get_xi_from_x(double xi) const;
-    // Method declaration
-    void readWorld();
 };
 
 #endif // DOMAIN_H

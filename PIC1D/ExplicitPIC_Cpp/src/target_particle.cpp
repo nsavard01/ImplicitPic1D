@@ -19,9 +19,11 @@ Target_Particle::Target_Particle(double mass_in, double temp_in, double density_
 
 
 std::vector<Target_Particle> read_target_particle_inputs(const std::string& filename){
-    std::cout << " " << std::endl;
-    std::cout << "Reading Target Particles " << std::endl;
-    std::cout << " -------------------------------- " << std::endl;
+    if (Constants::mpi_rank==0) {
+        std::cout << " " << std::endl;
+        std::cout << "Reading Target Particles " << std::endl;
+        std::cout << " -------------------------------- " << std::endl;
+    }
     std::ifstream file(filename);
     if (!file) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
@@ -65,15 +67,17 @@ std::vector<Target_Particle> read_target_particle_inputs(const std::string& file
     file.close();
 
     int i;
-    std::cout << "TNumber of target particles: " << global_inputs::number_target_particles << std::endl;
-    for (i = 0; i < global_inputs::number_target_particles; i++){
-        std::cout << "----------------- " << std::endl;
-        std::cout << "Target particle #: " << i << std::endl;
-        std::cout << "Name: " << target_particle_list[i].name << std::endl;
-        std::cout << "Mass: " << target_particle_list[i].mass << std::endl;
-        std::cout << "Temperature: " << target_particle_list[i].temperature << std::endl;
-        std::cout << "Density: " << target_particle_list[i].density << std::endl;
-        std::cout << "----------------- " << std::endl;
+    if (Constants::mpi_rank==0) {
+        std::cout << "TNumber of target particles: " << global_inputs::number_target_particles << std::endl;
+        for (i = 0; i < global_inputs::number_target_particles; i++){
+            std::cout << "----------------- " << std::endl;
+            std::cout << "Target particle #: " << i << std::endl;
+            std::cout << "Name: " << target_particle_list[i].name << std::endl;
+            std::cout << "Mass: " << target_particle_list[i].mass << std::endl;
+            std::cout << "Temperature: " << target_particle_list[i].temperature << std::endl;
+            std::cout << "Density: " << target_particle_list[i].density << std::endl;
+            std::cout << "----------------- " << std::endl;
+        }
     }
 
 

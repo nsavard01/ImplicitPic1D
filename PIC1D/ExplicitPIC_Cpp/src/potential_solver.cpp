@@ -8,7 +8,11 @@
 #include <omp.h>
 #include "Constants.h"
 
-Potential_Solver::Potential_Solver(const std::string& filename, const Domain& world){
+Potential_Solver::Potential_Solver(){
+    
+}
+
+void Potential_Solver::read_from_file(const std::string& filename, const Domain& world){
     this->lower_tri.resize(global_inputs::number_nodes-1, 0.0);
     this->upper_tri.resize(global_inputs::number_nodes-1, 0.0);
     this->center_tri.resize(global_inputs::number_nodes, 0.0);
@@ -26,10 +30,11 @@ Potential_Solver::Potential_Solver(const std::string& filename, const Domain& wo
     }
     
     std::string line;
-    std::cout << " "  << std::endl;
-    std::cout << "Reading potential inputs: "  << std::endl;
-    std::cout << "-------------------------- "  << std::endl;
-
+    if (Constants::mpi_rank==0){
+        std::cout << " "  << std::endl;
+        std::cout << "Reading potential inputs: "  << std::endl;
+        std::cout << "-------------------------- "  << std::endl;
+    }
     std::getline(file, line);  
     std::getline(file, line);
     std::getline(file, line);
@@ -56,13 +61,15 @@ Potential_Solver::Potential_Solver(const std::string& filename, const Domain& wo
         this->phi[0] = left_voltage;
         this->phi[global_inputs::number_cells] = left_voltage;
     }
-    this->RF_rad_frequency = 2.0 * M_PI * RF_frequency; 
-    std::cout << "Left voltage " << this->phi[0] << std::endl;
-    std::cout << "Right voltage " << this->phi[global_inputs::number_cells] << std::endl;
-    std::cout << "Rf frequency " << this->RF_rad_frequency/2.0/M_PI << std::endl;
-    std::cout << "RF half amplitude " << this->RF_half_amplitude << std::endl;
-    std::cout << "-------------------------- "  << std::endl;
-    std::cout << " "  << std::endl;
+    this->RF_rad_frequency = 2.0 * M_PI * RF_frequency;
+    if (Constants::mpi_rank==0) { 
+        std::cout << "Left voltage " << this->phi[0] << std::endl;
+        std::cout << "Right voltage " << this->phi[global_inputs::number_cells] << std::endl;
+        std::cout << "Rf frequency " << this->RF_rad_frequency/2.0/M_PI << std::endl;
+        std::cout << "RF half amplitude " << this->RF_half_amplitude << std::endl;
+        std::cout << "-------------------------- "  << std::endl;
+        std::cout << " "  << std::endl;
+    }
 
     for (int i = 0; i < global_inputs::number_nodes; i++){
         switch (world.boundary_conditions[i]) {

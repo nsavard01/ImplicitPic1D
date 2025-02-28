@@ -20,9 +20,10 @@ namespace global_inputs {
         }
         double temp_real;
         std::string line;
-        std::cout << "Reading global inputs: "  << std::endl;
-        std::cout << "-------------------------- "  << std::endl;
-
+        if (Constants::mpi_rank==0) {
+            std::cout << "Reading global inputs: "  << std::endl;
+            std::cout << "-------------------------- "  << std::endl;
+        }
         std::getline(file, line);
         std::istringstream iss(line);
         iss >> number_omp_threads;
@@ -86,18 +87,21 @@ namespace global_inputs {
         
         file.close();
         omp_set_num_threads(number_omp_threads);
-        std::cout << "Number of nodes: " << global_inputs::number_nodes << std::endl;
-        std::cout << "Number openmp threads: " << omp_get_max_threads() << std::endl;
-        std::cout << "Simulation time: " << simulation_time << std::endl;
-        std::cout << "Initial density: " << initial_density << std::endl;
-        std::cout << "T_e: " << temp_electrons << std::endl;
-        std::cout << "T_i: " << temp_ions << std::endl;
-        std::cout << "Number diagnostic steps: " << number_diagnostic_steps << std::endl;
-        std::cout << "Time step: " << time_step << std::endl;
-        std::cout << "Averaging time: " << averaging_time << std::endl;
-        std::cout << "Relative save folder: " << save_folder << std::endl;
-        std::cout << "Save filename: " << save_filename << std::endl;
-        std::cout << "-----------------------"  << std::endl;
+        if (Constants::mpi_rank == 0) {
+            std::cout << "Number of mpi ranks: " << Constants::mpi_size << std::endl;
+            std::cout << "Number openmp threads: " << omp_get_max_threads() << std::endl;
+            std::cout << "Number of nodes: " << global_inputs::number_nodes << std::endl;
+            std::cout << "Simulation time: " << simulation_time << std::endl;
+            std::cout << "Initial density: " << initial_density << std::endl;
+            std::cout << "T_e: " << temp_electrons << std::endl;
+            std::cout << "T_i: " << temp_ions << std::endl;
+            std::cout << "Number diagnostic steps: " << number_diagnostic_steps << std::endl;
+            std::cout << "Time step: " << time_step << std::endl;
+            std::cout << "Averaging time: " << averaging_time << std::endl;
+            std::cout << "Relative save folder: " << save_folder << std::endl;
+            std::cout << "Save filename: " << save_filename << std::endl;
+            std::cout << "-----------------------"  << std::endl;
+        }
 
     }
 

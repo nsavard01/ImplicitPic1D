@@ -1,6 +1,7 @@
 #include <omp.h>
 #include <random>
 #include <stdio.h>
+#include <iostream>
 
 // Define PRNG state globally, but make it thread-private
 static const double mult_factor_PCG = 1.0 / (static_cast<double>(UINT32_MAX) + 2.0);

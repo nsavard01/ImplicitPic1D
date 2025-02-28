@@ -44,32 +44,35 @@ Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::ve
         }
         this->sigma_v_max = std::max(this->sigma_v_max, sum_sigma * v_r);
     }
-    std::cout << "------------------------------ " << std::endl;
-    std::cout << "Primary particle is idx is " << this->primary_idx << " " << this->target_idx << std::endl;
-    std::cout << "Amount of collisions is " << this->number_collisions << std::endl;
-    std::cout << "Reduced mass: " << this->reduced_mass << std::endl;
-    std::cout << "Sum mass: " << this->mass_sum << std::endl;
-    std::cout << "Reduced mass triple product: " << this->reduced_mass_triple << std::endl;
-    std::cout << "Sigma_v_max: " << this->sigma_v_max << std::endl;
-    std::cout << "----- " << std::endl;
-    std::cout << std::endl;
-    for (l=0; l<this->number_collisions;l++){
-        std::cout << "Collision # " << l << std::endl;
-        std::cout << "Collision type integer is " << this->collision_type[l] << std::endl;
-        std::cout << "Threshold energy (eV) " << this->energy_threshold[l] << std::endl;
-        std::cout << "Products indices are: ";
-        for (u=0;u<this->products_indx[l].size();u++){
-            std::cout << this->products_indx[l][u] << " ";
-        }
-        std::cout << std::endl;
-        // std::cout << std::endl;
-        // for (u=0; u < this->length_arrays;u++){
-        //     std::cout << this->energy_array[u] << " " << this->sigma_array[l][u] << std::endl;  
-        // }
+
+    if (Constants::mpi_rank == 0) {
+        std::cout << "------------------------------ " << std::endl;
+        std::cout << "Primary particle is idx is " << this->primary_idx << " " << this->target_idx << std::endl;
+        std::cout << "Amount of collisions is " << this->number_collisions << std::endl;
+        std::cout << "Reduced mass: " << this->reduced_mass << std::endl;
+        std::cout << "Sum mass: " << this->mass_sum << std::endl;
+        std::cout << "Reduced mass triple product: " << this->reduced_mass_triple << std::endl;
+        std::cout << "Sigma_v_max: " << this->sigma_v_max << std::endl;
         std::cout << "----- " << std::endl;
         std::cout << std::endl;
+        for (l=0; l<this->number_collisions;l++){
+            std::cout << "Collision # " << l << std::endl;
+            std::cout << "Collision type integer is " << this->collision_type[l] << std::endl;
+            std::cout << "Threshold energy (eV) " << this->energy_threshold[l] << std::endl;
+            std::cout << "Products indices are: ";
+            for (u=0;u<this->products_indx[l].size();u++){
+                std::cout << this->products_indx[l][u] << " ";
+            }
+            std::cout << std::endl;
+            // std::cout << std::endl;
+            // for (u=0; u < this->length_arrays;u++){
+            //     std::cout << this->energy_array[u] << " " << this->sigma_array[l][u] << std::endl;  
+            // }
+            std::cout << "----- " << std::endl;
+            std::cout << std::endl;
+        }
+        std::cout << "------------------------------ " << std::endl;
     }
-    std::cout << "------------------------------ " << std::endl;
     
  
 }
@@ -309,9 +312,11 @@ inline void Null_Collision::triple_product_isotropic(const double &primary_mass,
 }
 
 std::vector<Null_Collision> read_null_collision_inputs(const std::string& filename, const std::vector<Particle> &particle_list, const std::vector<Target_Particle> &target_particle_list){
-    std::cout << " "<< std::endl;
-    std::cout << "Reading null collision inputs "<< std::endl;
-    std::cout << "---------------------------------------- "<< std::endl;
+    if (Constants::mpi_rank==0){
+        std::cout << " "<< std::endl;
+        std::cout << "Reading null collision inputs "<< std::endl;
+        std::cout << "---------------------------------------- "<< std::endl;
+    }
     std::ifstream file(filename);
     if (!file) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
@@ -334,7 +339,7 @@ std::vector<Null_Collision> read_null_collision_inputs(const std::string& filena
         std::string coll_filename;
         iss >> coll_filename;
         coll_filename = "../../CollisionData/" + coll_filename;
-        std::cout << "Open file: " << coll_filename << std::endl;
+        if (Constants::mpi_rank==0) {std::cout << "Open file: " << coll_filename << std::endl;}
         std::ifstream coll_file(coll_filename);
         if (!coll_file) {
             std::cerr << "Error: Unable to open file" << coll_filename << std::endl;
@@ -347,7 +352,7 @@ std::vector<Null_Collision> read_null_collision_inputs(const std::string& filena
                 iss.clear();
                 iss.str(line);
                 iss >> reaction_string;
-                std::cout << reaction_string << std::endl;
+                if (Constants::mpi_rank==0) {std::cout << reaction_string << std::endl;}
                 size_t arrow_pos = reaction_string.find("->");
                 std::string reactant_string = reaction_string.substr(0,arrow_pos);
                 std::string product_string = reaction_string.substr(arrow_pos+2);
@@ -618,7 +623,7 @@ std::vector<Null_Collision> read_null_collision_inputs(const std::string& filena
 
     std::vector<Null_Collision> binary_collision_list;
     binary_collision_list.reserve(global_inputs::number_binary_collisions);
-    std::cout << "number binary collisions " << global_inputs::number_binary_collisions << std::endl;
+    if(Constants::mpi_rank==0) {std::cout << "Number binary collisions " << global_inputs::number_binary_collisions << std::endl;}
     double mass_inputs[3];
     double mass_1, mass_2;
     for (k=0; k<global_inputs::number_binary_collisions; k++){

@@ -1,11 +1,15 @@
 #include "domain.h"
+#include "Constants.h"
 #include <cmath>
 #include "global_inputs.h"
 #include <fstream>
 #include <sstream>
 
-// Constructor definition
-Domain::Domain(const std::string& filename)
+Domain::Domain(){
+
+}
+
+void Domain::read_from_file(const std::string& filename)
     {
     std::ifstream file(filename);
     if (!file) {
@@ -15,10 +19,11 @@ Domain::Domain(const std::string& filename)
     
     std::string line;
     int left, right;
-    std::cout << " "  << std::endl;
-    std::cout << "Reading domain inputs: "  << std::endl;
-    std::cout << "-------------------------- "  << std::endl;
-
+    if (Constants::mpi_rank == 0) {
+        std::cout << " "  << std::endl;
+        std::cout << "Reading domain inputs: "  << std::endl;
+        std::cout << "-------------------------- "  << std::endl;
+    }
     std::getline(file, line);
     std::istringstream iss(line);
     iss >> L_domain;
@@ -64,12 +69,13 @@ Domain::Domain(const std::string& filename)
         k++;
     }
 
-    std::cout << "Left boundary type: " << boundary_conditions[0] << std::endl;
-    std::cout << "Right boundary type: " << boundary_conditions[global_inputs::number_nodes-1] << std::endl;
-    std::cout << "Grid length: " << L_domain << std::endl;
-    std::cout << "delta x is: " << del_X << std::endl;
-    std::cout << "-----------------------"  << std::endl;
-    
+    if (Constants::mpi_rank == 0) {
+        std::cout << "Left boundary type: " << boundary_conditions[0] << std::endl;
+        std::cout << "Right boundary type: " << boundary_conditions[global_inputs::number_nodes-1] << std::endl;
+        std::cout << "Grid length: " << L_domain << std::endl;
+        std::cout << "delta x is: " << del_X << std::endl;
+        std::cout << "-----------------------"  << std::endl;
+    }
 }
 
 double Domain::get_x_from_xi(double xi) const{
@@ -82,8 +88,4 @@ double Domain::get_xi_from_x(double x) const{
     return x/this->del_X;
 }
 
-// Method definition
-void Domain::readWorld() {
-    std::cout << "Reading world data..." << std::endl;
-    // Placeholder for file reading or other initialization
-}
+

@@ -10,6 +10,7 @@ namespace Constants {
     constexpr double mass_amu = 1.66053906660e-27; // kg
     constexpr double k_boltz = 1.380649e-23; // m^2 kg s^-2 K^-1
     extern const double cos_third_rot, sin_third_rot;
+    extern int mpi_rank, mpi_size;
 }
 
 #endif // CONSTANTS_H

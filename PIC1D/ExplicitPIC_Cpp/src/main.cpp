@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "pcg_rng.h"
 #include <omp.h>
+#include <mpi.h>
 #include <iomanip>
 #include <cmath>
 #include "Constants.h"
@@ -12,33 +13,39 @@
 #include "null_collision.h"
 #include "potential_solver.h"
 
-int main() {
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+    
     int i;
     
-    global_inputs::read_global_inputs("../InputData/InitialConditions.inp");
-    initialize_pcg(false);
-    Domain world("../InputData/Geometry.inp");
-    std::vector<Particle> particle_list = read_particle_inputs("../InputData/ParticleTypes.inp", world);
-    Potential_Solver solver("../InputData/Geometry.inp", world);
-    std::vector<Target_Particle> target_particle_list = read_target_particle_inputs("../InputData/ParticleTypes.inp");
-    std::vector<Null_Collision> binary_collision_list = read_null_collision_inputs("../InputData/collision.inp", particle_list, target_particle_list);
+    MPI_Comm_size(MPI_COMM_WORLD, &Constants::mpi_size);  // Get total processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &Constants::mpi_rank);  // Get current rank
+    Domain world;
+    std::vector<Particle> particle_list;
+    Potential_Solver solver;
+    std::vector<Target_Particle> target_particle_list;
+    std::vector<Null_Collision> binary_collision_list;
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Each mpi rank reads inputs independently to avoid issue with simultaneous reading
+    for (i=0;i<Constants::mpi_size;i++){
+        if (i == Constants::mpi_rank) {
+            global_inputs::read_global_inputs("../InputData/InitialConditions.inp");
+            initialize_pcg(false);
+            world.read_from_file("../InputData/Geometry.inp");
+            particle_list = read_particle_inputs("../InputData/ParticleTypes.inp", world);
+            solver.read_from_file("../InputData/Geometry.inp", world);
+            target_particle_list = read_target_particle_inputs("../InputData/ParticleTypes.inp");
+            binary_collision_list = read_null_collision_inputs("../InputData/collision.inp", particle_list, target_particle_list);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
     solver.deposit_rho(particle_list, world);
     solver.solve_potential_tridiag(world, 0.0);
     solver.make_EField(world);
     solver.initial_v_rewind(particle_list, global_inputs::time_step);
-    double P_before = 0.0;
-    for (i=0;i<global_inputs::number_charged_particles;i++){
-        P_before += particle_list[i].get_momentum_total();
-        std::cout << "KE " << particle_list[i].get_KE_ave() << std::endl;
-    }
-    std::cout << "P_before " << P_before << std::endl;
+    
     solver.move_particles(particle_list, world, global_inputs::time_step);
-    double P_after = 0.0;
-    for (i=0;i<global_inputs::number_charged_particles;i++){
-        P_after += particle_list[i].get_momentum_total();
-        std::cout << "KE " << particle_list[i].get_KE_ave() << std::endl;
-    }
-    std::cout << "P_after " << P_after << std::endl;
+    
 
     // for (i=0;i<global_inputs::number_binary_collisions;i++){
     //     binary_collision_list[i].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);
@@ -59,5 +66,10 @@ int main() {
     // }
     // std::cout << "Total average "<< sum / (10000.0) /omp_get_max_threads() << std::endl;
     // std::cout << "Total std "<< std::sqrt(var / (10000.0) /omp_get_max_threads()) << std::endl;
+
+    
+
+
+    MPI_Finalize();
     return 0;
 }
