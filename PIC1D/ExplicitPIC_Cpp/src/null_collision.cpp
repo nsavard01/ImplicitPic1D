@@ -279,6 +279,10 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
             this->total_amount_collisions[iter] += total_collisions[i][iter];
         }
     }
+    MPI_Allreduce(MPI_IN_PLACE, this->total_incident_energy.data(), this->number_collisions, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_energy_loss.data(), this->number_collisions, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_amount_collisions.data(), this->number_collisions, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &this->total_amount_collidable_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
   
 
 }

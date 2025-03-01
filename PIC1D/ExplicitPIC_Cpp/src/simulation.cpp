@@ -202,6 +202,31 @@ void Simulation::initialize_data_files(Potential_Solver& solver, std::vector<Par
 
 }
 
+void Simulation::reset_diag(std::vector<Particle>& particle_list, std::vector<Null_Collision>& binary_collision_list) {
+    for (int i=0;i<global_inputs::number_charged_particles;i++){
+        particle_list[i].accum_wall_loss[0] = 0;
+        particle_list[i].accum_wall_loss[1] = 0;
+        particle_list[i].accum_energy_loss[0] = 0.0;
+        particle_list[i].accum_energy_loss[1] = 0.0;
+    }
+
+    for (int i=0;i<global_inputs::number_binary_collisions;i++){
+        binary_collision_list[i].total_amount_collidable_particles = 0;
+        for (int j = 0;j<binary_collision_list[i].number_collisions;j++){     
+            binary_collision_list[i].total_incident_energy[j] = 0.0;
+            binary_collision_list[i].total_energy_loss[j] = 0.0;
+            binary_collision_list[i].total_amount_collisions[j] = 0.0;
+        }
+    }
+
+    this->diag_time_division = 0;
+    this->current_time = 0;
+    this->elapsed_time = 0;
+    this->charge_loss = 0;
+    this->energy_loss = 0;
+    this->momentum_total[0] = this->momentum_total[1] = this->momentum_total[2] = 0;
+}
+
 
 
 
