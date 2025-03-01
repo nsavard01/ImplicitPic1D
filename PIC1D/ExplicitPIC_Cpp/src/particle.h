@@ -28,6 +28,8 @@ public:
     double get_KE_total() const;
     void interpolate_particles();
     double get_momentum_total() const;
+    void write_cell_temperature(const std::string& dir_name, int diag_num) const;
+    void initialize_diagnostic_file(const std::string& dir_name) const; 
     // Accessor for 3D indexing
 };
 std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world);

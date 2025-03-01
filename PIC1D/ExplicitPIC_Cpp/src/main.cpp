@@ -6,12 +6,18 @@
 #include <iomanip>
 #include <cmath>
 #include "Constants.h"
+#include "basic_tools.h"
 #include "global_inputs.h"
 #include "domain.h"
 #include "particle.h"
 #include "target_particle.h"
 #include "null_collision.h"
 #include "potential_solver.h"
+#include "simulation.h"
+
+
+
+
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -48,6 +54,10 @@ int main(int argc, char** argv) {
         P_after += particle_list[i].get_momentum_total();
     }
     if (Constants::mpi_rank == 0 ) {std::cout << "P_after " << P_after << std::endl;}
+
+    Simulation simulator(global_inputs::save_folder + global_inputs::save_filename);
+
+    simulator.initialize_data_files(solver, particle_list, target_particle_list, binary_collision_list, world);
 
     // for (i=0;i<global_inputs::number_binary_collisions;i++){
     //     binary_collision_list[i].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);

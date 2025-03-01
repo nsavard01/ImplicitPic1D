@@ -4,6 +4,10 @@
 #include <omp.h>
 #include <algorithm>
 #include <numeric>
+#include <mpi.h>
+#include <iostream>
+#include "basic_tools.h"
+#include <iomanip>
 
 
 
@@ -75,6 +79,50 @@ Null_Collision::Null_Collision(int number_collisions, int length_arrays, std::ve
     }
     
  
+}
+
+void Null_Collision::initialize_data_files(const std::string& dir_name, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list) const {
+
+    if (Constants::mpi_rank == 0) {
+        std::string binary_folder = dir_name + "/BinaryCollisions/" + particle_list[this->primary_idx].name + "_on_" + target_particle_list[this->target_idx].name;
+        if (!createDirectory(binary_folder)) {
+            std::cerr << "Save directory not successfully created!" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        std::ofstream file(binary_folder + "/CollisionProperties.dat");
+        if (!file) {
+            std::cerr << "Error opening file \n";
+            return;
+        }
+
+        file << "Coll #, collType, E_thres (eV), maxSigma (m^2), EatMaxSigma (eV) \n";
+        file << std::scientific << std::setprecision(8);
+        
+        for (int i=0; i< this->number_collisions;i++){
+            size_t max_indx;
+            double max_val = 0.0;
+            for (int j= 0; j< this->length_arrays;j++){
+                if (this->sigma_array[i][j] > max_val) {
+                    max_indx = j;
+                    max_val = this->sigma_array[i][j];
+                }
+            }
+            file << i << "\t"
+                << this->collision_type[i] << "\t"
+                << this->energy_threshold[i] << "\t"
+                << this->sigma_array[i][max_indx] << "\t"
+                << this->energy_array[max_indx]
+                <<"\n";
+        }
+        
+        file.close();
+        for (int i=0; i< this->number_collisions;i++){
+            file.open(binary_folder + "/CollisionDiag_" + std::to_string(i+1) + ".dat");
+            file << "CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2) \n";
+            file.close();
+        }
+        
+    }
 }
 
 void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_list, std::vector<Target_Particle> &target_particle_list, double time_step){

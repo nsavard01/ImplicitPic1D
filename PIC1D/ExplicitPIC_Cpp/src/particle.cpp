@@ -3,6 +3,7 @@
 #include "particle.h"
 #include "global_inputs.h"
 #include "Constants.h"
+#include "basic_tools.h"
 #include <omp.h>
 #include <fstream>
 #include <sstream>
@@ -157,6 +158,60 @@ double Particle::get_momentum_total() const{
     }
     MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return sum * this->mass;;
+}
+
+void Particle::write_cell_temperature(const std::string& dir_name, int diag_num) const {
+    std::vector<double> temp(global_inputs::number_cells, 0.0);
+    std::vector<size_t> counter(global_inputs::number_cells, 0);
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        std::vector<double> temp_thread(global_inputs::number_cells, 0.0);
+        std::vector<size_t> counter_thread(global_inputs::number_cells, 0);
+        size_t last_idx = this->number_particles[thread_id]*4;
+        double v_x, v_y, v_z;
+        size_t xi_cell;
+        for (size_t part_idx = 0; part_idx < last_idx; part_idx += 4){
+            xi_cell = int(this->phase_space[thread_id][part_idx]);
+            v_x = this->phase_space[thread_id][part_idx + 1];
+            v_y = this->phase_space[thread_id][part_idx + 2];
+            v_z = this->phase_space[thread_id][part_idx + 3];
+            temp_thread[xi_cell] += v_x*v_x + v_y*v_y + v_z*v_z;
+            counter_thread[xi_cell]++;
+        }
+        #pragma omp critical
+        {
+            for (int i = 0; i<global_inputs::number_cells;i++){
+                temp[i] += temp_thread[i];
+                counter[i] += counter_thread[i];
+            }
+        }
+    }
+    MPI_Allreduce(MPI_IN_PLACE, temp.data(), global_inputs::number_cells, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, counter.data(), global_inputs::number_cells, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    for (int i = 0; i<global_inputs::number_cells;i++){
+        if (counter[i] > 0) {
+            temp[i] = temp[i] * this->mass / counter[i] / 3.0/Constants::elementary_charge;
+        } else {
+            temp[i] = 0.0;
+        }
+    }
+    std::string filename = dir_name + "/Temperature/Temp_" + this->name + "_" + std::to_string(diag_num) + ".dat";
+    write_vector_to_binary_file<double>(temp, filename, 4);
+
+}
+
+void Particle::initialize_diagnostic_file(const std::string& dir_name) const {
+    std::ofstream file(dir_name + "/ParticleDiagnostic_" + this->name + ".dat");
+    if (!file) {
+        std::cerr << "Error opening file for DateTime \n";
+        return;
+    }
+
+    file << "Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p, Temp \n";
+
+    file.close();
+
 }
 
 
