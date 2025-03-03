@@ -5,6 +5,8 @@
 #include <mpi.h>
 #include <chrono>
 #include <iomanip>
+#include <numeric>
+#include <chrono>
 
 
 
@@ -208,6 +210,8 @@ void Simulation::reset_diag(std::vector<Particle>& particle_list, std::vector<Nu
         particle_list[i].accum_wall_loss[1] = 0;
         particle_list[i].accum_energy_loss[0] = 0.0;
         particle_list[i].accum_energy_loss[1] = 0.0;
+        particle_list[i].accum_momentum_loss[0] = 0.0;
+        particle_list[i].accum_momentum_loss[1] = 0.0;
     }
 
     for (int i=0;i<global_inputs::number_binary_collisions;i++){
@@ -219,12 +223,154 @@ void Simulation::reset_diag(std::vector<Particle>& particle_list, std::vector<Nu
         }
     }
 
-    this->diag_time_division = 0;
-    this->current_time = 0;
-    this->elapsed_time = 0;
     this->charge_loss = 0;
     this->energy_loss = 0;
+    this->collision_energy_loss = 0;
+    this->momentum_loss = 0;
     this->momentum_total[0] = this->momentum_total[1] = this->momentum_total[2] = 0;
+
+    this->diag_step_diff = 0;
+}
+
+void Simulation::diag_write(Potential_Solver& solver, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list,
+    std::vector<Null_Collision>& binary_collision_list, const Domain& world) {
+    
+    double time_diff = this->diag_step_diff * global_inputs::time_step;
+    solver.write_phi(this->directory_name, this->current_diag_step, false);
+    double total_energy_system = solver.get_total_PE(world);
+    for (int  i=0;i<global_inputs::number_charged_particles;i++){
+        particle_list[i].load_density(true);
+        particle_list[i].write_density(this->directory_name, world, this->current_diag_step, false);
+        particle_list[i].write_cell_temperature(this->directory_name, this->current_diag_step);
+        particle_list[i].diag_write(this->directory_name, time_diff, this->current_time);
+        total_energy_system += particle_list[i].get_KE_total();
+
+        this->charge_loss += (particle_list[i].accum_wall_loss[0] + particle_list[i].accum_wall_loss[1]) * particle_list[i].q_times_wp; 
+        this->energy_loss += (particle_list[i].accum_energy_loss[0] + particle_list[i].accum_energy_loss[1]) * particle_list[i].mass * 0.5 * particle_list[i].weight;
+        this->momentum_loss += (particle_list[i].accum_momentum_loss[0] + particle_list[i].accum_momentum_loss[1]) * particle_list[i].mass * particle_list[i].weight;
+        this->momentum_loss += particle_list[i].get_momentum_total() * particle_list[i].weight;
+    }
+    for (int  i=0;i<global_inputs::number_binary_collisions;i++){
+        for (int coll_num = 0;coll_num < binary_collision_list[i].number_collisions;coll_num++){
+            this->collision_energy_loss += 0.5 * binary_collision_list[i].total_energy_loss[coll_num] * particle_list[binary_collision_list[i].primary_idx].weight;
+        }
+        binary_collision_list[i].diag_write(this->directory_name, particle_list, target_particle_list, time_diff);
+    }
+
+    MPI_Allreduce(MPI_IN_PLACE, &this->collision_energy_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &this->charge_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &this->energy_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &this->momentum_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (Constants::mpi_rank == 0){
+        std::ofstream file(this->directory_name + "/GlobalDiagnosticData.dat", std::ios::app); 
+        file << std::scientific << std::setprecision(8);
+        file << current_time << "\t"
+            << this->collision_energy_loss/time_diff << "\t"
+            << this->charge_loss/time_diff << "\t"
+            << this->energy_loss/time_diff << "\t"
+            << this->momentum_loss << "\t"
+            << total_energy_system
+            <<"\n";
+        file.close();
+
+        this->end_time_total = MPI_Wtime();
+
+        file.open(this->directory_name + "/SimulationTimeData.dat", std::ios::app); 
+        file << std::scientific << std::setprecision(8);
+        file << this->end_time_total - this->start_time_total << "\t"
+            << this->tot_potential_time << "\t"
+            << this->tot_particle_time << "\t"
+            << this->tot_collision_time << "\t"
+            << this->current_step
+            <<"\n";
+        file.close();
+
+    }
+    
+}
+
+void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list,
+    std::vector<Null_Collision>& binary_collision_list, const Domain& world) {
+
+    double P_before = 0.0;
+
+    // Take initial diagnostics
+    world.write_domain(this->directory_name);
+    for (int  i=0;i<global_inputs::number_charged_particles;i++){
+        P_before += particle_list[i].get_momentum_total();
+        particle_list[i].load_density(true);
+        particle_list[i].write_density(this->directory_name, world, 0, false);
+        particle_list[i].write_cell_temperature(this->directory_name, 0);
+    }
+    solver.write_phi(this->directory_name, 0, false);
+    if (Constants::mpi_rank == 0) {std::cout << "P_before " << P_before << std::endl;}
+
+    
+    this->current_time = global_inputs::start_simulation_time;
+    this->diag_time_division = (global_inputs::simulation_time - this->current_time)/global_inputs::number_diagnostic_steps;
+    this->diag_time = this->current_time + this->diag_time_division;
+    this->current_diag_step = 1;
+    this->elapsed_time = 0;
+    this->diag_step_diff = 0;
+
+    this->start_time_total = MPI_Wtime();
+    double start_time;
+    double end_time;
+    this->tot_particle_time = 0.0;
+    this->tot_potential_time = 0.0;
+    this->tot_collision_time = 0.0;
+    this->current_step = 0;
+   
+    while (this->current_time < global_inputs::simulation_time) { 
+        this->current_time += global_inputs::time_step;
+        start_time = MPI_Wtime();
+        solver.move_particles(particle_list, world, global_inputs::time_step);
+        solver.deposit_rho(particle_list, world);
+        end_time = MPI_Wtime();
+        this->tot_particle_time += (end_time - start_time);
+
+        start_time = MPI_Wtime();
+        solver.solve_potential_tridiag(world, 0.0);
+        solver.make_EField(world);
+        end_time = MPI_Wtime();
+        this->tot_potential_time += (end_time - start_time);
+
+        start_time = MPI_Wtime();
+        for (int coll_num = 0;coll_num < global_inputs::number_binary_collisions;coll_num++){
+            binary_collision_list[coll_num].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);
+        }
+        end_time = MPI_Wtime();
+        this->tot_collision_time += (end_time - start_time);
+
+        this->diag_step_diff++;
+
+        if (this->current_time >= this->diag_time) {
+            this->current_step = this->current_step + this->diag_step_diff;
+            if (Constants::mpi_rank == 0) {
+                std::cout << "Simulation is " << this->current_time * 100 /global_inputs::simulation_time << " % done" << std::endl;
+            }
+            this->diag_write(solver, particle_list, target_particle_list, binary_collision_list, world);
+            this->reset_diag(particle_list, binary_collision_list);
+            this->diag_time += this->diag_time_division;
+            this->current_diag_step++;
+        }
+    }
+    this->end_time_total = MPI_Wtime();
+    if (Constants::mpi_rank == 0) {
+        std::cout << "Total particle time " << this->tot_particle_time << " seconds" << std::endl;
+        std::cout << "Total potential time " << this->tot_potential_time << " seconds" << std::endl;
+        std::cout << "Total collision time " << this->tot_collision_time << " seconds" << std::endl;
+        std::cout << "Total time is " << this->end_time_total - this->start_time_total << " seconds" << std::endl;
+    }
+    double P_after = 0.0;
+    for (int i=0;i<global_inputs::number_charged_particles;i++){
+        P_after += particle_list[i].get_momentum_total();
+        if (Constants::mpi_rank == 0) {
+            std::cout << "Number particles " << std::accumulate(particle_list[i].number_particles.begin(),
+            particle_list[i].number_particles.end(), 0) << std::endl;
+        }
+    }
+    if (Constants::mpi_rank == 0 ) {std::cout << "P_after " << P_after << std::endl;}
 }
 
 

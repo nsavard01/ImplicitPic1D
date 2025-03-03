@@ -11,6 +11,7 @@
 #include <mpi.h>
 #include <numeric>
 #include <algorithm>
+#include <iomanip>
 
 
 Particle::Particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in)
@@ -26,6 +27,7 @@ Particle::Particle(double mass_in, double charge_in, size_t number_in, size_t fi
     this->final_idx = final_in;
     this->accum_wall_loss[0] = this->accum_wall_loss[1] = 0;
     this->accum_energy_loss[0] = this->accum_energy_loss[0] = 0.0;
+    this->accum_momentum_loss[0] = this->accum_momentum_loss[0] = 0.0;
     this->number_particles.resize(number_threads);
     this->number_collidable_particles.resize(number_threads);
     size_t expanded_size = static_cast<size_t>(4) * final_idx;
@@ -34,6 +36,7 @@ Particle::Particle(double mass_in, double charge_in, size_t number_in, size_t fi
     this->momentum_loss.resize(number_threads);
     this->energy_loss.resize(number_threads);
     this->wall_loss.resize(number_threads);
+    this->density.resize(global_inputs::number_nodes, 0.0);
     for (i = 0; i < number_threads; i++){
         this->number_particles[i] = number_in;
         this->number_collidable_particles[i] = number_in;
@@ -57,6 +60,7 @@ void Particle::initialize_weight(double n_ave, double L_domain) {
     for (i = 0; i < number_threads; i++){
        total_part += this->number_particles[i];
     }
+    MPI_Allreduce(MPI_IN_PLACE, &total_part, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     this->weight = n_ave * L_domain / static_cast<double>(total_part);
     this->q_times_wp = this->charge * this->weight;
 }
@@ -102,6 +106,50 @@ void Particle::interpolate_particles(){
         work_space[xi_right] += d;
     } 
 }
+
+void Particle::load_density(bool reset_bool){
+    if (reset_bool) {
+        #pragma omp parallel for
+        for (size_t i = 0; i < global_inputs::number_nodes;i++) {
+            this->density[i] = 0.0;
+        }
+    }
+    #pragma omp parallel
+    {
+        this->interpolate_particles();
+        #pragma omp barrier
+        int thread_id = omp_get_thread_num();
+        #pragma omp critical
+        {   
+            for (int i = 0; i<global_inputs::number_nodes; i++) {
+                this->density[i] += this->work_space[thread_id][i];
+            }
+        }
+    }
+
+}
+
+void Particle::write_density(const std::string& dir_name, const Domain& world, int current_diag, bool average_bool){
+    if (world.boundary_conditions[0] == 3) {
+        this->density[0] = this->density[0] + this->density[global_inputs::number_cells];
+        this->density[global_inputs::number_cells] = this->density[0];
+    } else {
+        this->density[0] = 2.0*this->density[0];
+        this->density[global_inputs::number_cells] = 2.0 * this->density[global_inputs::number_cells];
+    }
+    for (int i = 0;i<global_inputs::number_nodes; i++) {
+        this->density[i] = this->density[i] * this->weight/ world.del_X;
+    }
+    MPI_Allreduce(MPI_IN_PLACE, this->density.data(), global_inputs::number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    std::string filename;
+    if (average_bool) {
+        filename = dir_name + "/Density/density_" + this->name + "_Average.dat";
+    } else {
+        filename = dir_name + "/Density/density_" + this->name + "_" + std::to_string(current_diag) + ".dat";
+    }
+    if (Constants::mpi_rank == 0) {write_vector_to_binary_file(this->density, filename, 4);}
+}
+
 
 double Particle::get_KE_ave() const{
     // in eV
@@ -157,7 +205,7 @@ double Particle::get_momentum_total() const{
         }
     }
     MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    return sum * this->mass;;
+    return sum * this->mass;
 }
 
 void Particle::write_cell_temperature(const std::string& dir_name, int diag_num) const {
@@ -197,7 +245,7 @@ void Particle::write_cell_temperature(const std::string& dir_name, int diag_num)
         }
     }
     std::string filename = dir_name + "/Temperature/Temp_" + this->name + "_" + std::to_string(diag_num) + ".dat";
-    write_vector_to_binary_file<double>(temp, filename, 4);
+    if (Constants::mpi_rank == 0) {write_vector_to_binary_file<double>(temp, filename, 4);}
 
 }
 
@@ -211,6 +259,32 @@ void Particle::initialize_diagnostic_file(const std::string& dir_name) const {
     file << "Time (s), leftCurrentLoss(A/m^2), rightCurrentLoss(A/m^2), leftPowerLoss(W/m^2), rightPowerLoss(W/m^2), N_p, Temp \n";
 
     file.close();
+
+}
+
+void Particle::diag_write(const std::string& dir_name, const double& time_diff, const double& current_time) const {
+    size_t total_number_particles = std::accumulate(this->number_particles.begin(),this->number_particles.end(), 0);
+    MPI_Allreduce(MPI_IN_PLACE, &total_number_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    double KE_ave = this->get_KE_ave() * 2.0/3.0;
+    if (Constants::mpi_rank == 0) {
+        std::ofstream file(dir_name + "/ParticleDiagnostic_" + this->name + ".dat", std::ios::app);
+        if (!file) {
+            std::cerr << "Error opening file\n";
+            return;
+        }
+        
+        file << std::scientific << std::setprecision(8);
+        file << current_time << "\t"
+            << this->accum_wall_loss[0] * this->q_times_wp/time_diff << "\t"
+            << this->accum_wall_loss[1] * this->q_times_wp/time_diff << "\t"
+            << this->accum_wall_loss[0] * this->mass * this->weight * 0.5 / time_diff << "\t"
+            << this->accum_wall_loss[1] * this->mass * this->weight * 0.5 / time_diff << "\t"
+            << total_number_particles << "\t"
+            << KE_ave
+            <<"\n";
+
+        file.close();
+    }
 
 }
 

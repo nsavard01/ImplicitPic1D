@@ -14,9 +14,11 @@ public:
     void deposit_rho(std::vector<Particle> &particle_list, const Domain& world);
     void solve_potential_tridiag(const Domain& world, const double& time);
     void make_EField(const Domain& world);
+    double get_total_PE(const Domain& world) const;
     void initial_v_rewind(std::vector<Particle> &particle_list, const double& time_step);
     inline double get_EField_at_loc(const double& xi) const;
     void move_particles(std::vector<Particle> &particle_list, const Domain& world, const double& time_step);
+    void write_phi(const std::string& dir_name, int current_diag, bool average_bool);
 };
 
 #endif // PARTICLE_H

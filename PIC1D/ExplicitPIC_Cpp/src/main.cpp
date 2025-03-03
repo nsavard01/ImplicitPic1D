@@ -43,21 +43,13 @@ int main(int argc, char** argv) {
     solver.solve_potential_tridiag(world, 0.0);
     solver.make_EField(world);
     solver.initial_v_rewind(particle_list, global_inputs::time_step);
-    double P_before = 0.0;
-    for (i=0;i<global_inputs::number_charged_particles;i++){
-        P_before += particle_list[i].get_momentum_total();
-    }
-    if (Constants::mpi_rank == 0) {std::cout << "P_before " << P_before << std::endl;}
-    solver.move_particles(particle_list, world, global_inputs::time_step);
-    double P_after = 0.0;
-    for (i=0;i<global_inputs::number_charged_particles;i++){
-        P_after += particle_list[i].get_momentum_total();
-    }
-    if (Constants::mpi_rank == 0 ) {std::cout << "P_after " << P_after << std::endl;}
+    
 
     Simulation simulator(global_inputs::save_folder + global_inputs::save_filename);
 
     simulator.initialize_data_files(solver, particle_list, target_particle_list, binary_collision_list, world);
+    simulator.reset_diag(particle_list, binary_collision_list);
+    simulator.run(solver, particle_list, target_particle_list, binary_collision_list, world);
 
     // for (i=0;i<global_inputs::number_binary_collisions;i++){
     //     binary_collision_list[i].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);

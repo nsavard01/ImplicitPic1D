@@ -8,6 +8,7 @@
 #include <omp.h>
 #include <mpi.h>
 #include "Constants.h"
+#include "basic_tools.h"
 
 Potential_Solver::Potential_Solver(){
     
@@ -141,6 +142,16 @@ void Potential_Solver::deposit_rho(std::vector<Particle> &particle_list, const D
     MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), global_inputs::number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
+void Potential_Solver::write_phi(const std::string& dir_name, int current_diag, bool average_bool) {
+    std::string filename;
+    if (average_bool) {
+        filename = dir_name + "/Phi/phi_Average.dat";
+    } else {
+        filename = dir_name + "/Phi/phi_" + std::to_string(current_diag) + ".dat";
+    }
+    if (Constants::mpi_rank == 0) {write_vector_to_binary_file(this->phi, filename, 4);}
+}
+
 void Potential_Solver::solve_potential_tridiag(const Domain& world, const double& time) {
     double temp;
     if (world.boundary_conditions[0] == 2) {
@@ -194,6 +205,15 @@ inline double Potential_Solver::get_EField_at_loc(const double& xi) const{
     return this->EField[l_left] * (1.0 - d) + this->EField[l_left+1] * d;
 }
 
+double Potential_Solver::get_total_PE(const Domain& world) const{
+    double sum = 0.0;
+    sum += 0.5 * (this->EField[0]*this->EField[0] + this->EField[1]*this->EField[1]);
+    for (int i = 1;i<global_inputs::number_cells;i++){
+        sum += this->EField[i]*this->EField[i];
+    }
+    return sum * Constants::epsilon_0 * world.del_X;
+}
+
 void Potential_Solver::initial_v_rewind(std::vector<Particle> &particle_list, const double& time_step) {
     #pragma omp parallel
     {
@@ -209,7 +229,6 @@ void Potential_Solver::initial_v_rewind(std::vector<Particle> &particle_list, co
             }
         }
     }
-
 }
 
 void Potential_Solver::move_particles(std::vector<Particle> &particle_list, const Domain& world, const double& time_step) {
@@ -288,6 +307,8 @@ void Potential_Solver::move_particles(std::vector<Particle> &particle_list, cons
             particle_list[part_num].accum_wall_loss[1] += particle_list[part_num].wall_loss[i_thread][1];
             particle_list[part_num].accum_energy_loss[0] += particle_list[part_num].energy_loss[i_thread][0];
             particle_list[part_num].accum_energy_loss[1] += particle_list[part_num].energy_loss[i_thread][1];
+            particle_list[part_num].accum_momentum_loss[0] += particle_list[part_num].momentum_loss[i_thread][0];
+            particle_list[part_num].accum_momentum_loss[1] += particle_list[part_num].momentum_loss[i_thread][1];
         }
     }
 

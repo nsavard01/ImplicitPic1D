@@ -10,4 +10,8 @@ import glob, os
 import matplotlib.animation as animation
 import math
 
-phi = np.fromfile('test.dat', dtype = 'float', offset = 4)
+phi = np.fromfile('phi_0.dat', dtype = 'float', offset = 4)
+grid = np.fromfile('domainGrid.dat', dtype='float', offset = 4)
+boundary_conditions = np.fromfile('domainBoundaryConditions.dat', dtype='int', offset = 4)
+density = np.fromfile('density_He+_0.dat', dtype = 'float', offset = 4)
+temp = np.fromfile('Temp_e_0.dat', dtype = 'float', offset = 4)

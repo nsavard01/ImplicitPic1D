@@ -18,6 +18,7 @@ public:
     // Constructor declaration
     Domain();
     void read_from_file(const std::string& filename);
+    void write_domain(const std::string& dir_name) const;
     double get_x_from_xi(double xi) const;
     double get_xi_from_x(double xi) const;
 };

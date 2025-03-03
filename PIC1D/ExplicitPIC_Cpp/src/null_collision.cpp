@@ -125,6 +125,26 @@ void Null_Collision::initialize_data_files(const std::string& dir_name, std::vec
     }
 }
 
+void Null_Collision::diag_write(const std::string& dir_name, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list, const double& time_diff) const {
+    if (Constants::mpi_rank == 0) {
+        std::string binary_folder = dir_name + "/BinaryCollisions/" + particle_list[this->primary_idx].name + "_on_" + target_particle_list[this->target_idx].name;
+        for (int i=0; i< this->number_collisions;i++){
+            std::ofstream file(binary_folder + "/CollisionDiag_" + std::to_string(i+1) + ".dat", std::ios::app);
+            file << std::scientific << std::setprecision(8);
+            file << double(this->total_amount_collisions[i])/double(this->total_amount_collidable_particles) << "\t"
+                << this->total_energy_loss[i] * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
+                << this->total_incident_energy[i] * particle_list[this->primary_idx].mass * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
+                << this->total_energy_loss[i] * 0.5 * particle_list[this->primary_idx].weight / time_diff << "\t"
+                << double(this->total_amount_collisions[i]) * particle_list[this->primary_idx].weight / time_diff
+                << "\n";
+            file.close();
+        }
+        
+    }
+}
+
+
+
 void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_list, std::vector<Target_Particle> &target_particle_list, double time_step){
     
     

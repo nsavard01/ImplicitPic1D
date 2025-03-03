@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <mpi.h>
+#include "basic_tools.h"
 
 Domain::Domain(){
 
@@ -83,6 +84,13 @@ void Domain::read_from_file(const std::string& filename)
         std::cout << "Grid length: " << L_domain << std::endl;
         std::cout << "delta x is: " << del_X << std::endl;
         std::cout << "-----------------------"  << std::endl;
+    }
+}
+
+void Domain::write_domain(const std::string& dir_name) const{
+    if (Constants::mpi_rank == 0) {
+        write_vector_to_binary_file(this->grid, dir_name + "/domainGrid.dat", 4);
+        write_vector_to_binary_file(this->boundary_conditions, dir_name + "/domainBoundaryConditions.dat", 4);
     }
 }
 

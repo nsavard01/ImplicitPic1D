@@ -35,7 +35,6 @@ void write_vector_to_binary_file(const std::vector<T>& vec, const std::string& f
     outFile.write(byte_stream.data(), byte_stream.size());  // Write raw bytes to file
     outFile.close();
 
-    std::cout << "Data written to " << filename << " successfully!" << std::endl;
 }
 
 // Function to create a directory
