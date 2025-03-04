@@ -160,15 +160,7 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
     Target_Particle& target_particle = target_particle_list[target_idx];
     double primary_mass = primary_particle.mass;
     double target_mass = target_particle.mass;
-    int number_threads = omp_get_max_threads();
-    std::vector<std::vector<size_t>> total_collisions(number_threads);
-    std::vector<std::vector<double>> energy_loss(number_threads), total_incident_energy(number_threads);
-    int i;
-    for (i=0;i<number_threads;i++){
-        total_collisions[i].resize(this->number_collisions, 0);
-        energy_loss[i].resize(this->number_collisions, 0.0);
-        total_incident_energy[i].resize(this->number_collisions,0.0);
-    }
+    
     this->total_amount_collidable_particles += std::accumulate(primary_particle.number_collidable_particles.begin(),
         primary_particle.number_collidable_particles.end(), 0);
 
@@ -182,6 +174,8 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
     {
         int thread_id = omp_get_thread_num();
         int iter, coll_idx;
+        std::vector<size_t> total_collisions(this->number_collisions,0);
+        std::vector<double> energy_loss(this->number_collisions, 0.0), tot_incident_energy(this->number_collisions, 0.0);
         size_t number_total_particles = primary_particle.number_collidable_particles[thread_id];
         double number_selected_real = P_null * static_cast<double>(number_total_particles);
         size_t number_selected = static_cast<size_t>(number_selected_real);
@@ -234,9 +228,9 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
                 if (energy_CM > this->energy_threshold[coll_idx]) {
                     sigma_v += (this->sigma_array[coll_idx][indx_low] * (1.0 - interp_d) + this->sigma_array[coll_idx][indx_high] * interp_d) * speed_CM;
                     if (Rand <= sigma_v/this->sigma_v_max) {
-                        total_collisions[thread_id][coll_idx]++;
+                        total_collisions[coll_idx]++;
                         incident_energy = incident_velocity[0]*incident_velocity[0] + incident_velocity[1]*incident_velocity[1] + incident_velocity[2]*incident_velocity[2];
-                        total_incident_energy[thread_id][coll_idx] += incident_energy;
+                        tot_incident_energy[coll_idx] += incident_energy;
                         del_E = (energy_CM - this->energy_threshold[coll_idx]) * Constants::elementary_charge;
                         switch (this->collision_type[coll_idx]) {
                             case 1:
@@ -265,7 +259,7 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
                                 for (iter=0;iter<3;iter++){
                                     secondary_particle.phase_space[thread_id][secondary_idx*4+iter+1] = target_velocity[iter];
                                 }
-                                energy_loss[thread_id][coll_idx] += (- third_particle.mass * (velocity_CM[0]*velocity_CM[0] +
+                                energy_loss[coll_idx] += (- third_particle.mass * (velocity_CM[0]*velocity_CM[0] +
                                     velocity_CM[1]*velocity_CM[1] + velocity_CM[2]*velocity_CM[2]) - secondary_particle.mass * (target_velocity[0]*target_velocity[0] + 
                                     target_velocity[1]*target_velocity[1] + target_velocity[2]*target_velocity[2]));
                                 break;
@@ -279,7 +273,7 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
                                 break;
                         }
                         
-                        energy_loss[thread_id][coll_idx] += primary_mass * (incident_energy - incident_velocity[0]*incident_velocity[0] - 
+                        energy_loss[coll_idx] += primary_mass * (incident_energy - incident_velocity[0]*incident_velocity[0] - 
                             incident_velocity[1]*incident_velocity[1] - incident_velocity[2]*incident_velocity[2]);
                         break;
                     }
@@ -297,14 +291,13 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
             number_total_particles--;
         }
         primary_particle.number_collidable_particles[thread_id] = number_total_particles;
-    }
-    int iter;
-    
-    for (i = 0;i<number_threads;i++) {
-        for (iter=0;iter<this->number_collisions;iter++){
-            this->total_incident_energy[iter] += total_incident_energy[i][iter];
-            this->total_energy_loss[iter] += energy_loss[i][iter];
-            this->total_amount_collisions[iter] += total_collisions[i][iter];
+        #pragma omp critical
+        {
+           for (int iter=0;iter<this->number_collisions;iter++){
+                this->total_incident_energy[iter] += tot_incident_energy[iter];
+                this->total_energy_loss[iter] += energy_loss[iter];
+                this->total_amount_collisions[iter] += total_collisions[iter];
+            } 
         }
     }
     

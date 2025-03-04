@@ -1,6 +1,6 @@
 16 ! number of processors
 128 ! number of cells
-7.374631268436578e-07 0.0d0 ! simulation time
+9.43952802359882e-05 0.0d0 ! simulation time
 2.56e14! Initial number density (1/m^3) of electrons
 2.59 ! T_e (eV)
 0.025 ! T_i (eV)
