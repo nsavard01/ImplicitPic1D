@@ -1,5 +1,5 @@
 0.067 ! Domain length in meters, 0.0002572099123144409d0 for two stream
-3 3 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 RF dirichlet)
-0 0 ! Voltage for left and right side boundary, used for dirichlet and periodic conditions
-0.0 ! Osciallating voltage frequency
+1 4 ! Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 RF dirichlet)
+0 450 ! Voltage for left and right side boundary, used for dirichlet and periodic conditions
+13.56e6 ! Osciallating voltage frequency
 END

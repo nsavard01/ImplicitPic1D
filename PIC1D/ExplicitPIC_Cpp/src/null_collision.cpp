@@ -125,7 +125,15 @@ void Null_Collision::initialize_data_files(const std::string& dir_name, std::vec
     }
 }
 
-void Null_Collision::diag_write(const std::string& dir_name, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list, const double& time_diff) const {
+
+void Null_Collision::gather_mpi() {
+    MPI_Allreduce(MPI_IN_PLACE, this->total_incident_energy.data(), this->number_collisions, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_energy_loss.data(), this->number_collisions, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_amount_collisions.data(), this->number_collisions, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &this->total_amount_collidable_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+}
+
+void Null_Collision::diag_write(const std::string& dir_name, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list, const double& time_diff) {
     if (Constants::mpi_rank == 0) {
         std::string binary_folder = dir_name + "/BinaryCollisions/" + particle_list[this->primary_idx].name + "_on_" + target_particle_list[this->target_idx].name;
         for (int i=0; i< this->number_collisions;i++){
@@ -299,10 +307,7 @@ void Null_Collision::generate_null_collisions(std::vector<Particle> &particle_li
             this->total_amount_collisions[iter] += total_collisions[i][iter];
         }
     }
-    MPI_Allreduce(MPI_IN_PLACE, this->total_incident_energy.data(), this->number_collisions, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, this->total_energy_loss.data(), this->number_collisions, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, this->total_amount_collisions.data(), this->number_collisions, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &this->total_amount_collidable_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    
   
 
 }
@@ -343,6 +348,7 @@ inline void Null_Collision::triple_product_isotropic(const double &primary_mass,
     double e_vector[3], y_vector[3], u_vector[3];
     double cos_theta, speed_per_particle, phi, sin_theta, cos_phi, sin_phi, cos_theta_new, sin_theta_new, speed_electron, P_beginning, V_cm;
     int i;
+
 
     speed_per_particle = std::sqrt(2.0 * del_E * this->reduced_mass_triple / primary_mass/primary_mass);
 
@@ -710,7 +716,7 @@ std::vector<Null_Collision> read_null_collision_inputs(const std::string& filena
         mass_inputs[2] = 0.0;
         int u;
         for (u=0;u<number_collisions_per_primary[k]; u++) {
-            if (collision_type_per_primary_sorted[k][u] == 3) {
+            if (collision_type_per_primary_sorted[k][u] == 2) {
                 mass_2 = particle_list[product_indices_sorted[k][u][1]].mass;
                 mass_inputs[2] = 1.0/(1.0/mass_1 + 1.0/mass_2 + 1.0/Constants::electron_mass);
                 break;

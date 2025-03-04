@@ -60,18 +60,19 @@ void Particle::initialize_weight(double n_ave, double L_domain) {
     for (i = 0; i < number_threads; i++){
        total_part += this->number_particles[i];
     }
-    MPI_Allreduce(MPI_IN_PLACE, &total_part, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
-    this->weight = n_ave * L_domain / static_cast<double>(total_part);
+    MPI_Allreduce(&total_part, &this->total_number_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    this->weight = n_ave * L_domain / static_cast<double>(this->total_number_particles);
     this->q_times_wp = this->charge * this->weight;
 }
 
 void Particle::initialize_rand_uniform(double T_ave, const Domain& world) {
     double v_therm = std::sqrt(T_ave * Constants::elementary_charge / this->mass);
-    #pragma omp parallel
+    double sum_v_sq = 0.0, sum_v = 0;
+    #pragma omp parallel reduction(+:sum_v_sq, sum_v)
     {   
         int thread_id = omp_get_thread_num();
         size_t part_num;
-        double x_pos, R_1, R_2, R_3, R_4;
+        double x_pos, R_1, R_2, R_3, R_4, v_x, v_y, v_z;
         for (part_num = 0; part_num < this->number_particles[thread_id]; part_num++){
             x_pos = pcg32_random_r() * world.L_domain;
             this->phase_space[thread_id][part_num * 4] = world.get_xi_from_x(x_pos);
@@ -79,13 +80,20 @@ void Particle::initialize_rand_uniform(double T_ave, const Domain& world) {
             R_2 = pcg32_random_r();
             R_3 = pcg32_random_r();
             R_4 = pcg32_random_r();
-            this->phase_space[thread_id][part_num*4+1] = v_therm * std::sqrt(-2.0 * std::log(R_1)) * std::cos(2.0 * M_PI * R_2);
-            this->phase_space[thread_id][part_num*4+2] = v_therm * std::sqrt(-2.0 * std::log(R_1)) * std::sin(2.0 * M_PI * R_2);
-            this->phase_space[thread_id][part_num*4+3] = v_therm * std::sqrt(-2.0 * std::log(R_3)) * std::cos(2.0 * M_PI * R_4);
+            v_x = v_therm * std::sqrt(-2.0 * std::log(R_1)) * std::cos(2.0 * M_PI * R_2);
+            v_y = v_therm * std::sqrt(-2.0 * std::log(R_1)) * std::sin(2.0 * M_PI * R_2);
+            v_z = v_therm * std::sqrt(-2.0 * std::log(R_3)) * std::cos(2.0 * M_PI * R_4);
+            this->phase_space[thread_id][part_num*4+1] = v_x;
+            this->phase_space[thread_id][part_num*4+2] = v_y;
+            this->phase_space[thread_id][part_num*4+3] = v_z;
+            sum_v += v_x;
+            sum_v_sq += v_x * v_x + v_y*v_y + v_z * v_z;
 
         }
         
     }
+    MPI_Allreduce(&sum_v, &this->total_sum_v_x, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_v_sq, &this->total_sum_v_square, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
 void Particle::interpolate_particles(){
@@ -105,6 +113,31 @@ void Particle::interpolate_particles(){
         work_space[xi_left] += (1.0 - d);
         work_space[xi_right] += d;
     } 
+}
+
+void Particle::gather_mpi(){
+    double sum_v_sq = 0.0, sum_v = 0;
+    #pragma omp parallel reduction(+:sum_v_sq, sum_v)
+    {
+        int thread_id = omp_get_thread_num();
+        double v_x, v_y, v_z;
+        size_t final_part = this->number_particles[thread_id]*4;
+        size_t part_num;
+        for (part_num = 0; part_num < final_part; part_num += 4){
+            v_x = this->phase_space[thread_id][part_num + 1];
+            v_y = this->phase_space[thread_id][part_num + 2];
+            v_z = this->phase_space[thread_id][part_num + 3];
+            sum_v += v_x;
+            sum_v_sq += v_x * v_x + v_y*v_y + v_z * v_z;
+        }
+    }
+    size_t num = std::accumulate(this->number_particles.begin(),this->number_particles.end(), 0);
+    MPI_Allreduce(&sum_v, &this->total_sum_v_x, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_v_sq, &this->total_sum_v_square, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&num, &this->total_number_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_energy_loss, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_momentum_loss, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_loss, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 }
 
 void Particle::load_density(bool reset_bool){
@@ -127,6 +160,22 @@ void Particle::load_density(bool reset_bool){
         }
     }
 
+}
+
+void Particle::write_phase_space(const std::string& dir_name, int diag_num) const{
+    for (int rank_num = 0; rank_num < Constants::mpi_size; rank_num++){
+        if (Constants::mpi_rank == rank_num) {
+            for (int i_thread = 0; i_thread<global_inputs::number_omp_threads;i_thread++){
+                size_t size_vec = this->number_particles[i_thread]*4;
+                std::vector<double> temp_phase_space(this->phase_space[i_thread].begin(), this->phase_space[i_thread].begin() + size_vec);
+                bool append = (Constants::mpi_rank != 0);
+                
+                std::string filename = dir_name + "/PhaseSpace/phaseSpace_" + this->name + "_thread" + std::to_string(i_thread+1) + ".dat";
+                write_vector_to_binary_file(temp_phase_space, filename, 0, 0x00, append);
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
 }
 
 void Particle::write_density(const std::string& dir_name, const Domain& world, int current_diag, bool average_bool){
@@ -153,59 +202,15 @@ void Particle::write_density(const std::string& dir_name, const Domain& world, i
 
 double Particle::get_KE_ave() const{
     // in eV
-    double sum = 0.0;
-    double num_part_total = 0.0;
-    #pragma omp parallel reduction(+:sum, num_part_total)
-    {   
-        int thread_id = omp_get_thread_num();
-        double v_x, v_y, v_z;
-        size_t part_num;
-        for (part_num = 0; part_num < this->number_particles[thread_id]; part_num++){
-            v_x = this->phase_space[thread_id][part_num * 4 + 1];
-            v_y = this->phase_space[thread_id][part_num * 4 + 2];
-            v_z = this->phase_space[thread_id][part_num * 4 + 3];
-            sum += v_x * v_x + v_y*v_y + v_z * v_z;
-        }
-        num_part_total += this->number_particles[thread_id];
-    }
-    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &num_part_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    return sum * this->mass * 0.5 / num_part_total / Constants::elementary_charge;
+    return this->total_sum_v_square * this->mass * 0.5 / this->total_number_particles / Constants::elementary_charge;
 }
 
 double Particle::get_KE_total() const{
-    // in eV
-    double sum = 0.0;
-    #pragma omp parallel reduction(+:sum)
-    {   
-        int thread_id = omp_get_thread_num();
-        double v_x, v_y, v_z;
-        size_t part_num;
-        for (part_num = 0; part_num < this->number_particles[thread_id]; part_num++){
-            v_x = this->phase_space[thread_id][part_num * 4 + 1];
-            v_y = this->phase_space[thread_id][part_num * 4 + 2];
-            v_z = this->phase_space[thread_id][part_num * 4 + 3];
-            sum += v_x * v_x + v_y*v_y + v_z * v_z;
-        }
-    }
-    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    return sum * this->mass * 0.5 * this->weight;
+    return this->total_sum_v_square * this->mass * 0.5 * this->weight;
 }
 
 double Particle::get_momentum_total() const{
-    double sum = 0.0;
-    #pragma omp parallel reduction(+:sum)
-    {   
-        int thread_id = omp_get_thread_num();
-        double v_x;
-        size_t last_idx = this->number_particles[thread_id]*4;
-        for (size_t part_idx = 0; part_idx < last_idx; part_idx += 4){
-            v_x = this->phase_space[thread_id][part_idx+1];
-            sum += v_x;
-        }
-    }
-    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    return sum * this->mass;
+    return this->total_sum_v_x * this->mass;
 }
 
 void Particle::write_cell_temperature(const std::string& dir_name, int diag_num) const {
@@ -263,8 +268,6 @@ void Particle::initialize_diagnostic_file(const std::string& dir_name) const {
 }
 
 void Particle::diag_write(const std::string& dir_name, const double& time_diff, const double& current_time) const {
-    size_t total_number_particles = std::accumulate(this->number_particles.begin(),this->number_particles.end(), 0);
-    MPI_Allreduce(MPI_IN_PLACE, &total_number_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     double KE_ave = this->get_KE_ave() * 2.0/3.0;
     if (Constants::mpi_rank == 0) {
         std::ofstream file(dir_name + "/ParticleDiagnostic_" + this->name + ".dat", std::ios::app);
@@ -277,14 +280,15 @@ void Particle::diag_write(const std::string& dir_name, const double& time_diff, 
         file << current_time << "\t"
             << this->accum_wall_loss[0] * this->q_times_wp/time_diff << "\t"
             << this->accum_wall_loss[1] * this->q_times_wp/time_diff << "\t"
-            << this->accum_wall_loss[0] * this->mass * this->weight * 0.5 / time_diff << "\t"
-            << this->accum_wall_loss[1] * this->mass * this->weight * 0.5 / time_diff << "\t"
-            << total_number_particles << "\t"
+            << this->accum_energy_loss[0] * this->mass * this->weight * 0.5 / time_diff << "\t"
+            << this->accum_energy_loss[1] * this->mass * this->weight * 0.5 / time_diff << "\t"
+            << this->total_number_particles << "\t"
             << KE_ave
             <<"\n";
 
         file.close();
         std::cout << "Number of " << this->name << " is " << total_number_particles << std::endl;
+        std::cout << "  " << std::endl;
     }
 
 }
@@ -404,17 +408,13 @@ std::vector<Particle> read_particle_inputs(const std::string& filename, const Do
             std::cout << "Charge: " << particle_list[i].charge << std::endl;
             std::cout << "Weight: " << particle_list[i].weight << std::endl;
         }
-        size_t tot_sum = std::accumulate(particle_list[i].number_particles.begin(),
-            particle_list[i].number_particles.end(), 0);
-        MPI_Allreduce(MPI_IN_PLACE, &tot_sum, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
         double ave_KE = particle_list[i].get_KE_ave();
         if (Constants::mpi_rank == 0) {
-            std::cout << "total number of particles: " << tot_sum << std::endl;
+            std::cout << "total number of particles: " << particle_list[i].total_number_particles << std::endl;
             std::cout << "Allocated total amount of particles per thread " << particle_list[i].final_idx << std::endl;
             std::cout << "Averge KE: " << ave_KE << std::endl;
             std::cout << "----------------- " << std::endl;
         }
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     return particle_list;

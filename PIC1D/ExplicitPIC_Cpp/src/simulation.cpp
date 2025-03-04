@@ -239,10 +239,12 @@ void Simulation::diag_write(Potential_Solver& solver, std::vector<Particle>& par
     solver.write_phi(this->directory_name, this->current_diag_step, false);
     double total_energy_system = solver.get_total_PE(world);
     for (int  i=0;i<global_inputs::number_charged_particles;i++){
+        particle_list[i].gather_mpi();
         particle_list[i].load_density(true);
         particle_list[i].write_density(this->directory_name, world, this->current_diag_step, false);
         particle_list[i].write_cell_temperature(this->directory_name, this->current_diag_step);
         particle_list[i].diag_write(this->directory_name, time_diff, this->current_time);
+        particle_list[i].write_phase_space(this->directory_name, this->current_diag_step);
         total_energy_system += particle_list[i].get_KE_total();
 
         this->charge_loss += (particle_list[i].accum_wall_loss[0] + particle_list[i].accum_wall_loss[1]) * particle_list[i].q_times_wp; 
@@ -251,16 +253,13 @@ void Simulation::diag_write(Potential_Solver& solver, std::vector<Particle>& par
         this->momentum_loss += particle_list[i].get_momentum_total() * particle_list[i].weight;
     }
     for (int  i=0;i<global_inputs::number_binary_collisions;i++){
+        binary_collision_list[i].gather_mpi();
+        binary_collision_list[i].diag_write(this->directory_name, particle_list, target_particle_list, time_diff);
         for (int coll_num = 0;coll_num < binary_collision_list[i].number_collisions;coll_num++){
             this->collision_energy_loss += 0.5 * binary_collision_list[i].total_energy_loss[coll_num] * particle_list[binary_collision_list[i].primary_idx].weight;
         }
-        binary_collision_list[i].diag_write(this->directory_name, particle_list, target_particle_list, time_diff);
     }
 
-    MPI_Allreduce(MPI_IN_PLACE, &this->collision_energy_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &this->charge_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &this->energy_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &this->momentum_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     if (Constants::mpi_rank == 0){
         std::ofstream file(this->directory_name + "/GlobalDiagnosticData.dat", std::ios::app); 
         file << std::scientific << std::setprecision(8);
@@ -327,7 +326,7 @@ void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_l
         this->tot_particle_time += (end_time - start_time);
 
         start_time = MPI_Wtime();
-        solver.solve_potential_tridiag(world, 0.0);
+        solver.solve_potential_tridiag(world, this->current_time);
         solver.make_EField(world);
         end_time = MPI_Wtime();
         this->tot_potential_time += (end_time - start_time);

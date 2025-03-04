@@ -13,7 +13,8 @@ public:
     int accum_wall_loss[2];
     std::string name;
     double accum_energy_loss[2], accum_momentum_loss[2];
-    size_t final_idx;
+    size_t final_idx, total_number_particles;
+    double total_sum_v_square, total_sum_v_x;
     std::vector<size_t> number_particles, number_collidable_particles;
     std::vector<std::vector<double>> phase_space, work_space, momentum_loss, energy_loss;
     std::vector<std::vector<int>> wall_loss;
@@ -30,6 +31,8 @@ public:
     void diag_write(const std::string& dir_name, const double& time_diff, const double& current_time) const;
     void load_density(bool reset_bool);
     void write_density(const std::string& dir_name, const Domain& world, int current_diag, bool average_bool);
+    void gather_mpi();
+    void write_phase_space(const std::string& dir_name, int diag_num) const;
     // Accessor for 3D indexing
 };
 std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world);

@@ -323,7 +323,7 @@ contains
         totCollTime = totCollTime + real(collisionTime, kind = real64) / real(timingRate, kind = real64)
         open(9,file=directoryName//'/SimulationFinalData.dat')
         write(9,'("Elapsed Times(s), Potential Time (s), Mover Time (s), Collision Time (s), Total Steps")')
-        write(9,"(4(es16.8,1x), 1(I8, 1x))") elapsed_time, totPotTime, totMoverTime, totCollTime, i+1
+        write(9,"(4(es16.8,1x), 1(I8, 1x))") elapsed_time, totPotTime, totMoverTime, totCollTime, i
         close(9)
         print *, "Elapsed time for simulation is:", elapsed_time, "seconds"
         print *, 'moverTime is:', totMoverTime

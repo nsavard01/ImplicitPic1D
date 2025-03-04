@@ -6,10 +6,10 @@
 #include <dirent.h>
 
 template <typename T>
-void write_vector_to_binary_file(const std::vector<T>& vec, const std::string& filename, size_t paddingBytes, char paddingValue) {
+void write_vector_to_binary_file(const std::vector<T>& vec, const std::string& filename, size_t paddingBytes, char paddingValue, bool append) {
     // Calculate total size (data + padding)
     size_t size_of_T = sizeof(T);
-    size_t total_size = paddingBytes + vec.size() * size_of_T;
+    size_t total_size = 2* paddingBytes + vec.size() * size_of_T;
     
 
     // Create a byte buffer and pre-allocate required space
@@ -25,8 +25,17 @@ void write_vector_to_binary_file(const std::vector<T>& vec, const std::string& f
         std::memcpy(byte_stream.data() + paddingBytes + i * size_of_T, &vec[i], size_of_T);
     }
 
-    // Step 5: Write the byte buffer to the binary file
-    std::ofstream outFile(filename, std::ios::binary);
+    if (paddingBytes > 0) {
+        std::fill(byte_stream.begin() + paddingBytes + vec.size() * size_of_T, byte_stream.end(), paddingValue);  // Fill padding at the end
+    }
+
+    std::ios_base::openmode mode = std::ios::binary;
+    if (append){
+        mode |= std::ios::app;
+    }
+
+    // Write the byte buffer to the binary file
+    std::ofstream outFile(filename, mode);
     if (!outFile) {
         std::cerr << "Error opening file!" << std::endl;
         return;
@@ -55,5 +64,5 @@ bool directoryExists(const std::string& dirName) {
     return false;
 }
 
-template void write_vector_to_binary_file<double>(const std::vector<double>&, const std::string&, size_t, char);
-template void write_vector_to_binary_file<int>(const std::vector<int>&, const std::string&, size_t, char);
+template void write_vector_to_binary_file<double>(const std::vector<double>&, const std::string&, size_t, char, bool);
+template void write_vector_to_binary_file<int>(const std::vector<int>&, const std::string&, size_t, char, bool);

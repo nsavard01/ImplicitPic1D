@@ -1,13 +1,13 @@
 32 ! number of processors
-3.687315634218289e-05 0.0d0 ! simulation time
-1.d17 ! Initial number density (1/m^3) of electrons
-4.0 ! T_e (eV)
-0.025 ! T_i (eV)
+7.374631268436578e-07 0.0d0 ! simulation time
+2.56d14 ! Initial number density (1/m^3) of electrons
+2.59d0 ! T_e (eV)
+0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-10.d0 1.053518752633797e-11  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-3.6873156342182893e-06 ! amount of time to average final Diagnostics
+1.5d0 1.8436578171091445e-10  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+7.374631268436578e-07 ! amount of time to average final Diagnostics
 ../../../../ExplicitData/  !Save directory
-test !save file name
-no Exp_RFBenchmark_highDensity_EvenMoreResolved_x6 ! Restart(yes/no) and save directory to take from
+Exp_test_fortran !save file name
+no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
 END
 
