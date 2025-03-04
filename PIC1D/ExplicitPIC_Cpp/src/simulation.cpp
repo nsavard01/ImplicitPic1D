@@ -292,18 +292,15 @@ void Simulation::diag_write(Potential_Solver& solver, std::vector<Particle>& par
 void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list,
     std::vector<Null_Collision>& binary_collision_list, const Domain& world) {
 
-    double P_before = 0.0;
 
     // Take initial diagnostics
     world.write_domain(this->directory_name);
     for (int  i=0;i<global_inputs::number_charged_particles;i++){
-        P_before += particle_list[i].get_momentum_total();
         particle_list[i].load_density(true);
         particle_list[i].write_density(this->directory_name, world, 0, false);
         particle_list[i].write_cell_temperature(this->directory_name, 0);
     }
     solver.write_phi(this->directory_name, 0, false);
-    if (Constants::mpi_rank == 0) {std::cout << "P_before " << P_before << std::endl;}
 
     
     this->current_time = global_inputs::start_simulation_time;
@@ -343,9 +340,9 @@ void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_l
         this->tot_collision_time += (end_time - start_time);
 
         this->diag_step_diff++;
+        this->current_step++;
 
         if (this->current_time >= this->diag_time) {
-            this->current_step = this->current_step + this->diag_step_diff;
             if (Constants::mpi_rank == 0) {
                 std::cout << "Simulation is " << this->current_time * 100 /global_inputs::simulation_time << " % done" << std::endl;
             }
@@ -357,20 +354,21 @@ void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_l
     }
     this->end_time_total = MPI_Wtime();
     if (Constants::mpi_rank == 0) {
+        std::ofstream file(this->directory_name + "/SimulationFinalData.dat", std::ios::app);
+        file << std::scientific << std::setprecision(8);
+        file << this->end_time_total - this->start_time_total << "\t"
+            << this->tot_potential_time << "\t"
+            << this->tot_particle_time << "\t"
+            << this->tot_collision_time << "\t"
+            << this->current_step
+            <<"\n";
+        file.close();
         std::cout << "Total particle time " << this->tot_particle_time << " seconds" << std::endl;
         std::cout << "Total potential time " << this->tot_potential_time << " seconds" << std::endl;
         std::cout << "Total collision time " << this->tot_collision_time << " seconds" << std::endl;
         std::cout << "Total time is " << this->end_time_total - this->start_time_total << " seconds" << std::endl;
     }
-    double P_after = 0.0;
-    for (int i=0;i<global_inputs::number_charged_particles;i++){
-        P_after += particle_list[i].get_momentum_total();
-        if (Constants::mpi_rank == 0) {
-            std::cout << "Number particles " << std::accumulate(particle_list[i].number_particles.begin(),
-            particle_list[i].number_particles.end(), 0) << std::endl;
-        }
-    }
-    if (Constants::mpi_rank == 0 ) {std::cout << "P_after " << P_after << std::endl;}
+    
 }
 
 

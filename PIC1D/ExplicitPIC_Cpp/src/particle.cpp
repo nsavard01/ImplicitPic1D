@@ -284,6 +284,7 @@ void Particle::diag_write(const std::string& dir_name, const double& time_diff, 
             <<"\n";
 
         file.close();
+        std::cout << "Number of " << this->name << " is " << total_number_particles << std::endl;
     }
 
 }
