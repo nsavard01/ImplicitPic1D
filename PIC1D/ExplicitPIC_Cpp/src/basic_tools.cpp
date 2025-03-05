@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <dirent.h>
+#include "Constants.h"
+#include <cmath>
 
 template <typename T>
 void write_vector_to_binary_file(const std::vector<T>& vec, const std::string& filename, size_t paddingBytes, char paddingValue, bool append) {
@@ -62,6 +64,14 @@ bool directoryExists(const std::string& dirName) {
         return true;
     }
     return false;
+}
+
+double plasma_frequency(double n_e) {
+    return Constants::elementary_charge * std::sqrt(n_e /Constants::electron_mass / Constants::epsilon_0);
+}
+
+double debye_length(double n_e, double T_e) {
+    return std::sqrt(Constants::epsilon_0 * T_e / n_e / Constants::elementary_charge);
 }
 
 template void write_vector_to_binary_file<double>(const std::vector<double>&, const std::string&, size_t, char, bool);

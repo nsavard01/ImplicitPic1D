@@ -178,7 +178,7 @@ void Particle::write_phase_space(const std::string& dir_name, int diag_num) cons
     }
 }
 
-void Particle::write_density(const std::string& dir_name, const Domain& world, int current_diag, bool average_bool){
+void Particle::write_density(const std::string& dir_name, const Domain& world, size_t current_diag, bool average_bool){
     if (world.boundary_conditions[0] == 3) {
         this->density[0] = this->density[0] + this->density[global_inputs::number_cells];
         this->density[global_inputs::number_cells] = this->density[0];
@@ -193,6 +193,9 @@ void Particle::write_density(const std::string& dir_name, const Domain& world, i
     std::string filename;
     if (average_bool) {
         filename = dir_name + "/Density/density_" + this->name + "_Average.dat";
+        for (int i = 0; i<global_inputs::number_nodes;i++){
+            this->density[i] /= current_diag; //current diag is averaging number if averaging
+        }
     } else {
         filename = dir_name + "/Density/density_" + this->name + "_" + std::to_string(current_diag) + ".dat";
     }
@@ -267,28 +270,45 @@ void Particle::initialize_diagnostic_file(const std::string& dir_name) const {
 
 }
 
-void Particle::diag_write(const std::string& dir_name, const double& time_diff, const double& current_time) const {
+void Particle::diag_write(const std::string& dir_name, const double& time_diff, const double& current_time, bool average_bool) const {
     double KE_ave = this->get_KE_ave() * 2.0/3.0;
     if (Constants::mpi_rank == 0) {
-        std::ofstream file(dir_name + "/ParticleDiagnostic_" + this->name + ".dat", std::ios::app);
-        if (!file) {
-            std::cerr << "Error opening file\n";
-            return;
-        }
-        
-        file << std::scientific << std::setprecision(8);
-        file << current_time << "\t"
-            << this->accum_wall_loss[0] * this->q_times_wp/time_diff << "\t"
-            << this->accum_wall_loss[1] * this->q_times_wp/time_diff << "\t"
-            << this->accum_energy_loss[0] * this->mass * this->weight * 0.5 / time_diff << "\t"
-            << this->accum_energy_loss[1] * this->mass * this->weight * 0.5 / time_diff << "\t"
-            << this->total_number_particles << "\t"
-            << KE_ave
-            <<"\n";
+        if (!average_bool) {
+            std::ofstream file(dir_name + "/ParticleDiagnostic_" + this->name + ".dat", std::ios::app);
+            if (!file) {
+                std::cerr << "Error opening file\n";
+                return;
+            }
+            
+            file << std::scientific << std::setprecision(8);
+            file << current_time << "\t"
+                << this->accum_wall_loss[0] * this->q_times_wp/time_diff << "\t"
+                << this->accum_wall_loss[1] * this->q_times_wp/time_diff << "\t"
+                << this->accum_energy_loss[0] * this->mass * this->weight * 0.5 / time_diff << "\t"
+                << this->accum_energy_loss[1] * this->mass * this->weight * 0.5 / time_diff << "\t"
+                << this->total_number_particles << "\t"
+                << KE_ave
+                <<"\n";
 
-        file.close();
-        std::cout << "Number of " << this->name << " is " << total_number_particles << std::endl;
-        std::cout << "  " << std::endl;
+            file.close();
+            std::cout << "Number of " << this->name << " is " << total_number_particles << std::endl;
+            std::cout << "  " << std::endl;
+        } else {
+            std::ofstream file(dir_name + "/ParticleAveDiagnostic_" + this->name + ".dat");
+            if (!file) {
+                std::cerr << "Error opening file\n";
+                return;
+            }
+            file << "Left curr (A/m^2), right curr (A/m^2), left power (W/m^2), right power (W/m^2) \n";
+            file << std::scientific << std::setprecision(8);
+            file << this->accum_wall_loss[0] * this->q_times_wp/time_diff << "\t"
+                << this->accum_wall_loss[1] * this->q_times_wp/time_diff << "\t"
+                << this->accum_energy_loss[0] * this->mass * this->weight * 0.5 / time_diff << "\t"
+                << this->accum_energy_loss[1] * this->mass * this->weight * 0.5 / time_diff 
+                <<"\n";
+
+            file.close();
+        }
     }
 
 }

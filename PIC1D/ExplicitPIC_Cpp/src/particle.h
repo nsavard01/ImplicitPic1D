@@ -28,9 +28,9 @@ public:
     double get_momentum_total() const;
     void write_cell_temperature(const std::string& dir_name, int diag_num) const;
     void initialize_diagnostic_file(const std::string& dir_name) const; 
-    void diag_write(const std::string& dir_name, const double& time_diff, const double& current_time) const;
+    void diag_write(const std::string& dir_name, const double& time_diff, const double& current_time, bool average_bool = false) const;
     void load_density(bool reset_bool);
-    void write_density(const std::string& dir_name, const Domain& world, int current_diag, bool average_bool);
+    void write_density(const std::string& dir_name, const Domain& world, size_t current_diag, bool average_bool);
     void gather_mpi();
     void write_phase_space(const std::string& dir_name, int diag_num) const;
     // Accessor for 3D indexing

@@ -23,6 +23,8 @@ public:
     std::vector<Null_Collision>& binary_collision_list, const Domain& world);
     void run(Potential_Solver& solver, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list,
         std::vector<Null_Collision>& binary_collision_list, const Domain& world);
+    void averaging(Potential_Solver& solver, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list,
+        std::vector<Null_Collision>& binary_collision_list, const Domain& world);
 };
 
 #endif 

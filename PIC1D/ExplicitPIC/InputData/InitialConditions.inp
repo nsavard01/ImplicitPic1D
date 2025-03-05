@@ -5,7 +5,7 @@
 0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
 1.5d0 1.8436578171091445e-10  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-7.374631268436578e-07 ! amount of time to average final Diagnostics
+7.374631268436578e-06 ! amount of time to average final Diagnostics
 ../../../../ExplicitData/  !Save directory
 Exp_test_fortran !save file name
 no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from

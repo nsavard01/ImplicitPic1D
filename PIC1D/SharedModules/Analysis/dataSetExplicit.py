@@ -204,6 +204,7 @@ class dataSetExplicit:
             VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype='float', offset=4)
             VHist = VTot[0:-1]
             VMax = VTot[-1]
+
             Vedge = np.linspace(-VMax, VMax, VHist.size)
         else:
             raise Warning('No averaging done!')

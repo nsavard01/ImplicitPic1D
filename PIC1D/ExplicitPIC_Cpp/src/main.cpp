@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
     simulator.initialize_data_files(solver, particle_list, target_particle_list, binary_collision_list, world);
     simulator.reset_diag(particle_list, binary_collision_list);
     simulator.run(solver, particle_list, target_particle_list, binary_collision_list, world);
+    simulator.averaging(solver, particle_list, target_particle_list, binary_collision_list, world);
 
     // for (i=0;i<global_inputs::number_binary_collisions;i++){
     //     binary_collision_list[i].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);

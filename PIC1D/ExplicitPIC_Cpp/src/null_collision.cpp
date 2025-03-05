@@ -133,18 +133,34 @@ void Null_Collision::gather_mpi() {
     MPI_Allreduce(MPI_IN_PLACE, &this->total_amount_collidable_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
 }
 
-void Null_Collision::diag_write(const std::string& dir_name, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list, const double& time_diff) {
+void Null_Collision::diag_write(const std::string& dir_name, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list, const double& time_diff, bool average_bool) {
     if (Constants::mpi_rank == 0) {
         std::string binary_folder = dir_name + "/BinaryCollisions/" + particle_list[this->primary_idx].name + "_on_" + target_particle_list[this->target_idx].name;
-        for (int i=0; i< this->number_collisions;i++){
-            std::ofstream file(binary_folder + "/CollisionDiag_" + std::to_string(i+1) + ".dat", std::ios::app);
+        if (!average_bool) {   
+            for (int i=0; i< this->number_collisions;i++){
+                std::ofstream file(binary_folder + "/CollisionDiag_" + std::to_string(i+1) + ".dat", std::ios::app);
+                file << std::scientific << std::setprecision(8);
+                file << double(this->total_amount_collisions[i])/double(this->total_amount_collidable_particles) << "\t"
+                    << this->total_energy_loss[i] * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
+                    << this->total_incident_energy[i] * particle_list[this->primary_idx].mass * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
+                    << this->total_energy_loss[i] * 0.5 * particle_list[this->primary_idx].weight / time_diff << "\t"
+                    << double(this->total_amount_collisions[i]) * particle_list[this->primary_idx].weight / time_diff
+                    << "\n";
+                file.close();
+            }
+        } else {
+            std::ofstream file(binary_folder + "/AveCollisionDiag.dat");
+            file << "Coll #, CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2) \n";
             file << std::scientific << std::setprecision(8);
-            file << double(this->total_amount_collisions[i])/double(this->total_amount_collidable_particles) << "\t"
-                << this->total_energy_loss[i] * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
-                << this->total_incident_energy[i] * particle_list[this->primary_idx].mass * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
-                << this->total_energy_loss[i] * 0.5 * particle_list[this->primary_idx].weight / time_diff << "\t"
-                << double(this->total_amount_collisions[i]) * particle_list[this->primary_idx].weight / time_diff
-                << "\n";
+            for (int i=0; i< this->number_collisions;i++){
+                file << i+1 << "\t"
+                    << double(this->total_amount_collisions[i])/double(this->total_amount_collidable_particles) << "\t"
+                    << this->total_energy_loss[i] * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
+                    << this->total_incident_energy[i] * particle_list[this->primary_idx].mass * 0.5 / Constants::elementary_charge/double(this->total_amount_collisions[i]) << "\t"
+                    << this->total_energy_loss[i] * 0.5 * particle_list[this->primary_idx].weight / time_diff << "\t"
+                    << double(this->total_amount_collisions[i]) * particle_list[this->primary_idx].weight / time_diff
+                    << "\n";
+            }
             file.close();
         }
         

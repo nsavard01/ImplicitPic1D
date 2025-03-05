@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <numeric>
 #include <chrono>
+#include <omp.h>
+#include <algorithm>
 
 
 
@@ -212,6 +214,9 @@ void Simulation::reset_diag(std::vector<Particle>& particle_list, std::vector<Nu
         particle_list[i].accum_energy_loss[1] = 0.0;
         particle_list[i].accum_momentum_loss[0] = 0.0;
         particle_list[i].accum_momentum_loss[1] = 0.0;
+        for (int j = 0; j < global_inputs::number_nodes;j++){
+            particle_list[i].density[j] = 0.0;
+        }
     }
 
     for (int i=0;i<global_inputs::number_binary_collisions;i++){
@@ -368,6 +373,222 @@ void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_l
         std::cout << "Total time is " << this->end_time_total - this->start_time_total << " seconds" << std::endl;
     }
     
+}
+
+
+void Simulation::averaging(Potential_Solver& solver, std::vector<Particle>& particle_list, std::vector<Target_Particle>& target_particle_list,
+    std::vector<Null_Collision>& binary_collision_list, const Domain& world) {
+
+
+    std::cout << " Averaging over " << global_inputs::averaging_time << " s" << std::endl;
+    std::vector<double> phi_average(global_inputs::number_nodes, 0.0);
+    double start_time = this->current_time;
+    this->current_step = 0;
+    while (this->current_time - start_time < global_inputs::averaging_time) { 
+        this->current_time += global_inputs::time_step;
+        
+        solver.move_particles(particle_list, world, global_inputs::time_step);
+        solver.deposit_rho(particle_list, world);
+       
+        solver.solve_potential_tridiag(world, this->current_time);
+        solver.make_EField(world);
+  
+        for (int coll_num = 0;coll_num < global_inputs::number_binary_collisions;coll_num++){
+            binary_collision_list[coll_num].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);
+        }
+
+        for (int i = 0; i<global_inputs::number_charged_particles;i++){
+            particle_list[i].load_density(false);
+        }
+        this->current_step++;
+        
+        for (int i= 0; i<global_inputs::number_nodes;i++){
+            phi_average[i] += solver.phi[i];
+        }
+        
+    }
+    size_t steps_average = this->current_step;
+    for (int i= 0; i<global_inputs::number_nodes;i++){
+        phi_average[i] /= steps_average;
+    }
+    
+    std::string filename = this->directory_name + "/Phi/phi_Average.dat";
+    if (Constants::mpi_rank == 0) {write_vector_to_binary_file(phi_average, filename, 4);}
+    double time_diff = this->current_step * global_inputs::time_step;
+    for (int part = 0;part<global_inputs::number_charged_particles;part++) {
+        particle_list[part].gather_mpi();
+        this->charge_loss += (particle_list[part].accum_wall_loss[0] + particle_list[part].accum_wall_loss[1]) * particle_list[part].q_times_wp; 
+        this->energy_loss += (particle_list[part].accum_energy_loss[0] + particle_list[part].accum_energy_loss[1]) * particle_list[part].mass * 0.5 * particle_list[part].weight;
+        particle_list[part].write_density(this->directory_name, world, steps_average, true);
+        particle_list[part].diag_write(this->directory_name, global_inputs::averaging_time, this->current_time, true);
+    }
+
+    for (int  i=0;i<global_inputs::number_binary_collisions;i++){
+        binary_collision_list[i].gather_mpi();
+        binary_collision_list[i].diag_write(this->directory_name, particle_list, target_particle_list, time_diff, true);
+        for (int coll_num = 0;coll_num < binary_collision_list[i].number_collisions;coll_num++){
+            this->collision_energy_loss += 0.5 * binary_collision_list[i].total_energy_loss[coll_num] * particle_list[binary_collision_list[i].primary_idx].weight;
+        }
+    }
+
+    if (Constants::mpi_rank == 0) {
+        std::ofstream file(this->directory_name + "/GlobalDiagnosticDataAveraged.dat");
+        file << "Number Steps, Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2) \n";
+        file << std::scientific << std::setprecision(8);
+        file << steps_average << "\t"
+            << this->collision_energy_loss/time_diff << "\t"
+            << this->charge_loss/time_diff << "\t"
+            << this->energy_loss/time_diff
+            <<"\n";
+        file.close();
+
+        std::cout << "Power loss to wall is: " << this->energy_loss/time_diff << std::endl;
+        std::cout << "Power loss to collisions is: " << this->collision_energy_loss/time_diff << std::endl;
+    }
+
+    std::vector<double> E_min(global_inputs::number_charged_particles), E_min_log(global_inputs::number_charged_particles),
+        E_max(global_inputs::number_charged_particles, 0.0), V_max(global_inputs::number_charged_particles, 0.0), diff_E(global_inputs::number_charged_particles);
+
+    for (int part_type = 0; part_type < global_inputs::number_charged_particles; part_type++){
+        double E_max_local = 0.0, V_max_local = 0.0;
+        double E_min_local = 0.1 * Constants::elementary_charge * 2.0 / particle_list[part_type].mass;
+        #pragma omp parallel reduction(max:V_max_local, E_max_local) reduction(min:E_min_local)
+        {
+            int thread_id = omp_get_thread_num();
+            size_t last_part_idx = particle_list[part_type].number_particles[thread_id]*4;
+            std::vector<double>& phase_space = particle_list[part_type].phase_space[thread_id];
+            double v_x, v_y, v_z, part_v, part_E;
+            for (size_t part_idx=0;part_idx < last_part_idx; part_idx += 4){
+                v_x = phase_space[part_idx+1];
+                part_v = std::abs(v_x);
+                V_max_local = std::max(V_max_local, part_v);
+                v_y = phase_space[part_idx+2];
+                v_z = phase_space[part_idx+3];
+                part_E = v_x*v_x + v_y*v_y + v_z*v_z;
+                E_max_local = std::max(E_max_local, part_E);
+                E_min_local = std::min(E_min_local, part_E);
+            }
+        }
+        MPI_Allreduce(MPI_IN_PLACE, &E_min_local, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &E_max_local, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &V_max_local, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        E_min[part_type] = E_min_local;
+        E_max[part_type] = E_max_local;
+        V_max[part_type] = V_max_local;
+        E_min_log[part_type] = std::log(E_min_local);
+    }
+
+    int number_bins = 100;
+    std::vector<std::vector<double>> E_grid(global_inputs::number_charged_particles);
+    for (int part_type = 0; part_type < global_inputs::number_charged_particles; part_type++){
+        diff_E[part_type] = (std::log(E_max[part_type]) - std::log(E_min[part_type]))/(number_bins-1);
+        double E_temp = std::log(E_min[part_type]);
+        E_grid[part_type].resize(number_bins);
+        for (int i = 0; i<number_bins;i++){
+            E_grid[part_type][i] = std::exp(E_temp);
+            E_temp = E_temp + diff_E[part_type];
+        }
+    }
+
+    size_t number_steps = 100;
+    if (world.boundary_conditions[0] == 4 || world.boundary_conditions[global_inputs::number_cells] == 4) {
+        number_steps = size_t(2.0 * M_PI / solver.RF_rad_frequency / global_inputs::time_step);
+    } else if (particle_list[0].mass == Constants::electron_mass) {
+        double max_density = *std::max_element(particle_list[0].density.begin(), particle_list[0].density.end());
+        number_steps = size_t(50.0 / plasma_frequency(max_density) / global_inputs::time_step);
+    }
+
+    std::vector<std::vector<double>> E_hist(global_inputs::number_charged_particles), V_hist(global_inputs::number_charged_particles);
+    for (int part_type = 0; part_type < global_inputs::number_charged_particles; part_type++){
+        E_hist[part_type].resize(number_bins, 0.0);
+        V_hist[part_type].resize(2*number_bins, 0.0);
+    }
+    for (size_t step = 0; step < number_steps; step++) {
+        this->current_time += global_inputs::time_step;
+        
+        solver.move_particles(particle_list, world, global_inputs::time_step);
+        solver.deposit_rho(particle_list, world);
+       
+        solver.solve_potential_tridiag(world, this->current_time);
+        solver.make_EField(world);
+  
+        for (int coll_num = 0;coll_num < global_inputs::number_binary_collisions;coll_num++){
+            binary_collision_list[coll_num].generate_null_collisions(particle_list, target_particle_list, global_inputs::time_step);
+        }
+
+        #pragma omp parallel
+        {
+            int thread_id = omp_get_thread_num();
+            std::vector<std::vector<double>> E_hist_local(global_inputs::number_charged_particles), V_hist_local(global_inputs::number_charged_particles);
+            for (int part_type = 0; part_type < global_inputs::number_charged_particles; part_type++){
+                E_hist_local[part_type].resize(number_bins, 0.0);
+                V_hist_local[part_type].resize(2*number_bins, 0.0);
+                size_t last_part_idx = particle_list[part_type].number_particles[thread_id]*4;
+                std::vector<double>& phase_space = particle_list[part_type].phase_space[thread_id];
+                double v_x, v_y, v_z, part_v, part_E;
+                int bin;
+                for (size_t part_idx=0;part_idx < last_part_idx; part_idx += 4){
+                    v_x = phase_space[part_idx+1];
+                    v_y = phase_space[part_idx+2];
+                    v_z = phase_space[part_idx+3];
+                    part_v = 0.5 * v_x * (2 * number_bins-1)/V_max[part_type] + number_bins - 0.5;
+                    if (part_v > 0 && part_v < 2*number_bins-1) {
+                        bin = int(part_v);
+                        part_v = part_v - bin;
+                        V_hist_local[part_type][bin] += (1.0 - part_v);
+                        V_hist_local[part_type][bin+1] += part_v;
+                    }
+                    part_E = v_x*v_x + v_y*v_y + v_z*v_z;
+                    if (part_E > E_min[part_type] && part_E < E_max[part_type]) {
+                        part_E = (std::log(part_E) - E_min_log[part_type]) / diff_E[part_type];
+                        bin = int(part_E);
+                        part_E = part_E - bin;
+                        E_hist_local[part_type][bin] += (1.0 - part_E);
+                        E_hist_local[part_type][bin+1] += part_E;
+                    }
+                }
+          
+            }
+            #pragma omp critical 
+            {
+                for (int part_type = 0; part_type < global_inputs::number_charged_particles; part_type++){
+                    for (int bin = 0; bin< number_bins; bin++) {
+                        E_hist[part_type][bin] += E_hist_local[part_type][bin];
+                    }
+                    for (int bin = 0; bin < 2*number_bins; bin++) {
+                        V_hist[part_type][bin] += V_hist_local[part_type][bin];
+                    }
+                    
+                }
+            }
+
+        }
+
+    }
+
+
+    for (int part_type = 0; part_type < global_inputs::number_charged_particles; part_type++){
+        
+        MPI_Allreduce(MPI_IN_PLACE, V_hist[part_type].data(), 2*number_bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, E_hist[part_type].data(), number_bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        if (Constants::mpi_rank == 0) {
+            std::string filename = this->directory_name + "/Temperature/Temp_" + particle_list[part_type].name + "_average.dat";
+            std::vector<int> pad(1, 1);
+            write_vector_to_binary_file(pad, filename, 0);
+            write_vector_to_binary_file(V_hist[part_type], filename, 0, 0x00, true);
+            std::vector<double> pad_other(1, V_max[part_type]);
+            write_vector_to_binary_file(pad_other, filename, 0, 0x00, true);
+
+            filename = this->directory_name + "/Temperature/TempEnergy_" + particle_list[part_type].name + "_average.dat";
+            write_vector_to_binary_file(pad, filename, 0);
+            write_vector_to_binary_file(E_hist[part_type], filename, 0, 0x00, true);
+            for (int bin = 0; bin < number_bins; bin++){
+                E_grid[part_type][bin] *= 0.5 * particle_list[part_type].mass / Constants::elementary_charge;
+            }
+            write_vector_to_binary_file(E_grid[part_type], filename, 0, 0x00, true);
+        }
+    }
+
 }
 
 
