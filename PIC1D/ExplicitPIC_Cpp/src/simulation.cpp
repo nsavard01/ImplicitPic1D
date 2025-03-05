@@ -357,6 +357,7 @@ void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_l
         }
     }
     this->end_time_total = MPI_Wtime();
+    
     if (Constants::mpi_rank == 0) {
         std::ofstream file(this->directory_name + "/SimulationFinalData.dat", std::ios::app);
         file << std::scientific << std::setprecision(8);
@@ -367,6 +368,7 @@ void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_l
             << this->current_step
             <<"\n";
         file.close();
+        
         std::cout << "Total particle time " << this->tot_particle_time << " seconds" << std::endl;
         std::cout << "Total potential time " << this->tot_potential_time << " seconds" << std::endl;
         std::cout << "Total collision time " << this->tot_collision_time << " seconds" << std::endl;
@@ -380,7 +382,7 @@ void Simulation::averaging(Potential_Solver& solver, std::vector<Particle>& part
     std::vector<Null_Collision>& binary_collision_list, const Domain& world) {
 
 
-    std::cout << " Averaging over " << global_inputs::averaging_time << " s" << std::endl;
+    if (Constants::mpi_rank == 0) {std::cout << " Averaging over " << global_inputs::averaging_time << " s" << std::endl;}
     std::vector<double> phi_average(global_inputs::number_nodes, 0.0);
     double start_time = this->current_time;
     this->current_step = 0;

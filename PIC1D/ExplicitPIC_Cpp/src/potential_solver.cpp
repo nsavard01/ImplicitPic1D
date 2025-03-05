@@ -231,7 +231,7 @@ void Potential_Solver::initial_v_rewind(std::vector<Particle> &particle_list, co
     }
 }
 
-void Potential_Solver::move_particles(std::vector<Particle> &particle_list, const Domain& world, const double& time_step) {
+void Potential_Solver::move_particles(std::vector<Particle> &particle_list, const Domain& world, const double& time_step) const {
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();

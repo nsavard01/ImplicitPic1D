@@ -26,12 +26,14 @@ int main(int argc, char** argv) {
     
     MPI_Comm_size(MPI_COMM_WORLD, &Constants::mpi_size);  // Get total processes
     MPI_Comm_rank(MPI_COMM_WORLD, &Constants::mpi_rank);  // Get current rank
+    
     Domain world;
     std::vector<Particle> particle_list;
     Potential_Solver solver;
     std::vector<Target_Particle> target_particle_list;
     std::vector<Null_Collision> binary_collision_list;
     global_inputs::read_global_inputs("../InputData/InitialConditions.inp");
+
     initialize_pcg(false);
     world.read_from_file("../InputData/Geometry.inp");
     particle_list = read_particle_inputs("../InputData/ParticleTypes.inp", world);

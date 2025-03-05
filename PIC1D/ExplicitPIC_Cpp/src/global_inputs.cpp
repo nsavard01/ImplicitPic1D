@@ -92,6 +92,7 @@ namespace global_inputs {
                 file.close();
             }
         }
+        setenv("OMP_PROC_BIND", "TRUE", 1);
         omp_set_num_threads(number_omp_threads);
         // Determine mpi data type
         if (sizeof(size_t) == sizeof(unsigned int)) {
