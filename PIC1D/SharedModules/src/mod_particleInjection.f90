@@ -182,9 +182,9 @@ contains
         !$OMP end parallel
     end subroutine maxwellianHeating
 
-    subroutine EField_heating(species, old_time, current_time, world)
+    subroutine EField_heating(electron, old_time, current_time, world)
         ! Add velocity along y direction to particles from given oscillating field (sinusoidal)
-        type(Particle), intent(in out) :: species
+        type(Particle), intent(in out) :: electron
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: current_time, old_time
         real(real64) :: del_v, coeff_time, xi, Efield_future, v_sum, del_t, xi_left, xi_right
@@ -196,37 +196,37 @@ contains
         xi_left = world%getLfromX(power_left_bound_x)
         xi_right = world%getLfromX(power_right_bound_x)
         del_t = current_time - old_time
-        del_v = species%q_over_m * Efield_RF_past * del_t
+        del_v = electron%q_over_m * Efield_RF_past * del_t
         v_sum = 0
         number_part = 0
         !$OMP parallel private(iThread, i) reduction(+:v_sum, number_part)
         iThread = omp_get_thread_num() + 1
-        do i = 1, species%N_p(iThread)
-            xi = species%phaseSpace(1, i, iThread)
+        do i = 1, electron%N_p(iThread)
+            xi = electron%phaseSpace(1, i, iThread)
             if (xi > xi_left .and. xi < xi_right) then
-                species%phaseSpace(3, i, iThread) = species%phaseSpace(3, i, iThread) + del_v
-                v_sum = v_sum + species%phaseSpace(3, i, iThread)
+                electron%phaseSpace(3, i, iThread) = electron%phaseSpace(3, i, iThread) + del_v
+                v_sum = v_sum + electron%phaseSpace(3, i, iThread)
                 number_part = number_part + 1
             end if
         end do
         !$OMP end parallel
 
         
-        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 - species%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + Efield_RF_past
+        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 + electron%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + Efield_RF_past
        
       
-        J_particles_heat = species%q_times_wp * v_sum / (power_right_bound_x - power_left_bound_x)
+        J_particles_heat = electron%q_times_wp * v_sum / (power_right_bound_x - power_left_bound_x)
         
         v_ave_heat = v_sum / real(number_part, kind = 8)
-        Efield_RF_energy = (v_sum * species%q * Efield_RF_past * del_t + real(number_part, kind = 8) * 0.5d0 * species%q**2 * Efield_Rf_past**2 * del_t**2 / species%mass) ! Joules
+        Efield_RF_energy = (v_sum * electron%q * Efield_RF_past * del_t + real(number_part, kind = 8) * 0.5d0 * electron%q**2 * Efield_Rf_past**2 * del_t**2 / electron%mass) ! Joules
    
         Efield_RF_past = Efield_future
         
     end subroutine EField_heating
 
-    subroutine EField_heating_implicit(species, old_time, current_time, world)
+    subroutine EField_heating_implicit(electron, old_time, current_time, world)
         ! Add velocity along y direction to particles from given oscillating field (sinusoidal)
-        type(Particle), intent(in out) :: species
+        type(Particle), intent(in out) :: electron
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: current_time, old_time
         real(real64) :: del_v, coeff_time, xi, half_time, Efield_future, v_sum, Efield_half, del_t, other_coeff, xi_left, xi_right
@@ -242,38 +242,38 @@ contains
         number_part = 0
         !$OMP parallel private(iThread, i) reduction(+:v_sum, number_part)
         iThread = omp_get_thread_num() + 1
-        do i = 1, species%N_p(iThread)
-            xi = species%phaseSpace(1, i, iThread)
+        do i = 1, electron%N_p(iThread)
+            xi = electron%phaseSpace(1, i, iThread)
             if (xi > xi_left .and. xi < xi_right) then
-                v_sum = v_sum + species%phaseSpace(3, i, iThread)
+                v_sum = v_sum + electron%phaseSpace(3, i, iThread)
                 number_part = number_part + 1
             end if
         end do
         !$OMP end parallel
 
-        other_coeff = 0.5d0 * species%q * species%q_times_wp * real(number_part, kind = 8) * del_t**2 / (power_right_bound_x - power_left_bound_x) / species%mass / eps_0
-        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 - &
-            species%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + &
-                (1.0d0 - other_coeff) * Efield_RF_past
-        Efield_future = Efield_future / (1.0d0 + other_coeff)
+        other_coeff = 0.25d0 * electron%q * electron%q_times_wp * real(number_part, kind = 8) * del_t**2 / (power_right_bound_x - power_left_bound_x) / electron%mass / eps_0
+        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 + &
+            electron%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + &
+                (1.0d0 + other_coeff) * Efield_RF_past
+        Efield_future = Efield_future / (1.0d0 - other_coeff)
                 
         EField_half = 0.5d0 * (Efield_future + Efield_RF_past)
-        del_v = species%q_over_m * Efield_half * del_t
+        del_v = electron%q_over_m * Efield_half * del_t
         
         !$OMP parallel private(iThread, i)
         iThread = omp_get_thread_num() + 1
-        do i = 1, species%N_p(iThread)
-            xi = species%phaseSpace(1, i, iThread)
+        do i = 1, electron%N_p(iThread)
+            xi = electron%phaseSpace(1, i, iThread)
             if (xi > xi_left .and. xi < xi_right) then
-                species%phaseSpace(3, i, iThread) = species%phaseSpace(3, i, iThread) + del_v
+                electron%phaseSpace(3, i, iThread) = electron%phaseSpace(3, i, iThread) + del_v
             end if
         end do
         !$OMP end parallel
 
-        J_particles_heat = species%q_times_wp * (v_sum + del_v) / (power_right_bound_x - power_left_bound_x)
+        J_particles_heat = electron%q_times_wp * (v_sum + del_v) / (power_right_bound_x - power_left_bound_x)
         
         v_ave_heat = (v_sum + del_v) / real(number_part, kind = 8)
-        Efield_RF_energy = 0.5d0 * species%mass * (2 * del_v * v_sum + real(number_part, kind = 8) * del_v**2) ! Joules
+        Efield_RF_energy = 0.5d0 * electron%mass * (2 * del_v * v_sum + real(number_part, kind = 8) * del_v**2) ! Joules
    
         Efield_RF_past = Efield_future
         
