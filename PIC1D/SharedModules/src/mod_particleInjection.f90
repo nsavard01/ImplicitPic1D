@@ -212,7 +212,7 @@ contains
         !$OMP end parallel
 
         
-        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 + electron%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + Efield_RF_past
+        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 - electron%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + Efield_RF_past
        
       
         J_particles_heat = electron%q_times_wp * v_sum / (power_right_bound_x - power_left_bound_x)
@@ -252,10 +252,10 @@ contains
         !$OMP end parallel
 
         other_coeff = 0.25d0 * electron%q * electron%q_times_wp * real(number_part, kind = 8) * del_t**2 / (power_right_bound_x - power_left_bound_x) / electron%mass / eps_0
-        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 + &
+        Efield_future = J_total_RF * (cos(coeff_time * old_time) - cos(coeff_time * current_time)) / coeff_time / eps_0 - &
             electron%q_times_wp * v_sum * del_t / (power_right_bound_x - power_left_bound_x) /eps_0 + &
-                (1.0d0 + other_coeff) * Efield_RF_past
-        Efield_future = Efield_future / (1.0d0 - other_coeff)
+                (1.0d0 - other_coeff) * Efield_RF_past
+        Efield_future = Efield_future / (1.0d0 + other_coeff)
                 
         EField_half = 0.5d0 * (Efield_future + Efield_RF_past)
         del_v = electron%q_over_m * Efield_half * del_t

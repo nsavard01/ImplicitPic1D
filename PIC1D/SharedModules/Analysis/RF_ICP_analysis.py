@@ -169,6 +169,7 @@ Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC = dataSetExp
 
 Exp_ICP_highDensity_lowPressure_standRF_1100cells_4000delT_64PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1100cells_4000delT_64PPC/')
 Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC/')
+Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_new = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_new/')
 Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_implicit = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_implicit/')
 # Exp_ICP_highDensity_lowPressure = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure/')
 #
@@ -177,6 +178,8 @@ Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_implicit = dat
 
 NGP_ICP_lowPressure_2000Cells_sinusoid_420delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_2000Cells_sinusoid_420delT_3200PPC/')
 NGP_ICP_lowPressure_2000Cells_uniform_640delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_2000Cells_uniform_640delT_3200PPC/')
+
+NGP_ICP_lowPressure_1000Cells_uniform_640delT_1600PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_1000Cells_uniform_640delT_1600PPC/')
 
 NGP_ICP_lowPressure_128Cells_DenisMap_640delT_100PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_DenisMap_640delT_100PPC/')
 
@@ -285,6 +288,12 @@ plotAveDensity(NGP_ICP_lowPressure_200Cells_uniform_640delT_3200PPC, 'He+',label
 plotAveDensity(NGP_ICP_lowPressure_200Cells_uniform_640delT_6400PPC, 'He+',label = 'NGP 6400 PPC')
 plt.legend(loc = 'lower center')
 plt.savefig('RF_ICP/NGP_ICP_lowPress_density_uniform.png')
+
+plt.figure()
+plotAveDensity(Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC, 'He+', label = 'Exp High Res.')
+plotAveDensity(NGP_ICP_lowPressure_1000Cells_uniform_640delT_1600PPC, 'He+',label = 'NGP 1600 PPC, 1000 cells')
+plt.legend(loc = 'lower center')
+plt.savefig('RF_ICP/NGP_ICP_lowPress_density_uniform1000cells.png')
 
 
 # -------------------- Trends between pressures  --------------------------------------------
