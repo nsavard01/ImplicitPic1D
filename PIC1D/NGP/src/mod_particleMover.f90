@@ -74,14 +74,16 @@ contains
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x, x_i, x_f
         integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, startTime, endTime
         logical :: FutureAtBoundaryBool
         f_tol = del_t * 1.d-10
         ! Solve for current iteration of E^n+1/2
+        v_sum_RF_electrons = 0.0d0
+        Number_RF_heat_electrons = 0
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
-        !$OMP& numIter)
+        !$OMP& numIter, x_i, x_f) reduction(+:v_sum_RF_electrons, Number_RF_heat_electrons)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             ! Reset workspace for specific thread for adding J to domain
@@ -137,6 +139,17 @@ contains
                     v_sub = v_f
                     
                 end do
+                if (j==1 .and. EField_heating_bool .and. .not. FutureAtBoundaryBool) then
+                    x_f = (l_f - real(l_cell, kind = 8))*world%dx_dl(l_cell) + world%grid(l_cell)
+                    l_sub = particleList(j)%phaseSpace(1,i,iThread)
+                    l_cell = int(l_sub)
+                    x_i = (l_sub - real(l_cell, kind = 8))*world%dx_dl(l_cell) + world%grid(l_cell)
+                    x_f = 0.5 * (x_f + x_i) ! half distance
+                    if (x_f > power_left_bound_x .and. x_f < power_right_bound_x) then
+                        Number_RF_heat_electrons = Number_RF_heat_electrons + 1
+                        v_sum_RF_electrons = v_sum_RF_electrons + particleList(j)%phaseSpace(3,i,iThread)
+                    end if
+                end if
             end do loopParticles
         end do loopSpecies
         !$OMP barrier
@@ -162,7 +175,7 @@ contains
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
-        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
+        real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x, x_i, x_f
         integer(int32) :: j, i, l_cell, iThread, delIdx, l_boundary, numIter, numSubStepAve(numberChargedParticles), funcEvalCounter(numberChargedParticles), refIdx, N_p
         logical :: refluxedBool, FutureAtBoundaryBool, convergeTimeBool
         f_tol = del_t * 1.d-10
@@ -171,9 +184,10 @@ contains
         funcEvalCounter = 0
         ! E^1/2 
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
+        if (EField_heating_bool) call EField_heating_implicit(particleList(1), del_t, world)
         ! Make counters private, otherwise have false sharing which causes significant slowdown! In general, keep variables private whenever possible
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, delIdx, dx_dl, E_x, l_boundary, numIter, &
-        !$OMP&        refIdx, refluxedBool, FutureAtBoundaryBool, N_p, convergeTimeBool) reduction(+:numSubStepAve, funcEvalCounter)
+        !$OMP&        refIdx, refluxedBool, FutureAtBoundaryBool, N_p, convergeTimeBool, x_i, x_f) reduction(+:numSubStepAve, funcEvalCounter)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             ! initialize deletion index at dirichlet boundaries and reflux if applicable to neumann boundaries
@@ -252,6 +266,16 @@ contains
                 end do
                 ! Save final particle properties
                 if (.not. convergeTimeBool) then
+                    if (j==1 .and. EField_heating_bool) then
+                        x_f = (l_f - real(l_cell, kind = 8))*world%dx_dl(l_cell) + world%grid(l_cell)
+                        l_sub = particleList(j)%phaseSpace(1,i,iThread)
+                        l_cell = int(l_sub)
+                        x_i = (l_sub - real(l_cell, kind = 8))*world%dx_dl(l_cell) + world%grid(l_cell)
+                        x_f = 0.5 * (x_f + x_i) ! half distance
+                        if (x_f > power_left_bound_x .and. x_f < power_right_bound_x) then
+                            particleList(j)%phaseSpace(3, i, iThread) = particleList(j)%phaseSpace(3, i, iThread) + del_v_RF_electrons
+                        end if
+                    end if
                     particleList(j)%phaseSpace(1, i-delIdx, iThread) = l_f
                     particleList(j)%phaseSpace(2,i-delIdx, iThread) = v_f
                     particleList(j)%phaseSpace(3:4,i-delIdx, iThread) = particleList(j)%phaseSpace(3:4,i,iThread)

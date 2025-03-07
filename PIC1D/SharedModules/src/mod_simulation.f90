@@ -165,7 +165,6 @@ contains
                 potentialTime = potentialTime + (endTimer - startTimer)
                 call system_clock(startTimer)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-                if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)
@@ -202,7 +201,6 @@ contains
                 
                 call system_clock(startTimer)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-                if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
                 if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)
@@ -363,7 +361,6 @@ contains
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
             
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-            if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)
@@ -479,7 +476,6 @@ contains
             call solvePotential(solver, particleList, world, del_t, remainDel_t, currDel_t, currentTime)
             !call ionizationCollisionIsotropic(particleList(1), particleList(2), 1.0d20, 1.0d-20, currDel_t, 15.8d0, 0.0d0, irand)
             if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, currDel_t, del_t)
-            if (EField_heating_bool) call EField_heating_implicit(particleList(1), currentTime, currentTime+currDel_t, world)
             if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
             if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
             if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, currDel_t)

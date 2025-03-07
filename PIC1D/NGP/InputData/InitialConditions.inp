@@ -5,8 +5,8 @@
 0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
 10.d0 1.1522861356932154e-10 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-3.6873156342182893e-06 ! amount of time to average final Diagnostics
+7.374631268436579e-06 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-NGP_ICP_lowPressure_1000Cells_uniform_640delT_1600PPC !save file name
+NGP_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC_new !save file name
 no NGP_RFBenchmark_Denis_lowerDen_262PPC_256cells_noSmoothing ! Restart(yes/no) and save directory to take from
 END

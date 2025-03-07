@@ -202,6 +202,8 @@ NGP_ICP_lowPressure_128Cells_sinusoid_640delT_1600PPC = dataSet('Y:/ImplicitPic1
 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_3200PPC/')
 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_6400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_6400PPC/')
 
+NGP_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC_new = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC_new/')
+
 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC_smoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC_smoothing/')
 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_200PPC_smoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_200PPC_smoothing/')
 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_400PPC_smoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_400PPC_smoothing/')
@@ -294,6 +296,12 @@ plotAveDensity(Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200P
 plotAveDensity(NGP_ICP_lowPressure_1000Cells_uniform_640delT_1600PPC, 'He+',label = 'NGP 1600 PPC, 1000 cells')
 plt.legend(loc = 'lower center')
 plt.savefig('RF_ICP/NGP_ICP_lowPress_density_uniform1000cells.png')
+
+plt.figure()
+plotAvePhi(Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC, label = 'Exp High Res.')
+plotAvePhi(NGP_ICP_lowPressure_1000Cells_uniform_640delT_1600PPC, label = 'NGP 1600 PPC, 1000 cells')
+plt.legend(loc = 'lower center')
+plt.savefig('RF_ICP/NGP_ICP_lowPress_phi_uniform1000cells.png')
 
 
 # -------------------- Trends between pressures  --------------------------------------------
