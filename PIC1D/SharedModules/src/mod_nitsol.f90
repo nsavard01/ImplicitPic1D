@@ -3,7 +3,8 @@ module mod_nitsol
     implicit none
 
     ! From https://github.com/cmacmackin/nitsol
-    ! Modified to module and to use intrinsics whenever possible
+    ! Modified to module and to use intrinsics whenever possible for consistency
+    ! Comments kept from original 
 
     interface
 

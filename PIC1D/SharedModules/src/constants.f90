@@ -108,6 +108,7 @@ contains
         call omp_set_num_threads(numThread)
         plasmaFreqTemp = SQRT(n_ave * (e**2) / m_e / eps_0)
         del_t = MIN(fractionFreq * 1.0d0 / plasmaFreqTemp, del_t)
+        fractionFreq = del_t * plasmaFreqTemp
         simulationTime = simulationTime + startSimulationTime
         print *, "Save data folder: ", directoryName
         print *, 'Restart Bool:', restartBool
@@ -117,7 +118,7 @@ contains
         print *, "Initial electron temperature:", T_e
         print *, "Initial ion temperature:", T_i
         print *, "Number of diagnostic steps is:", numDiagnosticSteps
-        print *, "Fraction of 1/w_p for time step:", del_t * plasmaFreqTemp
+        print *, "Fraction of 1/w_p for time step:", fractionFreq
         print *, 'del_t will be:', del_t
         print *, 'Simulation start time is:', startSimulationTime
         print *, "Simulation time is:", simulationTime
@@ -176,7 +177,7 @@ contains
     end subroutine generateSaveDirectory
 
     subroutine changeDelT(dt)
-        ! Function to use if del_t needs to be changed
+        ! Subroutine to use if del_t needs to be changed
         real(real64), intent(in) :: dt
         del_t = dt
     end subroutine changeDelT

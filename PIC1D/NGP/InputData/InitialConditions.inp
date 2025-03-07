@@ -1,12 +1,12 @@
 32 ! number of processors
-1.5e-4 0.0d0 ! simulation time
-1.6d18 ! Initial number density (1/m^3) of electrons
+3.687315634218289e-05 0.0d0 ! simulation time
+1.d17 ! Initial number density (1/m^3) of electrons
 4.0d0 ! T_e (eV)
 0.025d0 ! T_i (eV)
 20 ! number of diagnostic data dumps    
-2.0d0 2.5e-11 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
-1.d-6 ! amount of time to average final Diagnostics
+10.d0 1.1522861356932154e-10 ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+3.6873156342182893e-06 ! amount of time to average final Diagnostics
 ../../../../ImplicitData/  !Save directory
-NGP_RFBenchmark_highDensity_halfPart_257nodes_halfEvenHalfSin_NoSmooth !save file name
-no Exp_RF_Benchmark_case1 ! Restart(yes/no) and save directory to take from
+NGP_ICP_lowPressure_1000Cells_uniform_640delT_1600PPC !save file name
+no NGP_RFBenchmark_Denis_lowerDen_262PPC_256cells_noSmoothing ! Restart(yes/no) and save directory to take from
 END

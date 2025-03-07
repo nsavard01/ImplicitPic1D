@@ -45,6 +45,9 @@ class dataSetExplicit:
             self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
             self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
             self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, sep='\s+', names = partDiag)
+            if (os.path.isfile(self.path + 'ParticleAveDiagnostic_' + name + '.dat')):
+                avePartDiag = ['leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss']
+                self.particles[name]['aveDiag'] = pd.read_csv(self.path + 'ParticleAveDiagnostic_' + name + '.dat', skiprows = 1, sep='\s+', names = avePartDiag)
 
         boundConditions = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype = np.int32, offset = 4)[0:-1]
         if (boundConditions[0] == 1):
@@ -201,6 +204,7 @@ class dataSetExplicit:
             VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype='float', offset=4)
             VHist = VTot[0:-1]
             VMax = VTot[-1]
+
             Vedge = np.linspace(-VMax, VMax, VHist.size)
         else:
             raise Warning('No averaging done!')

@@ -44,7 +44,7 @@ contains
         do j = 1, part%N_p(iThread)
             l_left = INT(part%phaseSpace(1, j, iThread))
             l_right = l_left + 1
-            d = part%phaseSpace(1, j, iThread) - real(l_left)
+            d = part%phaseSpace(1, j, iThread) - real(l_left, kind = 8)
             part%densities(l_left, iThread) = part%densities(l_left, iThread) + (1.0d0-d)
             part%densities(l_right, iThread) = part%densities(l_right, iThread) + d
         end do

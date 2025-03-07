@@ -3,6 +3,7 @@ module mod_targetParticle
     use iso_fortran_env, only: int32, real64, output_unit
     use constants
     use mod_BasicFunctions
+    use iso_c_binding
     implicit none
 
     private
@@ -25,8 +26,7 @@ module mod_targetParticle
 contains
 
     type(targetParticle) function targetParticle_constructor(particleName, mass, density, temperature) result(self)
-        ! Construct particle object, sizeIncrease is fraction larger stored array compared to initial amount of particles
-        ! In future, use hash function for possible k = 1 .. Nx, m amount of boundaries, p = prime number  m < p < N_x. h(k) = (k%p)%m
+        ! Construct object
         real(real64), intent(in) :: mass, density, temperature
         character(*), intent(in) :: particleName
         self % name = trim(particleName)
@@ -42,14 +42,14 @@ contains
 
     function generate3DMaxwellianVelocity(self, irand) result(res)
         ! random velocity generator for the particle for temperature T (eV)
-        ! Use box-muller method for random guassian variable, same as gwenael but doesn't have factor 2? Maybe factored into v_th
+        ! Use box-muller method for random guassian variable
         class(targetParticle), intent(in) :: self
-        integer(int32), intent(in out) :: irand
+        integer(c_int64_t), intent(in out) :: irand
         real(real64) :: U1, U2, U3, U4, res(3)
-        U1 = ran2(irand)
-        U2 = ran2(irand)
-        U3 = ran2(irand)
-        U4 = ran2(irand)
+        U1 = pcg32_random_r(irand)
+        U2 = pcg32_random_r(irand)
+        U3 = pcg32_random_r(irand)
+        U4 = pcg32_random_r(irand)
         res(1) = self%v_therm * SQRT(-2 * LOG(U1)) * COS(2 * pi * U2)
         res(2) = self%v_therm * SQRT(-2 * LOG(U1)) * SIN(2 * pi * U2)
         res(3) = self%v_therm * SQRT(-2 * LOG(U3)) * SIN(2 * pi * U4)

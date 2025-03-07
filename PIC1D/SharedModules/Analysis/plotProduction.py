@@ -15,28 +15,28 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
         colors = ['b', 'r', 'g', 'k', 'c', 'm', 'yAve']
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
-        plt.xlabel('Distance (m)')
+            plt.plot(dataSet.grid * 1e2, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
+        plt.xlabel('Distance (cm)')
         plt.ylabel('Particle Density (1/m^3)')
-        plt.xlim([dataSet.x_min, dataSet.x_max])
+        plt.xlim([dataSet.x_min, dataSet.x_max * 1e2])
         plt.legend(loc = 'best')
     else:
         if name not in dataSet.particles.keys():
             raise Warning("For average density, particle", name, "does not exist in the dataSet!")
         else:
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid, n,  linestyle = linestyle, marker = marker, markersize = 2, label = label)
-            plt.xlabel('Distance (m)')
+            plt.plot(dataSet.grid * 1e2, n,  linestyle = linestyle, marker = marker, markersize = 2, label = label)
+            plt.xlabel('Distance (cm)')
             plt.ylabel(name + ' Density (1/m^3)')
-            plt.xlim([dataSet.x_min, dataSet.x_max])
+            plt.xlim([dataSet.x_min, dataSet.x_max*1e2])
  
 def plotAvePhi(dataSet, label = '', marker = 'o', linestyle = '--'):
 
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
-    plt.xlabel('Distance (m)')
+    plt.plot(dataSet.grid*1e2, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
+    plt.xlabel('Distance (cm)')
     plt.ylabel('Potential (V)')
-    plt.xlim([dataSet.x_min, dataSet.x_max])
+    plt.xlim([dataSet.x_min, dataSet.x_max*1e2])
     plt.show()
     
 def maxwellEDVF(x, T):
@@ -75,6 +75,19 @@ def plotAveEDF(dataSet, name, CurveFit = False, label = ''):
         plt.plot(Ebin, EHist, 'o-', label=label)
         plt.ylabel('EDF (1/eV)')
         plt.xlabel('Particle Energy (eV)')
+
+
+def plotWallCurrent(data_point_array, particle_name, dataset_list, label = ""):
+    if (data_point_array.size != len(dataset_list)):
+        raise Exception("Error in size data array vs number of data sets")
+
+
+    val_array = np.zeros(data_point_array.size)
+    for j in range(data_point_array.size):
+        dataset = dataset_list[j]
+        val_array[j] = (dataset.particles[particle_name]['aveDiag']['leftCurrLoss'].values[0] + dataset.particles[particle_name]['aveDiag']['rightCurrLoss'].values[0])
+
+    plt.plot(data_point_array, val_array, 'o-', label = label)
 
 
 def plotAveEPF(dataSet, name, lower_limit = 0.2, label = '', marker = 'o', linestyle = '--'):
@@ -230,7 +243,45 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
             plt.xlim([dataSet.x_min, dataSet.x_max])
             plt.legend(loc='lower center')
             plt.pause(pauseTime)
-            
+
+
+def density_std_plots(dataSet, name, amount, label = ''):
+    num_nodes = dataSet.Nx
+    n = np.zeros((amount, num_nodes))
+    num_diag = 0
+    for y in range(dataSet.numDiag-1, dataSet.numDiag - amount-1, -1):
+        n[num_diag,:] = dataSet.getDensity(name, y)
+        num_diag += 1
+
+    # n_tot = np.mean(n, axis = 0)
+    # n_err = np.max(n, axis = 0) - np.min(n,axis = 0)
+    n_err = np.std(n, axis = 0)
+    # plt.errorbar(dataSet.grid, n_tot, yerr = n_err, fmt = '.')
+    plt.plot(dataSet.grid * 1e2, n_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
+
+def Efield_std_plots(dataSet, amount, label = ''):
+    E = np.zeros((amount, dataSet.Nx-1))
+    num_diag = 0
+    for y in range(dataSet.numDiag-1, dataSet.numDiag - amount-1, -1):
+        phi = dataSet.getPhi(y)
+        E[num_diag, :] = -np.diff(phi)/np.diff(dataSet.grid)
+        num_diag += 1
+    E_err = np.std(E, axis = 0)
+    plt.plot(0.5 * (dataSet.grid[0:-1] + dataSet.grid[1::]) * 1e2, E_err, linewidth = 2, linestyle = '--', marker = 'o', markersize = 2, label = label)
+
+def temp_plots(dataSet, name, amount):
+    T = np.zeros((amount, dataSet.Nx-1))
+    num_diag = 0
+    for y in range(dataSet.numDiag-1, dataSet.numDiag - amount-1, -1):
+        Temp = dataSet.getTemp(name,y)
+        T[num_diag, :] = Temp
+        num_diag += 1
+    T_err = np.std(T, axis = 0)
+    plt.plot(0.5 * (dataSet.grid[0:-1] + dataSet.grid[1::]), T_err, 'o-', label=y)
+    plt.xlabel('Distance (m)')
+    plt.ylabel(r'Temperature (eV)')
+    plt.xlim([dataSet.x_min, dataSet.x_max])
+
 def plotPhaseSpace(dataSet, name):
     phaseSpace = dataSet.getPhaseSpace(name)
     plt.scatter(phaseSpace[:,0], phaseSpace[:,1])
@@ -275,8 +326,10 @@ def get_thermalization_parameters(dataSet, reaction):
     del_t = dataSet.delT
     for obj in dataSet.binaryColl[reaction]:
         nu += obj['aveDiag']['ratio']
+        if (obj['type'] == 'Ionization'):
+            nu_ion = obj['aveDiag']['ratio']/del_t
     nu = nu / del_t
-    n_e = dataSet.getAveDensity('e').max()
+    n_e = dataSet.getAveDensity('e').mean()
 
     EHist, Ebin = dataSet.getAveEDF('e')
     EHist = EHist/Ebin
@@ -287,12 +340,13 @@ def get_thermalization_parameters(dataSet, reaction):
     L = dataSet.grid[-1] - dataSet.grid[0]
     N_p = dataSet.particles['e']['diag']['N_p'].values[-1]
     N_D = N_p/(L/deb)
+    print('N_D is', N_D)
     plas_freq = plasmaFreq(n_e)
-    denom = N_D**-2 + 28 * (1/N_D) * (nu/plas_freq)
+    denom = (N_D**(-2)) + 28 * (1/N_D) * (nu/plas_freq)
     tau_R = 34.4 / denom / plas_freq
 
     nu_coulomb = crossSectionCoulomb(T_e, n_e)
     nu_coulomb = nu_coulomb * n_e * np.sqrt(2 * e * T_e / np.pi / m_e)
-    return tau_R, 1/nu, 1/nu_coulomb
+    return tau_R, 1/nu, 1/nu_coulomb, 1/nu_ion
 
 

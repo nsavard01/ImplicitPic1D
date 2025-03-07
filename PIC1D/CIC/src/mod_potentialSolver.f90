@@ -232,15 +232,21 @@ contains
     function getError_tridiag_Poisson(self, world) result(res)
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
+        integer(int32) :: i
         real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         d = (-self%rho - self%rho_const) / eps_0
         d(1) = d(1) + self%sourceTermVals(1)
         d(NumberXNodes) = d(NumberXNodes) + self%sourceTermVals(2)
-        d = 1.0d0 - Ax/d
+        res = 0.0d0
+        do i = 1, NumberXNodes
+            if (d(i) /= 0) then
+                res = res + (1.0d0 - Ax(i)/d(i))**2
+            end if
+        end do
         
         !res = Ax*eps_0 - 
-        res = SQRT(SUM(d**2)/NumberXNodes)
+        res = SQRT(res/real(NumberXNodes, kind = 8))
 
     end function getError_tridiag_Poisson
 

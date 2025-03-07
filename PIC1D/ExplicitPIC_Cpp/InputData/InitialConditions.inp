@@ -1,0 +1,14 @@
+32 ! number of processors
+128 ! number of cells
+9.43952802359882e-05 0.0d0 ! simulation time
+2.56e14! Initial number density (1/m^3) of electrons
+2.59 ! T_e (eV)
+0.025 ! T_i (eV)
+20 ! number of diagnostic data dumps    
+1.0 1.8436578171091445e-10  ! Fraction of initial 1/w_p for initial time step, second number is explicit time step, take smallest of two
+7.374631268436578e-06 ! amount of time to average final Diagnostics
+../../../../ExplicitData/  !Save directory
+test_Exp_cpp !save file name
+no Exp_RFBenchmark_highDensity_EvenMoreResolved_x6 ! Restart(yes/no) and save directory to take from
+END
+

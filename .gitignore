@@ -5,3 +5,5 @@ tmp*
 *.a
 *.pdf
 *.png
+*.fuse_hidden*
+!PIC1D/CollisionData/*.dat
