@@ -324,12 +324,13 @@ void Simulation::run(Potential_Solver& solver, std::vector<Particle>& particle_l
    
     while (this->current_time < global_inputs::simulation_time) { 
         this->current_time += global_inputs::time_step;
+        
         start_time = MPI_Wtime();
         solver.move_particles(particle_list, world, global_inputs::time_step);
         solver.deposit_rho(particle_list, world);
         end_time = MPI_Wtime();
         this->tot_particle_time += (end_time - start_time);
-
+        
         start_time = MPI_Wtime();
         solver.solve_potential_tridiag(world, this->current_time);
         solver.make_EField(world);

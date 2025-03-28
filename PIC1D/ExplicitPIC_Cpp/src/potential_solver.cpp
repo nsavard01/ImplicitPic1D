@@ -246,6 +246,8 @@ void Potential_Solver::move_particles(std::vector<Particle> &particle_list, cons
             for (size_t part_indx= 0; part_indx < last_idx; part_indx += 4){
                 xi = phase_space[part_indx];
                 v_x = phase_space[part_indx+1];
+                v_y = phase_space[part_indx+2];
+                v_z = phase_space[part_indx+3];
                 v_x += part.q_over_m * this->get_EField_at_loc(xi) * time_step;
                 xi += v_x * time_step / world.del_X;
 
@@ -253,8 +255,6 @@ void Potential_Solver::move_particles(std::vector<Particle> &particle_list, cons
                     switch (world.boundary_conditions[0]){
                         case 1:
                         case 4:
-                            v_y = phase_space[part_indx+2];
-                            v_z = phase_space[part_indx+3];
                             part.energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
                             part.wall_loss[thread_id][0]++;
                             part.momentum_loss[thread_id][0] += v_x;
@@ -272,8 +272,6 @@ void Potential_Solver::move_particles(std::vector<Particle> &particle_list, cons
                     switch (world.boundary_conditions[global_inputs::number_cells]){
                         case 1:
                         case 4:
-                            v_y = phase_space[part_indx+2];
-                            v_z = phase_space[part_indx+3];
                             part.energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
                             part.wall_loss[thread_id][1]++;
                             part.momentum_loss[thread_id][1] += v_x;
@@ -293,8 +291,8 @@ void Potential_Solver::move_particles(std::vector<Particle> &particle_list, cons
                     new_idx = part_indx-space_delete;
                     phase_space[new_idx] = xi;
                     phase_space[new_idx+1] = v_x;
-                    phase_space[new_idx+2] = phase_space[part_indx+2];
-                    phase_space[new_idx+3] = phase_space[part_indx+3];
+                    phase_space[new_idx+2] = v_y;
+                    phase_space[new_idx+3] = v_z;
                 }
             }
             part.number_particles[thread_id] = (last_idx - space_delete)/4;

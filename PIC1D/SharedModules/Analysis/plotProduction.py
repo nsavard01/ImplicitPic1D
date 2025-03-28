@@ -101,7 +101,7 @@ def plotAveEPF(dataSet, name, lower_limit = 0.2, label = '', marker = 'o', lines
     plt.yscale('log')
     plt.xlabel('Particle Energy (eV)')
 
-def getAveDensityFiles(dataName, name = 'e', diagNumber = 0):
+def getAveDensityFiles(dataName, name = 'e', diagNumber = 0, smoothing = False):
     # Given name of file which will have _1, _2, etc appended
     if ('Explicit' in dataName):
         data = dataSetExplicit(dataName + '/')
@@ -116,6 +116,12 @@ def getAveDensityFiles(dataName, name = 'e', diagNumber = 0):
         else:
             data = dataSet(filename + '/')
         density = density + data.getDensity(name, diagNumber)
+    if (smoothing):
+        density_other = np.zeros(density.size)
+        density_other[0] = 0.5 * density[0] + 0.25 * density[-1] + 0.25 * density[1]
+        density_other[-1] = density_other[0]
+        density_other[1:-1] = 0.5 * density[1:-1] + 0.25 * density[0:-2] + 0.25 * density[2::]
+        density = density_other
     print('Finished averaging for', dataName)
     print('Contained', number+1, 'files')
     return density/(number+1)
@@ -244,6 +250,26 @@ def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Fi
             plt.legend(loc='lower center')
             plt.pause(pauseTime)
 
+def aveQuantity_vs_parameter(quantity, list_data, parameter_list, label_list, name = 'e'):
+    size_param = len(parameter_list)
+    size_list = len(list_data)
+    for j in range(size_list):
+        ave = np.zeros(size_param)
+        for i in range(size_param):
+            dataSet = list_data[j][i]
+            if (quantity == 'phi'):
+                q = dataSet.getAvePhi()
+                q_temp = np.trapz(q, dataSet.grid)
+                q_temp = q_temp / (dataSet.grid[-1] - dataSet.grid[0])
+            elif (quantity == 'density'):
+                q = dataSet.getAveDensity(name)
+                q_temp = np.trapz(q, dataSet.grid)
+                q_temp = q_temp / (dataSet.grid[-1] - dataSet.grid[0])
+            elif (quantity == 'current'):
+                q_temp = dataSet.particles[name]['aveDiag']['leftCurrLoss'].values[0] + dataSet.particles[name]['aveDiag']['rightCurrLoss'].values[0]
+
+            ave[i] = q_temp
+        plt.plot(parameter_list, ave, '--o', label = label_list[j])
 
 def density_std_plots(dataSet, name, amount, label = ''):
     num_nodes = dataSet.Nx

@@ -52,7 +52,12 @@ contains
                 ! calculate v_f and del_tau at boundary along v_sub
                 l_f = real(l_boundary)
                 v_f = SIGN(1.0d0, v_sub) * SQRT(diff_PE + v_i_sqr)
-                del_tau = (v_f - v_sub)/a
+                ! Select method which likely to minimize error in del_tau
+                if (abs(v_f - v_sub) > abs(v_f + v_sub)) then
+                    del_tau = (v_f - v_sub)/a
+                else
+                    del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_f + v_sub)
+                end if
             else if (.not. inCellBool) then
                 ! calculate v_f and del_tau at boundary in opposite direction
                 FutureAtBoundaryBool = .true.
@@ -75,13 +80,13 @@ contains
         type(Particle), intent(in out) :: particleList(:)
         real(real64), intent(in) :: del_t
         real(real64) :: l_f, l_sub, v_sub, v_f, timePassed, del_tau, f_tol, dx_dl, E_x
-        integer(int32) :: j, i, l_cell, iThread, l_boundary, numIter, startTime, endTime
+        integer(int32) :: j, i, l_cell, iThread, l_boundary, num_temp, startTime, endTime
         logical :: FutureAtBoundaryBool
         f_tol = del_t * 1.d-10
         ! Solve for current iteration of E^n+1/2
         call solver%makeHalfTimeEField(particleList(1)%workSpace(1:NumberXHalfNodes,1), world)
         !$OMP parallel private(iThread, i, j, l_f, l_sub, v_sub, v_f, timePassed, del_tau, l_cell, FutureAtBoundaryBool, dx_dl, E_x, l_boundary, &
-        !$OMP& numIter)
+        !$OMP& num_temp)
         iThread = omp_get_thread_num() + 1 
         loopSpecies: do j = 1, numberChargedParticles
             ! Reset workspace for specific thread for adding J to domain
@@ -96,7 +101,6 @@ contains
                 l_cell = INT(l_sub + SIGN(1.d-12, v_sub))
                 del_tau = del_t
                 do while(del_tau > f_tol)
-                    
                     E_x = solver%EField(l_cell)
                     dx_dl = world%dx_dl(l_cell)
 

@@ -137,7 +137,11 @@ contains
                     if (l_f == l_cell .or. l_f == l_cell + 1) then
                         if (l_f /= l_sub) then
                             v_f = SIGN(1.0d0, v_f + v_sub) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
-                            del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_sub + v_f)
+                            if (abs(v_f - v_sub) > abs(v_f + v_sub)) then
+                                del_tau = (v_f - v_sub) * dx_dl / accel
+                            else
+                                del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_sub + v_f)
+                            end if
                             ! numIter = numIter + 1
                         else
                             ! In the case that the particle goes back to starting position on boundary
@@ -288,7 +292,11 @@ contains
                     if (l_f == l_cell .or. l_f == l_cell + 1) then
                         if (l_f /= l_sub) then
                             v_f = SIGN(1.0d0, v_sub + v_f) * SQRT(2.0d0 * accel * (l_f - l_sub) + v_sub**2)
-                            del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_sub + v_f)
+                            if (abs(v_f - v_sub) > abs(v_f + v_sub)) then
+                                del_tau = (v_f - v_sub) * dx_dl / accel
+                            else
+                                del_tau = 2.0d0 * (l_f - l_sub) * dx_dl / (v_sub + v_f)
+                            end if
                             funcEvalCounter(j) = funcEvalCounter(j) + 1
                         else
                             ! In the case that the particle goes back to starting position on boundary

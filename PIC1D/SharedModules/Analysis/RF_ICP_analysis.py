@@ -43,6 +43,8 @@ Exp_ICP_highDensity_highPressure_standRF_6400delT_1600PPC = dataSetExplicit('Y:/
 Exp_ICP_highDensity_highPressure_standRF_6400delT_3200PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_highPressure_standRF_6400delT_3200PPC/')
 Exp_ICP_highDensity_highPressure_standRF_2500cells_10000delT_3200PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_highPressure_standRF_2500cells_10000delT_3200PPC/')
 
+Exp_ICP_highDensity_highPressure_standRF_640delT_400PPC_eps100 = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_highPressure_standRF_640delT_400PPC_eps100/')
+
 NGP_ICP_highPressure_200Cells_uniform_2500delT_100PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_100PPC/')
 NGP_ICP_highPressure_200Cells_uniform_2500delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_200PPC/')
 NGP_ICP_highPressure_200Cells_uniform_2500delT_400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_400PPC/')
@@ -51,7 +53,11 @@ NGP_ICP_highPressure_200Cells_uniform_2500delT_1600PPC = dataSet('Y:/ImplicitPic
 NGP_ICP_highPressure_200Cells_uniform_2500delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_3200PPC/')
 NGP_ICP_highPressure_200Cells_uniform_2500delT_6400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_6400PPC/')
 
+NGP_ICP_highPressure_1000Cells_uniform_2500delT_1600PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_1000Cells_uniform_2500delT_1600PPC/')
+NGP_ICP_highPressure_1000Cells_uniform_2500delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_1000Cells_uniform_2500delT_3200PPC/')
+
 NGP_ICP_highPressure_64Cells_sinusoid_2500delT_64PPC_epsneg4 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_64Cells_sinusoid_2500delT_64PPC_epsneg4/')
+NGP_ICP_highPressure_64Cells_sinusoid_2500delT_200PPC= dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_64Cells_sinusoid_2500delT_200PPC/')
 
 NGP_ICP_highPressure_128Cells_sinusoid_2500delT_100PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_128Cells_sinusoid_2500delT_100PPC/')
 NGP_ICP_highPressure_128Cells_sinusoid_2500delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_128Cells_sinusoid_2500delT_200PPC/')
@@ -121,6 +127,20 @@ plt.legend(loc = 'lower center')
 plt.savefig('RF_ICP/NGP_ICP_highPress_uniform.png')
 
 plt.figure()
+plotAveDensity(Exp_ICP_highDensity_highPressure_standRF_2500cells_10000delT_3200PPC, 'He+', label = 'Exp High Res.')
+plotAveDensity(NGP_ICP_highPressure_1000Cells_uniform_2500delT_1600PPC, 'He+', label = 'NGP 1600 PPC, 1000 Cells')
+plotAveDensity(NGP_ICP_highPressure_1000Cells_uniform_2500delT_3200PPC, 'He+', label = 'NGP 3200 PPC, 1000 Cells')
+plt.legend(loc = 'lower center')
+plt.savefig('RF_ICP/NGP_ICP_highPress_density_uniform_1000cells.png')
+
+plt.figure()
+plotAvePhi(Exp_ICP_highDensity_highPressure_standRF_2500cells_10000delT_3200PPC, label = 'Exp High Res.')
+plotAvePhi(NGP_ICP_highPressure_1000Cells_uniform_2500delT_1600PPC, label = 'NGP 1600 PPC, 1000 Cells')
+plotAvePhi(NGP_ICP_highPressure_1000Cells_uniform_2500delT_3200PPC, label = 'NGP 3200 PPC, 1000 Cells')
+plt.legend(loc = 'lower center')
+plt.savefig('RF_ICP/NGP_ICP_highPress_phi_uniform_1000cells.png')
+
+plt.figure()
 plotAvePhi(Exp_ICP_highDensity_highPressure_standRF_2500cells_10000delT_3200PPC, label = 'Exp High Res.')
 plotAvePhi(NGP_ICP_highPressure_200Cells_uniform_2500delT_200PPC, label = 'NGP 200 PPC')
 plotAvePhi(NGP_ICP_highPressure_200Cells_uniform_2500delT_400PPC, label = 'NGP 400 PPC')
@@ -169,12 +189,10 @@ Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC = dataSetExp
 
 Exp_ICP_highDensity_lowPressure_standRF_1100cells_4000delT_64PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1100cells_4000delT_64PPC/')
 Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC/')
-Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_new = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_new/')
+
 Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_implicit = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_1500cells_5000delT_128PPC_implicit/')
-# Exp_ICP_highDensity_lowPressure = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure/')
-#
-#
-# NGP_ICP_test_lowDensity_fullyImplicit = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_test_lowDensity_fullyImplicit/')
+
+Exp_ICP_highDensity_lowPressure_standRF_700delT_400PPC_eps100 = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_700delT_400PPC_eps100/')
 
 NGP_ICP_lowPressure_2000Cells_sinusoid_420delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_2000Cells_sinusoid_420delT_3200PPC/')
 NGP_ICP_lowPressure_2000Cells_uniform_640delT_3200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_2000Cells_uniform_640delT_3200PPC/')
@@ -193,6 +211,7 @@ NGP_ICP_lowPressure_200Cells_uniform_640delT_6400PPC = dataSet('Y:/ImplicitPic1D
 
 NGP_ICP_lowPressure_64Cells_sinusoid_640delT_64PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_64Cells_sinusoid_640delT_64PPC/')
 NGP_ICP_lowPressure_64Cells_sinusoid_640delT_64PPC_epsneg4 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_64Cells_sinusoid_640delT_64PPC_epsneg4/')
+NGP_ICP_lowPressure_64Cells_sinusoid_640delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_64Cells_sinusoid_640delT_200PPC/')
 
 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_100PPC/')
 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_sinusoid_640delT_200PPC/')
@@ -254,6 +273,18 @@ plotAvePhi(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_3200PPC, label = 'NGP 3
 plotAvePhi(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_6400PPC, label = 'NGP 6400 PPC')
 plt.legend(loc = 'lower center')
 plt.savefig('RF_ICP/NGP_ICP_lowPress_phi.png')
+
+plt.figure()
+plotAveEPF(Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC, 'e', label = 'Exp High Res.')
+# plotAvePhi(Exp_ICP_highDensity_lowPressure_standRF_1100cells_4000delT_64PPC, label = 'Exp Low Res.')
+plotAveEPF(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_200PPC, 'e', label = 'NGP 200 PPC')
+plotAveEPF(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_400PPC, 'e',  label = 'NGP 400 PPC')
+plotAveEPF(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_800PPC, 'e', label = 'NGP 800 PPC')
+plotAveEPF(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_1600PPC, 'e', label = 'NGP 1600 PPC')
+plotAveEPF(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_3200PPC, 'e',  label = 'NGP 3200 PPC')
+plotAveEPF(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_6400PPC, 'e', label = 'NGP 6400 PPC')
+plt.legend(loc = 'upper right')
+plt.savefig('RF_ICP/NGP_ICP_lowPress_EPF.png')
 
 plt.figure()
 plotAveDensity(Exp_ICP_highDensity_lowPressure_standRF_10000delT_2500cells_3200PPC, 'He+', label = 'Exp High Res.')
@@ -501,6 +532,7 @@ NGP_ICP_lowPressure_cutJ_128Cells_sinusoid_640delT_3200PPC = dataSet('Y:/Implici
 NGP_ICP_lowPressure_cutJ_128Cells_sinusoid_640delT_6400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_cutJ_128Cells_sinusoid_640delT_6400PPC/')
 
 NGP_ICP_lowPressure_cutJ_64Cells_sinusoid_640delT_64PPC_epsneg4 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_cutJ_64Cells_sinusoid_640delT_64PPC_epsneg4/')
+NGP_ICP_lowPressure_cutJ_64Cells_sinusoid_640delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_cutJ_64Cells_sinusoid_640delT_200PPC/')
 
 
 # plt.figure()
@@ -521,3 +553,94 @@ plotAvePhi(NGP_ICP_lowPressure_128Cells_sinusoid_640delT_6400PPC, label = 'NGP J
 plotAvePhi(NGP_ICP_lowPressure_cutJ_64Cells_sinusoid_640delT_64PPC_epsneg4, label = 'NGP 3/4 J_0 64 cells 64 PPC')
 plt.legend(loc = 'lower center')
 plt.savefig('RF_ICP/ICP_JComp_phi.png')
+
+
+# ------------------ low pressure cut J 1/2 ----------------
+
+Exp_ICP_highDensity_lowPressure_standRF_halfJ_5000delT_3200PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure_standRF_halfJ_5000delT_3200PPC/')
+NGP_ICP_lowPressure_halfJ_64Cells_sinusoid_640delT_64PPC_epsneg4 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_halfJ_64Cells_sinusoid_640delT_64PPC_epsneg4/')
+NGP_ICP_lowPressure_halfJ_64Cells_sinusoid_640delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_halfJ_64Cells_sinusoid_640delT_200PPC/')
+NGP_ICP_lowPressure_halfJ_128Cells_sinusoid_640delT_400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_halfJ_128Cells_sinusoid_640delT_400PPC/')
+NGP_ICP_lowPressure_halfJ_128Cells_sinusoid_640delT_1600PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_halfJ_128Cells_sinusoid_640delT_1600PPC/')
+
+# -------------------- med pressure ----------------------------
+
+Exp_ICP_highDensity_MedPressure_standRF_6400delT_3200PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_MedPressure_standRF_6400delT_3200PPC/')
+NGP_ICP_highDensity_MedPressure_64Cells_sinusoid_1200delT_64PPC_epsneg4 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_MedPressure_64Cells_sinusoid_1200delT_64PPC_epsneg4/')
+NGP_ICP_highDensity_MedPressure_64Cells_sinusoid_1200delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_MedPressure_64Cells_sinusoid_1200delT_200PPC/')
+NGP_ICP_highDensity_MedPressure_128Cells_sinusoid_1200delT_400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_MedPressure_128Cells_sinusoid_1200delT_400PPC/')
+NGP_ICP_highDensity_MedPressure_128Cells_sinusoid_1200delT_1600PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_MedPressure_128Cells_sinusoid_1200delT_1600PPC/')
+
+# ------------------- low pressure ------------
+
+Exp_ICP_highDensity_lowPressure8_standRF_6400delT_3200PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_ICP_highDensity_lowPressure8_standRF_6400delT_3200PPC/')
+NGP_ICP_highDensity_lowPressure8_64Cells_sinusoid_640delT_64PPC_epsneg4 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_lowPressure8_64Cells_sinusoid_640delT_64PPC_epsneg4/')
+NGP_ICP_highDensity_lowPressure8_64Cells_sinusoid_640delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_lowPressure8_64Cells_sinusoid_640delT_200PPC/')
+NGP_ICP_highDensity_lowPressure8_128Cells_sinusoid_640delT_400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_lowPressure8_128Cells_sinusoid_640delT_400PPC/')
+NGP_ICP_highDensity_lowPressure8_128Cells_sinusoid_640delT_1600PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highDensity_lowPressure8_128Cells_sinusoid_640delT_1600PPC/')
+
+list_exp = [Exp_ICP_highDensity_lowPressure_standRF_halfJ_5000delT_3200PPC,
+        Exp_ICP_highDensity_lowPressure_standRF_cutJ_7000delT_3200PPC,
+        Exp_ICP_highDensity_lowPressure_standRF_7000delT_3200PPC]
+list_NGP_low = [NGP_ICP_lowPressure_halfJ_64Cells_sinusoid_640delT_64PPC_epsneg4, NGP_ICP_lowPressure_cutJ_64Cells_sinusoid_640delT_64PPC_epsneg4,
+                NGP_ICP_lowPressure_64Cells_sinusoid_640delT_64PPC_epsneg4]
+list_NGP_med = [NGP_ICP_lowPressure_halfJ_64Cells_sinusoid_640delT_200PPC, NGP_ICP_lowPressure_cutJ_64Cells_sinusoid_640delT_200PPC,
+                NGP_ICP_lowPressure_64Cells_sinusoid_640delT_200PPC]
+list_NGP_high = [NGP_ICP_lowPressure_halfJ_128Cells_sinusoid_640delT_1600PPC, NGP_ICP_lowPressure_cutJ_128Cells_sinusoid_640delT_1600PPC,
+                 NGP_ICP_lowPressure_128Cells_sinusoid_640delT_1600PPC]
+J_list = [4000, 6000, 8000]
+
+plt.figure()
+aveQuantity_vs_parameter('density', [list_exp, list_NGP_low, list_NGP_med, list_NGP_high], J_list, ['Exp. High Res', r'NGP 64 Cells, 64 PPC, $\epsilon_a = 10^{-4}$', 'NGP 64 Cells, 200 PPC','NGP 128 Cells, 1600 PPC'], 'He+')
+plt.xlabel(r'Current Density (A/m$^2$)')
+plt.ylabel(r'Average He$^+$ density (m$^{-3}$)')
+plt.legend(loc = 'best')
+plt.savefig('RF_ICP/ICP_Jcomp_runs_density.png')
+
+
+plt.figure()
+aveQuantity_vs_parameter('phi', [list_exp, list_NGP_low, list_NGP_med, list_NGP_high], J_list, ['Exp. High Res', r'NGP 64 Cells, 64 PPC, $\epsilon_a = 10^{-4}$', 'NGP 64 Cells, 200 PPC', 'NGP 128 Cells, 1600 PPC'], 'He+')
+plt.xlabel(r'Current Density (A/m$^2$)')
+plt.ylabel(r'Average $\phi$ (V)')
+plt.legend(loc = 'best')
+plt.savefig('RF_ICP/ICP_Jcomp_runs_phi.png')
+
+plt.figure()
+aveQuantity_vs_parameter('current', [list_exp, list_NGP_low, list_NGP_med, list_NGP_high], J_list, ['Exp. High Res', r'NGP 64 Cells, 64 PPC, $\epsilon_a = 10^{-4}$', 'NGP 64 Cells, 200 PPC', 'NGP 128 Cells, 1600 PPC'], 'He+')
+plt.xlabel(r'Current Density (A/m$^2$)')
+plt.ylabel(r'Average He$^+$ wall current (A/m$^2$)')
+plt.legend(loc = 'best')
+plt.savefig('RF_ICP/ICP_Jcomp_runs_current.png')
+
+list_exp = [Exp_ICP_highDensity_lowPressure8_standRF_6400delT_3200PPC,
+        Exp_ICP_highDensity_MedPressure_standRF_6400delT_3200PPC,
+        Exp_ICP_highDensity_highPressure_standRF_6400delT_3200PPC]
+list_NGP_low = [NGP_ICP_highDensity_lowPressure8_64Cells_sinusoid_640delT_64PPC_epsneg4, NGP_ICP_highDensity_MedPressure_64Cells_sinusoid_1200delT_64PPC_epsneg4,
+                NGP_ICP_highPressure_64Cells_sinusoid_2500delT_64PPC_epsneg4]
+list_NGP_med = [NGP_ICP_highDensity_lowPressure8_64Cells_sinusoid_640delT_200PPC, NGP_ICP_highDensity_MedPressure_64Cells_sinusoid_1200delT_200PPC,
+                NGP_ICP_highPressure_64Cells_sinusoid_2500delT_200PPC]
+list_NGP_high = [NGP_ICP_highDensity_lowPressure8_128Cells_sinusoid_640delT_1600PPC, NGP_ICP_highDensity_MedPressure_128Cells_sinusoid_1200delT_1600PPC,
+                 NGP_ICP_highPressure_128Cells_sinusoid_2500delT_1600PPC]
+P_list = [8, 16, 32.1]
+
+plt.figure()
+aveQuantity_vs_parameter('density', [list_exp, list_NGP_low, list_NGP_med,list_NGP_high], P_list, ['Exp. High Res', r'NGP 64 Cells, 64 PPC, $\epsilon_a = 10^{-4}$', 'NGP 64 Cells, 200 PPC', 'NGP 128 Cells, 1600 PPC'], 'He+')
+plt.xlabel(r'Helium Density ($10^{20}$ m$^{-3}$)')
+plt.ylabel(r'Average He$^+$ density (m$^{-3}$)')
+plt.legend(loc = 'best')
+plt.savefig('RF_ICP/ICP_Pcomp_runs_density.png')
+
+
+plt.figure()
+aveQuantity_vs_parameter('phi', [list_exp, list_NGP_low, list_NGP_med, list_NGP_high], P_list, ['Exp. High Res', r'NGP 64 Cells, 64 PPC, $\epsilon_a = 10^{-4}$', 'NGP 64 Cells, 200 PPC', 'NGP 128 Cells, 1600 PPC'], 'He+')
+plt.xlabel(r'Helium Density ($10^{20}$ m$^{-3}$)')
+plt.ylabel(r'Average $\phi$ (V)')
+plt.legend(loc = 'best')
+plt.savefig('RF_ICP/ICP_Pcomp_runs_phi.png')
+
+plt.figure()
+aveQuantity_vs_parameter('current', [list_exp, list_NGP_low, list_NGP_med, list_NGP_high], P_list, ['Exp. High Res', r'NGP 64 Cells, 64 PPC, $\epsilon_a = 10^{-4}$', 'NGP 64 Cells, 200 PPC', 'NGP 128 Cells, 1600 PPC'], 'He+')
+plt.xlabel(r'Helium Density ($10^{20}$ m$^{-3}$)')
+plt.ylabel(r'Average He$^+$ wall current (A/m$^2$)')
+plt.legend(loc = 'best')
+plt.savefig('RF_ICP/ICP_Pcomp_runs_current.png')

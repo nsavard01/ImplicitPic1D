@@ -69,6 +69,7 @@ NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3 = dataSet('Y:/Impl
 # NGP_IASW_Chacon2013_Curv_Smooth_8Threads_5delT_JFNK = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_Curv_Smooth_8Threads_5delT_JFNK/')
 # # NGP_IASW_Chacon2013_Curv_noSmooth = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_IASW_Chen2013_curv_noSmooth/')
 #
+NGP_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT/')
 
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT/')
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3 = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3/')
@@ -83,7 +84,7 @@ CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_250PPC_epsNeg3 = dataSet('Y:/Impl
 CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3 = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3/')
 
 
-
+CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT/')
 
 Exp_Norm_density = getAveDensityFiles('Y:/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_32Threads', 'ion', 20)
 NGP_Norm_density = getAveDensityFiles('Y:/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_Curv_Smooth_32Threads_2delT', 'ion', 20)
@@ -98,10 +99,14 @@ CIC_30PPC_density = getAveDensityFiles('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_C
 CIC_40PPC_density = getAveDensityFiles('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_Smooth_32Threads_2delT_40PPC_epsNeg3', 'ion', 20)
 CIC_40PPC_noSmooth_density = getAveDensityFiles('Y:/ImplicitPic1D/ImplicitData/CIC_IASW_Chacon2013_Curv_NoSmooth_32Threads_2delT_40PPC_epsNeg3', 'ion', 20)
 Exp_lowResOther_density = getAveDensityFiles('Y:/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_32Threads_40PPC_400Cells_0p2delT', 'ion', 20)
+Exp_lowResOther_smooth_density = getAveDensityFiles('Y:/ImplicitPic1D/ExplicitData/Exp_IASW_Chacon2013_32Threads_40PPC_400Cells_0p2delT', 'ion', 20, True)
 
-plt.plot(Exp_IASW_Chacon2013_4Threads.grid*1e2, Exp_Norm_density, '-', label = 'Exp.')
+NGP_HighRes_density = getAveDensityFiles('Y:/ImplicitPic1D/ImplicitData/NGP_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT', 'ion', 20)
+
+plt.plot(Exp_IASW_Chacon2013_4Threads.grid*1e2, Exp_Norm_density, '-', label = 'Expl.')
 plt.plot(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid*1e2, NGP_Norm_density, linestyle = '--', marker = '.', label = r'INGP')
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid*1e2, CIC_Norm_density, linestyle = '--', marker = '.', label = r'ICIC')
+plt.plot(NGP_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid * 1e2, NGP_HighRes_density, linestyle = '--', marker = '.', label = 'NGP High Res')
 plt.xlim(Exp_IASW_Chacon2013_4Threads.grid[0], Exp_IASW_Chacon2013_4Threads.grid[-1]*1e2)
 plt.xlabel('Distance (cm)', fontsize = 14)
 plt.ylabel(r'Ion Density (m$^{-3}$)', fontsize = 14)
@@ -110,6 +115,7 @@ plt.yticks(fontsize=12)
 plt.legend(loc = 'best',fontsize=12)
 plt.tight_layout()
 plt.savefig('IASW/IASW_Exp_Imp.pdf')
+plt.savefig('IASW/IASW_Exp_Imp.png')
 plt.close()
 
 CIC_times = [CIC_IASW_Chacon2013_Curv_Smooth_4Threads_0p25delT_epsNeg3.totPotTime, \
@@ -127,6 +133,7 @@ plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 plt.tight_layout()
 plt.savefig('IASW/CIC_time_vs_timeStep.pdf')
+plt.savefig('IASW/CIC_time_vs_timeStep.png')
 plt.close()
 
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid*1e2, CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.getDensity('ion',20), linestyle = '--', marker = '.', label = r'$\varepsilon_a = 10^{-6}$')
@@ -140,6 +147,7 @@ plt.yticks(fontsize=12)
 plt.legend(loc = 'best', fontsize = 12)
 plt.tight_layout()
 plt.savefig('IASW/IASW_CIC_diffEps.pdf')
+plt.savefig('IASW/IASW_CIC_diffEps.png')
 plt.close()
 
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.globDiag['time(s)'].values, CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.globDiag['gaussError'].values, linestyle = '--', marker = 'o', label = r'$\varepsilon_a = 10^{-6}$')
@@ -153,6 +161,7 @@ plt.yticks(fontsize=12)
 plt.legend(loc = 'best', fontsize = 12)
 plt.tight_layout()
 plt.savefig('IASW/IASW_CIC_GaussError_Res.pdf')
+plt.savefig('IASW/IASW_CIC_GaussError_Res.png')
 plt.close()
 
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.globDiag['time(s)'].values, np.abs(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.globDiag['TotalEnergy(J/m^2)'].values - CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.globDiag['TotalEnergy(J/m^2)'].values[0])/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.globDiag['TotalEnergy(J/m^2)'].values[0], linestyle = '--', marker = 'o', label = r'$\varepsilon_a = 10^{-6}$')
@@ -166,6 +175,7 @@ plt.yticks(fontsize=12)
 plt.legend(loc = 'best', fontsize = 12)
 plt.tight_layout()
 plt.savefig('IASW/IASW_CIC_EnergyError_Res.pdf')
+plt.savefig('IASW/IASW_CIC_EnergyError_Res.png')
 plt.close()
 
 
@@ -181,6 +191,7 @@ plt.yticks(fontsize=12)
 plt.legend(loc = 'center right',fontsize=12)
 plt.tight_layout()
 plt.savefig('IASW/IASW_Exp_ChangePPC_delX.pdf')
+plt.savefig('IASW/IASW_Exp_ChangePPC_delX.png')
 plt.close()
 
 
@@ -189,6 +200,7 @@ plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_250PPC_epsNeg3.grid*1e2,
 # plt.plot(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3.grid, NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_188PPC_epsNeg3.getDensity('ion',20), linestyle = '--', marker = '.', label = r'NGP,188 PPC')
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid*1e2, CIC_100PPC_density, linestyle = '--', marker = '.', label = r'100 PPC')
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.grid*1e2, CIC_40PPC_density, linestyle = '--', marker = '.', label = r'40 PPC')
+# plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.grid*1e2, CIC_40PPC_noSmooth_density, linestyle = '--', marker = '.', label = r'40 PPC no smooth')
 plt.xlim(Exp_IASW_Chacon2013_4Threads.grid[0], Exp_IASW_Chacon2013_4Threads.grid[-1]*1e2)
 plt.xlabel('Distance (cm)', fontsize = 14)
 plt.ylabel(r'Ion Density (m$^{-3}$)', fontsize = 14)
@@ -197,6 +209,7 @@ plt.yticks(fontsize=12)
 plt.legend(loc = 'best',fontsize=12)
 plt.tight_layout()
 plt.savefig('IASW/IASW_CIC_ChangePPC.pdf')
+plt.savefig('IASW/IASW_CIC_ChangePPC.png')
 plt.close()
 
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3.grid*1e2, CIC_Norm_noSmooth_density, linestyle = '--', marker = '.', label = r'2000 PPC')
@@ -209,6 +222,20 @@ plt.yticks(fontsize=12)
 plt.legend(loc = 'best',fontsize=12)
 plt.tight_layout()
 plt.savefig('IASW/IASW_CIC_40PPC_smooth.pdf')
+plt.savefig('IASW/IASW_CIC_40PPC_smooth.png')
+plt.close()
+
+plt.figure()
+xi = np.arange(64) + 1
+plt.plot(xi, np.diff(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid) * 1e3, 'o')
+plt.xlim(1, 64)
+plt.xlabel(r'Cell Number', fontsize = 14)
+plt.ylabel(r'Cell Size (mm)', fontsize = 14)
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+plt.tight_layout()
+plt.savefig('IASW/IASW_cell_map.pdf')
+plt.savefig('IASW/IASW_cell_map.png')
 plt.close()
 
 
@@ -216,3 +243,47 @@ y = CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3.globDiag['TotalMoment
 z = CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.globDiag['TotalMomentum(kg/m/s)'].values[0]
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3.globDiag['time(s)'].values, (CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_epsNeg3.globDiag['TotalMomentum(kg/m/s)'].values - y)/y, linestyle = '--', marker = 'o', label = r'$\varepsilon_a = 10^{-6}$')
 plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.globDiag['time(s)'].values, (CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.globDiag['TotalMomentum(kg/m/s)'].values-z)/z, linestyle = '--', marker = 'o', label = r'$\varepsilon_a = 10^{-3}$')
+
+
+dev_sqr_exp = 0.0
+for i in range(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.Nx-1):
+    dev_sqr_exp += (Exp_lowResOther_density[i] - np.interp(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density))**2
+print('exp 40 PPC', 1e-13 * np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.Nx-1)))
+
+dev_sqr_exp = 0.0
+for i in range(Exp_IASW_Chacon2013_4Threads_100PPC.Nx-1):
+    dev_sqr_exp += (Exp_100PPC_density[i] - Exp_Norm_density[i])**2
+print('exp 100 PPC', 1e-13 * np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_100PPC.Nx-1)))
+
+dev_sqr_exp = 0.0
+for i in range(Exp_IASW_Chacon2013_4Threads_200PPC.Nx-1):
+    dev_sqr_exp += (Exp_200PPC_density[i] - Exp_Norm_density[i])**2
+print('exp 200 PPC', 1e-13 * np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_200PPC.Nx-1)))
+
+
+
+dev_sqr_impl = 0.0
+for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.Nx):
+    dev_sqr_impl += (CIC_40PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density))**2
+print('CIC 40 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.Nx))
+
+dev_sqr_impl = 0.0
+for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx):
+    dev_sqr_impl += (CIC_100PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density))**2
+print('CIC 100 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
+
+dev_sqr_impl = 0.0
+for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx):
+    dev_sqr_impl += (CIC_250PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density))**2
+print('CIC 250 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
+
+dev_sqr_impl = 0.0
+for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx):
+    dev_sqr_impl += (CIC_Norm_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density))**2
+print('CIC 2000 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
+
+
+dev_sqr_impl = 0.0
+for i in range(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.Nx-1):
+    dev_sqr_impl += (NGP_Norm_density[i] - np.interp(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density))**2
+print('NGP 2000 PPC', 1e-13 * np.sqrt(dev_sqr_impl/(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.Nx-1)))
