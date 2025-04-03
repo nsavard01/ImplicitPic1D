@@ -7,3 +7,4 @@ tmp*
 *.png
 *.fuse_hidden*
 !PIC1D/CollisionData/*.dat
+*.dbg

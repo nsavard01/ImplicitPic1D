@@ -189,6 +189,36 @@ class dataSet:
             return phi
         else:
             raise Warning("No such i diagnostic!")
+
+    def getEField(self, i):
+        if (i <= self.numDiag - 1):
+            phi = np.fromfile(self.path + 'Phi/phi_' + str(i) + '.dat', dtype = 'float', offset = 4)
+            if (self.scheme == 'NGP'):
+                if (self.smooth):
+                    phi_other = np.copy(phi)
+                    phi[1:-1] = 0.25 * phi_other[0:-2] + 0.5 * phi_other[1:-1] + 0.25 * phi[2::]
+                    phi[0] = 0.25 * phi_other[-2] + 0.5 * phi[0] + 0.25 * phi[1]
+                    phi[-1] = phi[0]
+                EField = (phi[0:-1] - phi[1::])/(self.grid[1::] - self.grid[0:-1])
+                field_grid = 0.5 * (self.grid[1::] + self.grid[0:-1])
+            else:
+                if (self.smooth):
+                    phi_other = np.copy(phi)
+                    phi[1:-1] = 0.25 * phi_other[0:-2] + 0.5 * phi_other[1:-1] + 0.25 * phi[2::]
+                    phi[0] = 0.25 * phi_other[-1] + 0.5 * phi[0] + 0.25 * phi[1]
+                    phi[-1] = 0.25 * phi_other[-2] + 0.5 * phi[-1] + 0.25 * phi[0]
+                EField = np.zeros(self.Nx+1)
+                EField[1:-1] = (phi[0:-1] - phi[1::])/(self.grid[1::] - self.grid[0:-1])
+                EField[0] = (phi[-1] - phi[0])/(2 * self.grid[0])
+                EField[-1] = EField[0]
+                field_grid = np.zeros(self.Nx+1)
+                field_grid[1:-1] = 0.5 * (self.grid[1::] + self.grid[0:-1])
+                field_grid[0] = 0
+                field_grid[-1] = self.grid[-1] + self.grid[0]
+
+            return (field_grid, EField)
+        else:
+            raise Warning("No such i diagnostic!")
             
     def getDensity(self, name, i):
         if (name not in self.particles.keys()):

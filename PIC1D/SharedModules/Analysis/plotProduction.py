@@ -101,7 +101,7 @@ def plotAveEPF(dataSet, name, lower_limit = 0.2, label = '', marker = 'o', lines
     plt.yscale('log')
     plt.xlabel('Particle Energy (eV)')
 
-def getAveDensityFiles(dataName, name = 'e', diagNumber = 0, smoothing = False):
+def getAveDensityFiles(dataName, name = 'e', diagNumber = 0):
     # Given name of file which will have _1, _2, etc appended
     if ('Explicit' in dataName):
         data = dataSetExplicit(dataName + '/')
@@ -116,15 +116,48 @@ def getAveDensityFiles(dataName, name = 'e', diagNumber = 0, smoothing = False):
         else:
             data = dataSet(filename + '/')
         density = density + data.getDensity(name, diagNumber)
-    if (smoothing):
-        density_other = np.zeros(density.size)
-        density_other[0] = 0.5 * density[0] + 0.25 * density[-1] + 0.25 * density[1]
-        density_other[-1] = density_other[0]
-        density_other[1:-1] = 0.5 * density[1:-1] + 0.25 * density[0:-2] + 0.25 * density[2::]
-        density = density_other
     print('Finished averaging for', dataName)
     print('Contained', number+1, 'files')
     return density/(number+1)
+
+def getAvePhiFiles(dataName, diagNumber = 0):
+    # Given name of file which will have _1, _2, etc appended
+    if ('Explicit' in dataName):
+        data = dataSetExplicit(dataName + '/')
+    else:
+        data = dataSet(dataName + '/')
+    density = data.getPhi(diagNumber)
+    fileList = glob.glob(dataName + '_[0-9]')
+    number = len(fileList)
+    for filename in fileList:
+        if ('Explicit' in dataName):
+            data = dataSetExplicit(filename + '/')
+        else:
+            data = dataSet(filename + '/')
+        density = density + data.getPhi(diagNumber)
+    print('Finished averaging for', dataName)
+    print('Contained', number+1, 'files')
+    return density/(number+1)
+
+def getAveEFieldFiles(dataName, diagNumber = 0):
+    # Given name of file which will have _1, _2, etc appended
+    if ('Explicit' in dataName):
+        data = dataSetExplicit(dataName + '/')
+    else:
+        data = dataSet(dataName + '/')
+    density = data.getEField(diagNumber)[1]
+    grid = data.getEField(diagNumber)[0]
+    fileList = glob.glob(dataName + '_[0-9]')
+    number = len(fileList)
+    for filename in fileList:
+        if ('Explicit' in dataName):
+            data = dataSetExplicit(filename + '/')
+        else:
+            data = dataSet(filename + '/')
+        density = density + data.getEField(diagNumber)[1]
+    print('Finished averaging for', dataName)
+    print('Contained', number+1, 'files')
+    return (grid, density/(number+1))
 
 def plotAveDensityVsRef(refData, dataList, name, labelList = [''], marker = 'o', linestyle = '--'):
     #Plotting average density vs a reference density

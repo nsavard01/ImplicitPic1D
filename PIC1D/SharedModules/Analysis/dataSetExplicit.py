@@ -164,7 +164,18 @@ class dataSetExplicit:
             return phi
         else:
             raise Warning("No such i diagnostic!")
-            
+
+    def getEField(self, i):
+        if (i <= self.numDiag - 1):
+            phi = np.fromfile(self.path + 'Phi/phi_' + str(i) + '.dat', dtype='float', offset=4)
+            EField = np.zeros(self.Nx)
+            EField[1:-1] = (phi[0:-2] - phi[2::])/(self.grid[2::] - self.grid[0:-2])
+            EField[0] = (phi[-1] - phi[1])/(2 * self.grid[1])
+            EField[-1] = EField[0]
+            return (self.grid, EField)
+        else:
+            raise Warning("No such i diagnostic!")
+
     def getDensity(self, name, i):
         if (name not in self.particles.keys()):
             raise Warning('No such particle', name, 'in simulation!')
