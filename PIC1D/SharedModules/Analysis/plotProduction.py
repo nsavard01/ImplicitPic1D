@@ -159,6 +159,19 @@ def getAveEFieldFiles(dataName, diagNumber = 0):
     print('Contained', number+1, 'files')
     return (grid, density/(number+1))
 
+def get_rms_percentage_ave_density(data, refData, name):
+    ref_grid = refData.grid
+    ref_n = refData.getAveDensity(name)
+
+    grid = data.grid
+    n = data.getAveDensity(name)
+    res = 0.0
+    for u in range(data.Nx):
+        res += ((n[u] - np.interp(grid[u], ref_grid, ref_n))/np.interp(grid[u], ref_grid, ref_n))**2
+    res = np.sqrt(res/data.Nx)
+    print('res is', res)
+
+
 def plotAveDensityVsRef(refData, dataList, name, labelList = [''], marker = 'o', linestyle = '--'):
     #Plotting average density vs a reference density
     refDensity = refData.getAveDensity(name)

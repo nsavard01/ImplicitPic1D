@@ -299,46 +299,48 @@ plt.plot(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.globDiag['
 
 dev_sqr_exp = 0.0
 for i in range(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.Nx-1):
-    dev_sqr_exp += (Exp_lowResOther_density[i] - np.interp(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density))**2
-print('exp 40 PPC', 1e-13 * np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.Nx-1)))
+    n_ref = np.interp(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.grid[i], Exp_IASW_Chacon2013_4Threads.grid, Exp_Norm_density)
+    dev = (Exp_lowResOther_density[i] - n_ref)/n_ref
+    dev_sqr_exp += dev**2
+print('exp 40 PPC', np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_40PPC_400Cells_0p2delT.Nx-1)))
 
 dev_sqr_exp = 0.0
 for i in range(Exp_IASW_Chacon2013_4Threads_100PPC.Nx-1):
-    dev_sqr_exp += (Exp_100PPC_density[i] - Exp_Norm_density[i])**2
-print('exp 100 PPC', 1e-13 * np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_100PPC.Nx-1)))
+    dev_sqr_exp += ((Exp_100PPC_density[i] - Exp_Norm_density[i])/Exp_Norm_density[i])**2
+print('exp 100 PPC', np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_100PPC.Nx-1)))
 
 dev_sqr_exp = 0.0
 for i in range(Exp_IASW_Chacon2013_4Threads_200PPC.Nx-1):
-    dev_sqr_exp += (Exp_200PPC_density[i] - Exp_Norm_density[i])**2
-print('exp 200 PPC', 1e-13 * np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_200PPC.Nx-1)))
+    dev_sqr_exp += ((Exp_200PPC_density[i] - Exp_Norm_density[i])/Exp_Norm_density[i])**2
+print('exp 200 PPC', np.sqrt(dev_sqr_exp/(Exp_IASW_Chacon2013_4Threads_200PPC.Nx-1)))
 
 
 
 dev_sqr_impl = 0.0
 for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.Nx):
-    dev_sqr_impl += (CIC_40PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
-print('CIC 40 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.Nx))
+    dev_sqr_impl += ((CIC_40PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))/np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
+print('CIC 40 PPC', np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_40PPC_epsNeg3.Nx))
 
 dev_sqr_impl = 0.0
 for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx):
-    dev_sqr_impl += (CIC_100PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
-print('CIC 100 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
+    dev_sqr_impl += ((CIC_100PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))/np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
+print('CIC 100 PPC', np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
 
 dev_sqr_impl = 0.0
 for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx):
-    dev_sqr_impl += (CIC_250PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
-print('CIC 250 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
+    dev_sqr_impl += ((CIC_250PPC_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))/np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
+print('CIC 250 PPC', np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
 
 dev_sqr_impl = 0.0
 for i in range(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx):
-    dev_sqr_impl += (CIC_Norm_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
-print('CIC 2000 PPC', 1e-13 * np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
+    dev_sqr_impl += ((CIC_Norm_density[i] - np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))/np.interp(CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.grid[i], CIC_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, CIC_HighRes_density))**2
+print('CIC 2000 PPC', np.sqrt(dev_sqr_impl/CIC_IASW_Chacon2013_Curv_Smooth_4Threads_2delT_100PPC_epsNeg3.Nx))
 
 
 dev_sqr_impl = 0.0
 for i in range(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.Nx-1):
-    dev_sqr_impl += (NGP_Norm_density[i] - np.interp(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid[i], NGP_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, NGP_HighRes_density))**2
-print('NGP 2000 PPC', 1e-13 * np.sqrt(dev_sqr_impl/(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.Nx-1)))
+    dev_sqr_impl += ((NGP_Norm_density[i] - np.interp(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid[i], NGP_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, NGP_HighRes_density))/np.interp(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.grid[i], NGP_IASW_Chacon2013_512cells_NoSmooth_32Threads_2delT.grid, NGP_HighRes_density))**2
+print('NGP 2000 PPC', np.sqrt(dev_sqr_impl/(NGP_IASW_Chacon2013_Curv_Smooth_4Threads_2delT.Nx-1)))
 
 plt.figure()
 plt.plot(Exp_Norm_EField[0]*1e2, Exp_Norm_EField[1], linestyle = '--', marker = '.', label = r'Expl.')

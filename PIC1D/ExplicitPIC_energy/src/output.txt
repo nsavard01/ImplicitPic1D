@@ -1,0 +1,224 @@
+ 
+ Reading initial inputs:
+ ------------------
+ Save data folder: 
+ ../../../../ExplicitData/Exp_ICP_highDensity_lowPressure8_standRF_6400delT_3200
+ PPC
+ Restart Bool: F
+ Number of threads is:          32
+ Total allowable threads:          64
+ Average initial electron density:  1.000000000000000E+017
+ Initial electron temperature:   4.00000000000000     
+ Initial ion temperature:  2.500000000000000E-002
+ Number of diagnostic steps is:          20
+ Fraction of 1/w_p for time step:  0.205566275578342     
+ del_t will be:  1.152286135693215E-011
+ Simulation start time is:  0.000000000000000E+000
+ Simulation time is:  3.687315634218289E-005
+ Final averaging time is:  7.374631268436579E-006
+ ------------------
+ 
+ 
+ Reading domain inputs:
+ ------------------
+ Number of nodes:        2001
+ Left boundary type:           1
+ Right boundary type:           1
+ Fraction of debye length:  0.712517676968431     
+ Grid length:  6.700000000000000E-002
+ DelX is:  3.350000000000000E-005
+ ------------------
+ 
+ 
+ Reading solver inputs:
+ ------------------
+ Left voltage:  0.000000000000000E+000
+ Right  voltage:  0.000000000000000E+000
+ RF frequency:  0.000000000000000E+000
+ RF half amplitude:  0.000000000000000E+000
+ ------------------
+ 
+ Reading particle inputs:
+ Amount charged particles:           2
+ Initializing e
+ Amount of macroparticles is:     6400000
+ Particle mass is:  9.109383701500001E-031
+ Particle charge is: -1.602176634000000E-019
+ Particle weight is:   1046875000.00000     
+ Particle mean KE is:   6.00349046008964     
+ Distribution type:           0
+ Drift velocity:  0.000000000000000E+000
+ Neutral charge start!
+ Initializing He+
+ Amount of macroparticles is:     6400000
+ Particle mass is:  6.645566050681144E-027
+ Particle charge is:  1.602176634000000E-019
+ Particle weight is:   1046875000.00000     
+ Particle mean KE is:  3.749025116173592E-002
+ Distribution type:           0
+ Drift velocity:  0.000000000000000E+000
+ ---------------
+ 
+ Reading particle inputs:
+ Initializing target particle:He
+ Particle mass is:  6.646476989051294E-027
+ Particle temperature(K) is:   300.000000000000     
+ Particle density is:  8.000000000000000E+020
+ ---------------
+ 
+ Reading collision inputs:
+ ---------------------------
+ Taking reactions from turner_benchmark_he_electron_table.dat
+ 
+ Null Collision generated
+ Reactants are:e and He
+ Amount of collisions:           4
+ Reduced mass:  9.108135378514684E-031
+ length of arrays:         773
+ Max sigma_v:  8.977580782689968E-014
+ reducedMass:  9.108135378514684E-031
+ reducedMassIonization:  4.554379705840549E-031
+ 
+ For collision #:           1
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           1
+ number Products are:           2
+ products are:
+ e and He
+ 
+ For collision #:           2
+ Energy threshold:   24.5870000000000     
+ Collision type:           2
+ number Products are:           3
+ products are:
+ e and He+and e
+ 
+ For collision #:           3
+ Energy threshold:   20.6100000000000     
+ Collision type:           3
+ number Products are:           2
+ products are:
+ e and He
+ 
+ For collision #:           4
+ Energy threshold:   19.8200000000000     
+ Collision type:           3
+ number Products are:           2
+ products are:
+ e and He
+ 
+ 
+ Null Collision generated
+ Reactants are:He+ and He
+ Amount of collisions:           2
+ Reduced mass:  3.323010744325864E-027
+ length of arrays:         101
+ Max sigma_v:  3.891896383417535E-014
+ reducedMass:  3.323010744325864E-027
+ reducedMassIonization:  0.000000000000000E+000
+ 
+ For collision #:           1
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           4
+ number Products are:           2
+ products are:
+ He+ and He
+ 
+ For collision #:           2
+ Energy threshold:  0.000000000000000E+000
+ Collision type:           1
+ number Products are:           2
+ products are:
+ He+ and He
+ 
+ ---------------------------
+ 
+ Reading initial inputs for particle injection:
+ ------------------
+ Particle lost is reinjected: F
+ Particle refluxing activated on neumann boundary: F
+ Particle injection on neumann boundary F
+ Particle injection unformly with maxwellian F
+ Electron maxwellian heating F
+ Electron E-field heating T
+ EField frequency:   13560000.0000000      Hz
+ J_total current density:   3000.00000000000      A/m^2
+ Heating region boundary between  1.675000000000000E-002 and
+  5.025000000000000E-002  meters
+ ------------------
+ 
+ Simulation is   5.00000000000689      percent done
+ Number of electrons is:     5237448
+ Number of ions is:     5243492
+ Simulation is   10.0000312499430      percent done
+ Number of electrons is:     4398718
+ Number of ions is:     4404581
+ Simulation is   15.0000000000469      percent done
+ Number of electrons is:     3797865
+ Number of ions is:     3803576
+ Simulation is   20.0000000001636      percent done
+ Number of electrons is:     3433047
+ Number of ions is:     3438629
+ Simulation is   25.0000312499635      percent done
+ Number of electrons is:     3231528
+ Number of ions is:     3236994
+ Simulation is   30.0000312497127      percent done
+ Number of electrons is:     3127574
+ Number of ions is:     3133073
+ Simulation is   35.0000312494618      percent done
+ Number of electrons is:     3076355
+ Number of ions is:     3081808
+ Simulation is   40.0000312492109      percent done
+ Number of electrons is:     3052274
+ Number of ions is:     3057737
+ Simulation is   45.0000312489600      percent done
+ Number of electrons is:     3041269
+ Number of ions is:     3046702
+ Simulation is   50.0000312487092      percent done
+ Number of electrons is:     3035478
+ Number of ions is:     3040931
+ Simulation is   55.0000312484583      percent done
+ Number of electrons is:     3032503
+ Number of ions is:     3037937
+ Simulation is   60.0000312482074      percent done
+ Number of electrons is:     3031151
+ Number of ions is:     3036518
+ Simulation is   65.0000312479566      percent done
+ Number of electrons is:     3032705
+ Number of ions is:     3038160
+ Simulation is   70.0000312477057      percent done
+ Number of electrons is:     3031490
+ Number of ions is:     3036897
+ Simulation is   75.0000312474548      percent done
+ Number of electrons is:     3030647
+ Number of ions is:     3036055
+ Simulation is   80.0000312472039      percent done
+ Number of electrons is:     3030312
+ Number of ions is:     3035721
+ Simulation is   85.0000312476107      percent done
+ Number of electrons is:     3032124
+ Number of ions is:     3037578
+ Simulation is   90.0000312488300      percent done
+ Number of electrons is:     3032104
+ Number of ions is:     3037537
+ Simulation is   95.0000000000493      percent done
+ Number of electrons is:     3032081
+ Number of ions is:     3037475
+ Simulation is   100.000000001269      percent done
+ Number of electrons is:     3031926
+ Number of ions is:     3037341
+ Elapsed time for simulation is:   12714.8518360000      seconds
+ moverTime is:   10209.0127500000     
+ potentialTime is:   88.1290590000000     
+ collision time is:   2409.25516200000     
+ Averaging over  7.374631268436579E-006 seconds
+ Averaging finished over  7.374631270234966E-006 simulation time (s)
+ Power average for Efield heating is:  8.325689891610818E-006 W
+ Power per m^2 for particles is:   8715.95660528007     
+ J average:   2121.42703393940     
+ v average:   231442.881532832     
+ Power loss to wall is:   1896.66490723216     
+ Power loss to inelastic collisions:   6800.14567267185     
+ Electron average wall loss (A/m^2):  -66.1003425347555     
+ Ion average wall loss (A/m^2):   66.1011158273104     
+ Performing average for EEDF over 50/omega_p
