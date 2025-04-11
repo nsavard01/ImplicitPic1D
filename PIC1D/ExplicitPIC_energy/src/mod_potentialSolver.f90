@@ -303,7 +303,7 @@ contains
                     END SELECT
                 end if
                 
-                if (x_f > world%startX .and. x_f < world%endX) then  
+                if (x_f > world%startX .and. x_f < world%endX) then 
                     direction = int(sign(1.0d0, x_f - x_i))
                     do while (x_f < world%grid(l_cell) .or. x_f >= world%grid(l_cell+1))
                         l_cell = l_cell + direction

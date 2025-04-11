@@ -194,6 +194,7 @@ CIC_RFBenchmark_Denis_2096PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/Impli
 CIC_RFBenchmark_Denis_4192PPC_128cells_noSmoothing_sinCenter = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RFBenchmark_Denis_4192PPC_128cells_noSmoothing_sinCenter/')
 
 NGP_Powis_benchmark_32ref_test = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_Powis_benchmark_32ref_test/')
+ECExp_Powis_benchmark_32ref = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/ECExp_Powis_benchmark_32ref/')
 Powis_32ref = np.loadtxt('ec-pic_ccp_data_for_nicolas/ccp_30cm_30mTorr_1000V_ec_refined32_ion_density.dat')
 
 
