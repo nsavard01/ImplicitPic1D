@@ -16,7 +16,7 @@ module constants
     ! Essential parameters set that is important for entire simulation state
     integer(int32), protected :: numDiagnosticSteps , numThread
     logical, protected :: restartBool = .false.
-    integer(int32), protected :: oldDiagStep
+    integer(int32), protected :: oldDiagStep, ionStepMult
     real(real64), protected :: fractionFreq, n_ave, T_e, T_i
     real(real64), protected :: del_t, simulationTime, averagingTime
     character(len=:), allocatable, protected :: directoryName, restartDirectory ! Name of save directory
@@ -43,7 +43,7 @@ contains
         read(10, *, IOSTAT = io) T_e
         read(10, *, IOSTAT = io) T_i
         read(10, *, IOSTAT = io) numDiagnosticSteps
-        read(10, *, IOSTAT = io) fractionFreq, del_t
+        read(10, *, IOSTAT = io) fractionFreq, del_t, ionStepMult
         read(10, *, IOSTAT = io) averagingTime
         read(10, '(A)', IOSTAT = io) saveFolderName
         read(10, *, IOSTAT = io) tempName
@@ -71,7 +71,7 @@ contains
             read(10, *, IOSTAT = io) T_e
             read(10, *, IOSTAT = io) T_i
             read(10, *, IOSTAT = io) u
-            read(10, *, IOSTAT = io) fractionFreq, del_t
+            read(10, *, IOSTAT = io) fractionFreq, del_t, ionStepMult
             read(10, *, IOSTAT = io) tempReal
             read(10, '(A)', IOSTAT = io) saveFolderName
             read(10, *, IOSTAT = io) tempName
@@ -110,6 +110,7 @@ contains
         del_t = MIN(fractionFreq * 1.0d0 / plasmaFreqTemp, del_t)
         fractionFreq = del_t * plasmaFreqTemp
         simulationTime = simulationTime + startSimulationTime
+        if (ionStepMult < 1 .or. ionStepMult > 1000) ionStepMult = 1
         print *, "Save data folder: ", directoryName
         print *, 'Restart Bool:', restartBool
         print *, "Number of threads is:", omp_get_max_threads()

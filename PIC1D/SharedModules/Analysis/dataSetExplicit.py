@@ -193,7 +193,15 @@ class dataSetExplicit:
             return temp
         else:
             raise Warning("No such i diagnostic!")
-            
+
+    def getAveTemp(self, name):
+        if (self.boolAverageFile):
+            EHist, Ebin = self.getAveEDF(name)
+            Norm = np.sum(EHist*Ebin)/ np.sum(EHist)
+            T = Norm * 2 / 3
+        else:
+            raise Warning('No averaging done!')
+        return T
     def getAvePhi(self):
         if (self.boolAverageFile):
             phi = np.fromfile(self.path + 'Phi/phi_Average.dat', dtype = 'float', offset = 4)

@@ -11,11 +11,12 @@ module mod_particle
     private
     public :: Particle, readChargedParticleInputs
     integer(int32), public, protected :: numberChargedParticles = 0 ! number of charged particles total
+    logical, public, protected :: electron_exists
 
     ! Particle contains particle properties and stored values in phase space for each charged particle
     type :: Particle
         character(:), allocatable :: name !name of the particle
-        integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:), numToCollide(:) !N_p is the current last index of particle, refIdx and delIdx are number to reflux and delete
+        integer(int32), allocatable :: N_p(:), refIdx(:), refRecordIdx(:, :), delIdx(:), numToCollide(:), startIdx(:) !N_p is the current last index of particle, refIdx and delIdx are number to reflux and delete
         ! numToCollide saves number that can collided in nullCollision
         integer(int32) :: finalIdx, accumWallLoss(2) ! finalIdx is maximum particles per thread
         real(real64), allocatable :: phaseSpace(:,:, :) !particle phase space, represents [l_x, v_x, v_y, v_z] in first index
@@ -65,9 +66,10 @@ contains
         maxNumNodes = MAX(NumberXNodes, NumberXHalfNodes) ! Take maximum of nodes on domain
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
-            self%densities(NumberXNodes, numThread), self%workSpace(maxNumNodes, numThread), self%numToCollide(numThread), self%momentumLoss(2, numThread))
+            self%densities(NumberXNodes, numThread), self%workSpace(maxNumNodes, numThread), self%numToCollide(numThread), self%momentumLoss(2, numThread), self%startIdx(numThread))
         self%refIdx = 0
         self%delIdx = 0
+        self%startIdx = 1
         self%N_p = N_p
         self%energyLoss = 0.0d0
         self%wallLoss = 0
@@ -324,6 +326,7 @@ contains
             read(10,*) name
 
             if( name(1:9).eq.'ELECTRONS') then
+                electron_exists = .true.
                 read(10,*) name
                 read(10,*) name
                 read(10,'(A4)', ADVANCE = 'NO') name(1:2)
@@ -359,7 +362,7 @@ contains
 
         end do
         close(10)
-
+        if (.not. electron_exists) ionStepMult = 1 ! if no electron, then you have del_t over only ions
         numberChargedParticles = numSpecies
         print *, 'Amount charged particles:', numberChargedParticles
         if (numberChargedParticles > 0) then

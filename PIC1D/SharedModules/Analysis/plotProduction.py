@@ -15,7 +15,7 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
         colors = ['b', 'r', 'g', 'k', 'c', 'm', 'yAve']
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid * 1e2, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
+            plt.plot(dataSet.grid * 1e2, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 3,color = colors[i], label = r'$n_{' + name +  '}$')
         plt.xlabel('Distance (cm)')
         plt.ylabel('Particle Density (1/m^3)')
         plt.xlim([dataSet.x_min, dataSet.x_max * 1e2])
@@ -25,7 +25,7 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
             raise Warning("For average density, particle", name, "does not exist in the dataSet!")
         else:
             n = dataSet.getAveDensity(name)
-            plt.plot(dataSet.grid * 1e2, n,  linestyle = linestyle, marker = marker, markersize = 2, label = label)
+            plt.plot(dataSet.grid * 1e2, n,  linestyle = linestyle, marker = marker, markersize = 4, label = label)
             plt.xlabel('Distance (cm)')
             plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([dataSet.x_min, dataSet.x_max*1e2])
@@ -33,7 +33,7 @@ def plotAveDensity(dataSet, name = "", label = "", marker = 'o', linestyle = '--
 def plotAvePhi(dataSet, label = '', marker = 'o', linestyle = '--'):
 
     phi = dataSet.getAvePhi()
-    plt.plot(dataSet.grid*1e2, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
+    plt.plot(dataSet.grid*1e2, phi, marker = marker, linestyle = linestyle, markersize = 3, label = label)
     plt.xlabel('Distance (cm)')
     plt.ylabel('Potential (V)')
     plt.xlim([dataSet.x_min, dataSet.x_max*1e2])
@@ -169,6 +169,18 @@ def get_rms_percentage_ave_density(data, refData, name):
     for u in range(data.Nx):
         res += ((n[u] - np.interp(grid[u], ref_grid, ref_n))/np.interp(grid[u], ref_grid, ref_n))**2
     res = np.sqrt(res/data.Nx)
+    print('res is', res)
+
+def get_rms_percentage_ave_phi(data, refData):
+    ref_grid = refData.grid
+    ref_n = refData.getAvePhi()
+
+    grid = data.grid
+    n = data.getAvePhi()
+    res = 0.0
+    for u in range(1,data.Nx-1):
+        res += ((n[u] - np.interp(grid[u], ref_grid, ref_n))/np.interp(grid[u], ref_grid, ref_n))**2
+    res = np.sqrt(res/(data.Nx-2))
     print('res is', res)
 
 
@@ -313,6 +325,8 @@ def aveQuantity_vs_parameter(quantity, list_data, parameter_list, label_list, na
                 q_temp = q_temp / (dataSet.grid[-1] - dataSet.grid[0])
             elif (quantity == 'current'):
                 q_temp = dataSet.particles[name]['aveDiag']['leftCurrLoss'].values[0] + dataSet.particles[name]['aveDiag']['rightCurrLoss'].values[0]
+            elif (quantity == 'temperature'):
+                q_temp = dataSet.getAveTemp(name)
 
             ave[i] = q_temp
         plt.plot(parameter_list, ave, '--o', label = label_list[j])

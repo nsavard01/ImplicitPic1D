@@ -237,10 +237,35 @@ class dataSet:
             return temp
         else:
             raise Warning("No such i diagnostic!")
-            
+
+    def getAveTemp(self, name):
+        if (self.boolAverageFile):
+            EHist, Ebin = self.getAveEDF(name)
+            Norm = np.sum(EHist * Ebin) / np.sum(EHist)
+            T = Norm * 2 / 3
+        else:
+            raise Warning('No averaging done!')
+        return T
     def getAvePhi(self):
         if (self.boolAverageFile):
             phi = np.fromfile(self.path + 'Phi/phi_Average.dat', dtype = 'float', offset = 4)
+            if (self.smooth):
+                phi_other = np.copy(phi)
+                phi[1:-1] = 0.25 * phi_other[0:-2] + 0.5 * phi_other[1:-1] + 0.25 * phi[2::]
+                if (self.scheme == 'CIC'):
+                    if ('Dirichlet' in self.leftBoundary):
+                        phi[0] = 0.25 * (phi_other[0] + phi_other[1])
+                    elif ('Neumann' in self.leftBoundary):
+                        phi[0] = 0.25 * (3*phi_other[0] + phi_other[1])
+                    else:
+                        phi[0] = 0.25 * (phi_other[-1] + 2*phi_other[0] + phi_other[1])
+                        phi[-1] = 0.25 * (phi_other[-2] + 2 * phi_other[-1] + phi_other[0])
+
+                    if ('Dirichlet' in self.rightBoundary):
+                        phi[-1] = 0.25 * (phi_other[-1] + phi_other[-2])
+                    elif ('Neumann' in self.rightBoundary):
+                        phi[-1] = 0.25 * (3*phi_other[-1] + phi_other[-2])
+
         else:
             raise Warning('No averaging done!')
         return phi

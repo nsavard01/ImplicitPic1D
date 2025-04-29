@@ -74,6 +74,8 @@ Exp_RFBenchmark_Denis_moreCells_lowerDen_10xPart_halfTime = dataSetExplicit('Y:/
 Exp_RFBenchmark_Denis_moreCells_lowerDen_20xPart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_lowerDen_20xPart/')
 Exp_RFBenchmark_Denis_moreCells_lowerDen_20xPart_3000cells_thirdsTime = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_lowerDen_20xPart_3000cells_thirdsTime/')
 
+ECExp_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_sinCenter = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/ECExp_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_sinCenter/')
+
 # ----------------------- NGP ---------------------------------
 
 NGP_RFBenchmark_Denis_262PPC_128cells_noSmoothing = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RFBenchmark_Denis_262PPC_128cells_noSmoothing/')
@@ -824,6 +826,23 @@ plt.legend(loc = 'lower right', fontsize = 12)
 plt.tight_layout()
 plt.savefig('Denis_RF/NGP_lowPress_128cells_DenisMap.pdf')
 plt.savefig('Denis_RF/NGP_lowPress_128cells_DenisMap.png')
+plt.close()
+
+plt.figure(figsize=(8.0139, 6.2739))
+plotAveDensity(NGP_RFBenchmark_Denis_lowerDen_2000PPC_2500cells_noSmoothing_smallTime, 'He+', '2000 PPC, 2500 Cells')
+plotAveDensity(NGP_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_denisMap, 'He+', '524 PPC')
+plotAveDensity(NGP_RFBenchmark_Denis_lowerDen_1048PPC_128cells_noSmoothing_denisMap, 'He+', '1048 PPC')
+plotAveDensity(NGP_RFBenchmark_Denis_lowerDen_2096PPC_128cells_noSmoothing_denisMap, 'He+', '2096 PPC')
+plotAveDensity(NGP_RFBenchmark_Denis_lowerDen_4192PPC_128cells_noSmoothing_denisMap, 'He+', '4192 PPC')
+plt.xlim(Exp_RFBenchmark_Denis_moreCells_lowerDen.grid[0], Exp_RFBenchmark_Denis_moreCells_lowerDen.grid[-1]*1e2/2)
+plt.ylim(0, None)
+plt.xlabel('Distance (cm)', fontsize = 14)
+plt.ylabel(r'He$^+$ Density (m$^{-3}$)', fontsize = 14)
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+plt.legend(loc = 'lower right', fontsize = 12)
+plt.tight_layout()
+plt.savefig('Denis_RF/NGP_lowPress_128cells_DenisMap.tif')
 plt.close()
 
 plt.figure()
