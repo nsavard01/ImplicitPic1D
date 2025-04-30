@@ -20,7 +20,6 @@ module mod_potentialSolver
         procedure, public, pass(self) :: solve_tridiag_Poisson
         procedure, public, pass(self) :: getEField
         procedure, public, pass(self) :: makeEField
-        procedure, public, pass(self) :: solvePotential
         procedure, public, pass(self) :: construct_diagMatrix
         procedure, public, pass(self) :: getTotalPE
         procedure, public, pass(self) :: getTotalE
@@ -226,16 +225,7 @@ contains
 
     ! ---------------- Initial Poisson Solver -------------------------------------------------
 
-    subroutine solvePotential(self, particleList, world, timeCurrent)
-        ! Solve for initial potential
-        class(potentialSolver), intent(in out) :: self
-        type(Particle), intent(in out) :: particleList(:)
-        type(Domain), intent(in) :: world
-        real(real64), intent(in) :: timeCurrent
-        call self%depositRho(particleList, world)
-        call self%solve_tridiag_Poisson(world, timeCurrent)
-        call self%makeEField(world)
-    end subroutine solvePotential
+
 
 
     ! ---------------- read Solver parameters --------------------------------------

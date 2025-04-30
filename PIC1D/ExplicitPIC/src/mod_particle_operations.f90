@@ -9,21 +9,19 @@ module mod_particle_operations
     use omp_lib
     implicit none
 
-    real(real64) :: inelasticEnergyLoss, currentTime
-
 contains
 
 
     subroutine loadParticleDensity(particleList, world, reset)
         ! load particle densities
-        type(Particle), intent(in out) :: particleList(numberChargedParticles)
+        type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         logical, intent(in) :: reset
         integer(int32) :: i,j, l_left, l_right, iThread, startIdx
         real(real64) :: d
         !$OMP parallel private(iThread, j, i, l_left, l_right, d)
         iThread = omp_get_thread_num() + 1
-        do i=1, numberChargedParticles
+        do i=1, size(particleList)
             if (reset) then
                 particleList(i)%densities(:,iThread) = 0.0d0
             end if
@@ -46,7 +44,7 @@ contains
         real(real64), intent(in) :: EField(NumberXNodes)
         real(real64), intent(in) :: del_t
         integer(int32), intent(in) :: iThread
-        integer(int32) :: i, delIdx, refIdx, iThread, N_p, xi_left
+        integer(int32) :: i, delIdx, refIdx, N_p, xi_left
         real(real64) :: v_prime, q_over_m, partLoc, d, EField_part
 
         q_over_m = part%q_over_m
@@ -108,21 +106,25 @@ contains
         part%refIdx(iThread) = refIdx
     end subroutine move_particle_thread
 
-    subroutine moveParticles(particleList, EField, world, del_t)
+    subroutine moveParticles(particleList, EField, world, del_t, ionStepMult)
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: EField(NumberXNodes)
         real(real64), intent(in) :: del_t
+        integer(int32), intent(in) :: ionStepMult
         integer(int32) :: iThread, j, size_list
         size_list = size(particleList)
         !$OMP parallel private(iThread, j)
         iThread = omp_get_thread_num() + 1
-        do j = 1, size_list
-            call move_particle_thread(particleList(j), EField, world, del_t, iThread)
+        ! first particle (regardless ion or electron) integrated over del_t
+        call move_particle_thread(particleList(1), EField, world, del_t, iThread)
+        ! other particles, if any, must be ions. If no electrons then ionStepMult = 1 anyway
+        do j = 2, size_list
+            call move_particle_thread(particleList(j), EField, world, ionStepMult * del_t, iThread)
         end do
         !$OMP end parallel
         ! Update particle accumulation stats
-        do j = 1, numberChargedParticles
+        do j = 1, size_list
             particleList(j)%numToCollide = particleList(j)%N_p
             particleList(j)%accumEnergyLoss = particleList(j)%accumEnergyLoss + SUM(particleList(j)%energyLoss, DIM=2)
             particleList(j)%accumWallLoss = particleList(j)%accumWallLoss + SUM(particleList(j)%wallLoss, DIM=2)
@@ -154,9 +156,9 @@ contains
         class(potentialSolver), intent(in out) :: solver
         type(Domain), intent(in) :: world
         type(Particle), intent(in out) :: particleList(numberChargedParticles)
-        integer(int32) :: i, leftThreadIndx, rightThreadIndx
+        integer(int32) :: i, leftThreadIndx, rightThreadIndx, iThread
         solver % rho = solver%rho_const
-        !$OMP parallel private(i, leftThreadIndx, rightThreadIndx)
+        !$OMP parallel private(i, leftThreadIndx, rightThreadIndx, iThread)
         iThread = omp_get_thread_num() + 1
         do i=1, numberChargedParticles
             call interpolate_particle_thread(particleList(i), iThread)
@@ -172,11 +174,12 @@ contains
         !$OMP end parallel
     end subroutine depositRho
 
-    subroutine initialVRewind(solver, particleList, del_t)
+    subroutine initialVRewind(solver, particleList, del_t, ionStepMult)
         ! Rewind particle velocities by half step using E-Field
         type(Particle), intent(in out) :: particleList(:)
         type(potentialSolver), intent(in) :: solver
         real(real64), intent(in) :: del_t
+        integer(int32), intent(in) :: ionStepMult
         real(real64) :: del_t_temp
         real(real64) :: q_m_ratio
         integer(int32) :: j, i, iThread

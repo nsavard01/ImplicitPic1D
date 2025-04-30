@@ -131,8 +131,8 @@ contains
         ! Calculate null collision probability to determine percentage of particles to react
         P_null = 1.0d0 - EXP(-self%sigmaVMax * targetParticleList(self%reactantsIndx(2))%density * del_t)
     
-        if (P_null > 0.05d0) then
-            print *, 'P_null greater than 5%'
+        if (P_null > 0.1d0) then
+            print *, 'P_null greater than 10% at ', P_null*100, '%'
             stop
         end if
         ! Initialize diagnostics

@@ -41,6 +41,7 @@ case1, case2, case3, case4 = readBenchmarkResults()
 case1_refined, case2_refined, case3_refined, case4_refined = readBenchmarkResultsRefined()
 
 Exp_RFBenchmark_case1 = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_case1/')
+Exp_RFBenchmark_case1_subcycle = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_case1_subcycle/')
 ECExp_RFBenchmark_case1 = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/ECPIC_RF_Benchmark_case1/')
 NGP_RF_Benchmark_case1 = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1/')
 CIC_RF_Benchmark_case1 = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1/')

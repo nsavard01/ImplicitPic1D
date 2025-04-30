@@ -178,38 +178,20 @@ contains
         call system_clock(startTotal)
         do while(currentTime < simulationTime)
  
-            ! move ions forward ionStepMult * del_t
-            if (electron_exists) then 
-                call system_clock(startTime)
-                call moveParticles(particleList(2:numberChargedParticles), world, ionStepMult * del_t)
-                call system_clock(endTime)
-                moverTime = moverTime + (endTime - startTime)
-            else
-                call system_clock(startTime)
-                call moveParticles(particleList, world, ionStepMult * del_t)
-                call system_clock(endTime)
-                moverTime = moverTime + (endTime - startTime)
-            end if
-            
-            
-            ! Now step forward for each electron sub-step
-            do sub_step = 1, ionStepMult
-                ! move electrons forward del_t
-                call system_clock(startTime)
-                call moveParticles(particleList(1:1), solver%EField, world, del_t)
-                call system_clock(endTime)
-                moverTime = moverTime + (endTime - startTime)
+            ! move ions and electrons forward
+            call system_clock(startTime)
+            call moveParticles(particleList, solver%EField, world, del_t, ionStepMult)
+            call system_clock(endTime)
+            moverTime = moverTime + (endTime - startTime)
+           
+            currentTime = currentTime + del_t
+            do sub_step = 1, ionStepMult-1
                 ! update startIdx for each ion so that only added via collision are then updated in rho
                 do j = 2, numberChargedParticles
-                    if (sub_step < ionStepMult) then
-                        ! If sub-stepping, make sure to startIdx to latest addition ion (from ionization) to add to rho
-                        particleList(j)%startIdx = particleList(j)%N_p + 1
-                    else
-                        ! Last step, so now reset rho for ion and add all ions
-                        particleList(j)%startIdx = 1
-                    end if
+                    ! If sub-stepping, make sure to startIdx to latest addition ion (from ionization) to add to rho
+                    particleList(j)%startIdx = particleList(j)%N_p + 1
                 end do
-                currentTime = currentTime + del_t
+                
                 ! undergo collisions for each time step
                 call system_clock(startTime)
                 if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
@@ -218,15 +200,10 @@ contains
                 if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
                 if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
                 if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
-                do j = 1, numberBinaryCollisions
-                    if (nullCollisionList(j)%reactantsIndx(1) == 1) then
-                        call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
-                        exit
-                    end if
-                end do
+                if (nullCollisionList(1)%reactantsIndx(1) == 1) call nullCollisionList(1)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
                 call system_clock(endTime)
                 collisionTime = collisionTime + (endTime - startTime)
-
+           
                 ! Re-evaluate rho with added particles
                 call system_clock(startTime)
                 call depositRho(solver, particleList, world)
@@ -239,17 +216,52 @@ contains
                 call solver%makeEField(world)
                 call system_clock(endTime)
                 potentialTime = potentialTime + (endTime - startTime)
-            end do
 
-            ! collide ions with background
+                call system_clock(startTime)
+                call moveParticles(particleList(1:1), solver%EField, world, del_t, ionStepMult)
+                call system_clock(endTime)
+                moverTime = moverTime + (endTime - startTime)
+                currentTime = currentTime + del_t
+            end do
+            do j = 2, numberChargedParticles
+                ! If sub-stepping, make sure to startIdx to latest addition ion (from ionization) to add to rho
+                particleList(j)%startIdx = 1
+            end do
+            
+            ! undergo collisions for each time step
             call system_clock(startTime)
-            do j = 1, numberBinaryCollisions
-                if (particleList(nullCollilsionList(j)%reactantsIndx(1))%mass /= m_e) then
-                    call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, ionStepMult * del_t)
-                end if
+            if (particleList(1)%mass == m_e) then
+                if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+                if (EField_heating_bool) call Efield_heating(particleList(1), currentTime - del_t, currentTime, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            end if
+            if (particleList(nullCollisionList(1)%reactantsIndx(1))%mass == m_e) then
+                call nullCollisionList(1)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+            else
+                call nullCollisionList(1)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, ionStepMult * del_t)
+            end if
+            do j = 2, numberBinaryCollisions
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, ionStepMult * del_t)  
             end do
             call system_clock(endTime)
             collisionTime = collisionTime + (endTime - startTime)
+
+            ! Re-evaluate rho with added particles
+            call system_clock(startTime)
+            call depositRho(solver, particleList, world)
+            call system_clock(endTime)
+            moverTime = moverTime + (endTime - startTime)
+
+            ! re-evaluate potential
+            call system_clock(startTime)
+            call solver%solve_tridiag_Poisson(world, currentTime)
+            call solver%makeEField(world)
+            call system_clock(endTime)
+            potentialTime = potentialTime + (endTime - startTime)
+
 
             if (currentTime >= diagTime) then
                 ! Operations with diagnostics
@@ -344,7 +356,7 @@ contains
         real(real64), intent(in) :: del_t, averagingTime
         integer(int32), intent(in) :: binNumber
         integer(c_int64_t), intent(in out) :: irand(numThread)
-        integer(int32) :: i, stepsAverage, windowDivision, j, k, iThread, intPartV
+        integer(int32) :: i, stepsAverage, windowDivision, j, k, iThread, intPartV, sub_step
         real(real64) :: startTime, phi_average(NumberXNodes), chargeTotal, energyLoss, meanLoss, stdLoss, VHist(2*binNumber, numberChargedParticles), EHist(binNumber, numberChargedParticles), partV, partE
         real(real64) :: VMax(numberChargedParticles), EMax(numberChargedParticles), Emin(numberChargedParticles), &
         E_grid(binNumber, numberChargedParticles), diffE(numberChargedParticles), Emin_log(numberChargedParticles)
@@ -375,32 +387,80 @@ contains
         end do
         windowDivision = INT(200.0d0 / fractionFreq)
         do while(currentTime-startTime < averagingTime)
+            ! move ions and electrons forward
+            call moveParticles(particleList, solver%EField, world, del_t, ionStepMult)
+
             currentTime = currentTime + del_t
-            call solver%moveParticles(particleList, world, del_t)
-            call solver%solvePotential(particleList, world, currentTime)
-            if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
-            if (EField_heating_bool) then
-                call Efield_heating(particleList(1), currentTime - del_t, currentTime, world)
-                Efield_RF_energy_total = Efield_RF_energy_total + Efield_RF_energy
-                J_particles_heat_total = J_particles_heat_total + J_particles_heat**2
-                v_ave_heat_tot = v_ave_heat_tot + v_ave_heat**2
-            end if
-            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
-            if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
-            do j = 1, numberBinaryCollisions
-                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+            do sub_step = 1, ionStepMult-1
+                ! update startIdx for each ion so that only added via collision are then updated in rho
+                do j = 2, numberChargedParticles
+                    ! If sub-stepping, make sure to startIdx to latest addition ion (from ionization) to add to rho
+                    particleList(j)%startIdx = particleList(j)%N_p + 1
+                end do
+                
+                ! undergo collisions for each time step
+                if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+                if (EField_heating_bool) call Efield_heating(particleList(1), currentTime - del_t, currentTime, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                if (nullCollisionList(1)%reactantsIndx(1) == 1) call nullCollisionList(1)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+
+
+                ! Re-evaluate rho with added particles
+                call depositRho(solver, particleList, world)
+                call solver%solve_tridiag_Poisson(world, currentTime)
+                call solver%makeEField(world)
+
+                ! load electron step density and phi
+                phi_average = phi_average + solver%phi
+                call loadParticleDensity(particleList(1:1), world, .false.)
+
+                call moveParticles(particleList(1:1), solver%EField, world, del_t, ionStepMult)
+
+                currentTime = currentTime + del_t
             end do
+            do j = 2, numberChargedParticles
+                ! If sub-stepping, make sure to startIdx to latest addition ion (from ionization) to add to rho
+                particleList(j)%startIdx = 1
+            end do
+            ! undergo collisions for each time step
+
+            if (particleList(1)%mass == m_e) then
+                if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+                if (EField_heating_bool) call Efield_heating(particleList(1), currentTime - del_t, currentTime, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            end if
+            if (particleList(nullCollisionList(1)%reactantsIndx(1))%mass == m_e) then
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+            else
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, ionStepMult * del_t)
+            end if
+            do j = 2, numberBinaryCollisions
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, ionStepMult * del_t)  
+            end do
+
+            ! Re-evaluate rho with added particles
+            call depositRho(solver, particleList, world)
+            call solver%solve_tridiag_Poisson(world, currentTime)
+            call solver%makeEField(world)
+
+            ! load density and phi after ion step
             call loadParticleDensity(particleList, world, .false.)
             phi_average = phi_average + solver%phi
+            
+
             i = i + 1
         end do
         print *, "Averaging finished over", (currentTime - startTime), 'simulation time (s)'
         stepsAverage = i 
-        phi_average = phi_average/stepsAverage
-        J_particles_heat_total = J_particles_heat_total/stepsAverage
-        v_ave_heat_tot = v_ave_heat_tot/stepsAverage
+        phi_average = phi_average/stepsAverage/ionStepMult
+        J_particles_heat_total = J_particles_heat_total/stepsAverage/ionStepMult
+        v_ave_heat_tot = v_ave_heat_tot/stepsAverage/ionStepMult
         call writePhi(phi_average, 0, .true., directoryName)
         chargeTotal = 0.0d0
         energyLoss = 0.0d0
@@ -409,7 +469,11 @@ contains
             energyLoss = energyLoss + SUM(particleList(i)%accumEnergyLoss) * particleList(i)%mass * particleList(i)%w_p * 0.5d0
             !$OMP parallel private(iThread)
             iThread = omp_get_thread_num() + 1
-            particleList(i)%densities(:, iThread) = particleList(i)%densities(:, iThread) /real(stepsAverage)
+            if (particleList(i)%mass /= m_e) then
+                particleList(i)%densities(:, iThread) = particleList(i)%densities(:, iThread) /real(stepsAverage)
+            else
+                particleList(i)%densities(:, iThread) = particleList(i)%densities(:, iThread) /real(stepsAverage*ionStepMult)
+            end if
             !$OMP end parallel
             open(22,file=directoryName//'/ParticleAveDiagnostic_'//particleList(i)%name//'.dat')
             write(22, '("Left curr (A/m^2), right curr (A/m^2), left power (W/m^2), right power (W/m^2)")')
@@ -483,26 +547,91 @@ contains
       
         if (world%boundaryConditions(1) == 4 .or. world%boundaryConditions(NumberXNodes) == 4) then
             ! If RF boundary then average over RF cycle
-            windowDivision = INT(2.0d0 * pi / solver%RF_rad_frequency/del_t)
+            windowDivision = INT(2.0d0 * pi / solver%RF_rad_frequency/del_t/ionStepMult)
         else if (Efield_heating_bool) then
-            windowDivision = INT(1.0d0 / Efield_heating_freq/del_t)
+            windowDivision = INT(1.0d0 / Efield_heating_freq/del_t/ionStepMult)
         else
-            windowDivision = INT(50.0d0/fractionFreq)
+            windowDivision = INT(50.0d0/fractionFreq/ionStepMult)
         end if
         VHist = 0.0d0
         EHist = 0.0d0
         do i = 1, windowDivision
+             ! move ions and electrons forward
+            call moveParticles(particleList, solver%EField, world, del_t, ionStepMult)
+
             currentTime = currentTime + del_t
-            call solver%moveParticles(particleList, world, del_t)
-            call solver%solvePotential(particleList, world, currentTime)
-            if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
-            if (EField_heating_bool) call Efield_heating(particleList(1), currentTime - del_t, currentTime, world)
-            if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
-            if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
-            if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
-            do j = 1, numberBinaryCollisions
-                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+            do sub_step = 1, ionStepMult-1
+                ! update startIdx for each ion so that only added via collision are then updated in rho
+                do j = 2, numberChargedParticles
+                    ! If sub-stepping, make sure to startIdx to latest addition ion (from ionization) to add to rho
+                    particleList(j)%startIdx = particleList(j)%N_p + 1
+                end do
+                
+                ! undergo collisions for each time step
+                if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+                if (EField_heating_bool) call Efield_heating(particleList(1), currentTime - del_t, currentTime, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+                if (nullCollisionList(1)%reactantsIndx(1) == 1) call nullCollisionList(1)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+
+                !$OMP parallel private(iThread, j, k, partV, intPartV, partE) reduction(+:VHist, EHist)
+                iThread = omp_get_thread_num() + 1
+                j = 1
+                do k = 1, particleList(j)%N_p(iThread)
+                    partV = particleList(j)%phaseSpace(2, k, iThread) * (2.0d0 * binNumber - 1) / 2.0d0 / VMax(j) + binNumber + 0.5d0
+                    if (partV > 1 .and. partV < binNumber*2) then
+                        intPartV = INT(partV)
+                        VHist(intPartV, j) = VHist(intPartV, j) + (1.0d0 - (partV - intPartV))
+                        VHist(intPartV+1, j) = VHist(intPartV + 1, j) + partV - intPartV
+                    end if
+                    partE = SUM(particleList(j)%phaseSpace(2:4, k, iThread)**2)
+                    if (partE > Emin(j) .and. partE < EMax(j)) then
+                        partV = (LOG(partE) - Emin_log(j))/diffE(j) + 1.0d0
+                        intPartV = INT(partV)
+                        partV = partV - intPartV
+                        EHist(intPartV, j) = EHist(intPartV, j) + (1.0d0 - partV)
+                        EHist(intPartV+1, j) = EHist(intPartV + 1, j) + partV
+                    end if
+                end do
+                !$OMP end parallel
+
+                ! Re-evaluate rho with added particles
+                call depositRho(solver, particleList, world)
+                call solver%solve_tridiag_Poisson(world, currentTime)
+                call solver%makeEField(world)
+                call moveParticles(particleList(1:1), solver%EField, world, del_t, ionStepMult)
+                currentTime = currentTime + del_t
             end do
+            do j = 2, numberChargedParticles
+                ! If sub-stepping, make sure to startIdx to latest addition ion (from ionization) to add to rho
+                particleList(j)%startIdx = 1
+            end do
+            ! undergo collisions for each time step
+
+            if (particleList(1)%mass == m_e) then
+                if (heatingBool) call maxwellianHeating(particleList(1), irand, fractionFreq, T_e, del_t, del_t)
+                if (EField_heating_bool) call Efield_heating(particleList(1), currentTime - del_t, currentTime, world)
+                if (addLostPartBool) call addMaxwellianLostParticles(particleList, T_e, T_i, irand, world)
+                if (refluxPartBool) call refluxParticles(particleList, T_e, T_i, irand, world)
+                if (injectionBool) call injectAtBoundary(particleList, T_e, T_i, irand, world, del_t)
+                if (uniformInjectionBool) call injectUniformFlux(particleList, T_e, T_i, irand, world)
+            end if
+            if (particleList(nullCollisionList(1)%reactantsIndx(1))%mass == m_e) then
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, del_t)
+            else
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, ionStepMult * del_t)
+            end if
+            do j = 2, numberBinaryCollisions
+                call nullCollisionList(j)%generateCollision(particleList, targetParticleList, numberChargedParticles, numberBinaryCollisions, irand, ionStepMult * del_t)  
+            end do
+
+            ! Re-evaluate rho with added particles
+            call depositRho(solver, particleList, world)
+            call solver%solve_tridiag_Poisson(world, currentTime)
+            call solver%makeEField(world)
+            
             !$OMP parallel private(iThread, j, k, partV, intPartV, partE) reduction(+:VHist, EHist)
             iThread = omp_get_thread_num() + 1
             do j = 1, numberChargedParticles

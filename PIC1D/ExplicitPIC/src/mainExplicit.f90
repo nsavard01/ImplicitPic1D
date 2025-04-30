@@ -36,9 +36,10 @@ program BoundPlasmaExample
 
     ! Make field, and if new simulation, rewind particle velocities a half step
     call solver%makeEField(world)
-    if (.not. restartBool) call initialVRewind(solver, particleList, del_t)
+    if (.not. restartBool) call initialVRewind(solver, particleList, del_t, ionStepMult)
     
     ! Solve Simulation
+   
     call solveSimulation(solver, particleList, targetParticleList, nullCollisionList, world, del_t, state_PCG, simulationTime)
     if (averagingTime /= 0.0d0) then
         print *, "Averaging over", averagingTime, "seconds"

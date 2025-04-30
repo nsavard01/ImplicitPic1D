@@ -8,7 +8,7 @@ BASE_C = -O3 -ipo -xHost -fast -qmkl -qopenmp
 OBJ= main.o mod_simulation.o mod_particle_operations.o mod_potentialSolver.o mod_particleInjection.o mod_NullCollision.o mod_targetParticle.o mod_particle.o mod_domain.o mod_BasicFunctions.o PCG_func.o constants.o #    mod_collisions.o   mod_potentialSolver.o 
 RM = rm -f
 
-all: cleanData clean main
+all: main
 
 debug: cleanData clean setDebug main
 

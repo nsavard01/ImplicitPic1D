@@ -183,4 +183,9 @@ contains
         del_t = dt
     end subroutine changeDelT
 
+    subroutine changeIonStep(val)
+        integer(int32), intent(in) :: val
+        ionStepMult = val
+    end subroutine
+
 end module constants
