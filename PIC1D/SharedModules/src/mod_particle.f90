@@ -51,6 +51,7 @@ contains
         integer(int32), intent(in) :: N_p, finalIdx, numThread
         character(*), intent(in) :: particleName
         integer(int32) :: maxNumNodes
+        integer(int32) :: iThread
         self % name = particleName
         self % mass = mass
         self % q = q
@@ -66,13 +67,22 @@ contains
         allocate(self%phaseSpace(4,finalIdx, numThread), self%refRecordIdx(INT(self%finalIdx/10), numThread), self%N_p(numThread), &
             self%delIdx(numThread), self%wallLoss(2, numThread), self%energyLoss(2, numThread), self%refIdx(numThread), &
             self%densities(NumberXNodes, numThread), self%workSpace(maxNumNodes, numThread), self%numToCollide(numThread), self%momentumLoss(2, numThread), self%startIdx(numThread))
-        self%refIdx = 0
-        self%delIdx = 0
-        self%startIdx = 1
-        self%N_p = N_p
-        self%energyLoss = 0.0d0
-        self%wallLoss = 0
-        self%momentumLoss = 0.0d0
+        
+        !First touch initiation
+        !$OMP parallel private(iThread)
+        iThread = omp_get_thread_num() + 1
+        self%phaseSpace(:,:, iThread) = 0
+        self%refRecordIdx(:,iThread) = 0
+        self%N_p(iThread) = N_p
+        self%energyLoss(:,iThread) = 0
+        self%wallLoss(:,iThread) = 0
+        self%momentumLoss(:,iThread) = 0
+        self%startIdx(iThread) = 1
+        self%delIdx(iThread) = 1
+        self%workSpace(:,iThread) = 0
+        self%numToCollide(iThread) = 0
+        self%densities(:, iThread) = 0
+        !$OMP end parallel
     end function particle_constructor
 
     pure subroutine initialize_n_ave(self, n_ave, L_domain)
