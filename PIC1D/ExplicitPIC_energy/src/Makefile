@@ -5,10 +5,10 @@ BASE= -O3 -ipo -no-prec-div -m64 -qopenmp -auto -fp-model fast=2 -unroll-aggress
 DEBUG= -traceback -CB -fp-stack-check -warn all -check uninit -check pointers -check output_conversion -check format -check stack -fpe0 -check arg_temp_created -g
 OPT= $(BASE)
 BASE_C = -O3 -ipo -xHost -fast -qmkl -qopenmp
-OBJ= main.o mod_simulation.o mod_potentialSolver.o mod_particleInjection.o mod_NullCollision.o mod_targetParticle.o mod_particle.o mod_domain.o mod_BasicFunctions.o PCG_func.o constants.o #    mod_collisions.o   mod_potentialSolver.o 
+OBJ= main.o mod_simulation.o mod_particle_operations.o mod_potentialSolver.o mod_particleInjection.o mod_NullCollision.o mod_targetParticle.o mod_particle.o mod_domain.o mod_BasicFunctions.o PCG_func.o constants.o #    mod_collisions.o   mod_potentialSolver.o 
 RM = rm -f
 
-all: cleanData clean main
+all: main
 
 debug: cleanData clean setDebug main
 
@@ -19,10 +19,13 @@ setDebug:
 main: $(OBJ)
 	$(FC) $(BASE) -o $@ $(OBJ)
 
-main.o: mainExplicit.f90 constants.o mod_BasicFunctions.o mod_domain.o mod_particle.o mod_targetParticle.o mod_NullCollision.o mod_particleInjection.o mod_potentialSolver.o mod_simulation.o# #mod_collisions.o 
+main.o: mainExplicit.f90 constants.o mod_BasicFunctions.o mod_domain.o mod_particle.o mod_targetParticle.o mod_NullCollision.o mod_particleInjection.o mod_potentialSolver.o mod_particle_operations.o mod_simulation.o# #mod_collisions.o 
 	$(FC) $(BASE) -c  -o $@ $<
 
-mod_simulation.o: mod_simulation.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_particleInjection.o mod_potentialSolver.o
+mod_simulation.o: mod_simulation.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_particleInjection.o mod_potentialSolver.o mod_particle_operations.o
+	$(FC) $(BASE) -c  -o $@ $<
+
+mod_particle_operations.o: mod_particle_operations.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o mod_particleInjection.o mod_potentialSolver.o
 	$(FC) $(BASE) -c  -o $@ $<
 
 mod_potentialSolver.o: mod_potentialSolver.f90 constants.o mod_BasicFunctions.o mod_particle.o mod_domain.o

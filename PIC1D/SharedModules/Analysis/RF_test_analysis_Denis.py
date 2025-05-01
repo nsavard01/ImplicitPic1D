@@ -77,6 +77,7 @@ Exp_RFBenchmark_Denis_moreCells_lowerDen_20xPart = dataSetExplicit('Y:/ImplicitP
 Exp_RFBenchmark_Denis_moreCells_lowerDen_20xPart_3000cells_thirdsTime = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_moreCells_lowerDen_20xPart_3000cells_thirdsTime/')
 
 ECExp_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_sinCenter = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/ECExp_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_sinCenter/')
+ECExp_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_sinCenter_subcycle = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/ECExp_RFBenchmark_Denis_lowerDen_524PPC_128cells_noSmoothing_sinCenter_subcycle/')
 
 # ----------------------- NGP ---------------------------------
 

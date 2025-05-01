@@ -37,6 +37,12 @@ class dataSetExplicit:
         self.ion_step = 1
         if (len(initialCond) > 13):
             self.ion_step = int(initialCond[13])
+        if (len(initialCond) > 14):
+            scheme_int = int(initialCond[14])
+            if (scheme_int == 0):
+                self.scheme = 'Explicit-MC'
+            else:
+                self.scheme = 'Explicit-EC'
         ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], sep='\s+')
         self.particles = {}
         partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p', 'Temp']

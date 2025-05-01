@@ -108,8 +108,8 @@ contains
         open(15,file=directoryName//'/InitialConditions.dat')
         write(15,'("Number Grid Nodes, Final Expected Time(s), Delta t(s), FractionFreq, delX, &
             n_ave, T_e, T_i, numDiag, NumChargedPart, numThread, RF_frequency, RF_half_amplitude, ion_step")')
-        write(15,"((I6, 1x), 7(es16.8,1x), 3(I6, 1x), 2(es16.8,1x), (I3, 1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps, &
-            numberChargedParticles, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude, ionStepMult
+        write(15,"((I6, 1x), 7(es16.8,1x), 3(I6, 1x), 2(es16.8,1x), 2(I3, 1x))") NumberXNodes, simulationTime, del_t, FractionFreq, world%delX, n_ave, T_e, T_i, numDiagnosticSteps, &
+            numberChargedParticles, numThread, solver%RF_rad_frequency, solver%RF_half_amplitude, ionStepMult, 0
         close(15)
         call system_clock(count_rate = timingRate)
         ! Write Particle properties
