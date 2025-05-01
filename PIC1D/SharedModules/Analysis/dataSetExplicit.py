@@ -34,6 +34,9 @@ class dataSetExplicit:
         self.numThreads = int(initialCond[10])
         self.RF_rad_frequency = initialCond[11]
         self.RF_half_amplitude = initialCond[12]
+        self.ion_step = 1
+        if (len(initialCond) > 13):
+            self.ion_step = int(initialCond[13])
         ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], sep='\s+')
         self.particles = {}
         partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p', 'Temp']
