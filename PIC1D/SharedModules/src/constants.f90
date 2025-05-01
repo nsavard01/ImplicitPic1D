@@ -111,6 +111,7 @@ contains
         fractionFreq = del_t * plasmaFreqTemp
         simulationTime = simulationTime + startSimulationTime
         if (ionStepMult < 1 .or. ionStepMult > 1000) ionStepMult = 1
+        ionStepMult = (ionStepMult/2) * 2 + 1 ! make ionStep Odd
         print *, "Save data folder: ", directoryName
         print *, 'Restart Bool:', restartBool
         print *, "Number of threads is:", omp_get_max_threads()
@@ -121,6 +122,7 @@ contains
         print *, "Number of diagnostic steps is:", numDiagnosticSteps
         print *, "Fraction of 1/w_p for time step:", fractionFreq
         print *, 'del_t will be:', del_t
+        print *, 'Ion Step:', ionStepMult
         print *, 'Simulation start time is:', startSimulationTime
         print *, "Simulation time is:", simulationTime
         print *, "Final averaging time is:", averagingTime

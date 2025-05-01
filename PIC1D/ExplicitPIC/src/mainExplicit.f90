@@ -36,7 +36,7 @@ program BoundPlasmaExample
 
     ! Make field, and if new simulation, rewind particle velocities a half step
     call solver%makeEField(world)
-    if (.not. restartBool) call initialVRewind(solver, particleList, del_t, ionStepMult)
+    ! if (.not. restartBool) call initialVRewind(solver, particleList, del_t, ionStepMult)
     
     ! Solve Simulation
    

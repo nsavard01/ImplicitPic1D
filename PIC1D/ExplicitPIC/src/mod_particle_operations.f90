@@ -106,21 +106,17 @@ contains
         part%refIdx(iThread) = refIdx
     end subroutine move_particle_thread
 
-    subroutine moveParticles(particleList, EField, world, del_t, ionStepMult)
+    subroutine moveParticles(particleList, EField, world, del_t)
         type(Particle), intent(in out) :: particleList(:)
         type(Domain), intent(in) :: world
         real(real64), intent(in) :: EField(NumberXNodes)
         real(real64), intent(in) :: del_t
-        integer(int32), intent(in) :: ionStepMult
         integer(int32) :: iThread, j, size_list
         size_list = size(particleList)
         !$OMP parallel private(iThread, j)
         iThread = omp_get_thread_num() + 1
-        ! first particle (regardless ion or electron) integrated over del_t
-        call move_particle_thread(particleList(1), EField, world, del_t, iThread)
-        ! other particles, if any, must be ions. If no electrons then ionStepMult = 1 anyway
-        do j = 2, size_list
-            call move_particle_thread(particleList(j), EField, world, ionStepMult * del_t, iThread)
+        do j = 1, size_list
+            call move_particle_thread(particleList(j), EField, world, del_t, iThread)
         end do
         !$OMP end parallel
         ! Update particle accumulation stats
