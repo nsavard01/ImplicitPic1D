@@ -8,3 +8,4 @@ tmp*
 *.fuse_hidden*
 !PIC1D/CollisionData/*.dat
 *.dbg
+./SPIC_1D/build/
