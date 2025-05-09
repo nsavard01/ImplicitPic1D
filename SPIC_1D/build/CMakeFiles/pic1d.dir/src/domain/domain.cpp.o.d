@@ -1,9 +1,8 @@
-CMakeFiles/pic1d.dir/src/main.cpp.o: \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/main.cpp \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/constants.hpp \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/mpi_vars.hpp \
-  /opt/intel/oneapi/mpi/2021.14/include/mpi.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstdint \
+CMakeFiles/pic1d.dir/src/domain/domain.cpp.o: \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/domain/domain.cpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/domain.hpp \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/vector \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_algobase.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++config.h \
   /usr/include/bits/wordsize.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/os_defines.h \
@@ -11,28 +10,6 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/include/sys/cdefs.h /usr/include/bits/long-double.h \
   /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/cpu_defines.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/stdint.h \
-  /usr/include/stdint.h /usr/include/bits/libc-header-start.h \
-  /usr/include/bits/types.h /usr/include/bits/typesizes.h \
-  /usr/include/bits/wchar.h /usr/include/bits/stdint-intn.h \
-  /usr/include/bits/stdint-uintn.h \
-  /opt/intel/oneapi/mpi/2021.14/include/mpio.h \
-  /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h /usr/include/stdio.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/stddef.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_size_t.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_null.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/stdarg.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stdarg___gnuc_va_list.h \
-  /usr/include/bits/types/__fpos_t.h \
-  /usr/include/bits/types/__mbstate_t.h \
-  /usr/include/bits/types/__fpos64_t.h /usr/include/bits/types/__FILE.h \
-  /usr/include/bits/types/FILE.h /usr/include/bits/types/struct_FILE.h \
-  /usr/include/bits/types/cookie_io_functions_t.h \
-  /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
-  /usr/include/bits/stdio.h \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/domain.hpp \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/vector \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_algobase.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/functexcept.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception_defines.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/cpp_type_traits.h \
@@ -57,9 +34,12 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception_ptr.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/cxxabi_init_exception.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/stddef.h \
   /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_header_macro.h \
   /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_ptrdiff_t.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_size_t.h \
   /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_wchar_t.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_null.h \
   /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_nullptr_t.h \
   /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_max_align_t.h \
   /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_offsetof.h \
@@ -84,10 +64,20 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/char_traits.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/postypes.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cwchar \
-  /usr/include/wchar.h /usr/include/bits/floatn.h \
-  /usr/include/bits/floatn-common.h /usr/include/bits/types/wint_t.h \
-  /usr/include/bits/types/mbstate_t.h /usr/include/bits/types/locale_t.h \
+  /usr/include/wchar.h /usr/include/bits/libc-header-start.h \
+  /usr/include/bits/floatn.h /usr/include/bits/floatn-common.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/stdarg.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stdarg___gnuc_va_list.h \
+  /usr/include/bits/wchar.h /usr/include/bits/types/wint_t.h \
+  /usr/include/bits/types/mbstate_t.h \
+  /usr/include/bits/types/__mbstate_t.h /usr/include/bits/types/__FILE.h \
+  /usr/include/bits/types/FILE.h /usr/include/bits/types/locale_t.h \
   /usr/include/bits/types/__locale_t.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstdint \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/stdint.h \
+  /usr/include/stdint.h /usr/include/bits/types.h \
+  /usr/include/bits/typesizes.h /usr/include/bits/stdint-intn.h \
+  /usr/include/bits/stdint-uintn.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/localefwd.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++locale.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/clocale \
@@ -131,6 +121,12 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/include/bits/stdlib-bsearch.h /usr/include/bits/stdlib-float.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/std_abs.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstdio \
+  /usr/include/stdio.h /usr/include/bits/types/__fpos_t.h \
+  /usr/include/bits/types/__fpos64_t.h \
+  /usr/include/bits/types/struct_FILE.h \
+  /usr/include/bits/types/cookie_io_functions_t.h \
+  /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
+  /usr/include/bits/stdio.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cerrno \
   /usr/include/errno.h /usr/include/bits/errno.h \
   /usr/include/linux/errno.h /usr/include/asm/errno.h \
@@ -179,4 +175,36 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ostream.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/istream \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/istream.tcc \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/non_uniform_domain.hpp
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/non_uniform_domain.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/mpi_vars.hpp \
+  /opt/intel/oneapi/mpi/2021.14/include/mpi.h \
+  /opt/intel/oneapi/mpi/2021.14/include/mpio.h \
+  /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cmath \
+  /usr/include/math.h /usr/include/bits/math-vector.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
+  /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/iscanonical.h /usr/include/bits/mathinline.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/specfun.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/gamma.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/special_function_util.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/bessel_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/beta_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/ell_integral.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/exp_integral.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/hypergeometric.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/legendre_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/modified_bessel_func.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_hermite.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_laguerre.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/riemann_zeta.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/fstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/codecvt.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/basic_file.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++io.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/fstream.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/sstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/sstream.tcc

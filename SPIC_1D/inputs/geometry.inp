@@ -1,0 +1,7 @@
+100 : number of cells
+0.067 : Domain length in meters
+1 0 40 0.00005 0.05 : First is type (0 = uniform, otherwise various non-uniform), other inputs numbers for non-uniform domains, first int whether have curvilinear 
+1 1 : Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 = RF-Dirichlet)
+0 0 : Voltage for left and right side boundary, used for dirichlet and periodic conditions. For RF-Dirichlet, voltage is half amplitude
+0 : Osciallating voltage frequency (Hz)
+ENDFILE

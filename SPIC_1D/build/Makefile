@@ -129,6 +129,30 @@ pic1d/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/build
 .PHONY : pic1d/fast
 
+src/domain/domain.o: src/domain/domain.cpp.o
+.PHONY : src/domain/domain.o
+
+# target to build an object file
+src/domain/domain.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/domain/domain.cpp.o
+.PHONY : src/domain/domain.cpp.o
+
+src/domain/domain.i: src/domain/domain.cpp.i
+.PHONY : src/domain/domain.i
+
+# target to preprocess a source file
+src/domain/domain.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/domain/domain.cpp.i
+.PHONY : src/domain/domain.cpp.i
+
+src/domain/domain.s: src/domain/domain.cpp.s
+.PHONY : src/domain/domain.s
+
+# target to generate assembly for a file
+src/domain/domain.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/domain/domain.cpp.s
+.PHONY : src/domain/domain.cpp.s
+
 src/globals/mpi_vars.o: src/globals/mpi_vars.cpp.o
 .PHONY : src/globals/mpi_vars.o
 
@@ -186,6 +210,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... pic1d"
+	@echo "... src/domain/domain.o"
+	@echo "... src/domain/domain.i"
+	@echo "... src/domain/domain.s"
 	@echo "... src/globals/mpi_vars.o"
 	@echo "... src/globals/mpi_vars.i"
 	@echo "... src/globals/mpi_vars.s"

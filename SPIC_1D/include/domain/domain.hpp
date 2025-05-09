@@ -2,12 +2,13 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <memory>
 
 class domain {
 
 protected:
-    size_t number_cells; // number of cells in the domain
-    size_t number_nodes; // number of nodes in the domain
+    int number_cells; // number of cells in the domain
+    int number_nodes; // number of nodes in the domain
     double length_domain; // length of the domain
     double min_dx; // minimum cell size
     std::vector<double> grid_nodes; // grid nodes
@@ -23,11 +24,11 @@ public:
         return this->min_dx;
     };
 
-    inline const size_t& get_number_cells() const {
+    inline const int& get_number_cells() const {
         return this->number_cells;
     };
 
-    inline const size_t& get_number_nodes() const {
+    inline const int& get_number_nodes() const {
         return this->number_nodes;
     };
 
@@ -39,6 +40,10 @@ public:
         return this->left_boundary_condition;
     };
 
+    // Factory method to create a domain from a file
+    static std::unique_ptr<domain> create_from_file(const std::string& filename);
+
+    virtual void print_out() = 0;
     // virtual void write_domain_to_file(const std::string& filename);
     // virtual void read_domain_from_file(const std::string& filename);
 };

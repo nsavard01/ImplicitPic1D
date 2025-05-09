@@ -1,1 +1,1 @@
-/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx -O3 -qopenmp -Wall CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.o CMakeFiles/pic1d.dir/src/main.cpp.o -o pic1d 
+/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx -O3 -qopenmp -Wall CMakeFiles/pic1d.dir/src/domain/domain.cpp.o CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.o CMakeFiles/pic1d.dir/src/main.cpp.o -o pic1d 

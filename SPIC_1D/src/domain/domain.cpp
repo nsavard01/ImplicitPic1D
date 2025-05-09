@@ -1,0 +1,147 @@
+#include "domain/domain.hpp"
+#include "domain/uniform_domain.hpp"
+#include "domain/non_uniform_domain.hpp"
+#include "globals/mpi_vars.hpp"
+#include <cmath>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+#include <memory>
+
+// Uniform domain constructor
+
+uniform_domain::uniform_domain(int num_cells, double length_domain, int left_boundary_condition, int right_boundary_condition) {
+    this->number_cells = num_cells;
+    this->length_domain = length_domain;
+    this->left_boundary_condition = left_boundary_condition;
+    this->right_boundary_condition = right_boundary_condition;
+    this->min_dx = length_domain / num_cells;
+    this->number_nodes = num_cells + 1;
+    this->grid_nodes.resize(this->number_nodes);
+    this->cell_centers.resize(this->number_cells);
+    for (size_t i = 0; i < this->number_nodes; i++) {
+        this->grid_nodes[i] = i * this->min_dx;
+    }
+    for (size_t i = 0; i < this->number_cells; i++) {
+        this->cell_centers[i] = (this->grid_nodes[i] + this->grid_nodes[i + 1]) * 0.5;
+    }
+}
+
+void uniform_domain::print_out() {
+    std::cout << "Non-uniform domain with " << this->number_cells << " cells and " << this->number_nodes << " nodes." << std::endl;
+    std::cout << "Length of the domain: " << this->length_domain << std::endl;
+    std::cout << "Minimum cell size: " << this->min_dx << std::endl;
+    std::cout << "Left boundary condition: " << this->left_boundary_condition << std::endl;
+    std::cout << "Right boundary condition: " << this->right_boundary_condition << std::endl;
+}
+
+// Non-uniform domain constructor
+
+non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int left_boundary_condition, int right_boundary_condition,
+    int type, int temp_int_1, int temp_int_2, double temp_double_1, double temp_double_2) {
+    this->number_cells = num_cells;
+    this->length_domain = length_domain;
+    this->left_boundary_condition = left_boundary_condition;
+    this->right_boundary_condition = right_boundary_condition;
+    this->number_nodes = num_cells + 1;
+    this->curvilinear = (temp_int_1 == 1); // curvilinear flag
+    // sinusoidal grid generation
+    this->grid_nodes.resize(this->number_nodes);
+    this->cell_centers.resize(this->number_cells);
+    this->dx_dxi.resize(this->number_cells);
+    this->grid_nodes[0] = 0.0; // First node
+    this->grid_nodes[this->number_cells] = this->length_domain; // Last node
+    if (type == 1) {
+        // Sinusoidal grid generation
+        // Fill the grid using the provided equation
+        for (int i = 1; i < this->number_cells; ++i) {
+            double phase = double(i)/double(this->number_cells);
+            grid_nodes[i] = this->length_domain * (
+                phase - (1.0 /double(this->number_cells) -  temp_double_1/ this->length_domain) *
+                std::sin(2.0 * M_PI * phase) /
+                std::sin(2.0 * M_PI / double(this->number_cells))
+            );
+        }
+        for (int i = 0; i < this->number_cells; ++i) {
+            if (!this->curvilinear) {
+                this->dx_dxi[i] = this->grid_nodes[i+1] - this->grid_nodes[i];
+                this->cell_centers[i] = (this->grid_nodes[i] + this->grid_nodes[i + 1]) * 0.5;
+            } else {
+                double xi = double(i) + 0.5;
+                this->dx_dxi[i] = this->length_domain * (1.0/double(this->number_cells) -  (2.0 * M_PI / double(this->number_cells))*(1.0/double(this->number_cells) - temp_double_1/ this->length_domain) *
+                    std::cos(2.0 * M_PI * xi / double(this->number_cells)) / std::sin(2.0 * M_PI / double(this->number_cells)));
+            }
+            if (mpi_vars::mpi_rank == 0) {
+                std::cout << "dx_dxi[" << i << "] = " << this->dx_dxi[i] << std::endl;
+            }
+        }
+        this->min_dx = this->dx_dxi[0]; // Minimum cell size
+    } else if (type == 2) {
+        
+    }
+
+    
+}
+
+void non_uniform_domain::print_out(){
+
+}
+
+std::unique_ptr<domain> domain::create_from_file(const std::string& filename) {
+    int left_boundary, right_boundary;
+    int number_cells;
+    double length_domain;
+    int type;
+    int temp_int_1, temp_int_2;
+    double temp_double_1, temp_double_2;
+    if (mpi_vars::mpi_rank == 0) {
+        std::cout << " "  << std::endl;
+        std::cout << "Reading domain inputs: "  << std::endl;
+        std::cout << "-------------------------- "  << std::endl;
+        std::string line;
+        std::ifstream file(filename);
+        if (!file) {
+            std::cerr << "Error: Unable to open file " << filename << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        
+        
+        std::getline(file, line);
+        std::istringstream iss(line);
+        iss >> number_cells;
+        iss.clear();
+        std::getline(file, line);
+        iss.str(line);
+        iss >> length_domain;
+        iss.clear();
+        std::getline(file, line);
+        iss.str(line);
+        iss >> type >> temp_int_1 >> temp_int_2 >> temp_double_1 >> temp_double_2;
+        iss.clear();
+        std::getline(file, line);
+        iss.str(line);
+        iss >> left_boundary >> right_boundary;
+        file.close();
+    }
+
+    // Broadcast the parameters to all processes
+    MPI_Bcast(&type, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&number_cells, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&length_domain, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);    
+    MPI_Bcast(&left_boundary, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&right_boundary, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&temp_double_1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&temp_int_1, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&temp_int_2, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&temp_double_2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (type == 0) {
+        // Uniform domain
+        return std::make_unique<uniform_domain>(number_cells, length_domain, left_boundary, right_boundary);
+    } else { 
+        // Non-uniform domain               
+        return std::make_unique<non_uniform_domain>(number_cells, length_domain, left_boundary, right_boundary,
+            type, temp_int_1, temp_int_2, temp_double_1, temp_double_2);
+    }
+}
+
+
