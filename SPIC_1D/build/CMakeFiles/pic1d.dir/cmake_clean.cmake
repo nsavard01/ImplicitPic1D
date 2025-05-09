@@ -5,6 +5,10 @@ file(REMOVE_RECURSE
   "CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.o.d"
   "CMakeFiles/pic1d.dir/src/main.cpp.o"
   "CMakeFiles/pic1d.dir/src/main.cpp.o.d"
+  "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o"
+  "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o.d"
+  "CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o"
+  "CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o.d"
   "pic1d"
   "pic1d.pdb"
 )

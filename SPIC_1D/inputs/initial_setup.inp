@@ -1,0 +1,5 @@
+16 ! number of processors per mpi thread
+test_Exp_cpp !save file name
+no Exp_RFBenchmark_highDensity_EvenMoreResolved_x6 ! Restart(yes/no) and save directory to take from
+END
+

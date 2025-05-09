@@ -1,5 +1,6 @@
 #pragma once
 #include <mpi.h>
+#include <iostream>
 
 // global physical constants
 namespace mpi_vars {

@@ -1,8 +1,5 @@
-#ifndef PCG_RNG_H
-#define PCG_RNG_H
-
+#pragma once
 #include <cstdint>
-
 // Define multiplier for conversion to [0,1] double
 
 
@@ -17,5 +14,4 @@ double pcg32_random_r();
 
 uint64_t get_pcg_state();
 
-#endif // PCG_RNG_H
 

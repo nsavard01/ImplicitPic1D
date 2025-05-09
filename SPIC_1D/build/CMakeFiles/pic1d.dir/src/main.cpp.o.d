@@ -30,18 +30,44 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/include/bits/types/cookie_io_functions_t.h \
   /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
   /usr/include/bits/stdio.h \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/domain.hpp \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/vector \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/iostream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ostream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ios \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/iosfwd \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stringfwd.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/memoryfwd.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/postypes.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cwchar \
+  /usr/include/wchar.h /usr/include/bits/floatn.h \
+  /usr/include/bits/floatn-common.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_wchar_t.h \
+  /usr/include/bits/types/wint_t.h /usr/include/bits/types/mbstate_t.h \
+  /usr/include/bits/types/locale_t.h \
+  /usr/include/bits/types/__locale_t.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/exception \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception_ptr.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception_defines.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/cxxabi_init_exception.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_header_macro.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_ptrdiff_t.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_nullptr_t.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_max_align_t.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_offsetof.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/typeinfo \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/hash_bytes.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/new \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/nested_exception.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/move.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/concept_check.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/type_traits \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/char_traits.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_algobase.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/functexcept.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception_defines.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/cpp_type_traits.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/type_traits.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/numeric_traits.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_pair.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/move.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/concept_check.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/type_traits \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_iterator_base_types.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_iterator_base_funcs.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/debug/assertions.h \
@@ -49,58 +75,14 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ptr_traits.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/debug/debug.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/predefined_ops.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/allocator.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++allocator.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/new_allocator.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/new \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/exception \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/exception_ptr.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/cxxabi_init_exception.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_header_macro.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_ptrdiff_t.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_wchar_t.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_nullptr_t.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_max_align_t.h \
-  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/__stddef_offsetof.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/typeinfo \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/hash_bytes.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/nested_exception.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/memoryfwd.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_construct.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/alloc_traits.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/alloc_traits.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_uninitialized.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/utility \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_relops.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/initializer_list \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_vector.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_bvector.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/functional_hash.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/range_access.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/vector.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/string \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stringfwd.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/char_traits.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/postypes.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cwchar \
-  /usr/include/wchar.h /usr/include/bits/floatn.h \
-  /usr/include/bits/floatn-common.h /usr/include/bits/types/wint_t.h \
-  /usr/include/bits/types/mbstate_t.h /usr/include/bits/types/locale_t.h \
-  /usr/include/bits/types/__locale_t.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/localefwd.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++locale.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/clocale \
   /usr/include/locale.h /usr/include/bits/locale.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/iosfwd \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cctype \
   /usr/include/ctype.h /usr/include/endian.h /usr/include/bits/endian.h \
   /usr/include/bits/byteswap.h /usr/include/bits/uintn-identity.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ostream_insert.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/cxxabi_forced.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_function.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/backward/binders.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/basic_string.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ios_base.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/atomicity.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/gthr.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/gthr-default.h \
@@ -118,8 +100,23 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/include/bits/thread-shared-types.h \
   /usr/include/bits/pthreadtypes-arch.h /usr/include/bits/setjmp.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/atomic_word.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/locale_classes.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/string \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/allocator.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++allocator.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/new_allocator.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ostream_insert.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/cxxabi_forced.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_function.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/backward/binders.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/range_access.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/initializer_list \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/basic_string.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/alloc_traits.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/alloc_traits.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/string_view \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/limits \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/functional_hash.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/string_view.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/string_conversions.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstdlib \
@@ -137,34 +134,10 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
   /usr/include/bits/types/error_t.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/basic_string.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/memory \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_tempbuf.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_raw_storage_iter.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/concurrence.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/uses_allocator.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/unique_ptr.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tuple \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/array \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/stdexcept \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/invoke.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/shared_ptr.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/shared_ptr_base.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/allocated_ptr.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/refwrap.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/aligned_buffer.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/shared_ptr_atomic.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/atomic_base.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/atomic_lockfree_defines.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/backward/auto_ptr.h \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/uniform_domain.hpp \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/iostream \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ostream \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ios \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ios_base.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/locale_classes.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/locale_classes.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/system_error \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/error_constants.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/stdexcept \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/streambuf \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/streambuf.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/basic_ios.h \
@@ -179,4 +152,44 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ostream.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/istream \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/istream.tcc \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/non_uniform_domain.hpp
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/domain.hpp \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/vector \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_construct.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_uninitialized.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/utility \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_relops.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_vector.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_bvector.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/vector.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/memory \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_tempbuf.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_raw_storage_iter.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/concurrence.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/uses_allocator.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/unique_ptr.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tuple \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/array \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/invoke.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/shared_ptr.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/shared_ptr_base.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/allocated_ptr.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/refwrap.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/aligned_buffer.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/shared_ptr_atomic.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/atomic_base.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/atomic_lockfree_defines.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/backward/auto_ptr.h \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/uniform_domain.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/non_uniform_domain.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/rand_gen/pcg_rng.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/particles/charged_particle.hpp \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstddef \
+  /opt/intel/oneapi/compiler/2025.0/bin/compiler/../../opt/compiler/include/omp.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/stdlib.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/fstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/codecvt.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/basic_file.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++io.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/fstream.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/sstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/sstream.tcc

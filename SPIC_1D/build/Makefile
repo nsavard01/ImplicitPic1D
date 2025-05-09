@@ -201,6 +201,54 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/particles/charged_particle.o: src/particles/charged_particle.cpp.o
+.PHONY : src/particles/charged_particle.o
+
+# target to build an object file
+src/particles/charged_particle.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o
+.PHONY : src/particles/charged_particle.cpp.o
+
+src/particles/charged_particle.i: src/particles/charged_particle.cpp.i
+.PHONY : src/particles/charged_particle.i
+
+# target to preprocess a source file
+src/particles/charged_particle.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.i
+.PHONY : src/particles/charged_particle.cpp.i
+
+src/particles/charged_particle.s: src/particles/charged_particle.cpp.s
+.PHONY : src/particles/charged_particle.s
+
+# target to generate assembly for a file
+src/particles/charged_particle.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.s
+.PHONY : src/particles/charged_particle.cpp.s
+
+src/rand_gen/pcg_rng.o: src/rand_gen/pcg_rng.cpp.o
+.PHONY : src/rand_gen/pcg_rng.o
+
+# target to build an object file
+src/rand_gen/pcg_rng.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o
+.PHONY : src/rand_gen/pcg_rng.cpp.o
+
+src/rand_gen/pcg_rng.i: src/rand_gen/pcg_rng.cpp.i
+.PHONY : src/rand_gen/pcg_rng.i
+
+# target to preprocess a source file
+src/rand_gen/pcg_rng.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.i
+.PHONY : src/rand_gen/pcg_rng.cpp.i
+
+src/rand_gen/pcg_rng.s: src/rand_gen/pcg_rng.cpp.s
+.PHONY : src/rand_gen/pcg_rng.s
+
+# target to generate assembly for a file
+src/rand_gen/pcg_rng.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.s
+.PHONY : src/rand_gen/pcg_rng.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -219,6 +267,12 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/particles/charged_particle.o"
+	@echo "... src/particles/charged_particle.i"
+	@echo "... src/particles/charged_particle.s"
+	@echo "... src/rand_gen/pcg_rng.o"
+	@echo "... src/rand_gen/pcg_rng.i"
+	@echo "... src/rand_gen/pcg_rng.s"
 .PHONY : help
 
 
