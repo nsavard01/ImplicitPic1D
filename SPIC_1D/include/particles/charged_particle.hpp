@@ -10,19 +10,23 @@ class charged_particle {
 private:
     std::string name;
     size_t total_number_particles, number_cells;
-    double mass, charge, weight, q_over_m, q_times_wp;
-    double total_sum_v_square, total_sum_v_x;
-    double accum_wall_energy_loss[2], accum_wall_momentum_loss[2];
+    int number_space_coordinates, number_velocity_coordinates;
+    double mass, charge, weight, q_over_m, q_times_wp, average_density, average_temperature;
+    double total_sum_v_square;
+    double accum_wall_energy_loss[2];
     size_t accum_wall_loss[2];
     std::vector<size_t> number_particles_per_cell;
-    std::vector<std::vector<double>> x, y, z, v_x, v_y, v_z;
-    std::vector<std::vector<double>> cell_v_sqr, momentum_loss, energy_loss;
+    std::vector<std::vector<double>> xi, y, z, v_x, v_y, v_z, weights;
+    std::vector<std::vector<double>> cell_v_sqr, energy_loss, accum_wall_momentum_loss;
+    std::vector<std::vector<std::vector<double>>> momentum_loss;
     std::vector<std::vector<size_t>> number_particles, number_collidable_particles, wall_loss, final_idx, cell_idx_array;
-    std::vector<double> density;
+    std::vector<double> density, total_sum_v;
 public:
     charged_particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in, int number_nodes);
+    void print_out() const;
+    void initialize_number_coordinates(int space, int velocity);
     void initialize_weight(double n_ave, double L_domain);
-    void initialize_rand_uniform(double T_ave, const domain& world);
+    void initialize_rand_maxwellian(double T_ave, double v_drift);
     double get_KE_ave() const;
     double get_KE_total() const;
     void interpolate_particles();

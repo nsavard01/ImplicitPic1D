@@ -65,6 +65,7 @@ int main(int argc, char** argv) {
     initialize_pcg(false); // Initialize the PCG RNG with a non-deterministic seed
     std::unique_ptr<domain> world = domain::create_from_file("../inputs/geometry.inp");
     world->print_out();
+    std::unique_ptr<std::vector<charged_particle>> charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *world);
     MPI_Finalize();
     return 0;
 }

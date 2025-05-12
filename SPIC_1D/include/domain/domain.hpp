@@ -28,6 +28,10 @@ public:
         return this->number_cells;
     };
 
+    inline const double& get_domain_length() const {
+        return this->length_domain;
+    };
+
     inline const int& get_number_nodes() const {
         return this->number_nodes;
     };

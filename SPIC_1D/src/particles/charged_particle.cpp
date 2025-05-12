@@ -1,6 +1,8 @@
 
 #include <vector>
 #include "particles/charged_particle.hpp"
+#include "globals/mpi_vars.hpp"
+#include "globals/constants.hpp"
 #include <omp.h>
 #include <fstream>
 #include <sstream>
@@ -9,6 +11,8 @@
 #include <numeric>
 #include <algorithm>
 #include <iomanip>
+#include <dirent.h>
+#include "rand_gen/maxwell_generator.hpp"
 
 
 charged_particle::charged_particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in, int number_nodes)
@@ -23,11 +27,11 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
     this->q_times_wp = 0.0;
     this->accum_wall_loss[0] = this->accum_wall_loss[1] = 0;
     this->accum_wall_energy_loss[0] = this->accum_wall_energy_loss[0] = 0.0;
-    this->accum_wall_momentum_loss[0] = this->accum_wall_momentum_loss[0] = 0.0;
     this->final_idx.resize(number_threads);
     this->number_particles.resize(number_threads);
     this->number_collidable_particles.resize(number_threads);
     this->momentum_loss.resize(number_threads);
+    this->accum_wall_momentum_loss.resize(2);
     this->energy_loss.resize(number_threads);
     this->wall_loss.resize(number_threads);
     this->density.resize(number_nodes, 0.0);
@@ -35,7 +39,7 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
         this->number_particles[i].resize(1, number_in);
         this->number_collidable_particles[i].resize(1,number_in);
         this->final_idx[i].resize(1, final_in);
-        this->momentum_loss[i].resize(2, 0);
+        this->momentum_loss[i].resize(2);
         this->energy_loss[i].resize(2, 0);
         this->wall_loss[i].resize(2, 0);
     }
@@ -43,51 +47,162 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
  
 }
 
+void charged_particle::print_out() const {
+    if (mpi_vars::mpi_rank == 0) {
+        std::cout << "Particle name: " << this->name << std::endl;
+        std::cout << "Mass: " << this->mass << std::endl;
+        std::cout << "Charge: " << this->charge << std::endl;
+        std::cout << "Weight: " << this->weight << std::endl;
+        std::cout << "q/m: " << this->q_over_m << std::endl;
+        std::cout << "Number of particles per thread: " << this->number_particles[0][0] << std::endl;
+        std::cout << "Number of total particles: " << this->total_number_particles << std::endl;
+        std::cout << "Final index: " << this->final_idx[0][0] << std::endl;
+        std::cout << "Degrees in space: " << this->number_space_coordinates << std::endl;
+        std::cout << "Degrees in velocity: " << this->number_velocity_coordinates << std::endl;
+        std::cout << "Average density: " << this->average_density << std::endl;
+        std::cout << "Average temperature: " << this->average_temperature << std::endl;
+        std::cout << " " << std::endl;
+    }
+}
+
+void charged_particle::initialize_number_coordinates(int space, int velocity)
+    {
+    int number_threads = omp_get_max_threads();
+    this->number_space_coordinates = space;
+    this->number_velocity_coordinates = velocity;
+    
+    // add number of spatial and velocity degrees of freedom
+    for (int i = 0; i < space; i++){ 
+        if (i == 0) {
+            this->xi.resize(number_threads);
+            for (int j = 0; j < number_threads; j++){
+                this->xi[j].resize(this->final_idx[j][0], 0);
+            }
+        } else if (i == 1) {
+            this->y.resize(number_threads);
+            for (int j = 0; j < number_threads; j++){
+                this->y[j].resize(this->final_idx[j][0], 0);
+            }
+        } else if (i == 2) {
+            this->z.resize(number_threads);
+            for (int j = 0; j < number_threads; j++){
+                this->z[j].resize(this->final_idx[j][0], 0);
+            }
+        }
+    }
+    for (int i = 0; i < velocity; i++){
+        if (i == 0) {
+            this->total_sum_v.resize(1, 0.0);
+            this-> accum_wall_momentum_loss[0].resize(1, 0.0);
+            this-> accum_wall_momentum_loss[1].resize(1, 0.0);
+            this->v_x.resize(number_threads);
+            for (int j = 0; j < number_threads; j++){
+                this->v_x[j].resize(this->final_idx[j][0], 0);
+                this->momentum_loss[j][0].resize(1, 0.0);
+                this->momentum_loss[j][1].resize(1, 0.0);
+            }
+        } else if (i == 1) {
+            this->total_sum_v.resize(2, 0.0);
+            this-> accum_wall_momentum_loss[0].resize(2, 0.0);
+            this-> accum_wall_momentum_loss[1].resize(2, 0.0);
+            this->v_y.resize(number_threads);
+            for (int j = 0; j < number_threads; j++){
+                this->v_y[j].resize(this->final_idx[j][0], 0);
+                this->momentum_loss[j][0].resize(2, 0.0);
+                this->momentum_loss[j][1].resize(2, 0.0);
+            }
+        } else if (i == 2) {
+            this->total_sum_v.resize(3, 0.0);
+            this-> accum_wall_momentum_loss[0].resize(3, 0.0);
+            this-> accum_wall_momentum_loss[1].resize(3, 0.0);
+            this->v_z.resize(number_threads);
+            for (int j = 0; j < number_threads; j++){
+                this->v_z[j].resize(this->final_idx[j][0], 0);
+                this->momentum_loss[j][0].resize(3, 0.0);
+                this->momentum_loss[j][1].resize(3, 0.0);
+            }
+        }
+    }
+    
+ 
+}
 
 
-// void Particle::initialize_weight(double n_ave, double L_domain) {
-//     size_t total_part;
-//     int i;
-//     int number_threads = omp_get_max_threads();
-//     total_part = 0;
-//     for (i = 0; i < number_threads; i++){
-//        total_part += this->number_particles[i];
-//     }
-//     MPI_Allreduce(&total_part, &this->total_number_particles, 1, Constants::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
-//     this->weight = n_ave * L_domain / static_cast<double>(this->total_number_particles);
-//     this->q_times_wp = this->charge * this->weight;
-// }
 
-// void Particle::initialize_rand_uniform(double T_ave, const Domain& world) {
-//     double v_therm = std::sqrt(T_ave * Constants::elementary_charge / this->mass);
-//     double sum_v_sq = 0.0, sum_v = 0;
-//     #pragma omp parallel reduction(+:sum_v_sq, sum_v)
-//     {   
-//         int thread_id = omp_get_thread_num();
-//         size_t part_num;
-//         double x_pos, R_1, R_2, R_3, R_4, v_x, v_y, v_z;
-//         for (part_num = 0; part_num < this->number_particles[thread_id]; part_num++){
-//             x_pos = pcg32_random_r() * world.L_domain;
-//             this->phase_space[thread_id][part_num * 4] = world.get_xi_from_x(x_pos);
-//             R_1 = pcg32_random_r();
-//             R_2 = pcg32_random_r();
-//             R_3 = pcg32_random_r();
-//             R_4 = pcg32_random_r();
-//             v_x = v_therm * std::sqrt(-2.0 * std::log(R_1)) * std::cos(2.0 * M_PI * R_2);
-//             v_y = v_therm * std::sqrt(-2.0 * std::log(R_1)) * std::sin(2.0 * M_PI * R_2);
-//             v_z = v_therm * std::sqrt(-2.0 * std::log(R_3)) * std::cos(2.0 * M_PI * R_4);
-//             this->phase_space[thread_id][part_num*4+1] = v_x;
-//             this->phase_space[thread_id][part_num*4+2] = v_y;
-//             this->phase_space[thread_id][part_num*4+3] = v_z;
-//             sum_v += v_x;
-//             sum_v_sq += v_x * v_x + v_y*v_y + v_z * v_z;
+void charged_particle::initialize_weight(double n_ave, double L_domain) {
+    size_t total_part;
+    int i;
+    int number_threads = omp_get_max_threads();
+    this->average_density = n_ave;
+    total_part = 0;
+    for (i = 0; i < number_threads; i++){
+       total_part += this->number_particles[i][0];
+    }
+    MPI_Allreduce(&total_part, &this->total_number_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    this->weight = n_ave * L_domain / static_cast<double>(this->total_number_particles);
+    this->q_times_wp = this->charge * this->weight;
+}
 
-//         }
-        
-//     }
-//     MPI_Allreduce(&sum_v, &this->total_sum_v_x, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-//     MPI_Allreduce(&sum_v_sq, &this->total_sum_v_square, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-// }
+void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) {
+    double v_therm = std::sqrt(T_ave * constants::elementary_charge / this->mass);
+    double sum_v_sq = 0.0;
+    double sum_v_x = 0.0;
+    double sum_v_y = 0.0;
+    double sum_v_z = 0.0;
+    if (this->number_velocity_coordinates == 1) {
+        #pragma omp parallel reduction(+:sum_v_x, sum_v_sq)
+        {
+            int thread_id = omp_get_thread_num();
+            size_t end_part = this->number_particles[thread_id][0];
+            for (size_t part_num = 0; part_num < end_part; part_num++){
+                double& v_x = this->v_x[thread_id][part_num];
+                maxwellian_1D(v_x, v_therm, v_drift);
+                sum_v_x += v_x;
+                sum_v_sq += v_x * v_x;
+            }
+        }  
+        this->total_sum_v[0] = sum_v_x; 
+    } else if (this->number_velocity_coordinates == 2) {
+        #pragma omp parallel reduction(+:sum_v_x, sum_v_y, sum_v_sq)
+        {
+            int thread_id = omp_get_thread_num();
+            size_t end_part = this->number_particles[thread_id][0];
+            for (size_t part_num = 0; part_num < end_part; part_num++){
+                double& v_x = this->v_x[thread_id][part_num];
+                double& v_y = this->v_y[thread_id][part_num];
+                maxwellian_2D(v_x, v_y, v_therm, v_drift);
+                sum_v_x += v_x;
+                sum_v_y += v_y;
+                sum_v_sq += v_x * v_x + v_y * v_y;
+            }
+        }
+        this->total_sum_v[0] = sum_v_x; 
+        this->total_sum_v[1] = sum_v_y;
+
+    } else if (this->number_velocity_coordinates == 3) {
+        #pragma omp parallel reduction(+:sum_v_sq, sum_v_x, sum_v_y, sum_v_z)
+        {
+            int thread_id = omp_get_thread_num();
+            size_t end_part = this->number_particles[thread_id][0];
+            for (size_t part_num = 0; part_num < end_part; part_num++){
+                double& v_x = this->v_x[thread_id][part_num];
+                double& v_y = this->v_y[thread_id][part_num];
+                double& v_z = this->v_z[thread_id][part_num];
+                maxwellian_3D(v_x, v_y, v_z, v_therm, v_drift);
+                sum_v_x += v_x;
+                sum_v_y += v_y;
+                sum_v_z += v_z;
+                sum_v_sq += v_x * v_x + v_y * v_y + v_z * v_z;
+            }
+        }  
+        this->total_sum_v[0] = sum_v_x; 
+        this->total_sum_v[1] = sum_v_y;
+        this->total_sum_v[2] = sum_v_z;
+    }
+    MPI_Allreduce(&sum_v_sq, &this->total_sum_v_square, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v.data(), this->number_velocity_coordinates, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    this->average_temperature = this->mass * this->total_sum_v_square / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
+}
 
 // void Particle::interpolate_particles(){
     
@@ -308,131 +423,147 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
 
 
 
-// std::vector<Particle> read_particle_inputs(const std::string& filename, const Domain& world){
-//     if (Constants::mpi_rank == 0) {
-//         std::cout << " "<< std::endl;
-//         std::cout << "Reading charged particle inputs "<< std::endl;
-//         std::cout << "---------------------------------------- "<< std::endl;
-//     }
-//     std::vector<Particle> particle_list;
-//     int count_number_particles = 0;
-//     std::string line;
-//     for (int rank_num = 0;rank_num < Constants::mpi_size;rank_num++) {
-//         if (rank_num == Constants::mpi_rank) {
-//             std::ifstream file(filename);
-//             if (!file) {
-//                 std::cerr << "Error: Unable to open file " << filename << std::endl;
-//             }
+std::unique_ptr<std::vector<charged_particle>> read_charged_particle_inputs(const std::string& directory_path, const domain& world){
+    
+    auto particle_list = std::make_unique<std::vector<charged_particle>>();
+    std::vector<double> mass_in, charge_in, n_ave, temp_in, v_drift;
+    std::vector<size_t> num_part_thread, factor, EEDF_type;
+    std::vector<std::string> particle_names;
+    std::vector<int> index_order, number_space_coordinates, number_velocity_coordinates;
+    int count_number_particles = 0;
+    if (mpi_vars::mpi_rank == 0) {
+        std::cout << " "<< std::endl;
+        std::cout << "Reading charged particle inputs "<< std::endl;
+        std::cout << "---------------------------------------- "<< std::endl;
+    }
+    for (int rank_num = 0; rank_num < mpi_vars::mpi_size; rank_num++){
+        if (mpi_vars::mpi_rank == rank_num) {
+            // Open the directory
+            DIR* dir = opendir(directory_path.c_str());
+            if (!dir) {
+                perror("opendir");
+                exit(EXIT_FAILURE);
+            }
+
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != nullptr) {
+                if (entry->d_type == DT_REG) {  // regular file
+                    count_number_particles++;
+                    std::string filename = directory_path + entry->d_name;
+                    std::string line;
+                    std::ifstream file(filename);
+                    if (!file) {
+                        std::cerr << "Error: Unable to open file " << filename << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    std::string name;
+                    iss >> name;
+                    particle_names.push_back(name);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    double charge;
+                    iss >> charge;
+                    charge_in.push_back(charge * constants::elementary_charge);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    double mass;
+                    iss >> mass;
+                    mass = mass * constants::mass_amu;
+                    if (std::abs(constants::electron_mass - mass ) /constants::electron_mass < 1e-3 ) {
+                        mass = constants::electron_mass;
+                    } 
+                    mass_in.push_back(mass);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    size_t number_part;
+                    iss >> number_part;
+                    num_part_thread.push_back(number_part);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    double n_ave_temp;
+                    iss >> n_ave_temp;
+                    n_ave.push_back(n_ave_temp);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    double temp;
+                    iss >> temp;
+                    temp_in.push_back(temp);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    double final_fac;
+                    iss >> final_fac;
+                    factor.push_back(size_t(final_fac * number_part));
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    int EEDF_type_temp;
+                    iss >> EEDF_type_temp;
+                    EEDF_type.push_back(EEDF_type_temp);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    double drift;
+                    iss >> drift;
+                    v_drift.push_back(drift);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    int number_space, number_velocity;
+                    iss >> number_space >> number_velocity;
+                    number_space_coordinates.push_back(number_space);
+                    number_velocity_coordinates.push_back(number_velocity);
+                    iss.clear();
+                    file.close();
+                }
+            }   
+        
+            closedir(dir);
+
+            // Initialize index_order with indices [0, 1, 2, ..., count_number_particles - 1]
+            index_order.resize(count_number_particles);
+            std::iota(index_order.begin(), index_order.end(), 0);
+
             
-//             // First check which particles exist and how many there are
-//             while (std::getline(file, line)) {
-//                 if (line.find("ELECTRONS") != std::string::npos){
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     std::istringstream iss(line);
-//                     std::string name;
-//                     uint32_t num_part_thread;
-//                     size_t factor;
-//                     iss >> name >> num_part_thread >> factor;
-//                     std::getline(file, line);
-//                     count_number_particles++;
-//                 }
-
-//                 if (line.find("IONS") != std::string::npos){
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     while (line.find("-------") == std::string::npos) {
-//                         std::istringstream iss(line);
-//                         std::string name;
-//                         uint32_t num_part_thread;
-//                         double mass_in, charge_in;
-//                         size_t factor;
-//                         iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
-//                         std::getline(file, line);
-//                         count_number_particles++;
-//                     }
-//                 }
-//             }
-            
-//             global_inputs::number_charged_particles = count_number_particles;
-//             particle_list.reserve(global_inputs::number_charged_particles);
-//             // get electrons
-//             file.clear();
-//             file.seekg(0, std::ios::beg);
-//             while (std::getline(file, line)) {
-//                 if (line.find("ELECTRONS") != std::string::npos){
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     std::istringstream iss(line);
-//                     std::string name;
-//                     size_t num_part_thread;
-//                     size_t factor;
-//                     iss >> name >> num_part_thread >> factor;
-//                     factor = factor * static_cast<size_t>(num_part_thread);
-//                     particle_list.emplace_back(Constants::electron_mass, -Constants::elementary_charge, num_part_thread, factor, name);
-//                     std::getline(file, line);
-//                 }
-//             }
-
-//             file.clear();
-//             file.seekg(0, std::ios::beg);
-//             while (std::getline(file, line)) {
-//                 if (line.find("IONS") != std::string::npos){
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     std::getline(file, line);
-//                     while (line.find("-------") == std::string::npos) {
-//                         std::istringstream iss(line);
-//                         std::string name;
-//                         size_t num_part_thread;
-//                         double mass_in, charge_in;
-//                         size_t factor;
-//                         iss >> name >> mass_in >> charge_in >> num_part_thread >> factor;
-//                         factor = factor * static_cast<size_t>(num_part_thread);
-//                         mass_in = mass_in * Constants::mass_amu - charge_in * Constants::electron_mass;
-//                         charge_in = charge_in * Constants::elementary_charge;
-//                         particle_list.emplace_back(mass_in, charge_in, num_part_thread, factor, name);
-//                         std::getline(file, line);
-//                     }
-//                 }
-//             }
-//             file.close();
-//         }
-//     }
-
-//     int i;
-//     double T_ave;
-//     for (i = 0; i < global_inputs::number_charged_particles; i++){
-//         particle_list[i].initialize_weight(global_inputs::initial_density, world.L_domain);
-//         if (particle_list[i].mass == Constants::electron_mass) {
-//             T_ave = global_inputs::temp_electrons;
-//         }
-//         else {
-//             T_ave = global_inputs::temp_ions;
-//         }
-//         particle_list[i].initialize_rand_uniform(T_ave, world);
-//         if (Constants::mpi_rank == 0) {
-//             std::cout << "Particle #: " << i << std::endl;
-//             std::cout << "Name: " << particle_list[i].name << std::endl;
-//             std::cout << "Mass: " << particle_list[i].mass << std::endl;
-//             std::cout << "Charge: " << particle_list[i].charge << std::endl;
-//             std::cout << "Weight: " << particle_list[i].weight << std::endl;
-//         }
-//         double ave_KE = particle_list[i].get_KE_ave();
-//         if (Constants::mpi_rank == 0) {
-//             std::cout << "total number of particles: " << particle_list[i].total_number_particles << std::endl;
-//             std::cout << "Allocated total amount of particles per thread " << particle_list[i].final_idx << std::endl;
-//             std::cout << "Averge KE: " << ave_KE << std::endl;
-//             std::cout << "----------------- " << std::endl;
-//         }
-//     }
-
-//     return particle_list;
+            // Sort indices based on charge-to-mass ratio (q/m)
+            std::sort(index_order.begin(), index_order.end(), [&](int i, int j) {
+                return (charge_in[i] / mass_in[i]) < (charge_in[j] / mass_in[j]);
+            });
+        
+        }
+    }
+    
     
 
-// }
+    //Create the particles in the sorted order 
+    for (int num_part = 0; num_part < count_number_particles; num_part++){
+        int i = index_order[num_part];
+        std::string name = particle_names[i];
+        double mass = mass_in[i];
+        double charge = charge_in[i];
+        size_t number_in = num_part_thread[i];
+        size_t final_in = factor[i];
+        int number_space = number_space_coordinates[i];
+        int number_velocity = number_velocity_coordinates[i];
+        charged_particle temp_particle(mass, charge, number_in, final_in, name, world.get_number_nodes());
+        
+        temp_particle.initialize_number_coordinates(number_space, number_velocity);
+        temp_particle.initialize_weight(n_ave[i], world.get_domain_length());
+        temp_particle.initialize_rand_maxwellian(temp_in[i], v_drift[i]);
+        particle_list->push_back(temp_particle);
+        particle_list->back().print_out();
+    }
+
+    return particle_list;
+    
+
+}
 
 
