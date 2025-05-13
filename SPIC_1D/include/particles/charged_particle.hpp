@@ -40,6 +40,6 @@ public:
     void write_phase_space(const std::string& dir_name, int diag_num) const;
 };
 
-std::unique_ptr<std::vector<charged_particle>> read_charged_particle_inputs(const std::string& filename, const domain& world);
+std::vector<charged_particle> read_charged_particle_inputs(const std::string& filename, const domain& world);
 
 

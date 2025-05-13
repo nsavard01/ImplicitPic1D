@@ -175,7 +175,7 @@ void non_uniform_domain::print_out(){
     }
 }
 
-std::unique_ptr<domain> domain::create_from_file(const std::string& filename) {
+std::unique_ptr<domain> create_domain_from_file(const std::string& filename) {
     int left_boundary, right_boundary;
     int number_cells;
     double length_domain;

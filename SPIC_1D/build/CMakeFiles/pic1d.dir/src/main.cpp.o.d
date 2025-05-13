@@ -184,6 +184,8 @@ CMakeFiles/pic1d.dir/src/main.cpp.o: \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/rand_gen/pcg_rng.hpp \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/particles/charged_particle.hpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstddef \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/solvers/poisson_solver_1D_tridiag.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/solvers/poisson_solver_1D.hpp \
   /opt/intel/oneapi/compiler/2025.0/bin/compiler/../../opt/compiler/include/omp.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/stdlib.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/fstream \

@@ -13,6 +13,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/main.cpp" "CMakeFiles/pic1d.dir/src/main.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/main.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle.cpp" "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/rand_gen/pcg_rng.cpp" "CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o.d"
+  "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/solvers/poisson_solver_1D_tridiag.cpp" "CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

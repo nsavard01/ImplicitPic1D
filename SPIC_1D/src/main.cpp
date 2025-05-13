@@ -5,6 +5,7 @@
 #include "domain/non_uniform_domain.hpp"
 #include "rand_gen/pcg_rng.hpp"
 #include "particles/charged_particle.hpp"
+#include "solvers/poisson_solver_1D_tridiag.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <mpi.h>
@@ -63,9 +64,13 @@ int main(int argc, char** argv) {
     }
     MPI_Barrier(MPI_COMM_WORLD);
     initialize_pcg(false); // Initialize the PCG RNG with a non-deterministic seed
-    std::unique_ptr<domain> world = domain::create_from_file("../inputs/geometry.inp");
+    std::unique_ptr<domain> world = create_domain_from_file("../inputs/geometry.inp");
     world->print_out();
-    std::unique_ptr<std::vector<charged_particle>> charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *world);
+    std::vector<charged_particle> charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *world);
+    for (int i = 0; i < charged_particle_list.size(); i++) {
+        charged_particle_list[i].print_out();
+    }
+    poisson_solver_1D_tridiag solver(*world);
     MPI_Finalize();
     return 0;
 }

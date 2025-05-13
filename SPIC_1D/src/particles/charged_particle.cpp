@@ -423,9 +423,9 @@ void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) 
 
 
 
-std::unique_ptr<std::vector<charged_particle>> read_charged_particle_inputs(const std::string& directory_path, const domain& world){
+std::vector<charged_particle> read_charged_particle_inputs(const std::string& directory_path, const domain& world){
     
-    auto particle_list = std::make_unique<std::vector<charged_particle>>();
+    std::vector<charged_particle> particle_list;
     std::vector<double> mass_in, charge_in, n_ave, temp_in, v_drift;
     std::vector<size_t> num_part_thread, factor, EEDF_type;
     std::vector<std::string> particle_names;
@@ -557,8 +557,7 @@ std::unique_ptr<std::vector<charged_particle>> read_charged_particle_inputs(cons
         temp_particle.initialize_number_coordinates(number_space, number_velocity);
         temp_particle.initialize_weight(n_ave[i], world.get_domain_length());
         temp_particle.initialize_rand_maxwellian(temp_in[i], v_drift[i]);
-        particle_list->push_back(temp_particle);
-        particle_list->back().print_out();
+        particle_list.push_back(temp_particle);
     }
 
     return particle_list;

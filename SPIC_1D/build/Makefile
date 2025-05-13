@@ -249,6 +249,30 @@ src/rand_gen/pcg_rng.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.s
 .PHONY : src/rand_gen/pcg_rng.cpp.s
 
+src/solvers/poisson_solver_1D_tridiag.o: src/solvers/poisson_solver_1D_tridiag.cpp.o
+.PHONY : src/solvers/poisson_solver_1D_tridiag.o
+
+# target to build an object file
+src/solvers/poisson_solver_1D_tridiag.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o
+.PHONY : src/solvers/poisson_solver_1D_tridiag.cpp.o
+
+src/solvers/poisson_solver_1D_tridiag.i: src/solvers/poisson_solver_1D_tridiag.cpp.i
+.PHONY : src/solvers/poisson_solver_1D_tridiag.i
+
+# target to preprocess a source file
+src/solvers/poisson_solver_1D_tridiag.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.i
+.PHONY : src/solvers/poisson_solver_1D_tridiag.cpp.i
+
+src/solvers/poisson_solver_1D_tridiag.s: src/solvers/poisson_solver_1D_tridiag.cpp.s
+.PHONY : src/solvers/poisson_solver_1D_tridiag.s
+
+# target to generate assembly for a file
+src/solvers/poisson_solver_1D_tridiag.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.s
+.PHONY : src/solvers/poisson_solver_1D_tridiag.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -273,6 +297,9 @@ help:
 	@echo "... src/rand_gen/pcg_rng.o"
 	@echo "... src/rand_gen/pcg_rng.i"
 	@echo "... src/rand_gen/pcg_rng.s"
+	@echo "... src/solvers/poisson_solver_1D_tridiag.o"
+	@echo "... src/solvers/poisson_solver_1D_tridiag.i"
+	@echo "... src/solvers/poisson_solver_1D_tridiag.s"
 .PHONY : help
 
 
