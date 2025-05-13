@@ -11,6 +11,7 @@
 // Uniform domain constructor
 
 uniform_domain::uniform_domain(int num_cells, double length_domain, int left_boundary_condition, int right_boundary_condition) {
+    this->domain_type = 0;
     this->number_cells = num_cells;
     this->length_domain = length_domain;
     this->left_boundary_condition = left_boundary_condition;
@@ -57,6 +58,7 @@ double sinusoidal_xi_to_dx_dxi(double xi, double number_cells, double length_dom
 non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int left_boundary_condition, int right_boundary_condition,
     int type, int temp_int_1, int temp_int_2, double temp_double_1, double temp_double_2) {
     this->number_cells = num_cells;
+    this->domain_type = 1;
     this->length_domain = length_domain;
     this->left_boundary_condition = left_boundary_condition;
     this->right_boundary_condition = right_boundary_condition;

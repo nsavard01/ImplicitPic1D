@@ -8,6 +8,7 @@ class domain {
 
 protected:
     int number_cells; // number of cells in the domain
+    int domain_type;
     int number_nodes; // number of nodes in the domain
     double length_domain; // length of the domain
     double min_dx; // minimum cell size
@@ -21,6 +22,9 @@ public:
     
     virtual ~domain() = default;
 
+    inline const int& get_domain_type() const {
+        return this->domain_type;
+    };
 
     inline const double& get_min_dx() const {
         return this->min_dx;

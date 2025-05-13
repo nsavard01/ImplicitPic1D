@@ -6,6 +6,7 @@
 #include "rand_gen/pcg_rng.hpp"
 #include "particles/charged_particle.hpp"
 #include "solvers/poisson_solver_1D_tridiag.hpp"
+#include "ES_solvers/ES_solver_MC.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <mpi.h>
@@ -69,8 +70,15 @@ int main(int argc, char** argv) {
     std::vector<charged_particle> charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *world);
     for (int i = 0; i < charged_particle_list.size(); i++) {
         charged_particle_list[i].print_out();
+    } 
+    if (world->get_domain_type() == 0) {
+        ES_solver_MC solver(*world);
+    } else if (world->get_domain_type() == 1) {
+        std::cout << "Non-uniform domain detected." << std::endl;
+    } else {
+        std::cerr << "Error: Unknown domain type." << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
-    poisson_solver_1D_tridiag solver(*world);
     MPI_Finalize();
     return 0;
 }

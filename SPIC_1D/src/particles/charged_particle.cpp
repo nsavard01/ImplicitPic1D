@@ -204,24 +204,309 @@ void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) 
     this->average_temperature = this->mass * this->total_sum_v_square / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
 }
 
-// void Particle::interpolate_particles(){
-    
-//     int thread_id = omp_get_thread_num();
-//     size_t last_idx = this->number_particles[thread_id]*4;
-//     double d, xi;
-//     size_t xi_left, xi_right;
-//     std::vector<double>& work_space = this->work_space[thread_id];
-//     std::vector<double>& phase_space = this->phase_space[thread_id];
-//     std::fill(work_space.begin(), work_space.end(), 0.0);
-//     for (size_t part_indx = 0; part_indx < last_idx; part_indx += 4){
-//         xi = phase_space[part_indx];
-//         xi_left = int(xi);
-//         xi_right = xi_left+1;
-//         d = xi - xi_left;
-//         work_space[xi_left] += (1.0 - d);
-//         work_space[xi_right] += d;
-//     } 
-// }
+void charged_particle::deposit_particles_linear(int thread_id, std::vector<double>& work_space) {
+    size_t last_idx = this->number_particles[thread_id][0];
+    double d, xi_p;
+    int xi_left, xi_right;
+    std::vector<double>& xi_local = this->xi[thread_id];
+    for (size_t part_indx = 0; part_indx < last_idx; part_indx++){
+        xi_p = xi_local[thread_id];
+        xi_left = int(xi_p);
+        xi_right = xi_left+1;
+        d = xi_p - xi_left;
+        work_space[xi_left] += (1.0 - d);
+        work_space[xi_right] += d;
+    } 
+}
+
+void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector<double>& E_field, const double dx, const int left_boundary, const int right_boundary, int number_cells) {
+   
+    size_t last_idx = this->number_particles[thread_id][0];
+    this->wall_loss[thread_id][0] = 0; this->wall_loss[thread_id][1] = 0;
+    this->energy_loss[thread_id][0] = 0.0; this->energy_loss[thread_id][1] = 0.0;
+    std::vector<double>& xi_local = this->xi[thread_id];
+    std::vector<double>& v_x_local = this->v_x[thread_id];
+    double inv_dx = 1.0/dx;
+    size_t space_delete = 0;
+    double v_x, xi, v_y = 0.0, v_z = 0.0;
+    double E_field_local, d_p;
+    bool use_vy = (this->number_velocity_coordinates > 1);
+    bool use_vz = (this->number_velocity_coordinates > 2);
+    int xi_cell;
+    bool del_part;
+    for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
+        xi = xi_local[part_indx];
+        xi_cell = int(xi);
+        d_p = xi - xi_cell;
+        E_field_local = E_field[xi_cell] * (1.0 - d_p) + E_field[xi_cell+1] * d_p;
+        v_x = v_x_local[part_indx];
+        v_x += this->q_over_m * E_field_local * del_t;
+        xi += v_x * del_t * inv_dx;
+        del_part = false;
+        if (xi <= 0) {
+            switch (left_boundary){
+                case 1:
+                case 4:
+                    if (use_vy) {
+                        v_y = this->v_y[thread_id][part_indx];
+                    }
+                    if (use_vz){
+                        v_z = this->v_z[thread_id][part_indx];
+                    }
+                    this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
+                    this->wall_loss[thread_id][0]++;
+                    this->momentum_loss[thread_id][0][0] += v_x;
+                    this->momentum_loss[thread_id][0][1] += v_y;
+                    this->momentum_loss[thread_id][0][2] += v_z;
+                    del_part = true;
+                    break;
+                case 2:
+                    xi = - xi;
+                    v_x = - v_x;
+                    break;
+                case 3:
+                    xi = number_cells + xi;
+                    break;
+            }
+        } else if (xi >= number_cells) {
+            switch (right_boundary){
+                case 1:
+                case 4:
+                    if (use_vy) {
+                        v_y = this->v_y[thread_id][part_indx];
+                    }
+                    if (use_vz){
+                        v_z = this->v_z[thread_id][part_indx];
+                    }
+                    this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
+                    this->wall_loss[thread_id][1]++;
+                    this->momentum_loss[thread_id][1][0] += v_x;
+                    this->momentum_loss[thread_id][1][1] += v_y;
+                    this->momentum_loss[thread_id][1][2] += v_z;
+                    del_part = true;
+                    break;
+                case 2:
+                    xi = 2.0 * number_cells - xi;
+                    v_x = - v_x;
+                    break;
+                case 3:
+                    xi = xi - number_cells;
+                    break;
+            }
+
+        }
+        if (!del_part) {
+            size_t new_idx = part_indx-space_delete;
+            xi_local[new_idx] = xi;
+            v_x_local[new_idx] = v_x;
+            if (use_vy) {
+                this->v_y[thread_id][new_idx] = v_y;
+            }
+            if (use_vz){
+                this->v_z[thread_id][new_idx] = v_z;
+            }
+        } else {
+            space_delete++;
+        }
+    }
+    this->number_particles[thread_id][0] = (last_idx - space_delete);
+}
+
+void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std::vector<double>& E_field, const double dx, const int left_boundary, const int right_boundary, int number_cells) {
+   
+    size_t last_idx = this->number_particles[thread_id][0];
+    this->wall_loss[thread_id][0] = 0; this->wall_loss[thread_id][1] = 0;
+    this->energy_loss[thread_id][0] = 0.0; this->energy_loss[thread_id][1] = 0.0;
+    std::vector<double>& xi_local = this->xi[thread_id];
+    std::vector<double>& v_x_local = this->v_x[thread_id];
+    double inv_dx = 1.0/dx;
+    size_t space_delete = 0;
+    double v_x, xi, v_y = 0.0, v_z = 0.0;
+    double E_field_local;
+    bool use_vy = (this->number_velocity_coordinates > 1);
+    bool use_vz = (this->number_velocity_coordinates > 2);
+    int xi_cell;
+    bool del_part;
+    for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
+        xi = xi_local[part_indx];
+        xi_cell = int(xi);
+        E_field_local = E_field[xi_cell];
+        v_x = v_x_local[part_indx];
+        v_x += this->q_over_m * E_field_local * del_t;
+        xi += v_x * del_t * inv_dx;
+        del_part = false;
+        if (xi <= 0) {
+            switch (left_boundary){
+                case 1:
+                case 4:
+                    if (use_vy) {
+                        v_y = this->v_y[thread_id][part_indx];
+                    }
+                    if (use_vz){
+                        v_z = this->v_z[thread_id][part_indx];
+                    }
+                    this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
+                    this->wall_loss[thread_id][0]++;
+                    this->momentum_loss[thread_id][0][0] += v_x;
+                    this->momentum_loss[thread_id][0][1] += v_y;
+                    this->momentum_loss[thread_id][0][2] += v_z;
+                    del_part = true;
+                    break;
+                case 2:
+                    xi = - xi;
+                    v_x = - v_x;
+                    break;
+                case 3:
+                    xi = number_cells + xi;
+                    break;
+            }
+        } else if (xi >= number_cells) {
+            switch (right_boundary){
+                case 1:
+                case 4:
+                    if (use_vy) {
+                        v_y = this->v_y[thread_id][part_indx];
+                    }
+                    if (use_vz){
+                        v_z = this->v_z[thread_id][part_indx];
+                    }
+                    this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
+                    this->wall_loss[thread_id][1]++;
+                    this->momentum_loss[thread_id][1][0] += v_x;
+                    this->momentum_loss[thread_id][1][1] += v_y;
+                    this->momentum_loss[thread_id][1][2] += v_z;
+                    del_part = true;
+                    break;
+                case 2:
+                    xi = 2.0 * number_cells - xi;
+                    v_x = - v_x;
+                    break;
+                case 3:
+                    xi = xi - number_cells;
+                    break;
+            }
+
+        }
+        if (!del_part) {
+            size_t new_idx = part_indx-space_delete;
+            xi_local[new_idx] = xi;
+            v_x_local[new_idx] = v_x;
+            if (use_vy) {
+                this->v_y[thread_id][new_idx] = v_y;
+            }
+            if (use_vz){
+                this->v_z[thread_id][new_idx] = v_z;
+            }
+        } else {
+            space_delete++;
+        }
+    }
+    this->number_particles[thread_id][0] = (last_idx - space_delete);
+}
+
+void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const std::vector<double>& E_field, 
+    const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, int number_cells) {
+   
+    size_t last_idx = this->number_particles[thread_id][0];
+    this->wall_loss[thread_id][0] = 0; this->wall_loss[thread_id][1] = 0;
+    this->energy_loss[thread_id][0] = 0.0; this->energy_loss[thread_id][1] = 0.0;
+    std::vector<double>& xi_local = this->xi[thread_id];
+    std::vector<double>& v_x_local = this->v_x[thread_id];
+    double inv_dx = 1.0/dx;
+    size_t space_delete = 0;
+    double v_x, xi, x_i, x_f, x_left, v_y = 0.0, v_z = 0.0;
+    double E_field_local;
+    bool use_vy = (this->number_velocity_coordinates > 1);
+    bool use_vz = (this->number_velocity_coordinates > 2);
+    int xi_cell;
+    bool del_part;
+    double dx;
+    double x_left_boundary = grid[0];
+    double x_right_boundary = grid[number_cells];
+    for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
+        xi = xi_local[part_indx];
+        xi_cell = int(xi);
+        E_field_local = E_field[xi_cell];
+        v_x = v_x_local[part_indx];
+        v_x += this->q_over_m * E_field_local * del_t;
+        dx = dx_dxi[xi_cell];
+        x_left = grid[xi_cell]
+        x_i = x_left + dx * (xi - xi_cell);
+        x_f = x_i +  v_x * del_t;
+        del_part = false;
+        if (x_f <= x_left_boundary) {
+            switch (left_boundary){
+                case 1:
+                case 4:
+                    if (use_vy) {
+                        v_y = this->v_y[thread_id][part_indx];
+                    }
+                    if (use_vz){
+                        v_z = this->v_z[thread_id][part_indx];
+                    }
+                    this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
+                    this->wall_loss[thread_id][0]++;
+                    this->momentum_loss[thread_id][0][0] += v_x;
+                    this->momentum_loss[thread_id][0][1] += v_y;
+                    this->momentum_loss[thread_id][0][2] += v_z;
+                    del_part = true;
+                    break;
+                case 2:
+                    xi = - xi;
+                    v_x = - v_x;
+                    break;
+                case 3:
+                    xi = number_cells + xi;
+                    break;
+            }
+        } else if (x_f >= x_right_boundary) {
+            switch (right_boundary){
+                case 1:
+                case 4:
+                    if (use_vy) {
+                        v_y = this->v_y[thread_id][part_indx];
+                    }
+                    if (use_vz){
+                        v_z = this->v_z[thread_id][part_indx];
+                    }
+                    this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
+                    this->wall_loss[thread_id][1]++;
+                    this->momentum_loss[thread_id][1][0] += v_x;
+                    this->momentum_loss[thread_id][1][1] += v_y;
+                    this->momentum_loss[thread_id][1][2] += v_z;
+                    del_part = true;
+                    break;
+                case 2:
+                    xi = 2.0 * number_cells - xi;
+                    v_x = - v_x;
+                    break;
+                case 3:
+                    xi = xi - number_cells;
+                    break;
+            }
+
+        }
+        if (!del_part) {
+            size_t new_idx = part_indx-space_delete;
+            double diff = x_f - x_i;
+            int direction = (diff > 0) - (diff < 0);
+            while (x_f < grid[xi_cell] || x_f >= grid[xi_cell+1]){
+                xi_cell += direction;
+            }
+            xi_local[new_idx] = xi_cell + (x_f - grid[xi_cell])/dx_dxi[xi_cell];
+            v_x_local[new_idx] = v_x;
+            if (use_vy) {
+                this->v_y[thread_id][new_idx] = v_y;
+            }
+            if (use_vz){
+                this->v_z[thread_id][new_idx] = v_z;
+            }
+        } else {
+            space_delete++;
+        }
+    }
+    this->number_particles[thread_id][0] = (last_idx - space_delete);
+}
 
 // void Particle::gather_mpi(){
 //     double sum_v_sq = 0.0, sum_v = 0;
