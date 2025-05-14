@@ -177,7 +177,7 @@ void non_uniform_domain::print_out(){
     }
 }
 
-std::unique_ptr<domain> create_domain_from_file(const std::string& filename) {
+std::unique_ptr<domain> create_domain_from_file(const std::string& filename, int scheme_type) {
     int left_boundary, right_boundary;
     int number_cells;
     double length_domain;
@@ -239,9 +239,14 @@ std::unique_ptr<domain> create_domain_from_file(const std::string& filename) {
         // Uniform domain
         return std::make_unique<uniform_domain>(number_cells, length_domain, left_boundary, right_boundary);
     } else { 
-        // Non-uniform domain               
-        return std::make_unique<non_uniform_domain>(number_cells, length_domain, left_boundary, right_boundary,
-            type, temp_int_1, temp_int_2, temp_double_1, temp_double_2);
+        if (scheme_type == 0) {
+            std::cout << "Cannot have non-uniform domain with MC-PIC!" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        } else {
+            // Non-uniform domain               
+            return std::make_unique<non_uniform_domain>(number_cells, length_domain, left_boundary, right_boundary,
+                type, temp_int_1, temp_int_2, temp_double_1, temp_double_2);
+        }
     }
 }
 

@@ -64,4 +64,4 @@ public:
     // virtual void read_domain_from_file(const std::string& filename);
 };
 
-std::unique_ptr<domain> create_domain_from_file(const std::string& filename);
+std::unique_ptr<domain> create_domain_from_file(const std::string& filename, int scheme_type);

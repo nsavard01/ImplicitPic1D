@@ -35,6 +35,7 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
     this->energy_loss.resize(number_threads);
     this->wall_loss.resize(number_threads);
     this->density.resize(number_nodes, 0.0);
+    this->work_space.resize(number_threads);
     for (int i = 0; i < number_threads; i++){
         this->number_particles[i].resize(1, number_in);
         this->number_collidable_particles[i].resize(1,number_in);
@@ -42,6 +43,7 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
         this->momentum_loss[i].resize(2);
         this->energy_loss[i].resize(2, 0);
         this->wall_loss[i].resize(2, 0);
+        this->work_space[i].resize(number_nodes, 0.0);
     }
     
  
@@ -204,13 +206,48 @@ void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) 
     this->average_temperature = this->mass * this->total_sum_v_square / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
 }
 
-void charged_particle::deposit_particles_linear(int thread_id, std::vector<double>& work_space) {
+
+void charged_particle::initialize_rand_position_uniform(const domain& world) {
+    
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        double particles_accum = 0.0;
+        double L_domain = world.get_domain_length();
+        size_t particle_total = 0;
+        size_t number_part = this->number_particles[thread_id][0];
+        int number_cells = world.get_number_cells();
+        size_t start_idx = 0;
+        size_t end_idx;
+        std::vector<double>& xi_local = this->xi[thread_id];
+        for (int i = 0; i < number_cells; i++){
+            double dx;
+            if (world.get_domain_type() == 0) {
+                dx = world.get_min_dx();
+            } else if (world.get_domain_type() == 1) {
+                dx = world.get_dx_dxi()[i];
+            }
+            particles_accum += number_part * dx / L_domain;
+            size_t num_particles = std::floor(particles_accum - particle_total);
+            end_idx = start_idx + num_particles;
+            for (int part_idx = start_idx; part_idx < end_idx; part_idx++){
+                xi_local[part_idx] = i + pcg32_random_r();
+            }
+            particle_total += num_particles;
+            start_idx = end_idx;
+        }
+    }
+
+}
+
+void charged_particle::deposit_particles_linear(int thread_id) {
     size_t last_idx = this->number_particles[thread_id][0];
     double d, xi_p;
     int xi_left, xi_right;
+    std::vector<double>& work_space = this->work_space[thread_id];
     std::vector<double>& xi_local = this->xi[thread_id];
     for (size_t part_indx = 0; part_indx < last_idx; part_indx++){
-        xi_p = xi_local[thread_id];
+        xi_p = xi_local[part_indx];
         xi_left = int(xi_p);
         xi_right = xi_left+1;
         d = xi_p - xi_left;
@@ -412,7 +449,6 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
     this->energy_loss[thread_id][0] = 0.0; this->energy_loss[thread_id][1] = 0.0;
     std::vector<double>& xi_local = this->xi[thread_id];
     std::vector<double>& v_x_local = this->v_x[thread_id];
-    double inv_dx = 1.0/dx;
     size_t space_delete = 0;
     double v_x, xi, x_i, x_f, x_left, v_y = 0.0, v_z = 0.0;
     double E_field_local;
@@ -430,7 +466,7 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
         v_x = v_x_local[part_indx];
         v_x += this->q_over_m * E_field_local * del_t;
         dx = dx_dxi[xi_cell];
-        x_left = grid[xi_cell]
+        x_left = grid[xi_cell];
         x_i = x_left + dx * (xi - xi_cell);
         x_f = x_i +  v_x * del_t;
         del_part = false;
@@ -842,7 +878,12 @@ std::vector<charged_particle> read_charged_particle_inputs(const std::string& di
         temp_particle.initialize_number_coordinates(number_space, number_velocity);
         temp_particle.initialize_weight(n_ave[i], world.get_domain_length());
         temp_particle.initialize_rand_maxwellian(temp_in[i], v_drift[i]);
+        temp_particle.initialize_rand_position_uniform(world);
         particle_list.push_back(temp_particle);
+    }
+
+    for (int i = 0; i < particle_list.size(); i++) {
+        particle_list[i].print_out();
     }
 
     return particle_list;

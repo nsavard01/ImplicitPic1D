@@ -1,5 +1,5 @@
-CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o: \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/ES_solvers/ES_solver_MC.cpp \
+CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver.cpp.o: \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/ES_solvers/ES_solver.cpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/vector \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_algobase.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++config.h \
@@ -84,7 +84,29 @@ CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o: \
   /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/stdint.h \
   /usr/include/stdint.h /usr/include/bits/wchar.h \
   /usr/include/bits/stdint-uintn.h \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver_MC.hpp \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cmath \
+  /usr/include/math.h /usr/include/bits/math-vector.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
+  /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/iscanonical.h /usr/include/bits/mathinline.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/specfun.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/limits \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/gamma.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/special_function_util.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/bessel_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/beta_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/ell_integral.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/exp_integral.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/hypergeometric.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/legendre_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/modified_bessel_func.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_hermite.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_laguerre.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/riemann_zeta.tcc \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver.hpp \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/solvers/poisson_solver_1D.hpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/string \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stringfwd.h \
@@ -121,7 +143,6 @@ CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o: \
   /usr/include/bits/types/struct_itimerspec.h /usr/include/bits/setjmp.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/atomic_word.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/string_view \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/limits \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/string_view.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ext/string_conversions.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstdio \
@@ -156,28 +177,6 @@ CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/atomic_base.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/atomic_lockfree_defines.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/backward/auto_ptr.h \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver.hpp \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cmath \
-  /usr/include/math.h /usr/include/bits/math-vector.h \
-  /usr/include/bits/libm-simd-decl-stubs.h \
-  /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
-  /usr/include/bits/fp-fast.h \
-  /usr/include/bits/mathcalls-helper-functions.h \
-  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
-  /usr/include/bits/iscanonical.h /usr/include/bits/mathinline.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/specfun.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/gamma.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/special_function_util.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/bessel_function.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/beta_function.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/ell_integral.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/exp_integral.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/hypergeometric.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/legendre_function.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/modified_bessel_func.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_hermite.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_laguerre.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/riemann_zeta.tcc \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/domain.hpp \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/uniform_domain.hpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/iostream \
@@ -209,4 +208,12 @@ CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o: \
   /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/particles/charged_particle.hpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstddef \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/solvers/poisson_solver_1D_tridiag.hpp
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver_EC.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver_MC.hpp \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/fstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/codecvt.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/basic_file.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++io.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/fstream.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/sstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/sstream.tcc

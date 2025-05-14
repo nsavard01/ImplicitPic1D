@@ -129,6 +129,54 @@ pic1d/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/build
 .PHONY : pic1d/fast
 
+src/ES_solvers/ES_solver.o: src/ES_solvers/ES_solver.cpp.o
+.PHONY : src/ES_solvers/ES_solver.o
+
+# target to build an object file
+src/ES_solvers/ES_solver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver.cpp.o
+.PHONY : src/ES_solvers/ES_solver.cpp.o
+
+src/ES_solvers/ES_solver.i: src/ES_solvers/ES_solver.cpp.i
+.PHONY : src/ES_solvers/ES_solver.i
+
+# target to preprocess a source file
+src/ES_solvers/ES_solver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver.cpp.i
+.PHONY : src/ES_solvers/ES_solver.cpp.i
+
+src/ES_solvers/ES_solver.s: src/ES_solvers/ES_solver.cpp.s
+.PHONY : src/ES_solvers/ES_solver.s
+
+# target to generate assembly for a file
+src/ES_solvers/ES_solver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver.cpp.s
+.PHONY : src/ES_solvers/ES_solver.cpp.s
+
+src/ES_solvers/ES_solver_EC.o: src/ES_solvers/ES_solver_EC.cpp.o
+.PHONY : src/ES_solvers/ES_solver_EC.o
+
+# target to build an object file
+src/ES_solvers/ES_solver_EC.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_EC.cpp.o
+.PHONY : src/ES_solvers/ES_solver_EC.cpp.o
+
+src/ES_solvers/ES_solver_EC.i: src/ES_solvers/ES_solver_EC.cpp.i
+.PHONY : src/ES_solvers/ES_solver_EC.i
+
+# target to preprocess a source file
+src/ES_solvers/ES_solver_EC.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_EC.cpp.i
+.PHONY : src/ES_solvers/ES_solver_EC.cpp.i
+
+src/ES_solvers/ES_solver_EC.s: src/ES_solvers/ES_solver_EC.cpp.s
+.PHONY : src/ES_solvers/ES_solver_EC.s
+
+# target to generate assembly for a file
+src/ES_solvers/ES_solver_EC.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_EC.cpp.s
+.PHONY : src/ES_solvers/ES_solver_EC.cpp.s
+
 src/ES_solvers/ES_solver_MC.o: src/ES_solvers/ES_solver_MC.cpp.o
 .PHONY : src/ES_solvers/ES_solver_MC.o
 
@@ -306,6 +354,12 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... pic1d"
+	@echo "... src/ES_solvers/ES_solver.o"
+	@echo "... src/ES_solvers/ES_solver.i"
+	@echo "... src/ES_solvers/ES_solver.s"
+	@echo "... src/ES_solvers/ES_solver_EC.o"
+	@echo "... src/ES_solvers/ES_solver_EC.i"
+	@echo "... src/ES_solvers/ES_solver_EC.s"
 	@echo "... src/ES_solvers/ES_solver_MC.o"
 	@echo "... src/ES_solvers/ES_solver_MC.i"
 	@echo "... src/ES_solvers/ES_solver_MC.s"
