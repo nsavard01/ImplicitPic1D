@@ -7,8 +7,7 @@ poisson_solver_1D_tridiag::poisson_solver_1D_tridiag(const domain& world) {
     this->diagonal.resize(this->number_unknowns, 0.0);
     this->upper.resize(this->number_unknowns-1, 0.0);
     this->lower.resize(this->number_unknowns-1, 0.0);
-    this->source_term.resize(this->number_unknowns, 0.0);
-    this->solution.resize(this->number_unknowns, 0.0);
+    this->work_space.resize(this->number_unknowns, 0.0);
     if (typeid(world) == typeid(uniform_domain)) {
         double dx = world.get_min_dx();
         switch (world.get_left_boundary_condition()) {
@@ -98,22 +97,22 @@ poisson_solver_1D_tridiag::poisson_solver_1D_tridiag(const domain& world) {
     
 }
 
-void poisson_solver_1D_tridiag::solve() {
-    // Solve the Poisson equation using the Thomas algorithm, with solution vector as source then turned into solution
-    // use source_term as working vector
+void poisson_solver_1D_tridiag::solve(std::vector<double>& solution, std::vector<double>& source_term) {
+    // Solve the Poisson equation using the Thomas algorithm
+    // Note one can have same reference for solution and source_term if you want to overwrite the source_term
     double m;
-    this->source_term[0] = this->upper[0] / this->diagonal[0];
-    this->solution[0] = this->solution[0] / this->diagonal[0];
+    this->work_space[0] = this->upper[0] / this->diagonal[0];
+    solution[0] = source_term[0] / this->diagonal[0];
     for (int i = 1; i < this->number_unknowns-1; i++) {
-        m = this->diagonal[i] - this->lower[i-1] * this->source_term[i-1];
-        this->source_term[i] = this->upper[i] / m;
-        this->solution[i] = (this->solution[i] - this->lower[i-1] * this->solution[i-1]) / m;
+        m = this->diagonal[i] - this->lower[i-1] * this->work_space[i-1];
+        this->work_space[i] = this->upper[i] / m;
+        solution[i] = (source_term[i] - this->lower[i-1] * solution[i-1]) / m;
     }
 
-    m = this->diagonal[this->number_unknowns-1] - this->lower[this->number_unknowns-2] * this->source_term[this->number_unknowns-2];
-    this->solution[this->number_unknowns-1] = (this->solution[this->number_unknowns-1] - this->lower[this->number_unknowns-2] * this->solution[this->number_unknowns-2]) / m; 
+    m = this->diagonal[this->number_unknowns-1] - this->lower[this->number_unknowns-2] * this->work_space[this->number_unknowns-2];
+    solution[this->number_unknowns-1] = (source_term[this->number_unknowns-1] - this->lower[this->number_unknowns-2] * solution[this->number_unknowns-2]) / m; 
     for (int i = this->number_unknowns-2; i >= 0; i--) {
-        this->solution[i] = this->solution[i] - this->source_term[i] * this->solution[i+1];
+        solution[i] = solution[i] - this->work_space[i] * solution[i+1];
     }
 }
 

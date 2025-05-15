@@ -84,9 +84,6 @@ non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int 
                 double xi = double(i) + 0.5;
                 this->dx_dxi[i] = sinusoidal_xi_to_dx_dxi(xi, double(this->number_cells), this->length_domain, temp_double_1);;
             }
-            if (mpi_vars::mpi_rank == 0) {
-                std::cout << "dx_dxi[" << i << "] = " << this->dx_dxi[i] << std::endl;
-            }
         }
         this->min_dx = this->dx_dxi[0]; // Minimum cell size
     } else if (type == 2) {
@@ -106,9 +103,6 @@ non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int 
             } else {
                 double xi = double(i) + 0.5;
                 this->dx_dxi[i] = sinusoidal_xi_to_dx_dxi(xi, double_cells, double_length, temp_double_1);
-            }
-            if (mpi_vars::mpi_rank == 0) {
-                std::cout << "dx_dxi[" << i << "] = " << this->dx_dxi[i] << std::endl;
             }
         }
         this->min_dx = this->dx_dxi[0]; // Minimum cell size
@@ -248,6 +242,7 @@ std::unique_ptr<domain> create_domain_from_file(const std::string& filename, int
                 type, temp_int_1, temp_int_2, temp_double_1, temp_double_2);
         }
     }
+    return nullptr; // This line should never be reached, but added to avoid compiler warnings
 }
 
 

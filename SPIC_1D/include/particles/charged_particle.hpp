@@ -7,7 +7,8 @@
 #include "domain/domain.hpp"
 
 class charged_particle {
-private:
+    
+public:
     std::string name;
     size_t total_number_particles;
     int number_space_coordinates, number_velocity_coordinates;
@@ -21,7 +22,6 @@ private:
     std::vector<std::vector<std::vector<double>>> momentum_loss;
     std::vector<std::vector<size_t>> number_particles, number_collidable_particles, wall_loss, final_idx, cell_idx_array;
     std::vector<double> density, total_sum_v;
-public:
     inline double get_mass() const { return this->mass; };
     inline double get_charge() const { return this->charge; };
     inline double get_weight() const { return this->weight; };

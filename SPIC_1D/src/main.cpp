@@ -1,4 +1,5 @@
 #include "globals/constants.hpp"
+#include "globals/plasma_functions.hpp"
 #include "globals/mpi_vars.hpp"
 #include "domain/domain.hpp"
 #include "domain/uniform_domain.hpp"
@@ -97,8 +98,10 @@ int main(int argc, char** argv) {
     std::unique_ptr<domain> world = create_domain_from_file("../inputs/geometry.inp", scheme_type);
     world->print_out();
     std::vector<charged_particle> charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *world); 
+    double del_t = 0.2 / get_plasma_frequency(charged_particle_list[0].average_temperature, charged_particle_list[0].average_density); // Time step
     std::unique_ptr<ES_solver> field_solver = read_voltage_inputs("../inputs/geometry.inp", scheme_type, *world);
     field_solver->deposit_charge_density(charged_particle_list);
+    field_solver->solve_potential(0.0, *world);
     MPI_Finalize();
     return 0;
 }

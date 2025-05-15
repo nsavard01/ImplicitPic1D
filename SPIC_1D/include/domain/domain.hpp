@@ -5,8 +5,9 @@
 #include <memory>
 
 class domain {
+    
+public:
 
-protected:
     int number_cells; // number of cells in the domain
     int domain_type;
     int number_nodes; // number of nodes in the domain
@@ -17,9 +18,6 @@ protected:
     std::vector<double> cell_centers; // cell centers
     int right_boundary_condition; // right boundary condition type
     int left_boundary_condition; // left boundary condition type
-public:
-
-    
     virtual ~domain() = default;
 
     inline const int& get_domain_type() const {

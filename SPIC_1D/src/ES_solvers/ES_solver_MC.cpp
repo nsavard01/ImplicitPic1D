@@ -20,7 +20,7 @@ void ES_solver_MC::print_out() {
         std::cout << "Left voltage: " << this->left_voltage << std::endl;
         std::cout << "Right voltage: " << this->right_voltage << std::endl;
         std::cout << "RF frequency: " << this->RF_rad_frequency / (2.0 * M_PI) << std::endl;
-        if (this->RF_indx != -1) {
+        if (this->RF_half_amplitude != 0.0) {
             std::cout << "RF half amplitude " << this->RF_half_amplitude << std::endl;
         } else {
             std::cout << "No RF set." << std::endl;
@@ -28,6 +28,20 @@ void ES_solver_MC::print_out() {
         std::cout << "-------------------------- " << std::endl;
     }
 }
+
+// void ES_solver_MC::push_particles(std::vector<charged_particle>& particle_list) {
+//     // Loop over all particles and push them to the grid
+//     int total_thread_count = omp_get_max_threads();
+//     int num_particles = particle_list.size();
+//     #pragma omp parallel
+//     {   
+//         int thread_id = omp_get_thread_num();
+//         for (int i = 0; i < num_particles; ++i) {
+//             charged_particle& particle = particle_list[i];
+//             particle.push_particles_linear(thread_id); // Push particles to the grid
+//         }
+//     }
+// }
 
 
 

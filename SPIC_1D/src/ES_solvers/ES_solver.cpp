@@ -9,6 +9,7 @@
 #include "ES_solvers/ES_solver_EC.hpp"
 #include "ES_solvers/ES_solver_MC.hpp"
 #include "globals/mpi_vars.hpp"
+#include "globals/constants.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -17,8 +18,7 @@
 void ES_solver::set_phi(double left_voltage, double right_voltage, double RF_frequency, int left_boundary, int right_boundary) {
     this->left_voltage = left_voltage;
     this->right_voltage = right_voltage;
-    this->RF_rad_frequency = RF_frequency * 2.0 * M_PI; // Convert to radians
-    this->RF_indx = -1; // Initialize RF index to -1
+    this->RF_rad_frequency = 0.0; // Convert to radians
     if (left_boundary != 1 && left_boundary != 4) {
         this->left_voltage = 0.0; // Set left boundary voltage
     } 
@@ -28,12 +28,10 @@ void ES_solver::set_phi(double left_voltage, double right_voltage, double RF_fre
     if (left_boundary == 4) {
         this->RF_half_amplitude = this->left_voltage; // Set RF half amplitude for left boundary
         this->left_voltage = 0.0;
-        this->RF_indx = 0; // Set RF index for left boundary
     } else if (right_boundary == 4) {
         this->RF_half_amplitude = this->right_voltage; // Set RF half amplitude for right boundary
         this->right_voltage = 0.0;
-        this->RF_indx = this->phi.size()-1; // Set RF index for right boundary
-    }
+    } 
     this->phi[0] = this->left_voltage; // Set left boundary voltage in phi vector
     this->phi[this->phi.size()-1] = this->right_voltage; // Set right boundary voltage in phi vector
 }
@@ -70,12 +68,41 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
         }
     }
     MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), total_rho_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
-    if (mpi_vars::mpi_rank == 0) {
-        for (int i = 0; i < total_rho_size; ++i) {
-            std::cout << "rho[" << i << "] = " << this->rho[i] << std::endl; // Print charge density for debugging
-        }
-    }
     
+}
+
+void ES_solver::solve_potential(double current_time, const domain& world) {
+    // generate the right-hand side of the Poisson equation
+    double inv_epsilon_0 = 1.0 / constants::epsilon_0; // Inverse of permittivity
+    int left_boundary = world.left_boundary_condition; // Get left boundary condition
+    int right_boundary = world.right_boundary_condition; // Get right boundary condition
+    int number_unknowns = this->poisson_solver->number_unknowns; // Number of unknowns in the system
+    if (left_boundary == 2) {
+        this->phi[0] = -this->rho[0] * inv_epsilon_0; // Change boundary phi
+    } else if (left_boundary == 4) {
+        this->phi[0] = this->RF_half_amplitude * std::sin(this->RF_rad_frequency * current_time); // Change boundary phi
+    } 
+
+    if (right_boundary == 2) {
+        this->phi[number_unknowns-1] = -this->rho[number_unknowns-1] * inv_epsilon_0; // Change boundary phi
+    } else if (left_boundary == 4) {
+        this->phi[number_unknowns-1] = this->RF_half_amplitude * std::sin(this->RF_rad_frequency * current_time); // Change boundary phi
+    } 
+
+    for (int i = 1; i < number_unknowns-1; ++i) {
+        this->phi[i] = -this->rho[i] * inv_epsilon_0; // Set right-hand side of the Poisson equation
+    }
+
+    this->poisson_solver->solve(this->phi, this->phi); // replace phi with solution
+
+    if (mpi_vars::mpi_rank == 0) {
+        for (int i = 0; i < this->phi.size(); ++i) {
+            std::cout << "phi[" << i << "] = " << this->phi[i] << "should be " << -0.5 * 1e14 * constants::elementary_charge * inv_epsilon_0 * world.grid_nodes[i] * (2.0 * world.length_domain - world.grid_nodes[i]) << std::endl; // Print charge density for debugging
+        }
+    }  
+
+
+
 }
 
 std::unique_ptr<ES_solver> read_voltage_inputs(const std::string& filename, int scheme_type, const domain& world){

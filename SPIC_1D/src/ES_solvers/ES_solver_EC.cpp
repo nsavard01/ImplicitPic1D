@@ -20,7 +20,7 @@ void ES_solver_EC::print_out() {
         std::cout << "Left voltage: " << this->left_voltage << std::endl;
         std::cout << "Right voltage: " << this->right_voltage << std::endl;
         std::cout << "RF frequency: " << this->RF_rad_frequency / (2.0 * M_PI) << std::endl;
-        if (this->RF_indx != -1) {
+        if (this->RF_half_amplitude != 0.0) {
             std::cout << "RF half amplitude " << this->RF_half_amplitude << std::endl;
         } else {
             std::cout << "No RF set." << std::endl;

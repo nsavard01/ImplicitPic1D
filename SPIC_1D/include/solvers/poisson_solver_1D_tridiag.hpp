@@ -7,10 +7,9 @@
 #include <memory>
 
 class poisson_solver_1D_tridiag : public poisson_solver_1D {
-protected:
-    std::vector<double> diagonal, upper, lower; // diagonal and upper matrix elements
 public:
+    std::vector<double> diagonal, upper, lower; // diagonal and upper matrix elements
     poisson_solver_1D_tridiag(const domain& world);
-    void solve() override;
+    void solve(std::vector<double>& solution, std::vector<double>& source_term) override;
 };
 
