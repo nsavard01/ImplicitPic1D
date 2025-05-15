@@ -102,6 +102,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<ES_solver> field_solver = read_voltage_inputs("../inputs/geometry.inp", scheme_type, *world);
     field_solver->deposit_charge_density(charged_particle_list);
     field_solver->solve_potential(0.0, *world);
+    field_solver->make_EField(*world);
     MPI_Finalize();
     return 0;
 }

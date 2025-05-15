@@ -82,7 +82,8 @@ non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int 
                 this->cell_centers[i] = (this->grid_nodes[i] + this->grid_nodes[i + 1]) * 0.5;
             } else {
                 double xi = double(i) + 0.5;
-                this->dx_dxi[i] = sinusoidal_xi_to_dx_dxi(xi, double(this->number_cells), this->length_domain, temp_double_1);;
+                this->dx_dxi[i] = sinusoidal_xi_to_dx_dxi(xi, double(this->number_cells), this->length_domain, temp_double_1);
+                this->cell_centers[i] = sinusoidal_xi_to_x(xi, double(this->number_cells), this->length_domain, temp_double_1); // x at center of logical cell
             }
         }
         this->min_dx = this->dx_dxi[0]; // Minimum cell size
@@ -103,6 +104,7 @@ non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int 
             } else {
                 double xi = double(i) + 0.5;
                 this->dx_dxi[i] = sinusoidal_xi_to_dx_dxi(xi, double_cells, double_length, temp_double_1);
+                this->cell_centers[i] = sinusoidal_xi_to_x(xi, double_cells, double_length, temp_double_1);
             }
         }
         this->min_dx = this->dx_dxi[0]; // Minimum cell size
@@ -130,6 +132,7 @@ non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int 
             } else {
                 double xi = double(i) + 0.5;
                 this->dx_dxi[i + num_uniform_cells] = sinusoidal_xi_to_dx_dxi(xi, double(number_sin_cells), length_sin, dx_min);
+                this->cell_centers[i + num_uniform_cells] = this->grid_nodes[num_uniform_cells] + sinusoidal_xi_to_x(xi, double(number_sin_cells), length_sin, temp_double_1);
             }
         }
     } else if (type == 4) {
@@ -153,6 +156,7 @@ non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int 
             } else {
                 double xi = double(i) + 0.5;
                 this->dx_dxi[i + num_uniform_cells] = sinusoidal_xi_to_dx_dxi(xi, 2.0 * double(number_sin_cells), 2.0 * length_sin, dx_min);
+                this->cell_centers[i + num_uniform_cells] = this->grid_nodes[num_uniform_cells] + sinusoidal_xi_to_x(xi, 2.0 * double(number_sin_cells), 2.0 * length_sin, dx_min);
             }
         }
     }

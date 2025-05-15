@@ -209,4 +209,5 @@ CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_EC.cpp.o: \
   /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/particles/charged_particle.hpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstddef \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/solvers/poisson_solver_1D_tridiag.hpp
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/solvers/poisson_solver_1D_tridiag.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/constants.hpp

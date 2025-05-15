@@ -95,15 +95,34 @@ void ES_solver::solve_potential(double current_time, const domain& world) {
 
     this->poisson_solver->solve(this->phi, this->phi); // replace phi with solution
 
-    if (mpi_vars::mpi_rank == 0) {
-        for (int i = 0; i < this->phi.size(); ++i) {
-            std::cout << "phi[" << i << "] = " << this->phi[i] << "should be " << -0.5 * 1e14 * constants::elementary_charge * inv_epsilon_0 * world.grid_nodes[i] * (2.0 * world.length_domain - world.grid_nodes[i]) << std::endl; // Print charge density for debugging
-        }
-    }  
+    
 
 
 
 }
+
+void ES_solver::make_EField(const domain& world) {
+    // Calculate the electric field from the potential
+    int number_nodes = world.number_nodes; // Number of cells in the domain
+    double inv_dx = 1.0/world.min_dx; // Cell size
+    int left_boundary = world.left_boundary_condition; // Get left boundary condition
+    int right_boundary = world.right_boundary_condition; // Get right boundary condition
+    for (int i = 1; i < number_nodes-1; ++i) {
+        this->E_field[i] = 0.5 * (this->phi[i-1] - this->phi[i+1]) * inv_dx; // Electric field calculation
+    }
+    if (left_boundary == 1 || left_boundary == 4) {
+        // First order at boundary consistent with rho = 0
+        this->E_field[0] = (this->phi[0] - this->phi[1])*inv_dx; // Electric field at left boundary
+    } else if (left_boundary == 3){
+        this->E_field[0] = 0.5 * (this->phi[number_nodes-2] - this->phi[1]) * inv_dx; 
+        this->E_field[number_nodes-1] = this->E_field[0]; 
+    }
+    if (right_boundary == 1 || right_boundary == 4) {
+        this->E_field[number_nodes-1] = (this->phi[number_nodes-2] - this->phi[number_nodes-1]) * inv_dx; 
+    } 
+     
+}
+ 
 
 std::unique_ptr<ES_solver> read_voltage_inputs(const std::string& filename, int scheme_type, const domain& world){
     double left_voltage, right_voltage, RF_frequency;

@@ -32,6 +32,7 @@ public:
     virtual void print_out() = 0;
     virtual void deposit_charge_density(std::vector<charged_particle>& particle_list);
     virtual void solve_potential(double current_time, const domain& world);
+    virtual void make_EField(const domain& world);
     // virtual void push_particles(std::vector<charged_particle>& particle_list, double del_t);
 
 };
