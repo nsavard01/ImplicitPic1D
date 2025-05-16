@@ -70,14 +70,6 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
         }
     }
     MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), total_rho_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
-
-    if (mpi_vars::mpi_rank == 0) {
-        for (int i = 0; i < total_rho_size; i++) {
-            std::cout << this->rho[i] << std::endl;
-        }
-
-
-    }
     
 }
 

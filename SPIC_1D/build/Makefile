@@ -321,6 +321,30 @@ src/rand_gen/pcg_rng.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.s
 .PHONY : src/rand_gen/pcg_rng.cpp.s
 
+src/simulation/simulation.o: src/simulation/simulation.cpp.o
+.PHONY : src/simulation/simulation.o
+
+# target to build an object file
+src/simulation/simulation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o
+.PHONY : src/simulation/simulation.cpp.o
+
+src/simulation/simulation.i: src/simulation/simulation.cpp.i
+.PHONY : src/simulation/simulation.i
+
+# target to preprocess a source file
+src/simulation/simulation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.i
+.PHONY : src/simulation/simulation.cpp.i
+
+src/simulation/simulation.s: src/simulation/simulation.cpp.s
+.PHONY : src/simulation/simulation.s
+
+# target to generate assembly for a file
+src/simulation/simulation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.s
+.PHONY : src/simulation/simulation.cpp.s
+
 src/solvers/poisson_solver_1D_tridiag.o: src/solvers/poisson_solver_1D_tridiag.cpp.o
 .PHONY : src/solvers/poisson_solver_1D_tridiag.o
 
@@ -378,6 +402,9 @@ help:
 	@echo "... src/rand_gen/pcg_rng.o"
 	@echo "... src/rand_gen/pcg_rng.i"
 	@echo "... src/rand_gen/pcg_rng.s"
+	@echo "... src/simulation/simulation.o"
+	@echo "... src/simulation/simulation.i"
+	@echo "... src/simulation/simulation.s"
 	@echo "... src/solvers/poisson_solver_1D_tridiag.o"
 	@echo "... src/solvers/poisson_solver_1D_tridiag.i"
 	@echo "... src/solvers/poisson_solver_1D_tridiag.s"

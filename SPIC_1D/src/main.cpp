@@ -1,20 +1,11 @@
-#include "globals/constants.hpp"
-#include "globals/plasma_functions.hpp"
-#include "globals/mpi_vars.hpp"
-#include "domain/domain.hpp"
-#include "domain/uniform_domain.hpp"
-#include "domain/non_uniform_domain.hpp"
-#include "rand_gen/pcg_rng.hpp"
-#include "particles/charged_particle.hpp"
-#include "solvers/poisson_solver_1D_tridiag.hpp"
-#include "ES_solvers/ES_solver_MC.hpp"
-#include "ES_solvers/ES_solver_EC.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <mpi.h>
 #include <omp.h>
 #include <fstream>
 #include <sstream>
+#include "globals/mpi_vars.hpp"
+#include "simulation/simulation.hpp"
 
 
 
@@ -66,44 +57,8 @@ int main(int argc, char** argv) {
         MPI_Barrier(MPI_COMM_WORLD);
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    // Get scheme type from the file
-    int scheme_type = 0;
-    if (mpi_vars::mpi_rank == 0) {
-        std::ifstream file("../inputs/initial_setup.inp");
-        if (!file) {
-            std::cout << "Error: Unable to open file initial_setup.inp" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        std::string line;
-        std::getline(file, line);
-        std::getline(file, line);
-        std::istringstream iss(line);
-        iss >> scheme_type;
-        file.close();
-        if (scheme_type == 0) {
-            std::cout << "Scheme type: 0 (MC-PIC)" << std::endl;
-        } else if (scheme_type == 1) {
-            std::cout << "Scheme type: 0 (EC-PIC)" << std::endl;
-        } else if (scheme_type == 2) {
-            std::cout << "Scheme type: 2 (I-NGP)" << std::endl;
-        } else if (scheme_type == 3) {
-            std::cout << "Scheme type: 3 (I-CIC)" << std::endl;
-        } else {
-            std::cerr << "Error: Unknown scheme type." << std::endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    MPI_Bcast(&scheme_type, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    initialize_pcg(false); // Initialize the PCG RNG with a non-deterministic seed
-    std::unique_ptr<domain> world = create_domain_from_file("../inputs/geometry.inp", scheme_type);
-    world->print_out();
-    std::vector<charged_particle> charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *world); 
-    double del_t = 0.2 / get_plasma_frequency(charged_particle_list[0].average_temperature, charged_particle_list[0].average_density); // Time step
-    std::unique_ptr<ES_solver> field_solver = read_voltage_inputs("../inputs/geometry.inp", scheme_type, *world);
-    field_solver->deposit_charge_density(charged_particle_list);
-    field_solver->solve_potential(0.0, *world);
-    field_solver->make_EField(*world);
-    field_solver->push_particles(del_t, charged_particle_list, *world);
+    
+    simulation simulator;
     MPI_Finalize();
     return 0;
 }

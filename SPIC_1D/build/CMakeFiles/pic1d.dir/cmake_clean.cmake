@@ -15,6 +15,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o.d"
   "CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o"
   "CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o.d"
+  "CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o"
+  "CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o.d"
   "CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o"
   "CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o.d"
   "pic1d"

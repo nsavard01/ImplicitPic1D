@@ -14,21 +14,23 @@ public:
     int number_space_coordinates, number_velocity_coordinates;
     double mass, charge, weight, q_over_m, q_times_wp, average_density, average_temperature;
     double total_sum_v_square;
+    double total_sum_v[3];
     double accum_wall_energy_loss[2];
     size_t accum_wall_loss[2];
     std::vector<size_t> number_particles_per_cell;
-    std::vector<std::vector<double>> weights;
+    std::vector<std::vector<double>> weights, work_space;
     std::vector<std::vector<double>> xi, y, z, v_x, v_y, v_z;
     std::vector<std::vector<double>> energy_loss, accum_wall_momentum_loss;
     std::vector<std::vector<std::vector<double>>> momentum_loss;
     std::vector<std::vector<size_t>> number_particles, number_collidable_particles, wall_loss, final_idx;
-    std::vector<double> density, total_sum_v, temperature;
+    std::vector<double> density, temperature;
     // Static variables for sorting, will be used per particle
     static std::vector<std::vector<double>> xi_sorted, y_sorted, z_sorted, v_x_sorted, v_y_sorted, v_z_sorted;
     static std::vector<std::vector<size_t>> sorted_number_particles_per_cell, cell_indices; //, particle_cell;
     charged_particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in, int number_nodes);
-    void get_diagnostics();
-    void sort_particles(int thread_id, int number_cells);
+    // void get_diagnostics();
+    void sort_particle_diagnostics(int number_cells);
+    void gather_mpi();
     void print_out() const;
     void initialize_number_coordinates(int space, int velocity);
     void initialize_weight(double n_ave, double L_domain);
