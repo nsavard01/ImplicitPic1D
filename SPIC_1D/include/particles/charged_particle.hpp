@@ -29,7 +29,7 @@ public:
     static std::vector<std::vector<size_t>> sorted_number_particles_per_cell, cell_indices; //, particle_cell;
     charged_particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in, int number_nodes);
     // void get_diagnostics();
-    void sort_particle_diagnostics(int number_cells);
+    void sort_particle_diagnostics(int thread_id, int number_cells);
     void gather_mpi();
     void print_out() const;
     void initialize_number_coordinates(int space, int velocity);

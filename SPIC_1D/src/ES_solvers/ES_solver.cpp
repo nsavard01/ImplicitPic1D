@@ -41,7 +41,7 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
     
     int total_thread_count = omp_get_max_threads();
     int total_rho_size = this->rho.size();
-    int num_particles = 1; //particle_list.size();
+    int num_particles = particle_list.size();
     // #pragma omp parallel
     // {   
     //     int thread_id = omp_get_thread_num();

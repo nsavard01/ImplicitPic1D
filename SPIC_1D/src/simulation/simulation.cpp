@@ -43,13 +43,16 @@ simulation::simulation() {
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
-        this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
-        #pragma omp master
-        {
-            this->field_solver->solve_potential(0.0, *this->world);
-            this->field_solver->make_EField(*this->world);
+        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+            this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
         }
-        #pragma omp barrier
-        this->field_solver->push_particles(thread_id, this->del_t, this->charged_particle_list, *this->world);
+        // this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
+        // #pragma omp master
+        // {
+        //     this->field_solver->solve_potential(0.0, *this->world);
+        //     this->field_solver->make_EField(*this->world);
+        // }
+        // #pragma omp barrier
+        // this->field_solver->push_particles(thread_id, this->del_t, this->charged_particle_list, *this->world);
     }
 }
