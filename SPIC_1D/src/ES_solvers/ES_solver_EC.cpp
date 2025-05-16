@@ -55,7 +55,7 @@ void ES_solver_EC::make_EField(const domain& world) {
 
 }
 
-void ES_solver_EC::push_particles(double del_t, std::vector<charged_particle>& particle_list, const domain& world){
+void ES_solver_EC::push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world){
     
 }
 

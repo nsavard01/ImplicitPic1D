@@ -12,7 +12,7 @@ public:
     ES_solver_EC(const domain& world);
     void print_out() override;
     void make_EField(const domain& world) override;
-    void push_particles(double del_t, std::vector<charged_particle>& particle_list, const domain& world) override;
+    void push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) override;
     // void integrate_time(double current_time, double del_t) override;
     // void interpolate_particles_to_grid(std::vector<charged_particle>& particle_list) override;
 };

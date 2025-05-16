@@ -21,6 +21,7 @@
 class simulation {
     
 public:
+    // Everything needed to simulate particle in cell
     double del_t;
     int number_omp_threads, scheme_type;
     std::unique_ptr<domain> world;
