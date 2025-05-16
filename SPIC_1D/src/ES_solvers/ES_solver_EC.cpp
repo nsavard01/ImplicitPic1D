@@ -10,6 +10,11 @@ ES_solver_EC::ES_solver_EC(const domain& world) {
     this->phi.resize(world.get_number_nodes(), 0.0);
     this->rho.resize(world.get_number_nodes(), 0.0);
     this->E_field.resize(world.get_number_cells(), 0.0);
+    int number_threads = omp_get_max_threads();
+    this->work_space.resize(number_threads);
+    for (int i = 0; i < number_threads; i++) {
+        this->work_space[i].resize(world.number_nodes, 0.0);
+    }
     this->poisson_solver = std::make_unique<poisson_solver_1D_tridiag>(world);
 }
 
@@ -48,11 +53,10 @@ void ES_solver_EC::make_EField(const domain& world) {
         }
     }
 
-    if (mpi_vars::mpi_rank == 0) {
-        for (int i = 0; i < number_cells; ++i) {
-            std::cout << "EField[" << i << "] = " << this->E_field[i] << "should be " << -1e14 * constants::elementary_charge * (world.cell_centers[i] - 0.5 * world.length_domain)  / constants::epsilon_0 << std::endl; // Print charge density for debugging
-        }
-    } 
+}
+
+void ES_solver_EC::push_particles(double del_t, std::vector<charged_particle>& particle_list, const domain& world){
+    
 }
 
 

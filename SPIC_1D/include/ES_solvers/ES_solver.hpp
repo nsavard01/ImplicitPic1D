@@ -16,6 +16,7 @@ public:
     std::vector<double> phi, rho, E_field; // diagonal and upper matrix elements
     double RF_half_amplitude, RF_rad_frequency, left_voltage, right_voltage; // RF amplitude and frequency
     std::unique_ptr<poisson_solver_1D> poisson_solver; // pointer to the Poisson solver
+    std::vector<std::vector<double>> work_space;
     
     virtual ~ES_solver() = default;
     
@@ -33,7 +34,7 @@ public:
     virtual void deposit_charge_density(std::vector<charged_particle>& particle_list);
     virtual void solve_potential(double current_time, const domain& world);
     virtual void make_EField(const domain& world);
-    // virtual void push_particles(std::vector<charged_particle>& particle_list, double del_t);
+    virtual void push_particles(double del_t, std::vector<charged_particle>& particle_list, const domain& world) = 0;
 
 };
 

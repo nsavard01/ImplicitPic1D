@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
     field_solver->deposit_charge_density(charged_particle_list);
     field_solver->solve_potential(0.0, *world);
     field_solver->make_EField(*world);
+    field_solver->push_particles(del_t, charged_particle_list, *world);
     MPI_Finalize();
     return 0;
 }

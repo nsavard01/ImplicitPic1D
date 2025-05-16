@@ -11,7 +11,7 @@ class ES_solver_MC : public ES_solver {
 public:
     ES_solver_MC(const domain& world);
     void print_out() override;
-    // void push_particles(std::vector<charged_particle>& particle_list, double del_t) override;
+    void push_particles(double del_t, std::vector<charged_particle>& particle_list, const domain& world) override;
     // void solve(double current_time, double del_t) override;
     // void interpolate_particles_to_grid(std::vector<charged_particle>& particle_list) override;
 };

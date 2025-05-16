@@ -41,33 +41,43 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
     
     int total_thread_count = omp_get_max_threads();
     int total_rho_size = this->rho.size();
-    int num_particles = 1; //particle_list.size();
+    int num_particles = particle_list.size();
     #pragma omp parallel
     {   
         int thread_id = omp_get_thread_num();
+        // use xi_sorted as workspace, since N_p >> number_nodes
+        std::vector<double>& part_work_space = charged_particle::xi_sorted[thread_id];
+        // local work_space to accumulate over each particle
+        std::vector<double>& local_work_space = this->work_space[thread_id];
+        std::fill(local_work_space.begin(), local_work_space.end(), 0.0);
         for (int i = 0; i < num_particles; ++i) {
             charged_particle& particle = particle_list[i];
-            particle.clear_work_space(thread_id); // Clear work space for each thread
-            particle.deposit_particles_linear(thread_id); // Deposit charge density for each particle
-            double q_time_wp = particle.get_q_times_wp(); // Get charge density for each particle
-            std::vector<double>& work_space = particle.get_work_space(thread_id);
+            // Set work space to 0
+            std::fill(part_work_space.begin(), part_work_space.begin() + total_rho_size, 0.0);
+            particle.deposit_particles_linear(thread_id, part_work_space); // Deposit charge density for each particle
+            double q_time_wp = particle.q_times_wp; // Get charge density for each particle
             for (int j = 0; j < total_rho_size; ++j) {
-                work_space[j] *= q_time_wp; // Accumulate charge density from all particles
+                local_work_space[j] += part_work_space[j] * q_time_wp; // Accumulate charge density from all particles
             }
         }
     }
     // Accumulate charge density from all threads
     std::fill(this->rho.begin(), this->rho.end(), 0.0);
-    for (int i = 0; i < num_particles; ++i) {
-        charged_particle& particle = particle_list[i];
-        for (int j = 0; j < total_thread_count; ++j) {
-            std::vector<double>& work_space = particle.get_work_space(j);
-            for (int k = 0; k < total_rho_size; ++k) {
-                this->rho[k] += work_space[k]; // Accumulate charge density from all threads
-            }
+    for (int j = 0; j < total_thread_count; ++j) {
+        std::vector<double>& work_space = this->work_space[j];
+        for (int k = 0; k < total_rho_size; ++k) {
+            this->rho[k] += work_space[k]; // Accumulate charge density from all threads
         }
     }
     MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), total_rho_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
+
+    if (mpi_vars::mpi_rank == 0) {
+        for (int i = 0; i < total_rho_size; i++) {
+            std::cout << this->rho[i] << std::endl;
+        }
+
+
+    }
     
 }
 
@@ -122,7 +132,8 @@ void ES_solver::make_EField(const domain& world) {
     } 
      
 }
- 
+
+
 
 std::unique_ptr<ES_solver> read_voltage_inputs(const std::string& filename, int scheme_type, const domain& world){
     double left_voltage, right_voltage, RF_frequency;

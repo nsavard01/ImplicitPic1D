@@ -17,19 +17,18 @@ public:
     double accum_wall_energy_loss[2];
     size_t accum_wall_loss[2];
     std::vector<size_t> number_particles_per_cell;
-    std::vector<std::vector<double>> xi, y, z, v_x, v_y, v_z, weights, work_space;
-    std::vector<std::vector<double>> cell_v_sqr, energy_loss, accum_wall_momentum_loss;
+    std::vector<std::vector<double>> weights;
+    std::vector<std::vector<double>> xi, y, z, v_x, v_y, v_z;
+    std::vector<std::vector<double>> energy_loss, accum_wall_momentum_loss;
     std::vector<std::vector<std::vector<double>>> momentum_loss;
-    std::vector<std::vector<size_t>> number_particles, number_collidable_particles, wall_loss, final_idx, cell_idx_array;
-    std::vector<double> density, total_sum_v;
-    inline double get_mass() const { return this->mass; };
-    inline double get_charge() const { return this->charge; };
-    inline double get_weight() const { return this->weight; };
-    inline double get_q_over_m() const { return this->q_over_m; };
-    inline double get_q_times_wp() const { return this->q_times_wp; };
-    inline double get_number_particles() const { return this->total_number_particles; };
-    inline std::vector<double>& get_work_space(int thread_id) { return this->work_space[thread_id]; };
+    std::vector<std::vector<size_t>> number_particles, number_collidable_particles, wall_loss, final_idx;
+    std::vector<double> density, total_sum_v, temperature;
+    // Static variables for sorting, will be used per particle
+    static std::vector<std::vector<double>> xi_sorted, y_sorted, z_sorted, v_x_sorted, v_y_sorted, v_z_sorted;
+    static std::vector<std::vector<size_t>> sorted_number_particles_per_cell, cell_indices; //, particle_cell;
     charged_particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in, int number_nodes);
+    void get_diagnostics();
+    void sort_particles(int thread_id, int number_cells);
     void print_out() const;
     void initialize_number_coordinates(int space, int velocity);
     void initialize_weight(double n_ave, double L_domain);
@@ -41,10 +40,7 @@ public:
         const double dx, const int left_boundary, const int right_boundary, int number_cells);
     void ES_push_EC_non_uniform(int thread_id, double del_t, const std::vector<double>& E_field, 
         const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, int number_cells);    
-    void deposit_particles_linear(int thread_id);
-    inline void clear_work_space(int thread_id) {
-        std::fill(this->work_space[thread_id].begin(), this->work_space[thread_id].end(), 0.0);
-    };
+    void deposit_particles_linear(int thread_id, std::vector<double>& work_space);
     // double get_KE_ave() const;
     // double get_KE_total() const;
     // void interpolate_particles();
