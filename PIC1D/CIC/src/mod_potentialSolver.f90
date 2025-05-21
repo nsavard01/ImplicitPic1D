@@ -233,7 +233,7 @@ contains
         class(potentialSolver), intent(in) :: self
         type(Domain), intent(in) :: world
         integer(int32) :: i
-        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res
+        real(real64) :: Ax(NumberXNodes), d(NumberXNodes), res, res_other
         Ax = triMul(NumberXNodes, self%a_tri, self%c_tri, self%b_tri, self%phi_f)
         d = (-self%rho - self%rho_const) / eps_0
         d(1) = d(1) + self%sourceTermVals(1)
@@ -244,7 +244,6 @@ contains
                 res = res + (1.0d0 - Ax(i)/d(i))**2
             end if
         end do
-        
         !res = Ax*eps_0 - 
         res = SQRT(res/real(NumberXNodes, kind = 8))
 
@@ -324,17 +323,20 @@ contains
         real(real64), intent(in) :: del_t, rho_i(NumberXNodes)
         type(Domain), intent(in) :: world
         integer(int32) :: i, k
-        real(real64) :: chargeError, del_Rho
+        real(real64) :: chargeError, del_Rho, other_charge_error
         chargeError = 0.0d0
+        other_charge_error = 0.0d0
         k = 0
         do i = 1, NumberXNodes
             del_Rho = self%rho(i) - rho_i(i)
             if (del_Rho /= 0) then
                 chargeError = chargeError + (1.0d0 + del_t * (self%J(i+1) - self%J(i))/(del_Rho))**2
+                other_charge_error = other_charge_error + (del_Rho + del_t * (self%J(i+1) - self%J(i)))**2
                 k = k + 1
             end if
         end do
         chargeError = SQRT(chargeError/k)
+        print *, 'Other charge error', SQRT(other_charge_error/k)
     end function getChargeContinuityError
 
     subroutine makeHalfTimeEField(self, workArray, world)

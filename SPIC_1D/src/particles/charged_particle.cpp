@@ -345,7 +345,9 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
         }
         cell_indices_local[local_indx]++; // increment the first index of the cell
     }
-
+    for (size_t i = 0; i < number_cells; i++){
+        cell_indices_local[i] = cell_indices_local[i] + number_part_cell_local[i];
+    }
     // swap the sorted arrays with the original ones
     std::swap(xi_local, xi_sorted_local);
     std::swap(v_x_local, v_x_sorted_local);
@@ -361,6 +363,8 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
     if (use_vz) {
         std::swap(this->v_z[thread_id], charged_particle::v_z_sorted[thread_id]);
     }
+
+
 
     
     // collect all into net diagnostics
