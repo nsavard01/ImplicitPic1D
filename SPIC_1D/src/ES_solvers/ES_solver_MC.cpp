@@ -65,6 +65,7 @@ void ES_solver_MC::push_particles(int thread_id, double del_t, std::vector<charg
             }
         }
     }
+    #pragma omp barrier
 }
 
 

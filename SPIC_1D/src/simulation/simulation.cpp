@@ -43,16 +43,47 @@ simulation::simulation() {
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
+        
         for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
             this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
+            this->charged_particle_list[part_num].gather_mpi();
         }
-        // this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
-        // #pragma omp master
-        // {
-        //     this->field_solver->solve_potential(0.0, *this->world);
-        //     this->field_solver->make_EField(*this->world);
-        // }
-        // #pragma omp barrier
-        // this->field_solver->push_particles(thread_id, this->del_t, this->charged_particle_list, *this->world);
+        #pragma omp barrier
+        #pragma omp master
+        {
+            if (mpi_vars::mpi_rank == 0) {
+                double sum = 0.0;
+                for (int i = 0; i < this->charged_particle_list.size(); i++) {
+                    sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
+                }
+                std::cout << "Total mv_x: " << sum << std::endl;
+            }
+        }
+        #pragma omp barrier
+        this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
+        #pragma omp master
+        {
+            this->field_solver->solve_potential(0.0, *this->world);
+            this->field_solver->make_EField(*this->world);
+        }
+        #pragma omp barrier
+        this->field_solver->push_particles(thread_id, this->del_t, this->charged_particle_list, *this->world);
+        #pragma omp barrier
+        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+            this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
+            this->charged_particle_list[part_num].gather_mpi();
+        }
+        #pragma omp barrier
+        #pragma omp master
+        {
+            if (mpi_vars::mpi_rank == 0) {
+                double sum = 0.0;
+                for (int i = 0; i < this->charged_particle_list.size(); i++) {
+                    sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
+                }
+                std::cout << "Total mv_x: " << sum << std::endl;
+            }
+        }
+        #pragma omp barrier
     }
 }

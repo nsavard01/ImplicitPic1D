@@ -42,10 +42,6 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
     int total_thread_count = omp_get_max_threads();
     int total_rho_size = this->rho.size();
     int num_particles = particle_list.size();
-    // #pragma omp parallel
-    // {   
-    //     int thread_id = omp_get_thread_num();
-        // use xi_sorted as workspace, since N_p >> number_nodes
     std::vector<double>& part_work_space = charged_particle::xi_sorted[thread_id];
     // local work_space to accumulate over each particle
     std::vector<double>& local_work_space = this->work_space[thread_id];
@@ -60,20 +56,23 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
             local_work_space[j] += part_work_space[j] * q_time_wp; // Accumulate charge density from all particles
         }
     }
-    // }
     // Accumulate charge density from all threads
     #pragma omp barrier
     #pragma omp for
     for (int i = 0; i < total_rho_size; i++) {
-        this->rho[i] = 0.0;
+        double sum = 0.0;
         for (int i_thread = 0; i_thread < total_thread_count; i_thread++) {
-            this->rho[i] += this->work_space[i_thread][i];
+            sum += this->work_space[i_thread][i];
         }
+        this->rho[i] = sum; // Set charge density for each cell
     }
+    #pragma omp barrier
     #pragma omp master
     {
         MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), total_rho_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
     }
+    #pragma omp barrier
+
 }
 
 void ES_solver::solve_potential(double current_time, const domain& world) {

@@ -120,6 +120,88 @@ def getAveDensityFiles(dataName, name = 'e', diagNumber = 0):
     print('Contained', number+1, 'files')
     return density/(number+1)
 
+def getAveTempFiles(dataName, name = 'e', diagNumber = 0):
+    # Given name of file which will have _1, _2, etc appended
+    if ('Explicit' in dataName):
+        data = dataSetExplicit(dataName + '/')
+    else:
+        data = dataSet(dataName + '/')
+    temp = data.getTemp(name, diagNumber)
+    fileList = glob.glob(dataName + '_[0-9]')
+    number = len(fileList)
+    for filename in fileList:
+        if ('Explicit' in dataName):
+            data = dataSetExplicit(filename + '/')
+        else:
+            data = dataSet(filename + '/')
+        temp = temp + data.getTemp(name, diagNumber)
+    print('Finished averaging for', dataName)
+    print('Contained', number+1, 'files')
+    return temp/(number+1)
+
+def getAveTempFiles_phaseSpace(dataName, name = 'e'):
+    # Given name of file which will have _1, _2, etc appended
+    if ('Explicit' in dataName):
+        data = dataSetExplicit(dataName + '/')
+    else:
+        data = dataSet(dataName + '/')
+    if (data.scheme == 'CIC'):
+        n_cell = data.Nx
+    else:
+        n_cell = data.Nx-1
+    phase_space = data.getPhaseSpace(name)
+
+    v2_binned_total = np.zeros(n_cell)
+    count_total = np.zeros(n_cell)
+
+    # Assume data is your (N_p, 4) array
+    positions = phase_space[:, 0] - 1 # convert to start with 0
+    velocities = phase_space[:, 1:4]
+
+    # Step 1: Get cell indices (e.g., by flooring to nearest lower int)
+    cell_indices = np.floor(positions).astype(int)
+
+    # Step 2: Compute v^2 = vx^2 + vy^2 + vz^2
+    v_squared = np.sum(velocities ** 2, axis=1)
+
+    # Step 3: Bin v^2 into cell indices using np.bincount
+    # Find max cell index to pre-allocate array of correct size
+
+    # Bin the v^2 values
+    v2_binned_total = v2_binned_total +  np.bincount(cell_indices, weights=v_squared, minlength=n_cell)
+
+    count_total = count_total + np.bincount(cell_indices, minlength=n_cell)
+    fileList = glob.glob(dataName + '_[0-9]')
+    number = len(fileList)
+    for filename in fileList:
+        if ('Explicit' in dataName):
+            data = dataSetExplicit(filename + '/')
+        else:
+            data = dataSet(filename + '/')
+        phase_space = data.getPhaseSpace(name)
+        positions = phase_space[:, 0] - 1  # convert to start with 0
+        velocities = phase_space[:, 1:4]
+
+        # Step 1: Get cell indices (e.g., by flooring to nearest lower int)
+        cell_indices = np.floor(positions).astype(int)
+
+        # Step 2: Compute v^2 = vx^2 + vy^2 + vz^2
+        v_squared = np.sum(velocities ** 2, axis=1)
+
+        # Step 3: Bin v^2 into cell indices using np.bincount
+        # Find max cell index to pre-allocate array of correct size
+
+        # Bin the v^2 values
+        v2_binned_total = v2_binned_total + np.bincount(cell_indices, weights=v_squared, minlength=n_cell)
+
+        count_total = count_total + np.bincount(cell_indices, minlength=n_cell)
+
+    temp = data.particles[name]['mass'] * v2_binned_total / count_total / 3.0 / e
+    print('Finished averaging for', dataName)
+    print('Contained', number+1, 'files')
+    return temp
+
+
 def getAvePhiFiles(dataName, diagNumber = 0):
     # Given name of file which will have _1, _2, etc appended
     if ('Explicit' in dataName):

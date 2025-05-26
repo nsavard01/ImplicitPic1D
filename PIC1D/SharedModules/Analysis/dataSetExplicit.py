@@ -158,9 +158,6 @@ class dataSetExplicit:
             temp = np.fromfile(self.path + 'PhaseSpace/phaseSpace_' + name + '_thread' + str(i+1) + '.dat', dtype='float',
                                offset=0)
             temp = temp.reshape((int(temp.size / 4), 4))
-            d = temp[:, 0] - temp[:, 0].astype(int)
-            temp[:, 0] = self.grid[temp[:, 0].astype(int) - 1] + d * (
-                        self.grid[temp[:, 0].astype(int)] - self.grid[temp[:, 0].astype(int) - 1])
             phaseSpace.append(temp)
 
         phaseSpace = np.concatenate(phaseSpace)
