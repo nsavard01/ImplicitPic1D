@@ -31,7 +31,7 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
     this->accum_wall_loss[0] = this->accum_wall_loss[1] = 0;
     this->accum_wall_energy_loss[0] = this->accum_wall_energy_loss[0] = 0.0;
     this->total_sum_v[0] = this->total_sum_v[1] = this->total_sum_v[2]  = 0.0;
-    this->total_sum_v_square = 0;
+    this->total_sum_v_square[0] = this->total_sum_v_square[1] = this->total_sum_v_square[2]  = 0.0;
     this->final_idx.resize(number_threads);
     this->number_particles.resize(number_threads);
     this->number_collidable_particles.resize(number_threads);
@@ -169,12 +169,14 @@ void charged_particle::initialize_weight(double n_ave, double L_domain) {
 
 void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) {
     double v_therm = std::sqrt(T_ave * constants::elementary_charge / this->mass);
-    double sum_v_sq = 0.0;
+    double sum_v_sq_x = 0.0;
+    double sum_v_sq_y = 0.0;
+    double sum_v_sq_z = 0.0;
     double sum_v_x = 0.0;
     double sum_v_y = 0.0;
     double sum_v_z = 0.0;
     if (this->number_velocity_coordinates == 1) {
-        #pragma omp parallel reduction(+:sum_v_x, sum_v_sq)
+        #pragma omp parallel reduction(+:sum_v_x, sum_v_sq_x)
         {
             int thread_id = omp_get_thread_num();
             size_t end_part = this->number_particles[thread_id][0];
@@ -182,12 +184,13 @@ void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) 
                 double& v_x = this->v_x[thread_id][part_num];
                 maxwellian_1D(v_x, v_therm, v_drift);
                 sum_v_x += v_x;
-                sum_v_sq += v_x * v_x;
+                sum_v_sq_x += v_x * v_x;
             }
         }  
         this->total_sum_v[0] = sum_v_x; 
+        this->total_sum_v_square[0] = sum_v_sq_x;
     } else if (this->number_velocity_coordinates == 2) {
-        #pragma omp parallel reduction(+:sum_v_x, sum_v_y, sum_v_sq)
+        #pragma omp parallel reduction(+:sum_v_x, sum_v_y, sum_v_sq_x, sum_v_sq_y)
         {
             int thread_id = omp_get_thread_num();
             size_t end_part = this->number_particles[thread_id][0];
@@ -197,14 +200,17 @@ void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) 
                 maxwellian_2D(v_x, v_y, v_therm, v_drift);
                 sum_v_x += v_x;
                 sum_v_y += v_y;
-                sum_v_sq += v_x * v_x + v_y * v_y;
+                sum_v_sq_x += v_x * v_x; 
+                sum_v_sq_y += v_y * v_y;
             }
         }
         this->total_sum_v[0] = sum_v_x; 
         this->total_sum_v[1] = sum_v_y;
+        this->total_sum_v_square[0] = sum_v_sq_x;
+        this->total_sum_v_square[1] = sum_v_sq_y;
 
     } else if (this->number_velocity_coordinates == 3) {
-        #pragma omp parallel reduction(+:sum_v_sq, sum_v_x, sum_v_y, sum_v_z)
+        #pragma omp parallel reduction(+:sum_v_sq_x, sum_v_sq_y, sum_v_sq_z, sum_v_x, sum_v_y, sum_v_z)
         {
             int thread_id = omp_get_thread_num();
             size_t end_part = this->number_particles[thread_id][0];
@@ -216,16 +222,22 @@ void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) 
                 sum_v_x += v_x;
                 sum_v_y += v_y;
                 sum_v_z += v_z;
-                sum_v_sq += v_x * v_x + v_y * v_y + v_z * v_z;
+                sum_v_sq_x += v_x * v_x; 
+                sum_v_sq_y += v_y * v_y;
+                sum_v_sq_z += v_z * v_z;
             }
         }  
         this->total_sum_v[0] = sum_v_x; 
         this->total_sum_v[1] = sum_v_y;
         this->total_sum_v[2] = sum_v_z;
+        this->total_sum_v_square[0] = sum_v_sq_x;
+        this->total_sum_v_square[1] = sum_v_sq_y;
+        this->total_sum_v_square[2] = sum_v_sq_z;
     }
-    MPI_Allreduce(&sum_v_sq, &this->total_sum_v_square, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v_square, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    this->average_temperature = this->mass * this->total_sum_v_square / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
+    double total_sum_v_square_temp = this->total_sum_v_square[0] + this->total_sum_v_square[1] + this->total_sum_v_square[2];
+    this->average_temperature = this->mass * total_sum_v_square_temp / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
 }
 
 
@@ -272,15 +284,16 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
     }
     #pragma omp master
     {
-        this->total_sum_v_square = 0.0;
         for (int i = 0; i < this->number_velocity_coordinates; i++){
             this->total_sum_v[i] = 0.0;
+            this->total_sum_v_square[i] = 0.0;
         }
     }
     #pragma omp barrier
-    double sum_v_sq = 0.0;
+    double sum_v_sq[3];
     double sum_v[3];
     sum_v[0] = 0.0; sum_v[1] = 0.0; sum_v[2] = 0.0;
+    sum_v_sq[0] = 0.0; sum_v_sq[1] = 0.0; sum_v_sq[2] = 0.0;
     bool use_vy = (this->number_velocity_coordinates > 1);
     bool use_vz = (this->number_velocity_coordinates > 2);
     bool use_y = (this->number_space_coordinates > 1);
@@ -305,15 +318,17 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
         local_indx = int(xi_temp);
         if (use_vy) {
             v_y_temp = this->v_y[thread_id][part_num];
+            sum_v_sq[1] += v_y_temp * v_y_temp;
         }
         if (use_vz) {
             v_z_temp = this->v_z[thread_id][part_num];
+            sum_v_sq[2] += v_z_temp * v_z_temp;
         }
         sum_v[0] += v_x_temp;
         sum_v[1] += v_y_temp;
         sum_v[2] += v_z_temp;
+        sum_v_sq[0] += v_x_temp * v_x_temp;
         v_sqr = v_x_temp * v_x_temp + v_y_temp * v_y_temp + v_z_temp * v_z_temp;
-        sum_v_sq += v_sqr;
         local_v_sqr[local_indx] += v_sqr; // add paticle energy to cell
         number_part_cell_local[local_indx]++;
     }
@@ -375,10 +390,12 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
         for (int i = 0; i < number_cells; i++) {
             this->temperature[i] += local_v_sqr[i];
         }
-        this->total_sum_v_square += sum_v_sq;
         this->total_sum_v[0] += sum_v[0];
         this->total_sum_v[1] += sum_v[1];
         this->total_sum_v[2] += sum_v[2];
+        this->total_sum_v_square[0] += sum_v_sq[0];
+        this->total_sum_v_square[1] += sum_v_sq[1];
+        this->total_sum_v_square[2] += sum_v_sq[2];
         
     }
     #pragma omp barrier
@@ -404,7 +421,7 @@ void charged_particle::gather_mpi(){
         }
         MPI_Allreduce(MPI_IN_PLACE, &this->total_number_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, &this->total_sum_v_square, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v_square, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_energy_loss, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[0].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[1].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -420,7 +437,7 @@ void charged_particle::gather_mpi(){
             this->average_temperature = this->average_temperature * this->mass / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
             std::cout << "Total number of particles: " << this->total_number_particles << std::endl;
             std::cout << "Total sum of velocity: " << this->total_sum_v[0] << ", " << this->total_sum_v[1] << ", " << this->total_sum_v[2] << std::endl;
-            std::cout << "Total sum of velocity square: " << this->total_sum_v_square << std::endl;
+            std::cout << "Total sum of velocity square: " << this->total_sum_v_square[0] << ", " << this->total_sum_v_square[1] << ", " << this->total_sum_v_square[2] << std::endl;
             std::cout << "Accumulated wall loss: " << this->accum_wall_loss[0] << ", " << this->accum_wall_loss[1] << std::endl;
             std::cout << "Accumulated wall energy loss: " << this->accum_wall_energy_loss[0] << ", " << this->accum_wall_energy_loss[1] << std::endl;
             std::cout << "Accumulated wall momentum loss: " << this->accum_wall_momentum_loss[0][0] << ", " << this->accum_wall_momentum_loss[0][1] << ", " << this->accum_wall_momentum_loss[0][2] << std::endl;
@@ -466,6 +483,8 @@ void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector
     double E_field_local, d_p;
     bool use_vy = (this->number_velocity_coordinates > 1);
     bool use_vz = (this->number_velocity_coordinates > 2);
+    bool use_y = (this->number_space_coordinates > 1);
+    bool use_z = (this->number_space_coordinates > 2);
     int xi_cell;
     bool del_part;
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
@@ -533,6 +552,12 @@ void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector
             if (use_vz){
                 this->v_z[thread_id][new_idx] = v_z;
             }
+            if (use_y) {
+                this->y[thread_id][new_idx] = this->y[thread_id][part_indx];
+            }
+            if (use_z) {
+                this->z[thread_id][new_idx] = this->z[thread_id][part_indx];
+            }
         } else {
             space_delete++;
         }
@@ -556,6 +581,8 @@ void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std
     double E_field_local;
     bool use_vy = (this->number_velocity_coordinates > 1);
     bool use_vz = (this->number_velocity_coordinates > 2);
+    bool use_y = (this->number_space_coordinates > 1);
+    bool use_z = (this->number_space_coordinates > 2);
     int xi_cell;
     bool del_part;
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
@@ -566,16 +593,16 @@ void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std
         v_x += this->q_over_m * E_field_local * del_t;
         xi += v_x * del_t * inv_dx;
         del_part = false;
+        if (use_vy) {
+            v_y = this->v_y[thread_id][part_indx];
+        }
+        if (use_vz){
+            v_z = this->v_z[thread_id][part_indx];
+        }
         if (xi <= 0) {
             switch (left_boundary){
                 case 1:
                 case 4:
-                    if (use_vy) {
-                        v_y = this->v_y[thread_id][part_indx];
-                    }
-                    if (use_vz){
-                        v_z = this->v_z[thread_id][part_indx];
-                    }
                     this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
                     this->wall_loss[thread_id][0]++;
                     this->momentum_loss[thread_id][0][0] += v_x;
@@ -595,12 +622,6 @@ void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std
             switch (right_boundary){
                 case 1:
                 case 4:
-                    if (use_vy) {
-                        v_y = this->v_y[thread_id][part_indx];
-                    }
-                    if (use_vz){
-                        v_z = this->v_z[thread_id][part_indx];
-                    }
                     this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
                     this->wall_loss[thread_id][1]++;
                     this->momentum_loss[thread_id][1][0] += v_x;
@@ -628,6 +649,12 @@ void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std
             if (use_vz){
                 this->v_z[thread_id][new_idx] = v_z;
             }
+            if (use_y) {
+                this->y[thread_id][new_idx] = this->y[thread_id][part_indx];
+            }
+            if (use_z) {
+                this->z[thread_id][new_idx] = this->z[thread_id][part_indx];
+            }
         } else {
             space_delete++;
         }
@@ -648,6 +675,8 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
     double E_field_local;
     bool use_vy = (this->number_velocity_coordinates > 1);
     bool use_vz = (this->number_velocity_coordinates > 2);
+    bool use_y = (this->number_space_coordinates > 1);
+    bool use_z = (this->number_space_coordinates > 2);
     int xi_cell;
     bool del_part;
     double dx;
@@ -664,16 +693,16 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
         x_i = x_left + dx * (xi - xi_cell);
         x_f = x_i +  v_x * del_t;
         del_part = false;
+        if (use_vy) {
+            v_y = this->v_y[thread_id][part_indx];
+        }
+        if (use_vz){
+            v_z = this->v_z[thread_id][part_indx];
+        }
         if (x_f <= x_left_boundary) {
             switch (left_boundary){
                 case 1:
                 case 4:
-                    if (use_vy) {
-                        v_y = this->v_y[thread_id][part_indx];
-                    }
-                    if (use_vz){
-                        v_z = this->v_z[thread_id][part_indx];
-                    }
                     this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
                     this->wall_loss[thread_id][0]++;
                     this->momentum_loss[thread_id][0][0] += v_x;
@@ -682,23 +711,17 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
                     del_part = true;
                     break;
                 case 2:
-                    xi = - xi;
+                    x_f = -x_f;
                     v_x = - v_x;
                     break;
                 case 3:
-                    xi = number_cells + xi;
+                    x_f = x_right_boundary + x_f;
                     break;
             }
         } else if (x_f >= x_right_boundary) {
             switch (right_boundary){
                 case 1:
                 case 4:
-                    if (use_vy) {
-                        v_y = this->v_y[thread_id][part_indx];
-                    }
-                    if (use_vz){
-                        v_z = this->v_z[thread_id][part_indx];
-                    }
                     this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
                     this->wall_loss[thread_id][1]++;
                     this->momentum_loss[thread_id][1][0] += v_x;
@@ -707,11 +730,11 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
                     del_part = true;
                     break;
                 case 2:
-                    xi = 2.0 * number_cells - xi;
+                    x_f = 2.0 * x_right_boundary - x_f;
                     v_x = - v_x;
                     break;
                 case 3:
-                    xi = xi - number_cells;
+                    x_f = x_f - x_right_boundary;
                     break;
             }
 
@@ -730,6 +753,12 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
             }
             if (use_vz){
                 this->v_z[thread_id][new_idx] = v_z;
+            }
+            if (use_y) {
+                this->y[thread_id][new_idx] = this->y[thread_id][part_indx];
+            }
+            if (use_z) {
+                this->z[thread_id][new_idx] = this->z[thread_id][part_indx];
             }
         } else {
             space_delete++;

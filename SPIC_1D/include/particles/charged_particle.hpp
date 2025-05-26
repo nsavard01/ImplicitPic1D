@@ -13,7 +13,7 @@ public:
     size_t total_number_particles;
     int number_space_coordinates, number_velocity_coordinates;
     double mass, charge, weight, q_over_m, q_times_wp, average_density, average_temperature;
-    double total_sum_v_square;
+    double total_sum_v_square[3];
     double total_sum_v[3];
     double accum_wall_energy_loss[2];
     size_t accum_wall_loss[2];
