@@ -22,12 +22,19 @@ class simulation {
     
 public:
     // Everything needed to simulate particle in cell
-    double del_t;
-    int number_omp_threads, scheme_type;
+    double del_t, simulation_time, averaging_time;
+    double total_particle_momentum[3];
+    double total_particle_KE[3];
+    double total_field_energy;
+    double inv_plasma_freq_fraction;
+    bool restarted_simulation;
+    std::string save_file_folder, save_file_path;
+    int number_omp_threads, scheme_type, number_diagnostics;
     std::unique_ptr<domain> world;
     std::vector<charged_particle> charged_particle_list;
     std::unique_ptr<ES_solver> field_solver;
     simulation();
+    void setup();
 };
 
 
