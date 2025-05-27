@@ -8,6 +8,7 @@
 #include "domain/non_uniform_domain.hpp"
 #include "rand_gen/pcg_rng.hpp"
 #include "particles/charged_particle.hpp"
+#include "particles/target_particle.hpp"
 #include "solvers/poisson_solver_1D_tridiag.hpp"
 #include "ES_solvers/ES_solver_MC.hpp"
 #include "ES_solvers/ES_solver_EC.hpp"
@@ -32,6 +33,7 @@ public:
     int number_omp_threads, scheme_type, number_diagnostics;
     std::unique_ptr<domain> world;
     std::vector<charged_particle> charged_particle_list;
+    std::vector<target_particle> target_particle_list;
     std::unique_ptr<ES_solver> field_solver;
     simulation();
     void setup();

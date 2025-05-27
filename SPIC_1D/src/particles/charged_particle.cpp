@@ -71,17 +71,17 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
 void charged_particle::print_out() const {
     if (mpi_vars::mpi_rank == 0) {
         std::cout << "Particle name: " << this->name << std::endl;
-        std::cout << "Mass: " << this->mass << std::endl;
-        std::cout << "Charge: " << this->charge << std::endl;
-        std::cout << "Weight: " << this->weight << std::endl;
+        std::cout << "Mass (kg): " << this->mass << std::endl;
+        std::cout << "Charge (C): " << this->charge << std::endl;
+        std::cout << "Weight (m^-2): " << this->weight << std::endl;
         std::cout << "q/m: " << this->q_over_m << std::endl;
         std::cout << "Number of particles per thread: " << this->number_particles[0][0] << std::endl;
         std::cout << "Number of total particles: " << this->total_number_particles << std::endl;
         std::cout << "Final index: " << this->final_idx[0][0] << std::endl;
         std::cout << "Degrees in space: " << this->number_space_coordinates << std::endl;
         std::cout << "Degrees in velocity: " << this->number_velocity_coordinates << std::endl;
-        std::cout << "Average density: " << this->average_density << std::endl;
-        std::cout << "Average temperature: " << this->average_temperature << std::endl;
+        std::cout << "Average density (m^-3): " << this->average_density << std::endl;
+        std::cout << "Average temperature (eV): " << this->average_temperature << std::endl;
         std::cout << " " << std::endl;
     }
 }
@@ -995,7 +995,9 @@ std::vector<charged_particle> read_charged_particle_inputs(const std::string& di
                     mass = mass * constants::mass_amu;
                     if (std::abs(constants::electron_mass - mass ) /constants::electron_mass < 1e-3 ) {
                         mass = constants::electron_mass;
-                    } 
+                    } else {
+                        mass = mass - charge * constants::electron_mass; // assume put in neutral mass, so subtract electron mass for momentum/energy conservation in collisions
+                    }
                     mass_in.push_back(mass);
                     iss.clear();
                     std::getline(file, line);

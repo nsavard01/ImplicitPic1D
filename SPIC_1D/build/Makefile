@@ -297,6 +297,30 @@ src/particles/charged_particle.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.s
 .PHONY : src/particles/charged_particle.cpp.s
 
+src/particles/target_particle.o: src/particles/target_particle.cpp.o
+.PHONY : src/particles/target_particle.o
+
+# target to build an object file
+src/particles/target_particle.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o
+.PHONY : src/particles/target_particle.cpp.o
+
+src/particles/target_particle.i: src/particles/target_particle.cpp.i
+.PHONY : src/particles/target_particle.i
+
+# target to preprocess a source file
+src/particles/target_particle.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.i
+.PHONY : src/particles/target_particle.cpp.i
+
+src/particles/target_particle.s: src/particles/target_particle.cpp.s
+.PHONY : src/particles/target_particle.s
+
+# target to generate assembly for a file
+src/particles/target_particle.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.s
+.PHONY : src/particles/target_particle.cpp.s
+
 src/rand_gen/pcg_rng.o: src/rand_gen/pcg_rng.cpp.o
 .PHONY : src/rand_gen/pcg_rng.o
 
@@ -399,6 +423,9 @@ help:
 	@echo "... src/particles/charged_particle.o"
 	@echo "... src/particles/charged_particle.i"
 	@echo "... src/particles/charged_particle.s"
+	@echo "... src/particles/target_particle.o"
+	@echo "... src/particles/target_particle.i"
+	@echo "... src/particles/target_particle.s"
 	@echo "... src/rand_gen/pcg_rng.o"
 	@echo "... src/rand_gen/pcg_rng.i"
 	@echo "... src/rand_gen/pcg_rng.s"

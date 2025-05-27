@@ -1,5 +1,4 @@
-#ifndef TARGET_PARTICLE_H
-#define TARGET_PARTICLE_H
+#pragma once
 
 #include <cmath>
 #include "Constants.h"
@@ -33,4 +32,3 @@ public:
 };
 std::vector<Target_Particle> read_target_particle_inputs(const std::string& filename);
 
-#endif // PARTICLE_H
