@@ -114,6 +114,7 @@ std::vector<target_particle> read_target_particle_inputs(const std::string& dire
             });
         
         }
+        MPI_Barrier(MPI_COMM_WORLD);
     }
     
     

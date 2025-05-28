@@ -212,6 +212,7 @@ CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_laguerre.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/riemann_zeta.tcc \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver_EC.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/collisions/null_collider.hpp \
   /opt/intel/oneapi/compiler/2025.0/bin/compiler/../../opt/compiler/include/omp.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/stdlib.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/fstream \

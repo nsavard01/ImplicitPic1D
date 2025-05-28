@@ -12,6 +12,7 @@
 #include "solvers/poisson_solver_1D_tridiag.hpp"
 #include "ES_solvers/ES_solver_MC.hpp"
 #include "ES_solvers/ES_solver_EC.hpp"
+#include "collisions/null_collider.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <mpi.h>
@@ -34,6 +35,7 @@ public:
     std::unique_ptr<domain> world;
     std::vector<charged_particle> charged_particle_list;
     std::vector<target_particle> target_particle_list;
+    std::vector<null_collider> null_collider_list;
     std::unique_ptr<ES_solver> field_solver;
     simulation();
     void setup();

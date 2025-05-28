@@ -201,6 +201,30 @@ src/ES_solvers/ES_solver_MC.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.s
 .PHONY : src/ES_solvers/ES_solver_MC.cpp.s
 
+src/collisions/null_collider.o: src/collisions/null_collider.cpp.o
+.PHONY : src/collisions/null_collider.o
+
+# target to build an object file
+src/collisions/null_collider.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/collisions/null_collider.cpp.o
+.PHONY : src/collisions/null_collider.cpp.o
+
+src/collisions/null_collider.i: src/collisions/null_collider.cpp.i
+.PHONY : src/collisions/null_collider.i
+
+# target to preprocess a source file
+src/collisions/null_collider.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/collisions/null_collider.cpp.i
+.PHONY : src/collisions/null_collider.cpp.i
+
+src/collisions/null_collider.s: src/collisions/null_collider.cpp.s
+.PHONY : src/collisions/null_collider.s
+
+# target to generate assembly for a file
+src/collisions/null_collider.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/collisions/null_collider.cpp.s
+.PHONY : src/collisions/null_collider.cpp.s
+
 src/domain/domain.o: src/domain/domain.cpp.o
 .PHONY : src/domain/domain.o
 
@@ -411,6 +435,9 @@ help:
 	@echo "... src/ES_solvers/ES_solver_MC.o"
 	@echo "... src/ES_solvers/ES_solver_MC.i"
 	@echo "... src/ES_solvers/ES_solver_MC.s"
+	@echo "... src/collisions/null_collider.o"
+	@echo "... src/collisions/null_collider.i"
+	@echo "... src/collisions/null_collider.s"
 	@echo "... src/domain/domain.o"
 	@echo "... src/domain/domain.i"
 	@echo "... src/domain/domain.s"

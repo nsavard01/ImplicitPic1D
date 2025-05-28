@@ -1060,6 +1060,7 @@ std::vector<charged_particle> read_charged_particle_inputs(const std::string& di
             });
         
         }
+        MPI_Barrier(MPI_COMM_WORLD);
     }
     
     

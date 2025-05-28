@@ -112,6 +112,7 @@ void simulation::setup() {
     this->world->print_out();
     this->charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *this->world); 
     this->target_particle_list = read_target_particle_inputs("../inputs/target_particles/", *this->world);
+    this->null_collider_list = read_null_collision_inputs("../inputs/collisions/binary/", this->charged_particle_list, this->target_particle_list);
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", this->scheme_type, *this->world);
     double plasma_freq = get_plasma_frequency(this->charged_particle_list[0].average_temperature, this->charged_particle_list[0].average_density);
     // Time step
