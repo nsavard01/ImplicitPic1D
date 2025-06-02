@@ -33,6 +33,30 @@ void target_particle::print_out() const {
     }
 }
 
+void target_particle::initialize_diagnostic_files(const std::string& dir_name) const {
+    std::ofstream file(dir_name + "/target_particles/" + this->name + "/particle_properties.dat");
+
+    // Write header (optional)
+    file << "Particle Symbol, Particle Mass (kg) \n";
+    file << std::scientific << std::setprecision(8);
+    file << this->name << "\t"
+        << this->mass << "\t"
+        <<"\n";
+
+
+    file.close();
+
+    file.open(dir_name + "/target_particles/" + this->name + "/ave_diagnostics.dat");
+    if (!file) {
+        std::cerr << "Error opening file for energy particle \n";
+        return;
+    }
+
+    file << "density (1/m^3), temperature (K) \n";
+
+    file.close();
+}
+
 
 
 

@@ -163,12 +163,6 @@ void Simulation::initialize_data_files(Potential_Solver& solver, std::vector<Par
 
         file.close();
 
-        file.open(this->directory_name + "/SimulationTimeData.dat");
-
-        // Write header (optional)
-        file << "Elapsed Times(s), Potential Time (s), Mover Time (s), Collision Time (s), Total Steps \n";
-
-        file.close();
 
         file.open(this->directory_name + "/SimulationTimeData.dat");
 

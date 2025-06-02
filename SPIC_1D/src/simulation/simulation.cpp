@@ -1,5 +1,7 @@
 #include "simulation/simulation.hpp"
 #include "globals/plasma_functions.hpp"
+#include <chrono>
+#include <iomanip>
 
 
 
@@ -39,6 +41,138 @@ simulation::simulation() {
     
 }
 
+void simulation::initialize_diagnostic_files() {
+    if (mpi_vars::mpi_rank == 0) {
+        std::string folder_name = this->save_file_path + this->save_file_folder;
+        bool dirExists = directoryExists(this->save_file_path);
+        if (dirExists) {
+            bool saveFileExists = directoryExists(folder_name);
+            if (saveFileExists) {
+                // Ask user for permission to overwrite existing directory
+                std::cout << "Save directory " << folder_name << " already exists. Are you sure you want to continue (yes/no)? ";
+                std::string userInput;
+                std::cin >> userInput;
+    
+                if (userInput != "yes" && userInput != "Yes") {
+                    std::cout << "You have decided to create a new directory for the save files." << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                removeDirectoryContents(folder_name);  // Remove old data
+            } else {
+                // Create the top-level directory
+                if (!createDirectory(folder_name)) {
+                    std::cerr << "Failed to create main directory: " << folder_name << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+            }
+    
+            // Create the necessary directories
+            if  (!createDirectory(folder_name + "/domain")  || !createDirectory(folder_name + "/phi") ||
+                !createDirectory(folder_name + "/charged_particles") || !createDirectory(folder_name + "/target_particles")) {
+                std::cerr << "Save directory not successfully created!" << std::endl;
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+            
+            for (int i = 0; i < this->charged_particle_list.size(); i++) {
+                if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name)) {
+                    std::cerr << "Save directory not successfully created!" << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                if (this->null_collider_list[i].number_targets > 0) {
+                    if (!createDirectory(folder_name + "/charged_particles/" + charged_particle_list[i].name + "/null_collision")) {
+                        std::cerr << "Save directory not successfully created!" << std::endl;
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
+                }
+            }
+
+            for (int i = 0; i < this->target_particle_list.size(); i++) {
+                if (!createDirectory(folder_name + "/target_particles/" + this->target_particle_list[i].name)) {
+                    std::cerr << "Save directory not successfully created!" << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+            }
+
+
+        
+    
+            // Copy input files (assuming the same mechanism for copying)
+            std::string copyCommand = "cp -Tr ../inputs " + folder_name + "/inputs";
+            int status = system(copyCommand.c_str());
+            if (status != 0) {
+                std::cerr << "Error copying input data deck" << std::endl;
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+        } else {
+            std::cout << "Directory chosen to save data doesn't exist!" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+
+        // Initialize data files
+
+        // Put Current date and time
+        auto now = std::chrono::system_clock::now();
+        std::time_t t = std::chrono::system_clock::to_time_t(now);
+        
+        // Convert to UTC time structure
+        std::tm utc_time = *std::gmtime(&t);
+
+        // Open file
+        std::ofstream file(folder_name + "/date_time.dat");
+        if (!file) {
+            std::cerr << "Error opening file for date and time \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+        file << "UTC_Date UTC_Time\n";
+
+        // Write date and time in YYYY MM DD HH MM SS format
+        file << std::put_time(&utc_time, "%Y%m%d %H%M%S") << "\n";
+
+        file.close();
+
+        file.open(folder_name + "/initital_condition.dat");
+
+        // Write header (optional)
+        file << "number MPI, number threads, Number Grid Nodes, Final Expected Time(s), Delta t(s), numDiag \n";
+        file << std::scientific << std::setprecision(8);
+        file << mpi_vars::mpi_size << "\t"
+            << omp_get_max_threads() << "\t"
+            << this->world->number_nodes << "\t"
+            << this->simulation_time << "\t"
+            << this->del_t << "\t"
+            << this->number_diagnostics
+            <<"\n";
+
+        file.close();
+
+        file.open(folder_name + "/simulation_timing_data.dat");
+
+        // Write header (optional)
+        file << "Elapsed Times(s), potential Time (s), mover Time (s), null collision Time (s), artificial collision time(s), total Steps \n";
+
+        file.close();
+
+        file.open(folder_name + "/global_diagnostic_data.dat");
+
+        // Write header (optional)
+        file << "Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), TotalMomentum(kg/m/s), TotalEnergy(J/m^2) \n";
+
+        file.close();
+
+        for (int part_num = 0; part_num < this->target_particle_list.size(); part_num++) {
+            this->target_particle_list[part_num].initialize_diagnostic_files(folder_name);
+        }
+        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
+            this->charged_particle_list[part_num].initialize_diagnostic_files(folder_name);
+        }
+
+
+
+    }
+}
 
 void simulation::setup() {
     // create openmp parallel, with thread id passed around
@@ -178,64 +312,8 @@ void simulation::setup() {
         std::cout << "------------------------------" << std::endl;
         std::cout << " " << std::endl;
     }
-    if (mpi_vars::mpi_rank == 0) {
-        bool dirExists = directoryExists(this->save_file_path);
-        if (dirExists) {
-            std::string folder_name = this->save_file_path + this->save_file_folder;
-            bool saveFileExists = directoryExists(folder_name);
-            if (saveFileExists) {
-                // Ask user for permission to overwrite existing directory
-                std::cout << "Save directory " << folder_name << " already exists. Are you sure you want to continue (yes/no)? ";
-                std::string userInput;
-                std::cin >> userInput;
     
-                if (userInput != "yes" && userInput != "Yes") {
-                    std::cout << "You have decided to create a new directory for the save files." << std::endl;
-                    MPI_Abort(MPI_COMM_WORLD, 1);
-                }
-                removeDirectoryContents(folder_name);  // Remove old data
-            } else {
-                // Create the top-level directory
-                if (!createDirectory(folder_name)) {
-                    std::cerr << "Failed to create main directory: " << folder_name << std::endl;
-                    MPI_Abort(MPI_COMM_WORLD, 1);
-                }
-            }
-    
-            // Create the necessary directories
-            if  (!createDirectory(folder_name + "/domain")  || !createDirectory(folder_name + "/phi") ||
-                !createDirectory(folder_name + "/charged_particles") || !createDirectory(folder_name + "/target_particles")) {
-                std::cerr << "Save directory not successfully created!" << std::endl;
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
-            
-            for (int i = 0; i < this->charged_particle_list.size(); i++) {
-                if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name)) {
-                    std::cerr << "Save directory not successfully created!" << std::endl;
-                    MPI_Abort(MPI_COMM_WORLD, 1);
-                }
-                if (this->null_collider_list[i].number_targets > 0) {
-                    if (!createDirectory(folder_name + "/charged_particles/" + charged_particle_list[i].name + "/null_collision")) {
-                        std::cerr << "Save directory not successfully created!" << std::endl;
-                        MPI_Abort(MPI_COMM_WORLD, 1);
-                    }
-                }
-            }
-        
-    
-            // Copy input files (assuming the same mechanism for copying)
-            std::string copyCommand = "cp -Tr ../inputs " + folder_name + "/inputs";
-            int status = system(copyCommand.c_str());
-            if (status != 0) {
-                std::cerr << "Error copying input data deck" << std::endl;
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
-        } else {
-            std::cout << "Directory chosen to save data doesn't exist!" << std::endl;
-            MPI_Abort(MPI_COMM_WORLD, 1);
-        }
-    }
-
+    this->initialize_diagnostic_files();
 
     // Setup directories
     #pragma omp parallel

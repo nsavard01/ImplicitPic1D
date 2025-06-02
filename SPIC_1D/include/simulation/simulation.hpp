@@ -41,6 +41,7 @@ public:
     std::unique_ptr<ES_solver> field_solver;
     simulation();
     void setup();
+    void initialize_diagnostic_files();
 };
 
 // Function to remove a directory and its contents

@@ -19,6 +19,7 @@ void ES_solver::set_phi(double left_voltage, double right_voltage, double RF_fre
     this->left_voltage = left_voltage;
     this->right_voltage = right_voltage;
     this->RF_rad_frequency = 0.0; // Convert to radians
+    this->RF_half_amplitude = 0.0;
     if (left_boundary != 1 && left_boundary != 4) {
         this->left_voltage = 0.0; // Set left boundary voltage
     } 

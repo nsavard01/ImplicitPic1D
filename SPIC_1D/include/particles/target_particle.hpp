@@ -12,6 +12,7 @@ public:
     // Accessor for 3D indexing
     target_particle(double mass_in, double temp_in, double density_in, double v_drift_in, std::string name_in);
     void print_out() const;
+    void initialize_diagnostic_files(const std::string& dir_name) const;
 };
 std::vector<target_particle> read_target_particle_inputs(const std::string& filename, const domain& world);
 
