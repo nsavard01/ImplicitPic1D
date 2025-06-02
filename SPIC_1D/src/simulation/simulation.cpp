@@ -2,6 +2,7 @@
 #include "globals/plasma_functions.hpp"
 
 
+
 simulation::simulation() {
     // Get scheme type from the file
     int max_threads = omp_get_max_threads();
@@ -113,6 +114,10 @@ void simulation::setup() {
     this->charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *this->world); 
     this->target_particle_list = read_target_particle_inputs("../inputs/target_particles/", *this->world);
     this->null_collider_list = read_null_collision_inputs("../inputs/collisions/binary/", this->charged_particle_list, this->target_particle_list);
+    for (int i = 0; i < charged_particle_list.size(); i++){
+        this->null_collider_list[i].set_null_frequency(this->charged_particle_list, this->target_particle_list);
+        this->null_collider_list[i].print_out(this->charged_particle_list, this->target_particle_list);
+    }
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", this->scheme_type, *this->world);
     double plasma_freq = get_plasma_frequency(this->charged_particle_list[0].average_temperature, this->charged_particle_list[0].average_density);
     // Time step
@@ -173,6 +178,66 @@ void simulation::setup() {
         std::cout << "------------------------------" << std::endl;
         std::cout << " " << std::endl;
     }
+    if (mpi_vars::mpi_rank == 0) {
+        bool dirExists = directoryExists(this->save_file_path);
+        if (dirExists) {
+            std::string folder_name = this->save_file_path + this->save_file_folder;
+            bool saveFileExists = directoryExists(folder_name);
+            if (saveFileExists) {
+                // Ask user for permission to overwrite existing directory
+                std::cout << "Save directory " << folder_name << " already exists. Are you sure you want to continue (yes/no)? ";
+                std::string userInput;
+                std::cin >> userInput;
+    
+                if (userInput != "yes" && userInput != "Yes") {
+                    std::cout << "You have decided to create a new directory for the save files." << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                removeDirectoryContents(folder_name);  // Remove old data
+            } else {
+                // Create the top-level directory
+                if (!createDirectory(folder_name)) {
+                    std::cerr << "Failed to create main directory: " << folder_name << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+            }
+    
+            // Create the necessary directories
+            if  (!createDirectory(folder_name + "/domain")  || !createDirectory(folder_name + "/phi") ||
+                !createDirectory(folder_name + "/charged_particles") || !createDirectory(folder_name + "/target_particles")) {
+                std::cerr << "Save directory not successfully created!" << std::endl;
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+            
+            for (int i = 0; i < this->charged_particle_list.size(); i++) {
+                if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name)) {
+                    std::cerr << "Save directory not successfully created!" << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                if (this->null_collider_list[i].number_targets > 0) {
+                    if (!createDirectory(folder_name + "/charged_particles/" + charged_particle_list[i].name + "/null_collision")) {
+                        std::cerr << "Save directory not successfully created!" << std::endl;
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
+                }
+            }
+        
+    
+            // Copy input files (assuming the same mechanism for copying)
+            std::string copyCommand = "cp -Tr ../inputs " + folder_name + "/inputs";
+            int status = system(copyCommand.c_str());
+            if (status != 0) {
+                std::cerr << "Error copying input data deck" << std::endl;
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+        } else {
+            std::cout << "Directory chosen to save data doesn't exist!" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+    }
+
+
+    // Setup directories
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();

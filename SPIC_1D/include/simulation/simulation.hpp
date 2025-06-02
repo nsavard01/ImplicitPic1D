@@ -19,6 +19,8 @@
 #include <omp.h>
 #include <fstream>
 #include <sstream>
+#include <dirent.h>
+#include <sys/stat.h>
 
 class simulation {
     
@@ -40,6 +42,34 @@ public:
     simulation();
     void setup();
 };
+
+// Function to remove a directory and its contents
+inline void removeDirectoryContents(const std::string& dirName) {
+    std::string command = "rm -r " + dirName + "/*";
+    int status = system(command.c_str());
+    if (status != 0) {
+        std::cerr << "Error removing directory contents: " << dirName << std::endl;
+        exit(1);  // Exiting since the function isn't able to clean up properly
+    }
+}
+
+// Function to create a directory
+inline bool createDirectory(const std::string& dirName) {
+    if (mkdir(dirName.c_str(), 0777) == -1) {
+        std::cerr << "Error creating directory: " << dirName << std::endl;
+        return false;
+    }
+    return true;
+}
+
+inline bool directoryExists(const std::string& dirName) {
+    DIR* dir = opendir(dirName.c_str());
+    if (dir) {
+        closedir(dir);
+        return true;
+    }
+    return false;
+}
 
 
 

@@ -5,7 +5,7 @@
 1e-9 ! total averaging time
 20 ! number of diagnostic times
 test_cpp ! save file name
-../../../../Test/ ! Save directory relative path
+../../../Test/ ! Save directory relative path
 no ! Restart(yes/no) and save directory to take from
 END
 
