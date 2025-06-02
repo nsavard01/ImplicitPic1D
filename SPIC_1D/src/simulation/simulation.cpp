@@ -79,9 +79,16 @@ void simulation::initialize_diagnostic_files() {
                     MPI_Abort(MPI_COMM_WORLD, 1);
                 }
                 if (this->null_collider_list[i].number_targets > 0) {
-                    if (!createDirectory(folder_name + "/charged_particles/" + charged_particle_list[i].name + "/null_collision")) {
+                    if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/null_collision")) {
                         std::cerr << "Save directory not successfully created!" << std::endl;
                         MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
+                    for (int t_idx = 0; t_idx < this->null_collider_list[i].number_targets;t_idx++){
+                        int idx = this->null_collider_list[i].target_idx[t_idx];
+                        if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/null_collision/" + this->target_particle_list[idx].name)) {
+                            std::cerr << "Save directory not successfully created!" << std::endl;
+                            MPI_Abort(MPI_COMM_WORLD, 1);
+                        }
                     }
                 }
             }
@@ -167,6 +174,7 @@ void simulation::initialize_diagnostic_files() {
         }
         for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
             this->charged_particle_list[part_num].initialize_diagnostic_files(folder_name);
+            this->null_collider_list[part_num].initialize_diagnostic_files(folder_name, this->charged_particle_list, this->target_particle_list);
         }
 
 
@@ -312,10 +320,11 @@ void simulation::setup() {
         std::cout << "------------------------------" << std::endl;
         std::cout << " " << std::endl;
     }
-    
-    this->initialize_diagnostic_files();
 
     // Setup directories
+    this->initialize_diagnostic_files();
+
+    
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();

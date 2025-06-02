@@ -886,51 +886,54 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
 // }
 
 void charged_particle::initialize_diagnostic_files(const std::string& dir_name) const {
-    std::ofstream file(dir_name + "/charged_particles/" + this->name + "/particle_properties.dat");
+    if (mpi_vars::mpi_rank == 0) {
 
-    // Write header (optional)
-    file << "Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2), number space coord, number velocity coord \n";
-    file << std::scientific << std::setprecision(8);
-    file << this->name << "\t"
-        << this->mass << "\t"
-        << this->charge << "\t"
-        << this->weight << "\t"
-        << this->number_space_coordinates << "\t"
-        << this->number_velocity_coordinates
-        <<"\n";
+        std::ofstream file(dir_name + "/charged_particles/" + this->name + "/particle_properties.dat");
+
+        // Write header (optional)
+        file << "Particle Symbol, Particle Mass (kg), Particle Charge (C), Particle Weight (N/m^2), number space coord, number velocity coord \n";
+        file << std::scientific << std::setprecision(8);
+        file << this->name << "\t"
+            << this->mass << "\t"
+            << this->charge << "\t"
+            << this->weight << "\t"
+            << this->number_space_coordinates << "\t"
+            << this->number_velocity_coordinates
+            <<"\n";
 
 
-    file.close();
+        file.close();
 
-    file.open(dir_name + "/charged_particles/" + this->name + "/momentum_diagnostics.dat");
-    if (!file) {
-        std::cerr << "Error opening file for momentum particle \n";
-        return;
+        file.open(dir_name + "/charged_particles/" + this->name + "/momentum_diagnostics.dat");
+        if (!file) {
+            std::cerr << "Error opening file for momentum particle \n";
+            return;
+        }
+
+        file << "sum_v_x, left_sum_v_x, right_sum_v_x, sum_v_y, left_sum_v_y, right_sum_v_y, sum_v_z, left_sum_v_z, right_sum_v_z \n";
+
+        file.close();
+
+        file.open(dir_name + "/charged_particles/" + this->name + "/energy_diagnostics.dat");
+        if (!file) {
+            std::cerr << "Error opening file for energy particle \n";
+            return;
+        }
+
+        file << "sum_v_sq_x, sum_v_sq_y, sum_v_sq_z, sum_v_sq, right_sum_v_sq, left_sum_v_sq \n";
+
+        file.close();
+
+        file.open(dir_name + "/charged_particles/" + this->name + "/number_diagnostics.dat");
+        if (!file) {
+            std::cerr << "Error opening file for energy particle \n";
+            return;
+        }
+
+        file << "N_p, left_lost, right_lost \n";
+
+        file.close();
     }
-
-    file << "sum_v_x, left_sum_v_x, right_sum_v_x, sum_v_y, left_sum_v_y, right_sum_v_y, sum_v_z, left_sum_v_z, right_sum_v_z \n";
-
-    file.close();
-
-    file.open(dir_name + "/charged_particles/" + this->name + "/energy_diagnostics.dat");
-    if (!file) {
-        std::cerr << "Error opening file for energy particle \n";
-        return;
-    }
-
-    file << "sum_v_sq_x, sum_v_sq_y, sum_v_sq_z, sum_v_sq, right_sum_v_sq, left_sum_v_sq \n";
-
-    file.close();
-
-    file.open(dir_name + "/charged_particles/" + this->name + "/number_diagnostics.dat");
-    if (!file) {
-        std::cerr << "Error opening file for energy particle \n";
-        return;
-    }
-
-    file << "N_p, left_lost, right_lost \n";
-
-    file.close();
 
 }
 

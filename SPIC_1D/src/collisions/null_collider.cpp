@@ -39,11 +39,16 @@ null_collider::null_collider(int primary_idx, int number_targets, const std::vec
         this->total_incident_energy.resize(this->number_targets);
         this->total_energy_loss.resize(this->number_targets);
         this->total_amount_collisions.resize(this->number_targets);
+        this->collision_id.resize(this->number_targets);
         for (int i = 0; i < this->number_targets; i++) {
             int num_collisions = this->number_collisions_per_target[i];
             this->total_incident_energy[i].resize(num_collisions, 0.0);
             this->total_energy_loss[i].resize(num_collisions, 0.0);
             this->total_amount_collisions[i].resize(num_collisions, 0.0);
+            this->collision_id[i].resize(num_collisions);
+            for (int j = 0; j < this->number_collisions_per_target[i]; j++) {
+                this->collision_id[i][j] = j;
+            }
         }
     }
     
@@ -497,8 +502,59 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
 }
 
 
+void null_collider::initialize_diagnostic_files(const std::string& dir_name, const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) const {
+    if (mpi_vars::mpi_rank == 0) {
+        for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+            const charged_particle& primary_particle = particle_list[this->primary_idx];
+            const target_particle& secondary_particle = target_particle_list[this->target_idx[t_idx]];
+            for (int coll_idx=0; coll_idx< this->number_collisions_per_target[t_idx];coll_idx++){
+                std::ofstream file(dir_name + "/charged_particles/" + primary_particle.name + "/null_collision/" + secondary_particle.name + "/collision_properties_" 
+                    + std::to_string(this->collision_id[t_idx][coll_idx]) + ".dat");
+                if (!file) {
+                    std::cerr << "Error opening file \n";
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+
+                file << "Coll #, collType, E_thres (eV), maxSigma (m^2), EatMaxSigma (eV) \n";
+                file << std::scientific << std::setprecision(8);
+                
+                
+                size_t max_indx;
+                double max_val = 0.0;
+                int length_array = this->energy_array.size();
+                for (int j= 0; j< length_array;j++){
+                    if (this->sigma_array[t_idx][coll_idx][j] > max_val) {
+                        max_indx = j;
+                        max_val = this->sigma_array[t_idx][coll_idx][j];
+                    }
+                }
+                file << this->collision_id[t_idx][coll_idx] << "\t"
+                    << this->collision_type_per_target[t_idx][coll_idx] << "\t"
+                    << this->energy_threshold[t_idx][coll_idx] << "\t"
+                    << this->sigma_array[t_idx][coll_idx][max_indx] << "\t"
+                    << this->energy_array[max_indx]
+                    <<"\n";
+                file.close();
+
+                file.open(dir_name + "/charged_particles/" + primary_particle.name + "/null_collision/" + secondary_particle.name + "/collision_diagnostics_" 
+                    + std::to_string(this->collision_id[t_idx][coll_idx]) + ".dat");
+                file << "CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz/m^2) \n";
+                file.close();
+            }     
+        }
+    }
+}
 
 
+void null_collider::gather_mpi() {
+    MPI_Allreduce(MPI_IN_PLACE, &this->total_amount_collidable_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+        MPI_Allreduce(MPI_IN_PLACE, this->total_incident_energy[t_idx].data(), this->number_collisions_per_target[t_idx], MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, this->total_energy_loss[t_idx].data(), this->number_collisions_per_target[t_idx], MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, this->total_amount_collisions[t_idx].data(), this->number_collisions_per_target[t_idx], mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    }
+    
+}
 
 
 std::vector<null_collider> read_null_collision_inputs(const std::string& directory_path, const std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list){
