@@ -57,7 +57,7 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
         this->momentum_loss[i].resize(2);
         this->momentum_loss[i][0].resize(3,0.0);
         this->momentum_loss[i][1].resize(3,0.0);
-        this->energy_loss[i].resize(2, 0);
+        this->energy_loss[i].resize(2, 0.0);
         this->wall_loss[i].resize(2, 0);
         if (charged_particle::sorted_number_particles_per_cell[i].empty()) {
             charged_particle::sorted_number_particles_per_cell[i].resize(number_nodes-1, 0);
@@ -417,29 +417,84 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
 }
 
 void charged_particle::write_diagnostics(const std::string& dir_name, int diag_number) const {
-    if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(this->temperature, this->temperature.size(), dir_name + "/" + this->name + "/temperature/cell_temp_" + std::to_string(diag_number) + ".dat", 0);}
+    if (mpi_vars::mpi_rank == 0) {
+        
+        write_vector_to_binary_file(this->temperature, this->temperature.size(), dir_name + "/charged_particles/" + this->name + "/temperature/cell_temp_" + std::to_string(diag_number) + ".dat", 0);
+
+        std::ofstream file(dir_name + "/charged_particles/" + this->name + "/momentum_diagnostics.dat", std::ios::app);
+        if (!file) {
+            std::cerr << "Error opening file for momentum particle \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        file << std::scientific << std::setprecision(8);
+        file << this->total_sum_v[0] << "\t"
+            << this->total_sum_v[1]  << "\t"
+            << this->total_sum_v[2] << "\t"
+            << this->accum_wall_momentum_loss[0][0] << "\t"
+            << this->accum_wall_momentum_loss[0][1] << "\t"
+            << this->accum_wall_momentum_loss[0][2] << "\t"
+            << this->accum_wall_momentum_loss[1][0] << "\t"
+            << this->accum_wall_momentum_loss[1][1] << "\t"
+            << this->accum_wall_momentum_loss[1][2]
+            <<"\n";
+
+        file.close();
+
+        file.open(dir_name + "/charged_particles/" + this->name + "/energy_diagnostics.dat", std::ios::app);
+        if (!file) {
+            std::cerr << "Error opening file for energy particle \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        file << std::scientific << std::setprecision(8);
+        double sum_v_sq = this->total_sum_v_square[0] + this->total_sum_v_square[1] + this->total_sum_v_square[2]; 
+        file << this->total_sum_v_square[0] << "\t"
+            << this->total_sum_v_square[1] << "\t"
+            << this->total_sum_v_square[2] << "\t"
+            << sum_v_sq << "\t"
+            << this->accum_wall_energy_loss[0] << "\t"
+            << this->accum_wall_energy_loss[1]
+            <<"\n";
+
+        file.close();
+
+        file.open(dir_name + "/charged_particles/" + this->name + "/number_diagnostics.dat", std::ios::app);
+        if (!file) {
+            std::cerr << "Error opening file for number particle \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        file << this->total_number_particles << "\t"
+            << this->accum_wall_loss[0] << "\t"
+            << this->accum_wall_loss[1]
+            <<"\n";
+
+        file.close();
+    }
+    this->write_phase_space(dir_name);
 }
 
 void charged_particle::write_phase_space(const std::string& dir_name) const {
     // dir_name = file/charged_particles
+    std::string file_path = dir_name + "/charged_particles/" + this->name + "/phase_space/";
     for (int rank_num = 0; rank_num < mpi_vars::mpi_size; rank_num++){
         if (mpi_vars::mpi_rank == rank_num) {
             for (int i_thread = 0; i_thread<omp_get_max_threads();i_thread++){
                 bool append = !(mpi_vars::mpi_rank == 0 && i_thread == 0); // initialize for rank =0, thread = 0
                 size_t part_num = this->number_particles[i_thread][0];
-                write_vector_to_binary_file(this->xi[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/xi.dat", 0, 0x00, append);
-                write_vector_to_binary_file(this->v_x[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/v_x.dat", 0, 0x00, append);
+                write_vector_to_binary_file(this->xi[i_thread], part_num, file_path + "xi.dat", 0, 0x00, append);
+                write_vector_to_binary_file(this->v_x[i_thread], part_num, file_path + "v_x.dat", 0, 0x00, append);
                 if (this->number_space_coordinates > 1) {
-                    write_vector_to_binary_file(this->y[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/y.dat", 0, 0x00, append);
+                    write_vector_to_binary_file(this->y[i_thread], part_num, file_path + "y.dat", 0, 0x00, append);
                 }
                 if (this->number_space_coordinates > 2) {
-                    write_vector_to_binary_file(this->z[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/z.dat", 0, 0x00, append);
+                    write_vector_to_binary_file(this->z[i_thread], part_num, file_path + "z.dat", 0, 0x00, append);
                 }
                 if (this->number_velocity_coordinates > 1) {
-                    write_vector_to_binary_file(this->v_y[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/v_y.dat", 0, 0x00, append);
+                    write_vector_to_binary_file(this->v_y[i_thread], part_num, file_path + "v_y.dat", 0, 0x00, append);
                 }
                 if (this->number_velocity_coordinates > 2) {
-                    write_vector_to_binary_file(this->v_z[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/v_z.dat", 0, 0x00, append);
+                    write_vector_to_binary_file(this->v_z[i_thread], part_num, file_path + "v_z.dat", 0, 0x00, append);
                 }
             }
         }
@@ -922,6 +977,8 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
 
 // }
 
+
+
 void charged_particle::initialize_diagnostic_files(const std::string& dir_name) const {
     if (mpi_vars::mpi_rank == 0) {
 
@@ -947,7 +1004,7 @@ void charged_particle::initialize_diagnostic_files(const std::string& dir_name) 
             return;
         }
 
-        file << "sum_v_x, left_sum_v_x, right_sum_v_x, sum_v_y, left_sum_v_y, right_sum_v_y, sum_v_z, left_sum_v_z, right_sum_v_z \n";
+        file << "sum_v_x, sum_v_y, sum_v_z, left_sum_v_x, left_sum_v_y, left_sum_v_z, right_sum_v_x, right_sum_v_y, right_sum_v_z \n";
 
         file.close();
 

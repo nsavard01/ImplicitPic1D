@@ -65,8 +65,8 @@ void ES_solver::initialize_diagnostic_files(const std::string& filename) {
     }
 }
 
-void ES_solver::write_phi(const std::string& filename) {
-    if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(this->phi, this->phi.size(), filename, 0);}
+void ES_solver::write_phi(const std::string& dir_name, const std::string& filename) {
+    if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(this->phi, this->phi.size(), dir_name + "/phi/" + filename, 0);}
 }
 
 
@@ -172,7 +172,7 @@ void ES_solver::write_particle_densities(const std::string file_path, const std:
                 density[i] = density[i] * particle.weight / cell_size;
             }
         }
-        if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(density, number_nodes, file_path + "/" + particle.name + "/density/" + filename, 0);}
+        if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(density, number_nodes, file_path + "/charged_particles/" + particle.name + "/density/" + filename, 0);}
 
     }
 

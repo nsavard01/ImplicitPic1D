@@ -356,11 +356,10 @@ void simulation::setup() {
     this->field_solver->make_EField(*this->world);
 
     // write initial states
-    this->field_solver->write_phi(this->save_file_folder + "/phi/potential_0.dat");
-    this->field_solver->write_particle_densities(this->save_file_folder + "/charged_particles", "density_0.dat", this->charged_particle_list, *this->world);
+    this->field_solver->write_phi(this->save_file_folder, "potential_0.dat");
+    this->field_solver->write_particle_densities(this->save_file_folder, "density_0.dat", this->charged_particle_list, *this->world);
     for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-        this->charged_particle_list[part_num].write_diagnostics(this->save_file_folder + "/charged_particles", 0);
-        this->charged_particle_list[part_num].write_phase_space(this->save_file_folder + "/charged_particles");
+        this->charged_particle_list[part_num].write_diagnostics(this->save_file_folder, 0);
     }
 
     

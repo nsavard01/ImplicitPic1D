@@ -28,7 +28,7 @@ public:
         return this->rho;
     };
     void initialize_diagnostic_files(const std::string& filename);
-    void write_phi(const std::string& filename);
+    void write_phi(const std::string& dir_name, const std::string& filename);
 
     void set_phi(double left_voltage, double right_voltage, double RF_frequency, int left_boundary, int right_boundary);
 
