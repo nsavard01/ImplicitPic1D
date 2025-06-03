@@ -273,6 +273,30 @@ src/globals/mpi_vars.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.s
 .PHONY : src/globals/mpi_vars.cpp.s
 
+src/globals/write_functions.o: src/globals/write_functions.cpp.o
+.PHONY : src/globals/write_functions.o
+
+# target to build an object file
+src/globals/write_functions.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.o
+.PHONY : src/globals/write_functions.cpp.o
+
+src/globals/write_functions.i: src/globals/write_functions.cpp.i
+.PHONY : src/globals/write_functions.i
+
+# target to preprocess a source file
+src/globals/write_functions.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.i
+.PHONY : src/globals/write_functions.cpp.i
+
+src/globals/write_functions.s: src/globals/write_functions.cpp.s
+.PHONY : src/globals/write_functions.s
+
+# target to generate assembly for a file
+src/globals/write_functions.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.s
+.PHONY : src/globals/write_functions.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -444,6 +468,9 @@ help:
 	@echo "... src/globals/mpi_vars.o"
 	@echo "... src/globals/mpi_vars.i"
 	@echo "... src/globals/mpi_vars.s"
+	@echo "... src/globals/write_functions.o"
+	@echo "... src/globals/write_functions.i"
+	@echo "... src/globals/write_functions.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

@@ -13,6 +13,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include "globals/write_functions.hpp"
+#include <iomanip>
 
 
 void ES_solver::set_phi(double left_voltage, double right_voltage, double RF_frequency, int left_boundary, int right_boundary) {
@@ -37,6 +39,38 @@ void ES_solver::set_phi(double left_voltage, double right_voltage, double RF_fre
     this->phi[this->phi.size()-1] = this->right_voltage; // Set right boundary voltage in phi vector
 }
 
+void ES_solver::initialize_diagnostic_files(const std::string& filename) {
+    // Open file
+    if (mpi_vars::mpi_rank == 0) {
+        std::ofstream file(filename + "/phi/parameters.dat");
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+        file << "RF_rad_frequency, RF_half_amplitude, left_voltage, right_voltage \n";
+
+        file << std::scientific << std::setprecision(8);
+        file << this->RF_rad_frequency << "\t"
+        << this->RF_half_amplitude << "\t"
+        << this->left_voltage << "\t"
+        << this->right_voltage <<
+        "\n";
+
+        file.close();
+
+        
+
+    }
+}
+
+void ES_solver::write_phi(const std::string& filename) {
+    if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(this->phi, this->phi.size(), filename, 0);}
+}
+
+
+
 void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_list, int thread_id) {
     // Loop over all particles and deposit charge density
     
@@ -48,7 +82,7 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
     std::vector<double>& local_work_space = this->work_space[thread_id];
     std::fill(local_work_space.begin(), local_work_space.end(), 0.0);
     for (int i = 0; i < num_particles; ++i) {
-        charged_particle& particle = particle_list[i];
+        const charged_particle& particle = particle_list[i];
         // Set work space to 0
         std::fill(part_work_space.begin(), part_work_space.begin() + total_rho_size, 0.0);
         particle.deposit_particles_linear(thread_id, part_work_space); // Deposit charge density for each particle
@@ -75,6 +109,75 @@ void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_l
     #pragma omp barrier
 
 }
+
+void ES_solver::deposit_density(std::vector<charged_particle>& particle_list, int thread_id) {
+    // Loop over all particles and deposit density
+    
+    int total_thread_count = omp_get_max_threads();
+    int total_rho_size = this->rho.size();
+    int num_particles = particle_list.size();
+    // local work_space to accumulate over each particle
+    std::vector<double>& local_work_space = this->work_space[thread_id];
+    for (int i = 0; i < num_particles; ++i) {
+        charged_particle& particle = particle_list[i];
+        // Set work space to 0
+        std::fill(local_work_space.begin(), local_work_space.end(), 0.0);
+        particle.deposit_particles_linear(thread_id, local_work_space); // Deposit density for each particle
+        // Accumulate density from all threads
+        #pragma omp barrier
+        #pragma omp for
+        for (int i = 0; i < total_rho_size; i++) {
+            double sum = 0.0;
+            for (int i_thread = 0; i_thread < total_thread_count; i_thread++) {
+                sum += this->work_space[i_thread][i];
+            }
+            particle.density[i] = sum; // Set charge density for each cell
+        }
+        #pragma omp barrier
+    }
+
+}
+
+void ES_solver::write_particle_densities(const std::string file_path, const std::string filename, std::vector<charged_particle>& particle_list, const domain& world) const {
+    // Loop over all particles and deposit density
+    
+    int number_nodes = world.number_nodes;
+    int number_cells = world.number_cells;
+    int num_particles = particle_list.size();
+    for (int i = 0; i < num_particles; ++i) {
+        charged_particle& particle = particle_list[i];
+        // Set work space to 0
+        std::vector<double>& density = particle.density;
+        if (world.left_boundary_condition == 3) {
+            density[0] = density[0] + density[number_cells];
+            density[number_cells] = density[0];
+        } else {
+            // Only half volume represented
+            density[0] = 2.0 * density[0];
+            density[number_cells] = density[number_cells] * 2.0;
+        }
+        MPI_Allreduce(MPI_IN_PLACE, density.data(), number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        if (world.domain_type == 0) {
+            // uniform
+            double del_x = world.min_dx;
+            for (int i = 0;i<number_nodes; i++) {
+                density[i] = density[i] * particle.weight / del_x;
+            }
+        } else {
+            // non-uniform
+            density[0] = density[0] * particle.weight / world.dx_dxi[0];
+            density[number_cells] = density[number_cells] * particle.weight / world.dx_dxi[number_cells-1];
+            for (int i = 1;i<number_cells; i++) {
+                double cell_size = 0.5 * (world.dx_dxi[i-1] + world.dx_dxi[i]);
+                density[i] = density[i] * particle.weight / cell_size;
+            }
+        }
+        if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(density, number_nodes, file_path + "/" + particle.name + "/density/" + filename, 0);}
+
+    }
+
+}
+
 
 void ES_solver::solve_potential(double current_time, const domain& world) {
     // generate the right-hand side of the Poisson equation
@@ -165,7 +268,7 @@ std::unique_ptr<ES_solver> read_voltage_inputs(const std::string& filename, int 
     } else {
         throw std::invalid_argument("Invalid scheme type for ES solver.");
     }
-    es_solver->set_phi(left_voltage, right_voltage, RF_frequency, world.get_left_boundary_condition(), world.get_right_boundary_condition());
+    es_solver->set_phi(left_voltage, right_voltage, RF_frequency, world.left_boundary_condition, world.right_boundary_condition);
     es_solver->print_out();
     return es_solver;
 

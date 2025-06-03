@@ -26,7 +26,10 @@ class simulation {
     
 public:
     // Everything needed to simulate particle in cell
-    double del_t, simulation_time, averaging_time;
+    double del_t, simulation_time, averaging_time, current_time, diag_time_division, diag_time;
+    double start_time_total, tot_particle_time, tot_potential_time, tot_collision_time;
+    int current_diag_step;
+    size_t diag_step_diff, current_step; 
     double total_particle_momentum[3];
     double total_particle_KE[3];
     double total_field_energy;
@@ -42,6 +45,7 @@ public:
     simulation();
     void setup();
     void initialize_diagnostic_files();
+    void run();
 };
 
 // Function to remove a directory and its contents

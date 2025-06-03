@@ -3,6 +3,7 @@
 #include "particles/charged_particle.hpp"
 #include "globals/mpi_vars.hpp"
 #include "globals/constants.hpp"
+#include "globals/write_functions.hpp"
 #include <omp.h>
 #include <fstream>
 #include <sstream>
@@ -247,22 +248,26 @@ void charged_particle::initialize_rand_position_uniform(const domain& world) {
     {
         int thread_id = omp_get_thread_num();
         double particles_accum = 0.0;
-        double L_domain = world.get_domain_length();
+        double L_domain = world.length_domain;
         size_t particle_total = 0;
         size_t number_part = this->number_particles[thread_id][0];
-        int number_cells = world.get_number_cells();
+        int number_cells = world.number_cells;
         size_t start_idx = 0;
         size_t end_idx;
         std::vector<double>& xi_local = this->xi[thread_id];
         for (int i = 0; i < number_cells; i++){
             double dx;
-            if (world.get_domain_type() == 0) {
-                dx = world.get_min_dx();
-            } else if (world.get_domain_type() == 1) {
-                dx = world.get_dx_dxi()[i];
+            if (world.domain_type == 0) {
+                dx = world.min_dx;
+            } else if (world.domain_type == 1) {
+                dx = world.dx_dxi[i];
             }
             particles_accum += number_part * dx / L_domain;
-            size_t num_particles = std::floor(particles_accum - particle_total);
+            double ideal_particles = particles_accum - particle_total;
+            size_t num_particles = std::floor(ideal_particles);
+            if (pcg32_random_r() < ideal_particles - num_particles) {
+                num_particles += 1;
+            }
             end_idx = start_idx + num_particles;
             for (int part_idx = start_idx; part_idx < end_idx; part_idx++){
                 xi_local[part_idx] = i + pcg32_random_r();
@@ -410,6 +415,38 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
     #pragma omp barrier
     
 }
+
+void charged_particle::write_diagnostics(const std::string& dir_name, int diag_number) const {
+    if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(this->temperature, this->temperature.size(), dir_name + "/" + this->name + "/temperature/cell_temp_" + std::to_string(diag_number) + ".dat", 0);}
+}
+
+void charged_particle::write_phase_space(const std::string& dir_name) const {
+    // dir_name = file/charged_particles
+    for (int rank_num = 0; rank_num < mpi_vars::mpi_size; rank_num++){
+        if (mpi_vars::mpi_rank == rank_num) {
+            for (int i_thread = 0; i_thread<omp_get_max_threads();i_thread++){
+                bool append = !(mpi_vars::mpi_rank == 0 && i_thread == 0); // initialize for rank =0, thread = 0
+                size_t part_num = this->number_particles[i_thread][0];
+                write_vector_to_binary_file(this->xi[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/xi.dat", 0, 0x00, append);
+                write_vector_to_binary_file(this->v_x[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/v_x.dat", 0, 0x00, append);
+                if (this->number_space_coordinates > 1) {
+                    write_vector_to_binary_file(this->y[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/y.dat", 0, 0x00, append);
+                }
+                if (this->number_space_coordinates > 2) {
+                    write_vector_to_binary_file(this->z[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/z.dat", 0, 0x00, append);
+                }
+                if (this->number_velocity_coordinates > 1) {
+                    write_vector_to_binary_file(this->v_y[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/v_y.dat", 0, 0x00, append);
+                }
+                if (this->number_velocity_coordinates > 2) {
+                    write_vector_to_binary_file(this->v_z[i_thread], part_num, dir_name + "/" + this->name + "/phase_space/v_z.dat", 0, 0x00, append);
+                }
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+}
+
 void charged_particle::gather_mpi(){
     // Should be done after sorting and diagnostics
     #pragma omp barrier
@@ -453,11 +490,11 @@ void charged_particle::gather_mpi(){
 }
 
 
-void charged_particle::deposit_particles_linear(int thread_id, std::vector<double>& work_space) {
+void charged_particle::deposit_particles_linear(int thread_id, std::vector<double>& work_space) const {
     size_t last_idx = this->number_particles[thread_id][0];
     double d, xi_p;
     int xi_left, xi_right;
-    std::vector<double>& xi_local = this->xi[thread_id];
+    const std::vector<double>& xi_local = this->xi[thread_id];
     for (size_t part_indx = 0; part_indx < last_idx; part_indx++){
         xi_p = xi_local[part_indx];
         xi_left = int(xi_p);
@@ -1114,10 +1151,10 @@ std::vector<charged_particle> read_charged_particle_inputs(const std::string& di
         size_t final_in = factor[i];
         int number_space = number_space_coordinates[i];
         int number_velocity = number_velocity_coordinates[i];
-        charged_particle temp_particle(mass, charge, number_in, final_in, name, world.get_number_nodes());
+        charged_particle temp_particle(mass, charge, number_in, final_in, name, world.number_nodes);
         
         temp_particle.initialize_number_coordinates(number_space, number_velocity);
-        temp_particle.initialize_weight(n_ave[i], world.get_domain_length());
+        temp_particle.initialize_weight(n_ave[i], world.length_domain);
         temp_particle.initialize_rand_maxwellian(temp_in[i], v_drift[i]);
         temp_particle.initialize_rand_position_uniform(world);
         particle_list.push_back(temp_particle);

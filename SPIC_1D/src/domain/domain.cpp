@@ -1,12 +1,14 @@
 #include "domain/domain.hpp"
 #include "domain/uniform_domain.hpp"
 #include "domain/non_uniform_domain.hpp"
+#include "globals/write_functions.hpp"
 #include "globals/mpi_vars.hpp"
 #include <cmath>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <memory>
+#include <iomanip>
 
 // Uniform domain constructor
 
@@ -163,6 +165,37 @@ non_uniform_domain::non_uniform_domain(int num_cells, double length_domain, int 
    
 }
 
+void uniform_domain::write_domain(const std::string& filename) {
+    // Open file
+    if (mpi_vars::mpi_rank == 0) {
+        std::ofstream file(filename + "/domain/parameters.dat");
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+        file << "type, Number nodes, number cells, left_boundary_condition, right_boundary_condition, length_domain (m) \n";
+
+        file << std::scientific << std::setprecision(8);
+        file << this->domain_type << "\t"
+        << this->number_nodes << "\t"
+        << this->number_cells << "\t"
+        << this->left_boundary_condition << "\t"
+        << this->right_boundary_condition << "\t"
+        << this->length_domain <<
+        "\n";
+
+        file.close();
+
+        write_vector_to_binary_file(this->grid_nodes, this->number_nodes, filename + "/domain/grid.dat", 0);
+        std::vector<double> temp(1);
+        temp[0] = this->min_dx;
+        write_vector_to_binary_file(temp, 1, filename + "/domain/dx_dxi.dat", 0);
+
+    }
+}
+
 void non_uniform_domain::print_out(){
     if (mpi_vars::mpi_rank == 0) {
         std::cout << "Non-uniform domain with " << this->number_cells << " cells and " << this->number_nodes << " nodes." << std::endl;
@@ -172,6 +205,35 @@ void non_uniform_domain::print_out(){
         std::cout << "Right boundary condition: " << this->right_boundary_condition << std::endl;
         std::cout << "Curvilinear: " << (this->curvilinear ? "true" : "false") << std::endl;
         std::cout << "--------------------------------" << std::endl;
+    }
+}
+
+void non_uniform_domain::write_domain(const std::string& filename) {
+    // Open file
+    if (mpi_vars::mpi_rank == 0) {
+        std::ofstream file(filename + "/domain/parameters.dat");
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+        file << "type, Number nodes, number cells, left_boundary_condition, right_boundary_condition, length_domain (m) \n";
+
+        file << std::scientific << std::setprecision(8);
+        file << this->domain_type << "\t"
+        << this->number_nodes << "\t"
+        << this->number_cells << "\t"
+        << this->left_boundary_condition << "\t"
+        << this->right_boundary_condition << "\t"
+        << this->length_domain <<
+        "\n";
+
+        file.close();
+
+        write_vector_to_binary_file(this->grid_nodes, this->number_nodes, filename + "/domain/grid.dat", 0);
+        write_vector_to_binary_file(this->dx_dxi, this->number_cells, filename + "/domain/dx_dxi.dat", 0);
+
     }
 }
 

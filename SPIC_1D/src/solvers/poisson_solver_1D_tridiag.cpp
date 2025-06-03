@@ -3,14 +3,14 @@
 #include "globals/mpi_vars.hpp"
 
 poisson_solver_1D_tridiag::poisson_solver_1D_tridiag(const domain& world) {
-    this->number_unknowns = world.get_number_nodes();
+    this->number_unknowns = world.number_nodes;
     this->diagonal.resize(this->number_unknowns, 0.0);
     this->upper.resize(this->number_unknowns-1, 0.0);
     this->lower.resize(this->number_unknowns-1, 0.0);
     this->work_space.resize(this->number_unknowns, 0.0);
     if (typeid(world) == typeid(uniform_domain)) {
-        double dx = world.get_min_dx();
-        switch (world.get_left_boundary_condition()) {
+        double dx = world.min_dx;
+        switch (world.left_boundary_condition) {
             case 1:
             case 4:
             case 3:
@@ -25,7 +25,7 @@ poisson_solver_1D_tridiag::poisson_solver_1D_tridiag(const domain& world) {
                 throw std::invalid_argument("Invalid left boundary condition.");
         }
     
-        switch (world.get_right_boundary_condition()) {
+        switch (world.right_boundary_condition) {
             case 1:
             case 4:
             case 3:
@@ -46,8 +46,8 @@ poisson_solver_1D_tridiag::poisson_solver_1D_tridiag(const domain& world) {
             this->lower[i-1] = 1.0 / dx;
         }
     } else if (typeid(world) == typeid(non_uniform_domain)) {
-        const std::vector<double>& dx_dxi = world.get_dx_dxi();
-        switch (world.get_left_boundary_condition()) {
+        const std::vector<double>& dx_dxi = world.dx_dxi;
+        switch (world.left_boundary_condition) {
             case 1:
             case 4:
             case 3:
@@ -62,7 +62,7 @@ poisson_solver_1D_tridiag::poisson_solver_1D_tridiag(const domain& world) {
                 throw std::invalid_argument("Invalid left boundary condition.");
         }
     
-        switch (world.get_right_boundary_condition()) {
+        switch (world.right_boundary_condition) {
             case 1:
             case 4:
             case 3:

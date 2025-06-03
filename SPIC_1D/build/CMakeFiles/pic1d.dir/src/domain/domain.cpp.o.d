@@ -176,6 +176,7 @@ CMakeFiles/pic1d.dir/src/domain/domain.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/istream \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/istream.tcc \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/domain/non_uniform_domain.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/write_functions.hpp \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/mpi_vars.hpp \
   /opt/intel/oneapi/mpi/2021.14/include/mpi.h \
   /opt/intel/oneapi/mpi/2021.14/include/mpio.h \
@@ -207,4 +208,14 @@ CMakeFiles/pic1d.dir/src/domain/domain.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++io.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/fstream.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/sstream \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/sstream.tcc
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/sstream.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/iomanip \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/locale \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/locale_facets_nonio.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ctime \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/time_members.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/messages_members.h \
+  /usr/include/libintl.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/locale_facets_nonio.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/locale_conv.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/quoted_string.h

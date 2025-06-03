@@ -11,6 +11,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/pic1d.dir/src/domain/domain.cpp.o.d"
   "CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.o"
   "CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.o.d"
+  "CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.o"
+  "CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.o.d"
   "CMakeFiles/pic1d.dir/src/main.cpp.o"
   "CMakeFiles/pic1d.dir/src/main.cpp.o.d"
   "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o"

@@ -27,11 +27,15 @@ public:
     std::vector<double>& get_rho() {
         return this->rho;
     };
+    void initialize_diagnostic_files(const std::string& filename);
+    void write_phi(const std::string& filename);
 
     void set_phi(double left_voltage, double right_voltage, double RF_frequency, int left_boundary, int right_boundary);
 
     virtual void print_out() = 0;
+    virtual void write_particle_densities(const std::string file_path, const std::string filename, std::vector<charged_particle>& particle_list, const domain& world) const; // since density determinined by potential solver type
     virtual void deposit_charge_density(std::vector<charged_particle>& particle_list, int thread_id);
+    virtual void deposit_density(std::vector<charged_particle>& particle_list, int thread_id);
     virtual void solve_potential(double current_time, const domain& world);
     virtual void make_EField(const domain& world);
     virtual void push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) = 0;

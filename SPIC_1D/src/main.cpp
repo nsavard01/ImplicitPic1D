@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
     
     simulation simulator;
     simulator.setup();
+    // simulator.run();
     MPI_Finalize();
     return 0;
 }

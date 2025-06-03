@@ -42,18 +42,19 @@ public:
         const double dx, const int left_boundary, const int right_boundary, int number_cells);
     void ES_push_EC_non_uniform(int thread_id, double del_t, const std::vector<double>& E_field, 
         const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, int number_cells);    
-    void deposit_particles_linear(int thread_id, std::vector<double>& work_space);
+    void deposit_particles_linear(int thread_id, std::vector<double>& work_space) const;
     // double get_KE_ave() const;
     // double get_KE_total() const;
     // void interpolate_particles();
     // double get_momentum_total() const;
     // void write_cell_temperature(const std::string& dir_name, int diag_num) const;
     void initialize_diagnostic_files(const std::string& dir_name) const; 
+    void write_diagnostics(const std::string& dir_name, int diag_number) const; 
     // void diag_write(const std::string& dir_name, const double& time_diff, const double& current_time, bool average_bool = false) const;
     // void load_density(bool reset_bool);
     // void write_density(const std::string& dir_name, const domain& world, size_t current_diag, bool average_bool);
     // void gather_mpi();
-    // void write_phase_space(const std::string& dir_name, int diag_num) const;
+    void write_phase_space(const std::string& dir_name) const;
 };
 
 std::vector<charged_particle> read_charged_particle_inputs(const std::string& filename, const domain& world);

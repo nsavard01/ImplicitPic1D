@@ -78,6 +78,18 @@ void simulation::initialize_diagnostic_files() {
                     std::cerr << "Save directory not successfully created!" << std::endl;
                     MPI_Abort(MPI_COMM_WORLD, 1);
                 }
+                if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/density")) {
+                    std::cerr << "Save directory not successfully created!" << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/temperature")) {
+                    std::cerr << "Save directory not successfully created!" << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/phase_space")) {
+                    std::cerr << "Save directory not successfully created!" << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
                 if (this->null_collider_list[i].number_targets > 0) {
                     if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/null_collision")) {
                         std::cerr << "Save directory not successfully created!" << std::endl;
@@ -143,11 +155,10 @@ void simulation::initialize_diagnostic_files() {
         file.open(folder_name + "/initital_condition.dat");
 
         // Write header (optional)
-        file << "number MPI, number threads, Number Grid Nodes, Final Expected Time(s), Delta t(s), numDiag \n";
+        file << "number MPI, number threads, Final Expected Time(s), Delta t(s), numDiag \n";
         file << std::scientific << std::setprecision(8);
         file << mpi_vars::mpi_size << "\t"
             << omp_get_max_threads() << "\t"
-            << this->world->number_nodes << "\t"
             << this->simulation_time << "\t"
             << this->del_t << "\t"
             << this->number_diagnostics
@@ -169,6 +180,9 @@ void simulation::initialize_diagnostic_files() {
 
         file.close();
 
+        this->world->write_domain(folder_name);
+        this->field_solver->initialize_diagnostic_files(folder_name);
+
         for (int part_num = 0; part_num < this->target_particle_list.size(); part_num++) {
             this->target_particle_list[part_num].initialize_diagnostic_files(folder_name);
         }
@@ -177,7 +191,7 @@ void simulation::initialize_diagnostic_files() {
             this->null_collider_list[part_num].initialize_diagnostic_files(folder_name, this->charged_particle_list, this->target_particle_list);
         }
 
-
+        
 
     }
 }
@@ -320,11 +334,41 @@ void simulation::setup() {
         std::cout << "------------------------------" << std::endl;
         std::cout << " " << std::endl;
     }
-
     // Setup directories
     this->initialize_diagnostic_files();
+    this->save_file_folder = this->save_file_path + this->save_file_folder;
+    this->current_time = 0.0;
+
+    // Initialize potential and diagnostics
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+            this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
+            this->charged_particle_list[part_num].gather_mpi();
+        }
+        #pragma omp barrier
+        this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
+        // get density
+        this->field_solver->deposit_density(this->charged_particle_list, thread_id);
+    }
+    this->field_solver->solve_potential(this->current_time, *this->world);
+    this->field_solver->make_EField(*this->world);
+
+    // write initial states
+    this->field_solver->write_phi(this->save_file_folder + "/phi/potential_0.dat");
+    this->field_solver->write_particle_densities(this->save_file_folder + "/charged_particles", "density_0.dat", this->charged_particle_list, *this->world);
+    for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+        this->charged_particle_list[part_num].write_diagnostics(this->save_file_folder + "/charged_particles", 0);
+        this->charged_particle_list[part_num].write_phase_space(this->save_file_folder + "/charged_particles");
+    }
 
     
+
+}
+
+void simulation::run() {
+
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
@@ -371,4 +415,5 @@ void simulation::setup() {
         }
         #pragma omp barrier
     }
+
 }

@@ -5,9 +5,9 @@
 #include "solvers/poisson_solver_1D_tridiag.hpp"
 
 ES_solver_MC::ES_solver_MC(const domain& world) {
-    this->phi.resize(world.get_number_nodes(), 0.0);
-    this->rho.resize(world.get_number_nodes(), 0.0);
-    this->E_field.resize(world.get_number_nodes(), 0.0);
+    this->phi.resize(world.number_nodes, 0.0);
+    this->rho.resize(world.number_nodes, 0.0);
+    this->E_field.resize(world.number_nodes, 0.0);
     int number_threads = omp_get_max_threads();
     this->work_space.resize(number_threads);
     for (int i = 0; i < number_threads; i++) {
