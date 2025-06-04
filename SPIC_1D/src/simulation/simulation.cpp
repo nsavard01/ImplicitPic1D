@@ -43,6 +43,7 @@ simulation::simulation() {
 
 void simulation::initialize_diagnostic_files() {
     if (mpi_vars::mpi_rank == 0) {
+        std::cout << "Initializing diagnostic files in save directory... ";
         std::string folder_name = this->save_file_path + this->save_file_folder;
         bool dirExists = directoryExists(this->save_file_path);
         if (dirExists) {
@@ -152,7 +153,7 @@ void simulation::initialize_diagnostic_files() {
 
         file.close();
 
-        file.open(folder_name + "/initital_condition.dat");
+        file.open(folder_name + "/initial_condition.dat");
 
         // Write header (optional)
         file << "number MPI, number threads, Final Expected Time(s), Delta t(s), numDiag \n";
@@ -169,14 +170,14 @@ void simulation::initialize_diagnostic_files() {
         file.open(folder_name + "/simulation_timing_data.dat");
 
         // Write header (optional)
-        file << "Elapsed Times(s), potential Time (s), mover Time (s), null collision Time (s), artificial collision time(s), total Steps \n";
+        file << "Total time (s), field time (s), particle_time (s), null collision time (s), artificial collision time (s) \n";
 
         file.close();
 
         file.open(folder_name + "/global_diagnostic_data.dat");
 
         // Write header (optional)
-        file << "Time (s), Collision Loss (W/m^2), ParticleCurrentLoss (A/m^2), ParticlePowerLoss(W/m^2), TotalMomentum(kg/m/s), TotalEnergy(J/m^2) \n";
+        file << "Time (s), total steps, runtime (s) \n";
 
         file.close();
 
@@ -191,7 +192,7 @@ void simulation::initialize_diagnostic_files() {
             this->null_collider_list[part_num].initialize_diagnostic_files(folder_name, this->charged_particle_list, this->target_particle_list);
         }
 
-        
+        std::cout << "Done" << std::endl;
 
     }
 }
@@ -337,33 +338,104 @@ void simulation::setup() {
     // Setup directories
     this->initialize_diagnostic_files();
     this->save_file_folder = this->save_file_path + this->save_file_folder;
+    this->simulation_start_time = 0.0;
+    this->diag_time_division = (this->simulation_time - this->simulation_start_time)/(this->number_diagnostics-1);
+    this->current_diag_step = 0;
     this->current_time = 0.0;
+    this->elapsed_time = 0.0;
+    this->current_step = 0;
+    this->particle_time = 0;
+    this->field_time = 0;
+    this->null_collision_time = 0;
+    this->art_collision_time = 0;
 
     // Initialize potential and diagnostics
+    if (mpi_vars::mpi_rank == 0) {
+        std::cout << "" << std::endl;
+        std::cout << "Initializing potential and let us run!" << std::endl;
+        std::cout << "------------" << std::endl;
+     }
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
-        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-            this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
-            this->charged_particle_list[part_num].gather_mpi();
-        }
-        #pragma omp barrier
         this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
-        // get density
-        this->field_solver->deposit_density(this->charged_particle_list, thread_id);
+        #pragma omp barrier
+        #pragma omp master
+        {
+            this->field_solver->solve_potential(this->current_time, *this->world);
+            this->field_solver->make_EField(*this->world);
+        }
+        this->diagnostics(thread_id);
     }
-    this->field_solver->solve_potential(this->current_time, *this->world);
-    this->field_solver->make_EField(*this->world);
-
-    // write initial states
-    this->field_solver->write_phi(this->save_file_folder, "potential_0.dat");
-    this->field_solver->write_particle_densities(this->save_file_folder, "density_0.dat", this->charged_particle_list, *this->world);
-    for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-        this->charged_particle_list[part_num].write_diagnostics(this->save_file_folder, 0);
-    }
+    
 
     
 
+    
+
+}
+
+void simulation::diagnostics(int thread_id) {
+
+    #pragma omp barrier
+    // write initial diagnostics
+    
+    
+    for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+        this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, this->world->number_cells);
+    }
+    #pragma omp barrier
+    this->field_solver->deposit_density(this->charged_particle_list, thread_id);
+    #pragma omp barrier
+    #pragma omp master
+    {
+        this->field_solver->solve_field_energy(*this->world);
+        this->field_solver->write_diagnostics(this->save_file_folder, this->current_diag_step);
+        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+            this->charged_particle_list[part_num].gather_mpi();
+            this->charged_particle_list[part_num].write_diagnostics(this->save_file_folder, this->current_diag_step);
+            this->null_collider_list[part_num].gather_mpi();
+            this->null_collider_list[part_num].write_diagnostics(this->save_file_folder, this->charged_particle_list, this->target_particle_list, this->del_t);
+        }
+        this->field_solver->write_particle_densities(this->save_file_folder, "density_" + std::to_string(this->current_diag_step) + ".dat", this->charged_particle_list, *this->world);
+        for (int t_idx = 0; t_idx < this->target_particle_list.size(); t_idx++) {
+            this->target_particle_list[t_idx].write_diagnostics(this->save_file_folder, this->current_diag_step);
+        }
+
+        if (mpi_vars::mpi_rank == 0) {
+            std::ofstream file(this->save_file_folder + "/global_diagnostic_data.dat", std::ios::app);
+
+            file << std::scientific << std::setprecision(8);
+            file << this->current_time << "\t"
+            << this->current_step << "\t"
+            << this->elapsed_time << "\n";
+
+            file.close();
+
+            file.open(this->save_file_folder + "/simulation_timing_data.dat", std::ios::app);
+
+            file << std::scientific << std::setprecision(8);
+            file << this->elapsed_time << "\t"
+            << this->field_time << "\t"
+            << this->particle_time << "\t"
+            << this->null_collision_time << "\t"
+            << this->art_collision_time << "\n";
+
+            file.close();
+
+            std::cout << "" << std::endl;
+            std::cout << "-------------------------------" << std::endl;
+            std::cout << "Diagnostics # " << std::to_string(this->current_diag_step+1) << "/" << std::to_string(this->number_diagnostics) << std::endl;
+            for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+                std::cout << "Particle " << this->charged_particle_list[part_num].name << ", total #: " << this->charged_particle_list[part_num].total_number_particles << " , n_ave: " 
+                << this->charged_particle_list[part_num].average_density << " (1/m^3) , T_ave: " << this->charged_particle_list[part_num].average_temperature << " (eV) " << std::endl;
+            }
+            std::cout << "-------------------------------" << std::endl;
+            std::cout << "" << std::endl;
+        }
+    }
+
+    #pragma omp barrier
 }
 
 void simulation::run() {

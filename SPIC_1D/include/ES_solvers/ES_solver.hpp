@@ -17,6 +17,9 @@ public:
     double RF_half_amplitude, RF_rad_frequency, left_voltage, right_voltage; // RF amplitude and frequency
     std::unique_ptr<poisson_solver_1D> poisson_solver; // pointer to the Poisson solver
     std::vector<std::vector<double>> work_space;
+
+    // diagnostics
+    double total_field_energy;
     
     virtual ~ES_solver() = default;
     
@@ -28,7 +31,7 @@ public:
         return this->rho;
     };
     void initialize_diagnostic_files(const std::string& filename);
-    void write_phi(const std::string& dir_name, const std::string& filename);
+    void write_diagnostics(const std::string& dir_name, int diag_number);
 
     void set_phi(double left_voltage, double right_voltage, double RF_frequency, int left_boundary, int right_boundary);
 
@@ -37,6 +40,7 @@ public:
     virtual void deposit_charge_density(std::vector<charged_particle>& particle_list, int thread_id);
     virtual void deposit_density(std::vector<charged_particle>& particle_list, int thread_id);
     virtual void solve_potential(double current_time, const domain& world);
+    virtual void solve_field_energy(const domain& world);
     virtual void make_EField(const domain& world);
     virtual void push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) = 0;
 

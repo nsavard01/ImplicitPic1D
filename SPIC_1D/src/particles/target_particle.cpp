@@ -59,6 +59,22 @@ void target_particle::initialize_diagnostic_files(const std::string& dir_name) c
     }
 }
 
+void target_particle::write_diagnostics(const std::string& dir_name, int diag_number) const {
+    if (mpi_vars::mpi_rank == 0) {
+    
+        std::ofstream file(dir_name + "/target_particles/" + this->name + "/ave_diagnostics.dat", std::ios::app);
+        if (!file) {
+            std::cerr << "Error opening file for target particle \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        file << std::scientific << std::setprecision(8);
+        file << this->average_density << "\t"
+        << this->average_temperature << "\n";
+
+        file.close();
+    }
+}
+
 
 
 

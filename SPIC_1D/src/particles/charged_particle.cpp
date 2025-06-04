@@ -504,43 +504,28 @@ void charged_particle::write_phase_space(const std::string& dir_name) const {
 
 void charged_particle::gather_mpi(){
     // Should be done after sorting and diagnostics
-    #pragma omp barrier
-    #pragma omp master
-    {
-        this->total_number_particles = 0;
-        for (int i = 0; i < omp_get_max_threads(); i++){
-            this->total_number_particles += this->number_particles[i][0];
-        }
-        MPI_Allreduce(MPI_IN_PLACE, &this->total_number_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v_square, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_energy_loss, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[0].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[1].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_loss, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, this->temperature.data(), this->temperature.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
-        MPI_Allreduce(MPI_IN_PLACE, this->number_particles_per_cell.data(), this->number_particles_per_cell.size(), mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
-        if (mpi_vars::mpi_rank == 0) {
-            this->average_temperature = 0.0;
-            for (size_t i = 0; i < this->temperature.size(); i++) {
-                this->average_temperature += this->temperature[i];
-                this->temperature[i] = this->temperature[i] * this->mass /static_cast<double>(this->number_particles_per_cell[i])/ double(this->number_velocity_coordinates) / constants::elementary_charge; // convert to temperature     
-            }
-            this->average_temperature = this->average_temperature * this->mass / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
-            std::cout << "Total number of particles: " << this->total_number_particles << std::endl;
-            std::cout << "Total sum of velocity: " << this->total_sum_v[0] << ", " << this->total_sum_v[1] << ", " << this->total_sum_v[2] << std::endl;
-            std::cout << "Total sum of velocity square: " << this->total_sum_v_square[0] << ", " << this->total_sum_v_square[1] << ", " << this->total_sum_v_square[2] << std::endl;
-            std::cout << "Accumulated wall loss: " << this->accum_wall_loss[0] << ", " << this->accum_wall_loss[1] << std::endl;
-            std::cout << "Accumulated wall energy loss: " << this->accum_wall_energy_loss[0] << ", " << this->accum_wall_energy_loss[1] << std::endl;
-            std::cout << "Accumulated wall momentum loss: " << this->accum_wall_momentum_loss[0][0] << ", " << this->accum_wall_momentum_loss[0][1] << ", " << this->accum_wall_momentum_loss[0][2] << std::endl;
-            std::cout << "Accumulated wall momentum loss: " << this->accum_wall_momentum_loss[1][0] << ", " << this->accum_wall_momentum_loss[1][1] << ", " << this->accum_wall_momentum_loss[1][2] << std::endl;
-            std::cout << "Average temperature: " << this->average_temperature << std::endl;
-            // for (size_t i = 0; i < this->number_particles_per_cell.size(); i++) {
-            //     std::cout << "Number of particles in cell " << i << ": " << this->number_particles_per_cell[i] << std::endl;
-            // }
-        }
+    
+    this->total_number_particles = 0;
+    for (int i = 0; i < omp_get_max_threads(); i++){
+        this->total_number_particles += this->number_particles[i][0];
     }
-    #pragma omp barrier
+    MPI_Allreduce(MPI_IN_PLACE, &this->total_number_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v_square, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_energy_loss, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[0].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[1].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_loss, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->temperature.data(), this->temperature.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
+    MPI_Allreduce(MPI_IN_PLACE, this->number_particles_per_cell.data(), this->number_particles_per_cell.size(), mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    if (mpi_vars::mpi_rank == 0) {
+        this->average_temperature = 0.0;
+        for (size_t i = 0; i < this->temperature.size(); i++) {
+            this->average_temperature += this->temperature[i];
+            this->temperature[i] = this->temperature[i] * this->mass /static_cast<double>(this->number_particles_per_cell[i])/ double(this->number_velocity_coordinates) / constants::elementary_charge; // convert to temperature     
+        }
+        this->average_temperature = this->average_temperature * this->mass / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
+    }
     
 }
 

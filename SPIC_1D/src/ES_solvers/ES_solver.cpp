@@ -60,13 +60,52 @@ void ES_solver::initialize_diagnostic_files(const std::string& filename) {
 
         file.close();
 
+        file.open(filename + "/field_diagnostics.dat");
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+        file << "field energy (J/m^2) \n";
+
+        file.close();
         
 
     }
 }
 
-void ES_solver::write_phi(const std::string& dir_name, const std::string& filename) {
-    if (mpi_vars::mpi_rank == 0) {write_vector_to_binary_file(this->phi, this->phi.size(), dir_name + "/phi/" + filename, 0);}
+void ES_solver::solve_field_energy(const domain& world) {
+    double sum = 0.0;
+    // rho in computational space, so already have rho * delta_x, don't need take into consideration different delta_x non-uniform
+    if (world.left_boundary_condition == 2) {
+        sum += this->phi[0] * this->rho[0]; // only half rho considered and only getting energy in half cell
+    }
+    if (world.right_boundary_condition == 2) {
+        sum += this->phi[world.number_cells] * this->rho[world.number_cells];
+    }
+    for (int i = 1; i < world.number_cells; i++) {
+        sum += this->phi[i] * this->rho[i];
+    }
+    this->total_field_energy = 0.5 * sum; // J/m^2
+}
+
+void ES_solver::write_diagnostics(const std::string& dir_name, int diag_number) {
+    if (mpi_vars::mpi_rank == 0) {
+        write_vector_to_binary_file(this->phi, this->phi.size(), dir_name + "/phi/potential_" + std::to_string(diag_number) + ".dat", 0);
+        std::ofstream file(dir_name + "/field_diagnostics.dat", std::ios::app);
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+
+        file << std::scientific << std::setprecision(8);
+        file << this->total_field_energy << "\n";
+
+        file.close();
+    }
 }
 
 

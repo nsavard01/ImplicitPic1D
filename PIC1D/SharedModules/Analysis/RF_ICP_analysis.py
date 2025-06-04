@@ -54,6 +54,8 @@ ECExp_ICP_highPressure_128Cells_sinusoid_6400delT_6400PPC = dataSetExplicit('Y:/
 
 ECExp_ICP_highPressure_64Cells_sinusoid_6400delT_64PPC = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/ECExp_ICP_highPressure_64Cells_sinusoid_6400delT_64PPC/')
 
+NGP_ICP_lowPressure_128Cells_uniform_640delT_3200PPC_highDensity = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_lowPressure_128Cells_uniform_640delT_3200PPC_highDensity/')
+
 NGP_ICP_highPressure_200Cells_uniform_2500delT_100PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_100PPC/')
 NGP_ICP_highPressure_200Cells_uniform_2500delT_200PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_200PPC/')
 NGP_ICP_highPressure_200Cells_uniform_2500delT_400PPC = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_ICP_highPressure_200Cells_uniform_2500delT_400PPC/')
