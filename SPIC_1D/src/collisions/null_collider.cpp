@@ -50,6 +50,21 @@ null_collider::null_collider(int primary_idx, int number_targets, const std::vec
                 this->collision_id[i][j] = j;
             }
         }
+        int max_threads = omp_get_max_threads();
+        this->total_incident_energy_thread.resize(max_threads);
+        this->total_amount_collisions_thread.resize(max_threads);
+        this->total_energy_loss_thread.resize(max_threads);
+        for (int i_thread = 0; i_thread < max_threads; i_thread++) {
+            this->total_incident_energy_thread[i_thread].resize(this->number_targets);
+            this->total_amount_collisions_thread[i_thread].resize(this->number_targets);
+            this->total_energy_loss_thread[i_thread].resize(this->number_targets);
+            for (int i = 0; i < this->number_targets; i++) {
+                int num_collisions = this->number_collisions_per_target[i];
+                this->total_incident_energy_thread[i_thread][i].resize(num_collisions, 0);
+                this->total_amount_collisions_thread[i_thread][i].resize(num_collisions, 0);
+                this->total_energy_loss_thread[i_thread][i].resize(num_collisions, 0);
+            }
+        }
     }
     
     
@@ -307,8 +322,9 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
         const std::vector<int>& number_collisions_per_target_local = this->number_collisions_per_target;
         const std::vector<std::vector<std::vector<int>>>& product_indices_local = this->product_indices;
         const std::vector<std::vector<int>>& collision_type_per_target_local = this->collision_type_per_target;
-        std::vector<std::vector<size_t>> total_collisions(number_targets_local);
-        std::vector<std::vector<double>> energy_loss(number_targets_local), tot_incident_energy(number_targets_local);
+        std::vector<std::vector<size_t>>& total_collisions = this->total_amount_collisions_thread[thread_id];
+        std::vector<std::vector<double>>& energy_loss = this->total_energy_loss_thread[thread_id];
+        std::vector<std::vector<double>>& tot_incident_energy = this->total_incident_energy_thread[thread_id];
         std::vector<double> target_mass(number_targets_local),
 
         // generate local vectors for target and diagnostics
@@ -318,9 +334,6 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
             target_mass[i] = target_particle_list[idx].mass;
             target_density[i] = target_particle_list[idx].average_density;
             v_therm[i] = target_particle_list[idx].v_therm;
-            energy_loss[i].resize(number_collisions_per_target_local[i], 0.0);
-            tot_incident_energy[i].resize(number_collisions_per_target_local[i], 0.0);
-            total_collisions[i].resize(number_collisions_per_target_local[i], 0);
         }
 
         // Calculate 
@@ -488,13 +501,6 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
         #pragma omp critical
         {
             this->total_amount_collidable_particles += initial_amount_collidable_particles;
-            for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
-                for (int coll_idx=0;coll_idx<this->number_collisions_per_target[t_idx];coll_idx++){
-                    this->total_incident_energy[t_idx][coll_idx] += tot_incident_energy[t_idx][coll_idx];
-                    this->total_energy_loss[t_idx][coll_idx] += energy_loss[t_idx][coll_idx];
-                    this->total_amount_collisions[t_idx][coll_idx] += total_collisions[t_idx][coll_idx];
-                } 
-            }
         }
     
     }
@@ -573,11 +579,35 @@ void null_collider::write_diagnostics(const std::string& dir_name, const std::ve
 void null_collider::gather_mpi() {
     MPI_Allreduce(MPI_IN_PLACE, &this->total_amount_collidable_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+        std::fill(this->total_incident_energy[t_idx].begin(), this->total_incident_energy[t_idx].end(), 0);
+        std::fill(this->total_energy_loss[t_idx].begin(), this->total_energy_loss[t_idx].end(), 0);
+        std::fill(this->total_amount_collisions[t_idx].begin(), this->total_amount_collisions[t_idx].end(), 0);
+        for (int coll_idx = 0; coll_idx < this->number_collisions_per_target[t_idx]; coll_idx++) {
+            for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+                this->total_incident_energy[t_idx][coll_idx] += this->total_incident_energy_thread[i_thread][t_idx][coll_idx];
+                this->total_energy_loss[t_idx][coll_idx] += this->total_energy_loss_thread[i_thread][t_idx][coll_idx];
+                this->total_amount_collisions[t_idx][coll_idx] += this->total_amount_collisions_thread[i_thread][t_idx][coll_idx];
+            }
+        }
         MPI_Allreduce(MPI_IN_PLACE, this->total_incident_energy[t_idx].data(), this->number_collisions_per_target[t_idx], MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, this->total_energy_loss[t_idx].data(), this->number_collisions_per_target[t_idx], MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, this->total_amount_collisions[t_idx].data(), this->number_collisions_per_target[t_idx], mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     }
     
+}
+
+void null_collider::reset_diagnostics(int thread_id) {
+    if (this->number_targets > 0) {
+        #pragma omp master 
+        {
+            this->total_amount_collidable_particles = 0;
+        }
+        for (int t_idx = 0; t_idx < this->number_targets; t_idx++){
+            std::fill(this->total_incident_energy_thread[thread_id][t_idx].begin(), this->total_incident_energy_thread[thread_id][t_idx].end(), 0.0);
+            std::fill(this->total_energy_loss_thread[thread_id][t_idx].begin(), this->total_energy_loss_thread[thread_id][t_idx].end(), 0.0);
+            std::fill(this->total_amount_collisions_thread[thread_id][t_idx].begin(), this->total_amount_collisions_thread[thread_id][t_idx].end(), 0);
+        }
+    }
 }
 
 

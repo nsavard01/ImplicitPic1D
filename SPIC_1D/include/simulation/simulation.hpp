@@ -43,6 +43,7 @@ public:
     void setup();
     void initialize_diagnostic_files();
     void diagnostics(int thread_id);
+    void reset_diagnostics(int thread_id);
     void run();
 };
 

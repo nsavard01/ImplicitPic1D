@@ -365,7 +365,12 @@ void simulation::setup() {
             this->field_solver->solve_potential(this->current_time, *this->world);
             this->field_solver->make_EField(*this->world);
         }
+        #pragma omp barrier
         this->diagnostics(thread_id);
+        #pragma omp barrier
+        this->reset_diagnostics(thread_id);
+        
+
     }
     
 
@@ -382,7 +387,7 @@ void simulation::diagnostics(int thread_id) {
     
     
     for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-        this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, this->world->number_cells);
+        this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells);
     }
     #pragma omp barrier
     this->field_solver->deposit_density(this->charged_particle_list, thread_id);
@@ -438,53 +443,67 @@ void simulation::diagnostics(int thread_id) {
     #pragma omp barrier
 }
 
+void simulation::reset_diagnostics(int thread_id) {
+    for (int i = 0; i<this->charged_particle_list.size(); i++){
+        this->charged_particle_list[i].reset_diagnostics(thread_id);
+        this->null_collider_list[i].reset_diagnostics(thread_id);
+    }
+    #pragma omp master
+    {
+        this->diag_step_diff = 0;
+    }
+}
+
 void simulation::run() {
 
-    #pragma omp parallel
-    {
-        int thread_id = omp_get_thread_num();
+    // double start_timer, end_timer;
+    // this->start_time_total = MPI_Wtime();
+
+    // #pragma omp parallel
+    // {
+    //     int thread_id = omp_get_thread_num();
         
-        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-            this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
-            this->charged_particle_list[part_num].gather_mpi();
-        }
-        #pragma omp barrier
-        #pragma omp master
-        {
-            if (mpi_vars::mpi_rank == 0) {
-                double sum = 0.0;
-                for (int i = 0; i < this->charged_particle_list.size(); i++) {
-                    sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
-                }
-                std::cout << "Total mv_x: " << sum << std::endl;
-            }
-        }
-        #pragma omp barrier
-        this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
-        #pragma omp master
-        {
-            this->field_solver->solve_potential(0.0, *this->world);
-            this->field_solver->make_EField(*this->world);
-        }
-        #pragma omp barrier
-        this->field_solver->push_particles(thread_id, this->del_t, this->charged_particle_list, *this->world);
-        #pragma omp barrier
-        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-            this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
-            this->charged_particle_list[part_num].gather_mpi();
-        }
-        #pragma omp barrier
-        #pragma omp master
-        {
-            if (mpi_vars::mpi_rank == 0) {
-                double sum = 0.0;
-                for (int i = 0; i < this->charged_particle_list.size(); i++) {
-                    sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
-                }
-                std::cout << "Total mv_x: " << sum << std::endl;
-            }
-        }
-        #pragma omp barrier
-    }
+    //     for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+    //         this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
+    //         this->charged_particle_list[part_num].gather_mpi();
+    //     }
+    //     #pragma omp barrier
+    //     #pragma omp master
+    //     {
+    //         if (mpi_vars::mpi_rank == 0) {
+    //             double sum = 0.0;
+    //             for (int i = 0; i < this->charged_particle_list.size(); i++) {
+    //                 sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
+    //             }
+    //             std::cout << "Total mv_x: " << sum << std::endl;
+    //         }
+    //     }
+    //     #pragma omp barrier
+    //     this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
+    //     #pragma omp master
+    //     {
+    //         this->field_solver->solve_potential(0.0, *this->world);
+    //         this->field_solver->make_EField(*this->world);
+    //     }
+    //     #pragma omp barrier
+    //     this->field_solver->push_particles(thread_id, this->del_t, this->charged_particle_list, *this->world);
+    //     #pragma omp barrier
+    //     for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+    //         this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
+    //         this->charged_particle_list[part_num].gather_mpi();
+    //     }
+    //     #pragma omp barrier
+    //     #pragma omp master
+    //     {
+    //         if (mpi_vars::mpi_rank == 0) {
+    //             double sum = 0.0;
+    //             for (int i = 0; i < this->charged_particle_list.size(); i++) {
+    //                 sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
+    //             }
+    //             std::cout << "Total mv_x: " << sum << std::endl;
+    //         }
+    //     }
+    //     #pragma omp barrier
+    // }
 
 }

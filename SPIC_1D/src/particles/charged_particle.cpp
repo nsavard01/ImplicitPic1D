@@ -279,26 +279,10 @@ void charged_particle::initialize_rand_position_uniform(const domain& world) {
 
 }
 
-void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells) {
+void charged_particle::sort_particle(int thread_id, int number_cells) {
 
     
-    #pragma omp barrier
-    #pragma omp for
-    for (int i = 0; i < number_cells; i++){
-        this->temperature[i] = 0.0;
-    }
-    #pragma omp master
-    {
-        for (int i = 0; i < this->number_velocity_coordinates; i++){
-            this->total_sum_v[i] = 0.0;
-            this->total_sum_v_square[i] = 0.0;
-        }
-    }
-    #pragma omp barrier
-    double sum_v_sq[3];
-    double sum_v[3];
-    sum_v[0] = 0.0; sum_v[1] = 0.0; sum_v[2] = 0.0;
-    sum_v_sq[0] = 0.0; sum_v_sq[1] = 0.0; sum_v_sq[2] = 0.0;
+    
     bool use_vy = (this->number_velocity_coordinates > 1);
     bool use_vz = (this->number_velocity_coordinates > 2);
     bool use_y = (this->number_space_coordinates > 1);
@@ -307,7 +291,6 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
     size_t last_idx = this->number_particles[thread_id][0];
     size_t local_indx;
     double xi_temp = 0.0, y_temp = 0.0, z_temp = 0.0, v_x_temp = 0.0, v_y_temp = 0.0, v_z_temp = 0.0;
-    double v_sqr;
     std::vector<double>& xi_local = this->xi[thread_id];
     std::vector<double>& v_x_local = this->v_x[thread_id];
     std::vector<double>& v_x_sorted_local = charged_particle::v_x_sorted[thread_id];
@@ -317,26 +300,6 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
     std::vector<double> local_v_sqr(number_cells, 0.0);
     std::fill(number_part_cell_local.begin(), number_part_cell_local.end(), 0);
 
-    for (size_t part_num = 0; part_num < last_idx; part_num++){
-        xi_temp = xi_local[part_num];
-        v_x_temp = v_x_local[part_num];
-        local_indx = int(xi_temp);
-        if (use_vy) {
-            v_y_temp = this->v_y[thread_id][part_num];
-            sum_v_sq[1] += v_y_temp * v_y_temp;
-        }
-        if (use_vz) {
-            v_z_temp = this->v_z[thread_id][part_num];
-            sum_v_sq[2] += v_z_temp * v_z_temp;
-        }
-        sum_v[0] += v_x_temp;
-        sum_v[1] += v_y_temp;
-        sum_v[2] += v_z_temp;
-        sum_v_sq[0] += v_x_temp * v_x_temp;
-        v_sqr = v_x_temp * v_x_temp + v_y_temp * v_y_temp + v_z_temp * v_z_temp;
-        local_v_sqr[local_indx] += v_sqr; // add paticle energy to cell
-        number_part_cell_local[local_indx]++;
-    }
     
     cell_indices_local[0] = 0;
     for (size_t i = 1; i <= number_cells; i++){
@@ -386,6 +349,63 @@ void charged_particle::sort_particle_diagnostics(int thread_id, int number_cells
         std::swap(this->v_z[thread_id], charged_particle::v_z_sorted[thread_id]);
     }
 
+    
+}
+
+void charged_particle::get_particle_diagnostics(int thread_id, int number_cells) {
+
+    
+    #pragma omp barrier
+    #pragma omp for
+    for (int i = 0; i < number_cells; i++){
+        this->temperature[i] = 0.0;
+    }
+    #pragma omp master
+    {
+        for (int i = 0; i < this->number_velocity_coordinates; i++){
+            this->total_sum_v[i] = 0.0;
+            this->total_sum_v_square[i] = 0.0;
+        }
+    }
+    #pragma omp barrier
+    double sum_v_sq[3];
+    double sum_v[3];
+    sum_v[0] = 0.0; sum_v[1] = 0.0; sum_v[2] = 0.0;
+    sum_v_sq[0] = 0.0; sum_v_sq[1] = 0.0; sum_v_sq[2] = 0.0;
+    bool use_vy = (this->number_velocity_coordinates > 1);
+    bool use_vz = (this->number_velocity_coordinates > 2);
+    
+    size_t last_idx = this->number_particles[thread_id][0];
+    size_t local_indx;
+    double xi_temp = 0.0, v_x_temp = 0.0, v_y_temp = 0.0, v_z_temp = 0.0;
+    double v_sqr;
+    std::vector<double>& xi_local = this->xi[thread_id];
+    std::vector<double>& v_x_local = this->v_x[thread_id];
+    std::vector<size_t>& number_part_cell_local = charged_particle::sorted_number_particles_per_cell[thread_id];
+    std::vector<double> local_v_sqr(number_cells, 0.0);
+    std::fill(number_part_cell_local.begin(), number_part_cell_local.end(), 0);
+
+    for (size_t part_num = 0; part_num < last_idx; part_num++){
+        xi_temp = xi_local[part_num];
+        v_x_temp = v_x_local[part_num];
+        local_indx = int(xi_temp);
+        if (use_vy) {
+            v_y_temp = this->v_y[thread_id][part_num];
+            sum_v_sq[1] += v_y_temp * v_y_temp;
+        }
+        if (use_vz) {
+            v_z_temp = this->v_z[thread_id][part_num];
+            sum_v_sq[2] += v_z_temp * v_z_temp;
+        }
+        sum_v[0] += v_x_temp;
+        sum_v[1] += v_y_temp;
+        sum_v[2] += v_z_temp;
+        sum_v_sq[0] += v_x_temp * v_x_temp;
+        v_sqr = v_x_temp * v_x_temp + v_y_temp * v_y_temp + v_z_temp * v_z_temp;
+        local_v_sqr[local_indx] += v_sqr; // add paticle energy to cell
+        number_part_cell_local[local_indx]++;
+    }
+    
 
 
     
@@ -474,6 +494,24 @@ void charged_particle::write_diagnostics(const std::string& dir_name, int diag_n
     this->write_phase_space(dir_name);
 }
 
+void charged_particle::reset_diagnostics(int thread_id) {
+    
+    this->wall_loss[thread_id][0] = this->wall_loss[thread_id][1] = 0;
+    this->energy_loss[thread_id][0] = this->energy_loss[thread_id][1] = 0;
+    for (int j = 0; j < this->number_velocity_coordinates; j++) {
+        this->momentum_loss[thread_id][0][j] = 0;
+        this->momentum_loss[thread_id][0][j] = 0;
+    }
+
+    
+    #pragma omp master
+    {   
+        this->total_number_particles = 0;
+        std::fill(this->density.begin(), this->density.end(), 0.0);
+    }
+   
+}
+
 void charged_particle::write_phase_space(const std::string& dir_name) const {
     // dir_name = file/charged_particles
     std::string file_path = dir_name + "/charged_particles/" + this->name + "/phase_space/";
@@ -506,8 +544,21 @@ void charged_particle::gather_mpi(){
     // Should be done after sorting and diagnostics
     
     this->total_number_particles = 0;
+    this->accum_wall_loss[0] = this->accum_wall_loss[1] = 0;
+    this->accum_wall_energy_loss[0] = this->accum_wall_energy_loss[1] = 0;
+    for (int i = 0; i < this->number_velocity_coordinates; i++) {
+        this->accum_wall_momentum_loss[0][i] = this->accum_wall_momentum_loss[1][i] = 0;
+    }
     for (int i = 0; i < omp_get_max_threads(); i++){
         this->total_number_particles += this->number_particles[i][0];
+        this->accum_wall_loss[0] += this->wall_loss[i][0];
+        this->accum_wall_loss[1] += this->wall_loss[i][1];
+        this->accum_wall_energy_loss[0] += this->energy_loss[i][0];
+        this->accum_wall_energy_loss[1] += this->energy_loss[i][1];
+        for (int j = 0; j < this->number_velocity_coordinates; j++) {
+            this->accum_wall_momentum_loss[0][j] += this->momentum_loss[i][0][j];
+            this->accum_wall_momentum_loss[1][j] += this->momentum_loss[i][1][j];
+        }
     }
     MPI_Allreduce(MPI_IN_PLACE, &this->total_number_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -648,8 +699,6 @@ void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector
 void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std::vector<double>& E_field, const double dx, const int left_boundary, const int right_boundary, int number_cells) {
    
     size_t last_idx = this->number_particles[thread_id][0];
-    this->wall_loss[thread_id][0] = 0; this->wall_loss[thread_id][1] = 0;
-    this->energy_loss[thread_id][0] = 0.0; this->energy_loss[thread_id][1] = 0.0;
     std::vector<double>& xi_local = this->xi[thread_id];
     std::vector<double>& v_x_local = this->v_x[thread_id];
     double inv_dx = 1.0/dx;
@@ -743,8 +792,6 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
     const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, int number_cells) {
    
     size_t last_idx = this->number_particles[thread_id][0];
-    this->wall_loss[thread_id][0] = 0; this->wall_loss[thread_id][1] = 0;
-    this->energy_loss[thread_id][0] = 0.0; this->energy_loss[thread_id][1] = 0.0;
     std::vector<double>& xi_local = this->xi[thread_id];
     std::vector<double>& v_x_local = this->v_x[thread_id];
     size_t space_delete = 0;
