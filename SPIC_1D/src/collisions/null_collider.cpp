@@ -304,11 +304,8 @@ inline void triple_product_isotropic(const double &primary_mass, const double &i
 
 
 
-void null_collider::generate_null_collisions(int thread_id, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list, const double time_step){
-    #pragma omp master
-    {
-        this->timer = MPI_Wtime();
-    }
+void null_collider::generate_null_collisions(const int thread_id, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list, const double time_step){
+    
     if (this->number_targets > 0) {
         
         // initialize local variables
@@ -508,11 +505,6 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
             this->total_amount_collidable_particles += initial_amount_collidable_particles;
         }
     
-    }
-    #pragma omp master
-    {
-        double end_time = MPI_Wtime();
-        this->timer = end_time - this->timer;
     }
 
 }

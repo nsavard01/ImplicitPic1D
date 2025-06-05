@@ -55,7 +55,7 @@ void ES_solver_EC::make_EField(const domain& world) {
 
 }
 
-void ES_solver_EC::integrate_time_step(int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) {
+void ES_solver_EC::integrate_time_step(const int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) {
     #pragma omp barrier
     #pragma omp master
     {
@@ -77,8 +77,26 @@ void ES_solver_EC::integrate_time_step(int thread_id, double del_t, double curre
 
 }
 
-void ES_solver_EC::push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world){
+void ES_solver_EC::push_particles(const int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world){
+    // Loop over all particles and push them to the grid
+    int num_particles = particle_list.size();
+    int left_boundary = world.left_boundary_condition; // Get left boundary condition
+    int right_boundary = world.right_boundary_condition; // Get right boundary condition
+    int number_cells = world.number_cells; // Number of cells in the domain
+    int domain_type = world.domain_type;
     
+    if (domain_type == 0) {
+        double inv_dx = 1.0 / world.min_dx; // Cell size
+        for (int i = 0; i < num_particles; ++i) {
+            charged_particle& particle = particle_list[i];
+            particle.ES_push_EC_uniform(thread_id, del_t, this->E_field, inv_dx, left_boundary, right_boundary, number_cells); // Push particles to the grid
+        }
+    } else {
+        for (int i = 0; i < num_particles; ++i) {
+            charged_particle& particle = particle_list[i];
+            particle.ES_push_EC_non_uniform(thread_id, del_t, this->E_field, world.dx_dxi, world.grid_nodes, left_boundary, right_boundary, number_cells); // Push particles to the grid
+        }
+    }
 }
 
 

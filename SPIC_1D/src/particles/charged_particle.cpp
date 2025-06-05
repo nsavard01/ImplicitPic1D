@@ -581,7 +581,7 @@ void charged_particle::gather_mpi(){
 }
 
 
-void charged_particle::deposit_particles_linear(int thread_id, std::vector<double>& work_space) const {
+void charged_particle::deposit_particles_linear(const int thread_id, std::vector<double>& work_space) const {
     size_t last_idx = this->number_particles[thread_id][0];
     double d, xi_p;
     int xi_left, xi_right;
@@ -596,7 +596,7 @@ void charged_particle::deposit_particles_linear(int thread_id, std::vector<doubl
     } 
 }
 
-void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector<double>& E_field, const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells) {
+void charged_particle::ES_push_MC(const int thread_id, double del_t, const std::vector<double>& E_field, const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells) {
    
     size_t last_idx = this->number_particles[thread_id][0];
     std::vector<double>& xi_local = this->xi[thread_id];
@@ -689,12 +689,11 @@ void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector
     this->number_collidable_particles[thread_id][0] = (last_idx - space_delete);
 }
 
-void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std::vector<double>& E_field, const double dx, const int left_boundary, const int right_boundary, int number_cells) {
+void charged_particle::ES_push_EC_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells) {
    
     size_t last_idx = this->number_particles[thread_id][0];
     std::vector<double>& xi_local = this->xi[thread_id];
     std::vector<double>& v_x_local = this->v_x[thread_id];
-    double inv_dx = 1.0/dx;
     size_t space_delete = 0;
     double v_x, xi, v_y = 0.0, v_z = 0.0;
     double E_field_local;
@@ -782,8 +781,8 @@ void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std
     this->number_collidable_particles[thread_id][0] = (last_idx - space_delete);
 }
 
-void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const std::vector<double>& E_field, 
-    const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, int number_cells) {
+void charged_particle::ES_push_EC_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, 
+    const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, const int number_cells) {
    
     size_t last_idx = this->number_particles[thread_id][0];
     std::vector<double>& xi_local = this->xi[thread_id];
@@ -798,8 +797,8 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
     int xi_cell;
     bool del_part;
     double dx;
-    double x_left_boundary = grid[0];
-    double x_right_boundary = grid[number_cells];
+    const double x_left_boundary = grid[0];
+    const double x_right_boundary = grid[number_cells];
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
         xi = xi_local[part_indx];
         xi_cell = int(xi);

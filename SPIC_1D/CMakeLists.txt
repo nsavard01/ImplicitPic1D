@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Build type and compiler flags
 set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -qopenmp -Wall")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -qopenmp -qmkl -xHost -fast -ipo -Wall")
 
 # Include directories
 include_directories(include)

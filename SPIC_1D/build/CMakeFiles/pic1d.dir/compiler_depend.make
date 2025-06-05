@@ -2811,6 +2811,11 @@ CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o: /home/nsavard/ImplicitPic1D/Imp
   /usr/include/c++/8/bits/vector.tcc \
   /usr/include/c++/8/bits/uniform_int_dist.h \
   /usr/include/c++/8/x86_64-redhat-linux/bits/opt_random.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/pmmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/emmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/xmmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/mmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/mm_malloc.h \
   /usr/include/c++/8/bits/random.tcc \
   /usr/include/c++/8/numeric \
   /usr/include/c++/8/bits/stl_numeric.h
@@ -3335,6 +3340,12 @@ CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o: /home/nsavard/
 
 /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/simulation/simulation.cpp:
 
+/opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/mmintrin.h:
+
+/opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/emmintrin.h:
+
+/opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/pmmintrin.h:
+
 /usr/include/c++/8/x86_64-redhat-linux/bits/opt_random.h:
 
 /opt/intel/oneapi/compiler/2025.0/opt/compiler/include/math_common_define.h:
@@ -3378,6 +3389,8 @@ CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o: /home/nsavard/
 /usr/include/c++/8/bits/shared_ptr_atomic.h:
 
 /usr/include/c++/8/cstdint:
+
+/opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/mm_malloc.h:
 
 /usr/include/bits/types/error_t.h:
 
@@ -3632,6 +3645,8 @@ CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o: /home/nsavard/
 /usr/include/c++/8/bits/stl_bvector.h:
 
 /usr/include/c++/8/tr1/hypergeometric.tcc:
+
+/opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/xmmintrin.h:
 
 /usr/include/bits/types/time_t.h:
 

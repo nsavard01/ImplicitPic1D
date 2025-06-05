@@ -478,6 +478,7 @@ void simulation::reset_diagnostics(int thread_id) {
 void simulation::run() {
 
     double start_time_total = MPI_Wtime();
+    double timer_1, timer_2;
     int number_charged_particles = this->charged_particle_list.size();
 
     #pragma omp parallel
@@ -490,17 +491,16 @@ void simulation::run() {
             #pragma omp master
             {
                 this->particle_time += this->field_solver->particle_timer;
-                this->field_time += this->field_solver->potential_timer;  
+                this->field_time += this->field_solver->potential_timer;
+                timer_1 = MPI_Wtime();  
             }
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
                 this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);
-                #pragma omp master
-                {
-                    this->null_collision_time += this->null_collider_list[part_num].timer;
-                }
             }
             #pragma omp master
-            {
+            {   
+                timer_2 = MPI_Wtime();
+                this->null_collision_time += (timer_2 - timer_1);
                 this->current_time += this->del_t;
                 this->current_step++;
                 this->diag_step_diff++;

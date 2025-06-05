@@ -187,6 +187,11 @@ CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/vector.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/uniform_int_dist.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/opt_random.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/pmmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/emmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/xmmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/mmintrin.h \
+  /opt/intel/oneapi/compiler/2025.0/lib/clang/19/include/mm_malloc.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/random.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/numeric \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_numeric.h

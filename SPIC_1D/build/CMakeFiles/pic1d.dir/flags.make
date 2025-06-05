@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include
 
-CXX_FLAGS = -O3 -qopenmp -Wall -std=gnu++17
+CXX_FLAGS = -O3 -qopenmp -qmkl -xHost -fast -ipo -Wall -std=gnu++17
 

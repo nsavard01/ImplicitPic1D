@@ -14,7 +14,7 @@ public:
     std::vector<std::vector<double>> energy_threshold, total_incident_energy, total_energy_loss; // diagnostics for each collision type
     std::vector<std::vector<std::vector<double>>> total_incident_energy_thread, total_energy_loss_thread; // diagnostics for each collision type
     std::vector<double> energy_array, reduced_mass, reduced_mass_ionization;
-    double null_frequency, timer;
+    double null_frequency;
     std::vector<std::vector<std::vector<int>>> product_indices;
     std::vector<std::vector<int>> collision_type_per_target, collision_id; // product indices for each array
     std::vector<int> target_idx, number_collisions_per_target; // collision type identifier
@@ -28,7 +28,7 @@ public:
     const std::vector<double>& reduced_mass, const std::vector<double>& reduced_mass_ionization);
     void set_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list);
     void print_out(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) const;
-    void generate_null_collisions(int thread_id, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list, const double time_step);
+    void generate_null_collisions(const int thread_id, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list, const double time_step);
     // inline void double_product_isotropic(const double &primary_mass, const double &target_mass, const double &del_E, 
     //     double (&incident_velocity)[3], double (&target_velocity)[3]);
     // inline void triple_product_isotropic(const double &primary_mass, const double &ion_mass, const double &target_mass, const double &del_E, 

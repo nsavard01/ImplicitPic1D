@@ -39,11 +39,11 @@ public:
     void initialize_rand_position_uniform(const domain& world);
     void ES_push_MC(int thread_id, double del_t, const std::vector<double>& E_field, 
         const double dx, const int left_boundary, const int right_boundary, int number_cells);
-    void ES_push_EC_uniform(int thread_id, double del_t, const std::vector<double>& E_field, 
+    void ES_push_EC_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, 
         const double dx, const int left_boundary, const int right_boundary, int number_cells);
-    void ES_push_EC_non_uniform(int thread_id, double del_t, const std::vector<double>& E_field, 
-        const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, int number_cells);    
-    void deposit_particles_linear(int thread_id, std::vector<double>& work_space) const;
+    void ES_push_EC_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, 
+        const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, const int number_cells);    
+    void deposit_particles_linear(const int thread_id, std::vector<double>& work_space) const;
     // double get_KE_ave() const;
     // double get_KE_total() const;
     // void interpolate_particles();

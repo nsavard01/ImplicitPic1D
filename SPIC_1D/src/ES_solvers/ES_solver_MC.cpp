@@ -34,7 +34,7 @@ void ES_solver_MC::print_out() {
     }
 }
 
-void ES_solver_MC::integrate_time_step(int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) {
+void ES_solver_MC::integrate_time_step(const int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) {
     #pragma omp barrier
     #pragma omp master
     {
@@ -56,7 +56,7 @@ void ES_solver_MC::integrate_time_step(int thread_id, double del_t, double curre
 
 }
 
-void ES_solver_MC::push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) {
+void ES_solver_MC::push_particles(const int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) {
     // Loop over all particles and push them to the grid
     int num_particles = particle_list.size();
     double inv_dx = 1.0 / world.min_dx; // Cell size
