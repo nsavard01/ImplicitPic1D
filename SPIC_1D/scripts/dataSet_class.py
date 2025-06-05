@@ -71,6 +71,20 @@ class dataSet:
             size = data.size
             if (size == 5):
                 self.timing_data = pd.read_csv(temp_path, skiprows = 1, names = ['total', 'field', 'particle', 'null', 'art'], sep='\s+')
+        temp_path = self.path + 'global_diagnostic_data.dat'
+        if (os.path.isfile(temp_path)):
+            data = pd.read_csv(temp_path, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
+            size = data.size
+            if (size == 6):
+                self.global_data = pd.read_csv(temp_path, skiprows = 1, names = ['time', 'steps', 'P_x', 'P_y', 'P_z', 'E_tot'], sep='\s+')
+
+        temp_path = self.path + 'field_diagnostics.dat'
+        if (os.path.isfile(temp_path)):
+            data = pd.read_csv(temp_path, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
+            size = data.size
+            if (size == 1):
+                self.field_data = pd.read_csv(temp_path, skiprows=1,
+                                               names=['E_tot'], sep='\s+')
     #     if int(initialCond[0])== 0:
     #         self.scheme = 'NGP'
     #     elif int(initialCond[0])== 1:
@@ -206,7 +220,18 @@ class dataSet:
     #         self.beta_k = solver[3]
     #         self.maxIter = int(solver[4])
     #
-    #
+    def get_grid(self):
+        return np.fromfile(self.path + '/domain/grid.dat', dtype = 'float')
+
+    def get_dx(self):
+        data = np.fromfile(self.path + '/domain/dx_dxi.dat', dtype = 'float')
+        if (self.domain_type == 'uniform'):
+            return data[0]
+        else:
+            return data
+
+    def get_phi(self, diag_number):
+        return np.fromfile(self.path + '/phi/potential_' + str(diag_number) +  '.dat', dtype = 'float')
     # def getPhaseSpace(self, name):
     #     if (name not in self.particles.keys()):
     #         raise Warning('No such particle', name, 'in simulation!')

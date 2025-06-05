@@ -178,7 +178,7 @@ void simulation::initialize_diagnostic_files() {
         file.open(folder_name + "/global_diagnostic_data.dat");
 
         // Write header (optional)
-        file << "Time (s), total steps, runtime (s), total momentum x (kg /s /m), total momentum y (kg /s /m), total momentum z (kg /s /m), total energy (J/m^2) \n";
+        file << "Time (s), total steps, total momentum x (kg /s /m), total momentum y (kg /s /m), total momentum z (kg /s /m), total energy (J/m^2) \n";
 
         file.close();
 
@@ -356,7 +356,6 @@ void simulation::setup() {
     if (mpi_vars::mpi_rank == 0) {
         std::cout << "" << std::endl;
         std::cout << "Initializing potential and let us run!" << std::endl;
-        std::cout << "time division " << this->diag_time_division;
         std::cout << "------------" << std::endl;
      }
     #pragma omp parallel
@@ -426,7 +425,6 @@ void simulation::diagnostics(int thread_id) {
             file << std::scientific << std::setprecision(8);
             file << this->current_time << "\t"
             << this->current_step << "\t"
-            << this->elapsed_time << "\t"
             << total_momentum[0] << "\t"
             << total_momentum[1] << "\t"
             << total_momentum[2] << "\t"
