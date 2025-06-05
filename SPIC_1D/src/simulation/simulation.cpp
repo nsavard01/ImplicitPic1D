@@ -156,10 +156,11 @@ void simulation::initialize_diagnostic_files() {
         file.open(folder_name + "/initial_condition.dat");
 
         // Write header (optional)
-        file << "number MPI, number threads, Final Expected Time(s), Delta t(s), numDiag \n";
+        file << "number MPI, number threads, scheme_type, Final Expected Time(s), Delta t(s), numDiag \n";
         file << std::scientific << std::setprecision(8);
         file << mpi_vars::mpi_size << "\t"
             << omp_get_max_threads() << "\t"
+            << this->scheme_type << "\t"
             << this->simulation_time << "\t"
             << this->del_t << "\t"
             << this->number_diagnostics
@@ -246,7 +247,7 @@ void simulation::setup() {
         if (scheme_type == 0) {
             std::cout << "Scheme type: 0 (MC-PIC)" << std::endl;
         } else if (scheme_type == 1) {
-            std::cout << "Scheme type: 0 (EC-PIC)" << std::endl;
+            std::cout << "Scheme type: 1 (EC-PIC)" << std::endl;
         } else if (scheme_type == 2) {
             std::cout << "Scheme type: 2 (I-NGP)" << std::endl;
         } else if (scheme_type == 3) {
@@ -342,7 +343,7 @@ void simulation::setup() {
     this->diag_time_division = (this->simulation_time - this->simulation_start_time)/(this->number_diagnostics-1);
     this->current_diag_step = 0;
     this->current_time = 0.0;
-    this->next_diag_time = this->current_time + this->diag_time_division;
+    this->next_diag_time = this->current_time;
     this->last_diag_time = this->current_time;
     this->elapsed_time = 0.0;
     this->current_step = 0;
@@ -355,6 +356,7 @@ void simulation::setup() {
     if (mpi_vars::mpi_rank == 0) {
         std::cout << "" << std::endl;
         std::cout << "Initializing potential and let us run!" << std::endl;
+        std::cout << "time division " << this->diag_time_division;
         std::cout << "------------" << std::endl;
      }
     #pragma omp parallel
@@ -418,7 +420,6 @@ void simulation::diagnostics(int thread_id) {
         for (int t_idx = 0; t_idx < this->target_particle_list.size(); t_idx++) {
             this->target_particle_list[t_idx].write_diagnostics(this->save_file_folder, this->current_diag_step);
         }
-
         if (mpi_vars::mpi_rank == 0) {
             std::ofstream file(this->save_file_folder + "/global_diagnostic_data.dat", std::ios::app);
 
@@ -452,16 +453,11 @@ void simulation::diagnostics(int thread_id) {
                 std::cout << "Particle " << this->charged_particle_list[part_num].name << ", total #: " << this->charged_particle_list[part_num].total_number_particles << " , n_ave: " 
                 << this->charged_particle_list[part_num].average_density << " (1/m^3) , T_ave: " << this->charged_particle_list[part_num].average_temperature << " (eV) " << std::endl;
             }
-            std::cout << "Left voltage :" << this->field_solver->phi[0] << " right voltage : " << this->field_solver->phi[this->world->number_cells] << std::endl;
             std::cout << "Total momentum (kg / m/s) is x: " << total_momentum[0] << " y: " << total_momentum[1] << " z: " << total_momentum[2] << std::endl;
             std::cout << "Total Energy (J/m^2) is : " << total_Energy << std::endl;
             std::cout << "-------------------------------" << std::endl;
             std::cout << "" << std::endl;
         }
-        this->current_diag_step++;
-        this->last_diag_time = this->next_diag_time;
-        this->next_diag_time = this->last_diag_time + this->diag_time_division;
-        this->diag_step_diff = 0;
     }
 
     #pragma omp barrier
@@ -473,7 +469,10 @@ void simulation::reset_diagnostics(int thread_id) {
         this->null_collider_list[i].reset_diagnostics(thread_id);
     }
     #pragma omp master
-    {
+    {   
+        this->current_diag_step++;
+        this->last_diag_time = this->next_diag_time;
+        this->next_diag_time = this->last_diag_time + this->diag_time_division;
         this->diag_step_diff = 0;
     }
 }
@@ -510,6 +509,10 @@ void simulation::run() {
             }
             #pragma omp barrier
             if (this->current_time >= this->next_diag_time) {
+                #pragma omp master
+                {
+                    this->elapsed_time = MPI_Wtime() - start_time_total;
+                }
                 this->diagnostics(thread_id);
                 #pragma omp barrier
                 this->reset_diagnostics(thread_id);
