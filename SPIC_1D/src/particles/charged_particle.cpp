@@ -599,11 +599,6 @@ void charged_particle::deposit_particles_linear(int thread_id, std::vector<doubl
 void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector<double>& E_field, const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells) {
    
     size_t last_idx = this->number_particles[thread_id][0];
-    this->wall_loss[thread_id][0] = 0; this->wall_loss[thread_id][1] = 0;
-    this->energy_loss[thread_id][0] = 0.0; this->energy_loss[thread_id][1] = 0.0;
-    this->momentum_loss[thread_id][0][0] = 0;
-    this->momentum_loss[thread_id][0][1] = 0;
-    this->momentum_loss[thread_id][0][2] = 0;
     std::vector<double>& xi_local = this->xi[thread_id];
     std::vector<double>& v_x_local = this->v_x[thread_id];
     size_t space_delete = 0;
@@ -691,9 +686,7 @@ void charged_particle::ES_push_MC(int thread_id, double del_t, const std::vector
         }
     }
     this->number_particles[thread_id][0] = (last_idx - space_delete);
-    // if (mpi_vars::mpi_rank == 0) {
-    //     std::cout << "number_particles " << this->number_particles[thread_id][0] << std::endl;
-    // }
+    this->number_collidable_particles[thread_id][0] = (last_idx - space_delete);
 }
 
 void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std::vector<double>& E_field, const double dx, const int left_boundary, const int right_boundary, int number_cells) {
@@ -786,6 +779,7 @@ void charged_particle::ES_push_EC_uniform(int thread_id, double del_t, const std
         }
     }
     this->number_particles[thread_id][0] = (last_idx - space_delete);
+    this->number_collidable_particles[thread_id][0] = (last_idx - space_delete);
 }
 
 void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const std::vector<double>& E_field, 
@@ -889,6 +883,7 @@ void charged_particle::ES_push_EC_non_uniform(int thread_id, double del_t, const
         }
     }
     this->number_particles[thread_id][0] = (last_idx - space_delete);
+    this->number_collidable_particles[thread_id][0] = (last_idx - space_delete);
 }
 
 

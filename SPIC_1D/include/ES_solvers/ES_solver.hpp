@@ -20,6 +20,7 @@ public:
 
     // diagnostics
     double total_field_energy;
+    double potential_timer, particle_timer;
     
     virtual ~ES_solver() = default;
     
@@ -42,6 +43,9 @@ public:
     virtual void solve_potential(double current_time, const domain& world);
     virtual void solve_field_energy(const domain& world);
     virtual void make_EField(const domain& world);
+    // general integration through time step which solves for fields after time step given initial fields
+    // general enough that it can include non-linear processes as well (implicit)
+    virtual void integrate_time_step(int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) = 0; 
     virtual void push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) = 0;
 
 };

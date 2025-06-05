@@ -35,6 +35,7 @@ null_collider::null_collider(int primary_idx, int number_targets, const std::vec
     this->product_indices = product_indices;
     this->reduced_mass = reduced_mass;
     this->reduced_mass_ionization = reduced_mass_ionization;
+    this->total_amount_collidable_particles = 0;
     if (number_targets > 0) {
         this->total_incident_energy.resize(this->number_targets);
         this->total_energy_loss.resize(this->number_targets);
@@ -304,7 +305,10 @@ inline void triple_product_isotropic(const double &primary_mass, const double &i
 
 
 void null_collider::generate_null_collisions(int thread_id, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list, const double time_step){
-    
+    #pragma omp master
+    {
+        this->timer = MPI_Wtime();
+    }
     if (this->number_targets > 0) {
         
         // initialize local variables
@@ -504,6 +508,11 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
         }
     
     }
+    #pragma omp master
+    {
+        double end_time = MPI_Wtime();
+        this->timer = end_time - this->timer;
+    }
 
 }
 
@@ -544,14 +553,14 @@ void null_collider::initialize_diagnostic_files(const std::string& dir_name, con
 
                 file.open(dir_name + "/charged_particles/" + primary_particle.name + "/null_collision/" + secondary_particle.name + "/collision_diagnostics_" 
                     + std::to_string(this->collision_id[t_idx][coll_idx]) + ".dat");
-                file << "CollRatio, AveEnergyLoss (eV), AveIncidentEnergy (eV), P_loss(W/m^2), aveCollFreq (Hz) \n";
+                file << "Amount collisions, amount collidable,  Energy loss (J), Incident Energy (J) \n";
                 file.close();
             }     
         }
     }
 }
 
-void null_collider::write_diagnostics(const std::string& dir_name, const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list, double time_diff) const {
+void null_collider::write_diagnostics(const std::string& dir_name, const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) const {
     if (mpi_vars::mpi_rank == 0) {
         for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
             const charged_particle& primary_particle = particle_list[this->primary_idx];
@@ -565,10 +574,9 @@ void null_collider::write_diagnostics(const std::string& dir_name, const std::ve
                     MPI_Abort(MPI_COMM_WORLD, 1);
                 }
                 file << std::scientific << std::setprecision(8);
-                file << double(this->total_amount_collisions[t_idx][coll_idx])/double(this->total_amount_collidable_particles) << "\t"
-                << this->total_energy_loss[t_idx][coll_idx] * 0.5 / constants::elementary_charge / double(this->total_amount_collisions[t_idx][coll_idx]) << "\t"
-                << this->total_incident_energy[t_idx][coll_idx] * 0.5 * primary_particle.mass / constants::elementary_charge / double(this->total_amount_collidable_particles) << "\t"
-                << double(this->total_amount_collisions[t_idx][coll_idx])/double(this->total_amount_collidable_particles)/time_diff << "\n";
+                file << this->total_amount_collisions[t_idx][coll_idx] << "\t" << this->total_amount_collidable_particles << "\t"
+                << this->total_energy_loss[t_idx][coll_idx] * 0.5 << "\t"
+                << this->total_incident_energy[t_idx][coll_idx] * 0.5 * primary_particle.mass << "\n";
                 file.close();
             }     
         }

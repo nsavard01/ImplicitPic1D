@@ -34,6 +34,28 @@ void ES_solver_MC::print_out() {
     }
 }
 
+void ES_solver_MC::integrate_time_step(int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) {
+    #pragma omp barrier
+    #pragma omp master
+    {
+        this->particle_timer = MPI_Wtime();
+    }
+    this->push_particles(thread_id, del_t, particle_list, world);
+    this->deposit_charge_density(particle_list, thread_id);
+    #pragma omp barrier
+    #pragma omp master
+    {
+        double end_time = MPI_Wtime();
+        this->particle_timer = end_time - this->particle_timer;
+        double start_time = MPI_Wtime();
+        this->solve_potential(current_time + del_t, world);
+        this->make_EField(world);
+        end_time = MPI_Wtime();
+        this->potential_timer = end_time - start_time;
+    }
+
+}
+
 void ES_solver_MC::push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) {
     // Loop over all particles and push them to the grid
     int num_particles = particle_list.size();
@@ -46,25 +68,6 @@ void ES_solver_MC::push_particles(int thread_id, double del_t, std::vector<charg
         charged_particle& particle = particle_list[i];
         particle.ES_push_MC(thread_id, del_t, this->E_field, inv_dx, left_boundary, right_boundary, number_cells); // Push particles to the grid
     }
-
-    // #pragma omp barrier
-    // #pragma omp master
-    // {
-    //     for (int part_num = 0; part_num < num_particles; part_num++){
-    //         charged_particle& particle = particle_list[part_num];
-    //         for (int i_thread = 0; i_thread < total_thread_count; i_thread++){
-    //             particle.accum_wall_loss[0] += particle.wall_loss[i_thread][0];
-    //             particle.accum_wall_loss[1] += particle.wall_loss[i_thread][1];
-    //             particle.accum_wall_energy_loss[0] += particle.energy_loss[i_thread][0];
-    //             particle.accum_wall_energy_loss[1] += particle.energy_loss[i_thread][1];
-    //             for (int coord = 0; coord < particle.number_velocity_coordinates; coord++) {
-    //                 particle.accum_wall_momentum_loss[0][coord] += particle.momentum_loss[i_thread][0][coord];
-    //                 particle.accum_wall_momentum_loss[1][coord] += particle.momentum_loss[i_thread][1][coord];
-    //             }
-    //         }
-    //     }
-    // }
-    // #pragma omp barrier
 }
 
 

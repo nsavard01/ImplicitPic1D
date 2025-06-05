@@ -177,7 +177,7 @@ void simulation::initialize_diagnostic_files() {
         file.open(folder_name + "/global_diagnostic_data.dat");
 
         // Write header (optional)
-        file << "Time (s), total steps, runtime (s) \n";
+        file << "Time (s), total steps, runtime (s), total momentum x (kg /s /m), total momentum y (kg /s /m), total momentum z (kg /s /m), total energy (J/m^2) \n";
 
         file.close();
 
@@ -293,8 +293,8 @@ void simulation::setup() {
         std::cout << "Issue with averaging time!" << std::endl;
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
-    if (this->number_diagnostics <= 0 || this->number_diagnostics > this->simulation_time/this->del_t) {
-        std::cout << "Issue with number diagnostics!" << std::endl;
+    if (this->number_diagnostics <= 0 || this->number_diagnostics > std::ceil(this->simulation_time/this->del_t) + 1) {
+        std::cout << "Issue with number diagnostics! " << std::endl;
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
     if (mpi_vars::mpi_rank == 0) {
@@ -342,6 +342,8 @@ void simulation::setup() {
     this->diag_time_division = (this->simulation_time - this->simulation_start_time)/(this->number_diagnostics-1);
     this->current_diag_step = 0;
     this->current_time = 0.0;
+    this->next_diag_time = this->current_time + this->diag_time_division;
+    this->last_diag_time = this->current_time;
     this->elapsed_time = 0.0;
     this->current_step = 0;
     this->particle_time = 0;
@@ -370,7 +372,6 @@ void simulation::setup() {
         #pragma omp barrier
         this->reset_diagnostics(thread_id);
         
-
     }
     
 
@@ -394,13 +395,24 @@ void simulation::diagnostics(int thread_id) {
     #pragma omp barrier
     #pragma omp master
     {
+        double total_momentum[3];
+        total_momentum[0] = total_momentum[1] = total_momentum[2] = 0.0;
         this->field_solver->solve_field_energy(*this->world);
         this->field_solver->write_diagnostics(this->save_file_folder, this->current_diag_step);
+        double total_Energy = this->field_solver->total_field_energy;
         for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
             this->charged_particle_list[part_num].gather_mpi();
             this->charged_particle_list[part_num].write_diagnostics(this->save_file_folder, this->current_diag_step);
+            total_momentum[0] += this->charged_particle_list[part_num].weight * this->charged_particle_list[part_num].mass * this->charged_particle_list[part_num].total_sum_v[0];
+            total_momentum[1] += this->charged_particle_list[part_num].weight * this->charged_particle_list[part_num].mass * this->charged_particle_list[part_num].total_sum_v[1];
+            total_momentum[2] += this->charged_particle_list[part_num].weight * this->charged_particle_list[part_num].mass * this->charged_particle_list[part_num].total_sum_v[2];
+            double v_sqr = 0.0;
+            for (int i = 0; i<3; i++) {
+                v_sqr += this->charged_particle_list[part_num].total_sum_v_square[i];
+            }
+            total_Energy += 0.5 * this->charged_particle_list[part_num].weight * this->charged_particle_list[part_num].mass * v_sqr;
             this->null_collider_list[part_num].gather_mpi();
-            this->null_collider_list[part_num].write_diagnostics(this->save_file_folder, this->charged_particle_list, this->target_particle_list, this->del_t);
+            this->null_collider_list[part_num].write_diagnostics(this->save_file_folder, this->charged_particle_list, this->target_particle_list);
         }
         this->field_solver->write_particle_densities(this->save_file_folder, "density_" + std::to_string(this->current_diag_step) + ".dat", this->charged_particle_list, *this->world);
         for (int t_idx = 0; t_idx < this->target_particle_list.size(); t_idx++) {
@@ -413,7 +425,11 @@ void simulation::diagnostics(int thread_id) {
             file << std::scientific << std::setprecision(8);
             file << this->current_time << "\t"
             << this->current_step << "\t"
-            << this->elapsed_time << "\n";
+            << this->elapsed_time << "\t"
+            << total_momentum[0] << "\t"
+            << total_momentum[1] << "\t"
+            << total_momentum[2] << "\t"
+            << total_Energy << "\n";
 
             file.close();
 
@@ -435,6 +451,8 @@ void simulation::diagnostics(int thread_id) {
                 std::cout << "Particle " << this->charged_particle_list[part_num].name << ", total #: " << this->charged_particle_list[part_num].total_number_particles << " , n_ave: " 
                 << this->charged_particle_list[part_num].average_density << " (1/m^3) , T_ave: " << this->charged_particle_list[part_num].average_temperature << " (eV) " << std::endl;
             }
+            std::cout << "Total momentum (kg / m/s) is x: " << total_momentum[0] << " y: " << total_momentum[1] << " z: " << total_momentum[2] << std::endl;
+            std::cout << "Total Energy (J/m^2) is : " << total_Energy << std::endl;
             std::cout << "-------------------------------" << std::endl;
             std::cout << "" << std::endl;
         }
@@ -456,54 +474,52 @@ void simulation::reset_diagnostics(int thread_id) {
 
 void simulation::run() {
 
-    // double start_timer, end_timer;
-    // this->start_time_total = MPI_Wtime();
+    double start_time_total = MPI_Wtime();
+    int number_charged_particles = this->charged_particle_list.size();
 
-    // #pragma omp parallel
-    // {
-    //     int thread_id = omp_get_thread_num();
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
         
-    //     for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-    //         this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
-    //         this->charged_particle_list[part_num].gather_mpi();
-    //     }
-    //     #pragma omp barrier
-    //     #pragma omp master
-    //     {
-    //         if (mpi_vars::mpi_rank == 0) {
-    //             double sum = 0.0;
-    //             for (int i = 0; i < this->charged_particle_list.size(); i++) {
-    //                 sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
-    //             }
-    //             std::cout << "Total mv_x: " << sum << std::endl;
-    //         }
-    //     }
-    //     #pragma omp barrier
-    //     this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
-    //     #pragma omp master
-    //     {
-    //         this->field_solver->solve_potential(0.0, *this->world);
-    //         this->field_solver->make_EField(*this->world);
-    //     }
-    //     #pragma omp barrier
-    //     this->field_solver->push_particles(thread_id, this->del_t, this->charged_particle_list, *this->world);
-    //     #pragma omp barrier
-    //     for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-    //         this->charged_particle_list[part_num].sort_particle_diagnostics(thread_id, world->number_cells);
-    //         this->charged_particle_list[part_num].gather_mpi();
-    //     }
-    //     #pragma omp barrier
-    //     #pragma omp master
-    //     {
-    //         if (mpi_vars::mpi_rank == 0) {
-    //             double sum = 0.0;
-    //             for (int i = 0; i < this->charged_particle_list.size(); i++) {
-    //                 sum += this->charged_particle_list[i].total_sum_v[0] * this->charged_particle_list[i].mass;
-    //             }
-    //             std::cout << "Total mv_x: " << sum << std::endl;
-    //         }
-    //     }
-    //     #pragma omp barrier
-    // }
+        while (this->current_time < this->simulation_time) {
+            this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
+            #pragma omp barrier
+            #pragma omp master
+            {
+                this->particle_time += this->field_solver->particle_timer;
+                this->field_time += this->field_solver->potential_timer;  
+            }
+            for (int part_num = 0; part_num < number_charged_particles; part_num++){
+                this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);
+                #pragma omp master
+                {
+                    this->null_collision_time += this->null_collider_list[part_num].timer;
+                }
+            }
+            #pragma omp master
+            {
+                this->current_time += this->del_t;
+                this->current_step++;
+                this->diag_step_diff++;
+            }
+            #pragma omp barrier
+            if (this->current_time >= this->next_diag_time) {
+                this->diagnostics(thread_id);
+                #pragma omp barrier
+                this->reset_diagnostics(thread_id);
+                #pragma omp master
+                {
+                    this->current_diag_step++;
+                    this->last_diag_time = this->next_diag_time;
+                    this->next_diag_time = this->last_diag_time + this->diag_time_division;
+                }
+            }
+            #pragma omp barrier
+        }
+    }
+    double end_time_total = MPI_Wtime();
+    if (mpi_vars::mpi_rank == 0) {
+        std::cout << "Simulation took " << end_time_total - start_time_total << " seconds" << std::endl;
+    }
 
 }

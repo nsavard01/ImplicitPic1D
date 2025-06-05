@@ -55,6 +55,28 @@ void ES_solver_EC::make_EField(const domain& world) {
 
 }
 
+void ES_solver_EC::integrate_time_step(int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) {
+    #pragma omp barrier
+    #pragma omp master
+    {
+        this->particle_timer = MPI_Wtime();
+    }
+    this->push_particles(thread_id, del_t, particle_list, world);
+    this->deposit_charge_density(particle_list, thread_id);
+    #pragma omp barrier
+    #pragma omp master
+    {
+        double end_time = MPI_Wtime();
+        this->particle_timer = end_time - this->particle_timer;
+        double start_time = MPI_Wtime();
+        this->solve_potential(current_time + del_t, world);
+        this->make_EField(world);
+        end_time = MPI_Wtime();
+        this->potential_timer = end_time - start_time;
+    }
+
+}
+
 void ES_solver_EC::push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world){
     
 }

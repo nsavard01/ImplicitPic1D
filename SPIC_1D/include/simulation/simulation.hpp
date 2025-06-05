@@ -26,8 +26,8 @@ class simulation {
     
 public:
     // Everything needed to simulate particle in cell
-    double del_t, simulation_time, simulation_start_time, averaging_time, current_time, diag_time_division, diag_time;
-    double start_time_total, elapsed_time, particle_time, field_time, null_collision_time, art_collision_time;
+    double del_t, simulation_time, simulation_start_time, averaging_time, current_time, diag_time_division, next_diag_time, last_diag_time;
+    double elapsed_time, particle_time, field_time, null_collision_time, art_collision_time;
     int current_diag_step;
     size_t diag_step_diff, current_step; 
     double inv_plasma_freq_fraction;
