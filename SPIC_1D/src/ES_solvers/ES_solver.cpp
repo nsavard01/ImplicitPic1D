@@ -30,9 +30,11 @@ void ES_solver::set_phi(double left_voltage, double right_voltage, double RF_fre
     } 
     if (left_boundary == 4) {
         this->RF_half_amplitude = this->left_voltage; // Set RF half amplitude for left boundary
+        this->RF_rad_frequency = 2.0 * RF_frequency * M_PI;
         this->left_voltage = 0.0;
     } else if (right_boundary == 4) {
         this->RF_half_amplitude = this->right_voltage; // Set RF half amplitude for right boundary
+        this->RF_rad_frequency = 2.0 * RF_frequency * M_PI;
         this->right_voltage = 0.0;
     } 
     this->phi[0] = this->left_voltage; // Set left boundary voltage in phi vector
@@ -232,7 +234,7 @@ void ES_solver::solve_potential(double current_time, const domain& world) {
 
     if (right_boundary == 2) {
         this->phi[number_unknowns-1] = -this->rho[number_unknowns-1] * inv_epsilon_0; // Change boundary phi
-    } else if (left_boundary == 4) {
+    } else if (right_boundary == 4) {
         this->phi[number_unknowns-1] = this->RF_half_amplitude * std::sin(this->RF_rad_frequency * current_time); // Change boundary phi
     } 
 
@@ -247,6 +249,7 @@ void ES_solver::solve_potential(double current_time, const domain& world) {
 void ES_solver::make_EField(const domain& world) {
     // Calculate the electric field from the potential
     int number_nodes = world.number_nodes; // Number of cells in the domain
+    int number_cells = world.number_cells;
     double inv_dx = 1.0/world.min_dx; // Cell size
     int left_boundary = world.left_boundary_condition; // Get left boundary condition
     int right_boundary = world.right_boundary_condition; // Get right boundary condition
@@ -257,11 +260,11 @@ void ES_solver::make_EField(const domain& world) {
         // First order at boundary consistent with rho = 0
         this->E_field[0] = (this->phi[0] - this->phi[1])*inv_dx; // Electric field at left boundary
     } else if (left_boundary == 3){
-        this->E_field[0] = 0.5 * (this->phi[number_nodes-2] - this->phi[1]) * inv_dx; 
-        this->E_field[number_nodes-1] = this->E_field[0]; 
+        this->E_field[0] = 0.5 * (this->phi[number_cells-1] - this->phi[1]) * inv_dx; 
+        this->E_field[number_cells] = this->E_field[0]; 
     }
     if (right_boundary == 1 || right_boundary == 4) {
-        this->E_field[number_nodes-1] = (this->phi[number_nodes-2] - this->phi[number_nodes-1]) * inv_dx; 
+        this->E_field[number_cells] = (this->phi[number_cells-1] - this->phi[number_cells]) * inv_dx; 
     } 
      
 }

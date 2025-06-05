@@ -447,15 +447,21 @@ void simulation::diagnostics(int thread_id) {
             std::cout << "" << std::endl;
             std::cout << "-------------------------------" << std::endl;
             std::cout << "Diagnostics # " << std::to_string(this->current_diag_step+1) << "/" << std::to_string(this->number_diagnostics) << std::endl;
+            std::cout << "Current simulation time (s): " << this->current_time << std::endl;
             for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
                 std::cout << "Particle " << this->charged_particle_list[part_num].name << ", total #: " << this->charged_particle_list[part_num].total_number_particles << " , n_ave: " 
                 << this->charged_particle_list[part_num].average_density << " (1/m^3) , T_ave: " << this->charged_particle_list[part_num].average_temperature << " (eV) " << std::endl;
             }
+            std::cout << "Left voltage :" << this->field_solver->phi[0] << " right voltage : " << this->field_solver->phi[this->world->number_cells] << std::endl;
             std::cout << "Total momentum (kg / m/s) is x: " << total_momentum[0] << " y: " << total_momentum[1] << " z: " << total_momentum[2] << std::endl;
             std::cout << "Total Energy (J/m^2) is : " << total_Energy << std::endl;
             std::cout << "-------------------------------" << std::endl;
             std::cout << "" << std::endl;
         }
+        this->current_diag_step++;
+        this->last_diag_time = this->next_diag_time;
+        this->next_diag_time = this->last_diag_time + this->diag_time_division;
+        this->diag_step_diff = 0;
     }
 
     #pragma omp barrier
@@ -507,12 +513,6 @@ void simulation::run() {
                 this->diagnostics(thread_id);
                 #pragma omp barrier
                 this->reset_diagnostics(thread_id);
-                #pragma omp master
-                {
-                    this->current_diag_step++;
-                    this->last_diag_time = this->next_diag_time;
-                    this->next_diag_time = this->last_diag_time + this->diag_time_division;
-                }
             }
             #pragma omp barrier
         }

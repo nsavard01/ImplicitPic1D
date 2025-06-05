@@ -438,10 +438,11 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
                                 }
                                 case 2: {
                                     int secondary_product_idx = product_indices_local[t_idx][coll_idx][1]; // secondary product ion
-                                    triple_product_isotropic(primary_mass, target_mass_local - constants::electron_mass, target_mass_local, reduced_mass_ionization_local[t_idx], del_E, 
-                                        incident_velocity, target_velocity, velocity_CM);
                                     charged_particle& secondary_particle = particle_list[secondary_product_idx];
                                     charged_particle& electron_particle = particle_list[0]; // If ionization exists, electron exists at indx 0
+                                    double secondary_mass = secondary_particle.mass;
+                                    triple_product_isotropic(primary_mass, secondary_mass, target_mass_local, reduced_mass_ionization_local[t_idx], del_E, 
+                                        incident_velocity, target_velocity, velocity_CM);
                                     // Increase number electron and ion
                                     electron_particle.number_particles[thread_id][0]++;
                                     secondary_particle.number_particles[thread_id][0]++;
@@ -461,7 +462,7 @@ void null_collider::generate_null_collisions(int thread_id, std::vector<charged_
                                     secondary_particle.v_y[thread_id][secondary_number] = target_velocity[1];
                                     secondary_particle.v_z[thread_id][secondary_number] = target_velocity[2];
                                     energy_loss[t_idx][coll_idx] += (- constants::electron_mass * (velocity_CM[0]*velocity_CM[0] +
-                                        velocity_CM[1]*velocity_CM[1] + velocity_CM[2]*velocity_CM[2]) - (target_mass_local - constants::electron_mass) * (target_velocity[0]*target_velocity[0] + 
+                                        velocity_CM[1]*velocity_CM[1] + velocity_CM[2]*velocity_CM[2]) - secondary_mass * (target_velocity[0]*target_velocity[0] + 
                                         target_velocity[1]*target_velocity[1] + target_velocity[2]*target_velocity[2])); // add gain of energy in system due to introduction of target velocity
                                     break;
                                 }
