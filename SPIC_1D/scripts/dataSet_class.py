@@ -55,8 +55,24 @@ class dataSet:
                 self.domain_type = 'non-uniform'
             self.num_nodes = int(data[1])
             self.num_cells = int(data[2])
-            self.left_boundary = int(data[3])
-            self.right_boundary = int(data[4])
+            h = data[3]
+            if (h == 1):
+                self.left_boundary = 'Dirichlet'
+            elif (h==2):
+                self.left_boundary = 'Neumann-Symmetric'
+            elif (h == 3):
+                self.left_boundary = 'Periodic'
+                self.right_boundary = 'Periodic'
+            elif (h == 4):
+                self.left_boundary = 'RF-Dirichlet'
+
+            h = int(data[4])
+            if (h == 1):
+                self.right_boundary = 'Dirichlet'
+            elif (h==2):
+                self.right_boundary = 'Neumann-Symmetric'
+            elif (h == 4):
+                self.right_boundary = 'RF-Dirichlet'
             self.domain_length = data[5]
         temp_path = self.path + '/phi/parameters.dat'
         if (os.path.isfile(temp_path)):
@@ -85,143 +101,81 @@ class dataSet:
             if (size == 1):
                 self.field_data = pd.read_csv(temp_path, skiprows=1,
                                                names=['E_tot'], sep='\s+')
-    #     if int(initialCond[0])== 0:
-    #         self.scheme = 'NGP'
-    #     elif int(initialCond[0])== 1:
-    #         self.scheme = 'CIC'
-    #     else:
-    #         self.scheme = 'newCIC'
-    #     self.Nx = int(initialCond[1])
-    #     self.T_e = initialCond[2]
-    #     self.T_i = initialCond[3]
-    #     self.n_ave = initialCond[4]
-    #     self.simTimeTotal = initialCond[5]
-    #     self.delT = initialCond[6]
-    #     self.fracTime = initialCond[7]
-    #     self.smooth = (initialCond[9] == 1)
-    #     self.numDiag = int(initialCond[11]) + 1
-    #     self.numThreads = int(initialCond[12])
-    #     self.RF_rad_frequency = initialCond[13]
-    #     self.RF_half_amplitude = initialCond[14]
-    #     ParticleProperties = pd.read_csv(self.path + 'ParticleProperties.dat', skiprows = 1, names = ['name', 'mass', 'q', 'w_p', 'maxIdx'], sep='\s+')
-    #     self.particles = {}
-    #     partDiag = ['time', 'leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss', 'N_p', 'Temp', 'numSubStep', 'numFuncEval']
-    #     for i in range(len(ParticleProperties)):
-    #         name = ParticleProperties.iloc[i]['name']
-    #         self.particles[name] = {}
-    #         self.particles[name]['mass'] = ParticleProperties.iloc[i]['mass']
-    #         self.particles[name]['q'] = ParticleProperties.iloc[i]['q']
-    #         self.particles[name]['w_p'] = ParticleProperties.iloc[i]['w_p']
-    #         self.particles[name]['maxIdx'] = ParticleProperties.iloc[i]['maxIdx']
-    #         self.particles[name]['diag'] = pd.read_csv(self.path + 'ParticleDiagnostic_' + name + '.dat', skiprows = 1, sep='\s+', names = partDiag)
-    #         if (os.path.isfile(self.path + 'ParticleAveDiagnostic_' + name + '.dat')):
-    #             avePartDiag = ['leftCurrLoss', 'rightCurrLoss', 'leftPowerLoss', 'rightPowerLoss']
-    #             self.particles[name]['aveDiag'] = pd.read_csv(self.path + 'ParticleAveDiagnostic_' + name + '.dat', skiprows = 1, sep='\s+', names = avePartDiag)
-    #
-    #     boundConditions = np.fromfile(self.path + 'domainBoundaryConditions.dat', dtype=np.int32, offset=4)[0:-1]
-    #     if (boundConditions[0] == 1):
-    #         self.leftBoundary = 'Dirichlet'
-    #     elif (boundConditions[0] == 2):
-    #         self.leftBoundary = 'Neumann'
-    #     elif (boundConditions[0] == 3):
-    #         self.leftBoundary = 'Periodic'
-    #     elif (boundConditions[0] == 4):
-    #         self.leftBoundary = 'RF-Dirichlet'
-    #     else:
-    #         raise Warning("Left boundary not defined!")
-    #
-    #     if (boundConditions[-1] == 1):
-    #         self.rightBoundary = 'Dirichlet'
-    #     elif (boundConditions[-1] == 2):
-    #         self.rightBoundary = 'Neumann'
-    #     elif (boundConditions[-1] == 3):
-    #         self.rightBoundary = 'Periodic'
-    #     elif (boundConditions[-1] == 4):
-    #         self.rightBoundary = 'RF-Dirichlet'
-    #     else:
-    #         raise Warning("Right boundary not defined!")
-    #     self.grid = np.fromfile(self.path + 'domainGrid.dat', dtype = 'float', offset = 4)
-    #     self.dx_dl = np.fromfile(self.path + 'domainDxDl.dat', dtype = 'float', offset = 4)
-    #     if (self.scheme == 0):
-    #         self.x_min = self.grid[0]
-    #         self.x_max = self.grid[-1]
-    #     else:
-    #         self.x_min = self.grid[0] - 0.5 * self.dx_dl[0]
-    #         self.x_max = self.grid[-1] + 0.5 * self.dx_dl[-1]
-    #     diagList = ['time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'TotalEnergy(J/m^2)', 'TotalMomentum(kg/m/s)', 'gaussError', 'chargeError', 'energyError', 'numPicardIter']
-    #     self.globDiag = pd.read_csv(self.path + 'GlobalDiagnosticData.dat', skiprows = 1, sep='\s+', names = diagList)
-    #     if (os.path.isfile(self.path + 'SimulationTimeData.dat')):
-    #         diagList = ['Time', 'SolverTime', 'PotTime', 'MoverTime', 'CollTime', 'Step']
-    #         self.timeDiag = pd.read_csv(self.path + 'SimulationTimeData.dat', skiprows=1, sep='\s+',
-    #                                     names=diagList)
-    #     if (self.globDiag.shape[0] > self.numDiag):
-    #         self.numDiag = self.globDiag.shape[0]
-    #     self.boolAverageFile = os.path.isfile(self.path + 'GlobalDiagnosticDataAveraged.dat')
-    #     if (self.boolAverageFile):
-    #         diagAverageList = ['steps', 'time(s)', 'Ploss(W/m^2)', 'I_wall(A/m^2)', 'P_wall(W/m^2)', 'gaussError']
-    #         self.aveGlobDiag = pd.read_csv(self.path + 'GlobalDiagnosticDataAveraged.dat', skiprows = 1, sep='\s+', names = diagAverageList)
-    #         endDiag = np.loadtxt(self.path + 'SimulationFinalData.dat', skiprows=1)
-    #         self.totTime = endDiag[0]
-    #         self.totPotTime = endDiag[1]
-    #         self.totCollTime = endDiag[2]
-    #         self.totTimeSteps = int(endDiag[3])
-    #         self.totSplitSteps = int(endDiag[4])
-    #     else:
-    #         self.aveGlobDiag = None
-    #         print("No averaging done for this simulation!")
-    #     if (os.path.isdir(self.path + 'BinaryCollisions')):
-    #         self.binaryColl = {}
-    #         pattern = '(.*)_on_(.*)'
-    #         for filename in os.listdir(self.path + 'BinaryCollisions'):
-    #             test = re.search(pattern, filename)
-    #             primary = test.group(1)
-    #             target = test.group(2)
-    #             react = primary + '->' + target
-    #             prop = np.loadtxt(self.path + 'BinaryCollisions/' + filename + '/CollisionProperties.dat', skiprows = 1)
-    #             self.binaryColl[react] = list(range(prop.shape[0]))
-    #             collDiag = ['ratio', 'aveEnergyLoss', 'aveIncEnergy', 'P_loss(W/m^2)', 'aveFreq(Hz/m^2)']
-    #             for i in range(prop.shape[0]):
-    #                 self.binaryColl[react][i] = {}
-    #                 type = int(prop[i, 1])
-    #                 if (type == 1):
-    #                     self.binaryColl[react][i]['type'] = 'Elastic'
-    #                 elif (type == 2):
-    #                     self.binaryColl[react][i]['type'] = 'Ionization'
-    #                 elif (type == 3):
-    #                     self.binaryColl[react][i]['type'] = 'Excitation'
-    #                 elif (type == 4):
-    #                     self.binaryColl[react][i]['type'] = 'ChargeExchange'
-    #                 self.binaryColl[react][i]['E_thres'] = prop[i,2]
-    #                 self.binaryColl[react][i]['maxSigma'] = prop[i, 3]
-    #                 self.binaryColl[react][i]['EatMaxSigma'] = prop[i, 4]
-    #                 self.binaryColl[react][i]['diag'] = pd.read_csv(self.path + 'BinaryCollisions/' + filename + '/CollisionDiag_' + str(i+1) + '.dat', skiprows = 1, sep='\s+', names = collDiag)
-    #             if (self.boolAverageFile):
-    #                 prop = np.loadtxt(self.path + 'BinaryCollisions/' + filename + '/AveCollisionDiag.dat', skiprows = 1)
-    #                 for i,coll in enumerate(self.binaryColl[react]):
-    #                     coll['aveDiag'] = {}
-    #                     coll['aveDiag']['ratio'] = prop[i,1]
-    #                     coll['aveDiag']['aveEnergyLoss'] = prop[i,2]
-    #                     coll['aveDiag']['aveIncEnergy'] = prop[i, 3]
-    #                     coll['aveDiag']['P_loss(W/m^2)'] = prop[i, 4]
-    #                     coll['aveDiag']['aveFreq(Hz/m^2)'] = prop[i, 5]
-    #     solver = np.loadtxt(self.path + 'SolverState.dat', skiprows = 1)
-    #     if (int(solver[0]) == 0):
-    #         self.solverType = 'AAc'
-    #     else:
-    #         self.solverType = 'JFNK'
-    #     self.eps_a = solver[1]
-    #     if (dateTimeBool):
-    #         self.eps_r = solver[2]
-    #         self.m_And = int(solver[3])
-    #         self.beta_k = solver[4]
-    #         self.maxIter = int(solver[5])
-    #     else:
-    #         self.m_And = int(solver[2])
-    #         self.beta_k = solver[3]
-    #         self.maxIter = int(solver[4])
-    #
+
+        self.particles = {}
+        temp_path = self.path + 'charged_particles'
+        for filename in os.listdir(temp_path):
+            name = filename
+            self.particles[name] = {}
+            part_path = temp_path + '/' + name + '/'
+            part_prop = part_path + 'particle_properties.dat'
+            data = pd.read_csv(part_prop, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
+            self.particles[name]['m'] = data[1]
+            self.particles[name]['q'] = data[2]
+            self.particles[name]['w'] = data[3]
+            self.particles[name]['n_x'] = data[4]
+            self.particles[name]['n_v'] = data[5]
+            part_num = part_path + 'number_diagnostics.dat'
+            data = pd.read_csv(part_num, skiprows=1,
+                                               names=['N_p', 'left', 'right'], sep='\s+')
+            self.particles[name]['numbers'] = data
+            part_P = part_path + 'momentum_diagnostics.dat'
+            data = pd.read_csv(part_P, skiprows=1,
+                               names=['v_x', 'v_y', 'v_z', 'left_v_x', 'left_v_y', 'left_v_z', 'right_v_x', 'right_v_y', 'right_v_z'], sep='\s+')
+            self.particles[name]['momentum'] = data
+            part_E = part_path + 'energy_diagnostics.dat'
+            data = pd.read_csv(part_E, skiprows=1,
+                               names=['v_sq_x', 'v_sq_y', 'v_sq_z', 'v_sq_tot', 'left_v_sq', 'right_v_sq'], sep='\s+')
+            self.particles[name]['energy'] = data
+            if (os.path.isdir(part_path + 'null_collision')):
+                self.particles[name]['null'] = {}
+                t_path = part_path + 'null_collision'
+                for target in os.listdir(t_path):
+                    self.particles[name]['null'][target] = []
+                    dir_name = t_path + '/' + target
+                    num_coll = int(sum(1 for f in os.listdir(dir_name) if os.path.isfile(os.path.join(dir_name, f)))/2)
+                    for i in range(num_coll):
+                        temp_dict = {}
+                        file_prop = dir_name + '/collision_properties_' + str(i) + '.dat'
+                        file_diag = dir_name + '/collision_diagnostics_' + str(i) + '.dat'
+                        data = pd.read_csv(file_prop, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
+                        type = int(data[1])
+                        if (type == 1):
+                            temp_dict['type'] = 'Elastic'
+                        elif (type == 2):
+                            temp_dict['type'] = 'Ionization'
+                        elif (type == 3):
+                            temp_dict['type'] = 'Excitation'
+                        elif (type == 4):
+                            temp_dict['type'] = 'Charge-Exchange'
+                        temp_dict['E_thres'] = data[2]
+                        temp_dict['max_sig'] = data[3]
+                        temp_dict['E_peak'] = data[4]
+                        data = pd.read_csv(file_diag,skiprows=1,
+                               names=['num_coll', 'num_tot', 'E_loss', 'E_i'], sep='\s+')
+                        temp_dict['diag'] = data
+                        self.particles[name]['null'][target].append(temp_dict)
+
+        self.targets = {}
+        temp_path = self.path + 'target_particles'
+        for filename in os.listdir(temp_path):
+            name = filename
+            self.targets[name] = {}
+            part_path = temp_path + '/' + name + '/'
+            part_prop = part_path + 'particle_properties.dat'
+            part_diag = part_path + 'ave_diagnostics.dat'
+            data = pd.read_csv(part_prop, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
+            self.targets[name]['m'] = data[1]
+            data = pd.read_csv(part_diag, skiprows=1,
+                               names=['n', 'T'], sep='\s+')
+            self.targets[name]['diag'] = data
+
     def get_grid(self):
         return np.fromfile(self.path + '/domain/grid.dat', dtype = 'float')
+
+    def get_half_grid(self):
+        x = np.fromfile(self.path + '/domain/grid.dat', dtype = 'float')
+        return 0.5 * (x[0:-1] + x[1::])
 
     def get_dx(self):
         data = np.fromfile(self.path + '/domain/dx_dxi.dat', dtype = 'float')
@@ -232,139 +186,16 @@ class dataSet:
 
     def get_phi(self, diag_number):
         return np.fromfile(self.path + '/phi/potential_' + str(diag_number) +  '.dat', dtype = 'float')
-    # def getPhaseSpace(self, name):
-    #     if (name not in self.particles.keys()):
-    #         raise Warning('No such particle', name, 'in simulation!')
-    #     phaseSpace = []
-    #     for i in range(self.numThreads):
-    #         temp = np.fromfile(self.path + 'PhaseSpace/phaseSpace_' + name + '_thread' + str(i + 1) + '.dat',
-    #                            dtype='float',
-    #                            offset=0)
-    #         temp = temp.reshape((int(temp.size / 4), 4))
-    #         # d = temp[:, 0] - temp[:, 0].astype(int)
-    #         # temp[:, 0] = self.grid[temp[:, 0].astype(int) - 1] + d * (
-    #         #         self.grid[temp[:, 0].astype(int)] - self.grid[temp[:, 0].astype(int) - 1])
-    #         phaseSpace.append(temp)
-    #
-    #     phaseSpace = np.concatenate(phaseSpace)
-    #     return phaseSpace
-    #
-    #
-    # def getPhi(self, i):
-    #     if (i <= self.numDiag - 1):
-    #         phi = np.fromfile(self.path + 'Phi/phi_' + str(i) + '.dat', dtype = 'float', offset = 4)
-    #         return phi
-    #     else:
-    #         raise Warning("No such i diagnostic!")
-    #
-    # def getEField(self, i):
-    #     if (i <= self.numDiag - 1):
-    #         phi = np.fromfile(self.path + 'Phi/phi_' + str(i) + '.dat', dtype = 'float', offset = 4)
-    #         if (self.scheme == 'NGP'):
-    #             if (self.smooth):
-    #                 phi_other = np.copy(phi)
-    #                 phi[1:-1] = 0.25 * phi_other[0:-2] + 0.5 * phi_other[1:-1] + 0.25 * phi[2::]
-    #                 phi[0] = 0.25 * phi_other[-2] + 0.5 * phi[0] + 0.25 * phi[1]
-    #                 phi[-1] = phi[0]
-    #             EField = (phi[0:-1] - phi[1::])/(self.grid[1::] - self.grid[0:-1])
-    #             field_grid = 0.5 * (self.grid[1::] + self.grid[0:-1])
-    #         else:
-    #             if (self.smooth):
-    #                 phi_other = np.copy(phi)
-    #                 phi[1:-1] = 0.25 * phi_other[0:-2] + 0.5 * phi_other[1:-1] + 0.25 * phi[2::]
-    #                 phi[0] = 0.25 * phi_other[-1] + 0.5 * phi[0] + 0.25 * phi[1]
-    #                 phi[-1] = 0.25 * phi_other[-2] + 0.5 * phi[-1] + 0.25 * phi[0]
-    #             EField = np.zeros(self.Nx+1)
-    #             EField[1:-1] = (phi[0:-1] - phi[1::])/(self.grid[1::] - self.grid[0:-1])
-    #             EField[0] = (phi[-1] - phi[0])/(2 * self.grid[0])
-    #             EField[-1] = EField[0]
-    #             field_grid = np.zeros(self.Nx+1)
-    #             field_grid[1:-1] = 0.5 * (self.grid[1::] + self.grid[0:-1])
-    #             field_grid[0] = 0
-    #             field_grid[-1] = self.grid[-1] + self.grid[0]
-    #
-    #         return (field_grid, EField)
-    #     else:
-    #         raise Warning("No such i diagnostic!")
-    #
-    # def getDensity(self, name, i):
-    #     if (name not in self.particles.keys()):
-    #         raise Warning('No such particle', name, 'in simulation!')
-    #     if (i <= self.numDiag - 1):
-    #         n = np.fromfile(self.path + 'Density/density_' + name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
-    #         return n
-    #     else:
-    #         raise Warning("No such i diagnostic!")
-    #
-    # def getTemp(self, name, i):
-    #     if (name not in self.particles.keys()):
-    #         raise Warning('No such particle', name, 'in simulation!')
-    #     if (i <= self.numDiag - 1):
-    #         temp = np.fromfile(self.path + 'Temperature/Temp_' + name + '_' + str(i) + '.dat', dtype = 'float', offset = 4)
-    #         return temp
-    #     else:
-    #         raise Warning("No such i diagnostic!")
-    #
-    # def getAveTemp(self, name):
-    #     if (self.boolAverageFile):
-    #         EHist, Ebin = self.getAveEDF(name)
-    #         Norm = np.sum(EHist * Ebin) / np.sum(EHist)
-    #         T = Norm * 2 / 3
-    #     else:
-    #         raise Warning('No averaging done!')
-    #     return T
-    # def getAvePhi(self):
-    #     if (self.boolAverageFile):
-    #         phi = np.fromfile(self.path + 'Phi/phi_Average.dat', dtype = 'float', offset = 4)
-    #         if (self.smooth):
-    #             phi_other = np.copy(phi)
-    #             phi[1:-1] = 0.25 * phi_other[0:-2] + 0.5 * phi_other[1:-1] + 0.25 * phi[2::]
-    #             if (self.scheme == 'CIC'):
-    #                 if ('Dirichlet' in self.leftBoundary):
-    #                     phi[0] = 0.25 * (phi_other[0] + phi_other[1])
-    #                 elif ('Neumann' in self.leftBoundary):
-    #                     phi[0] = 0.25 * (3*phi_other[0] + phi_other[1])
-    #                 else:
-    #                     phi[0] = 0.25 * (phi_other[-1] + 2*phi_other[0] + phi_other[1])
-    #                     phi[-1] = 0.25 * (phi_other[-2] + 2 * phi_other[-1] + phi_other[0])
-    #
-    #                 if ('Dirichlet' in self.rightBoundary):
-    #                     phi[-1] = 0.25 * (phi_other[-1] + phi_other[-2])
-    #                 elif ('Neumann' in self.rightBoundary):
-    #                     phi[-1] = 0.25 * (3*phi_other[-1] + phi_other[-2])
-    #
-    #     else:
-    #         raise Warning('No averaging done!')
-    #     return phi
-    #
-    # def getAveDensity(self, name):
-    #     if (name not in self.particles.keys()):
-    #         raise Warning('No such particle', name, 'in simulation!')
-    #     if (self.boolAverageFile):
-    #         n = np.fromfile(self.path + 'Density/density_' + name + '_Average.dat', dtype = 'float', offset = 4)
-    #     else:
-    #         raise Warning('No averaging done!')
-    #     return n
-    #
-    # def getAveVDF(self, name):
-    #     if (self.boolAverageFile):
-    #         VTot = np.fromfile(self.path + 'Temperature/Temp_' + str(name) + '_average.dat', dtype='float', offset=4)
-    #         VHist = VTot[0:-1]
-    #         VMax = VTot[-1]
-    #         Vedge = np.linspace(-VMax, VMax, VHist.size)
-    #     else:
-    #         raise Warning('No averaging done!')
-    #     return VHist, Vedge
-    #
-    # def getAveEDF(self, name):
-    #     if (self.boolAverageFile):
-    #         ETot = np.fromfile(self.path + 'Temperature/TempEnergy_' + str(name) + '_average.dat', dtype='float', offset=4)
-    #         EHist = ETot[0:int(ETot.size/2)]
-    #         Ebin = ETot[int(ETot.size/2)::]
-    #     else:
-    #         raise Warning('No averaging done!')
-    #     return EHist, Ebin
-    #
+
+    def get_density(self, name, diag_number):
+        temp_path = self.path + 'charged_particles/' + name + '/density/density_' + str(diag_number) + '.dat'
+        return np.fromfile(temp_path, dtype = 'float')
+
+    def get_temp(self, name, diag_number):
+        temp_path = self.path + 'charged_particles/' + name + '/temperature/cell_temp_' + str(diag_number) + '.dat'
+        return np.fromfile(temp_path, dtype = 'float')
+
+
 
     
     
