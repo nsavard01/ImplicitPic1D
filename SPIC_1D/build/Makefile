@@ -321,6 +321,30 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/non_linear_solvers/AA_solver.o: src/non_linear_solvers/AA_solver.cpp.o
+.PHONY : src/non_linear_solvers/AA_solver.o
+
+# target to build an object file
+src/non_linear_solvers/AA_solver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o
+.PHONY : src/non_linear_solvers/AA_solver.cpp.o
+
+src/non_linear_solvers/AA_solver.i: src/non_linear_solvers/AA_solver.cpp.i
+.PHONY : src/non_linear_solvers/AA_solver.i
+
+# target to preprocess a source file
+src/non_linear_solvers/AA_solver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.i
+.PHONY : src/non_linear_solvers/AA_solver.cpp.i
+
+src/non_linear_solvers/AA_solver.s: src/non_linear_solvers/AA_solver.cpp.s
+.PHONY : src/non_linear_solvers/AA_solver.s
+
+# target to generate assembly for a file
+src/non_linear_solvers/AA_solver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.s
+.PHONY : src/non_linear_solvers/AA_solver.cpp.s
+
 src/particles/charged_particle.o: src/particles/charged_particle.cpp.o
 .PHONY : src/particles/charged_particle.o
 
@@ -344,6 +368,30 @@ src/particles/charged_particle.s: src/particles/charged_particle.cpp.s
 src/particles/charged_particle.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.s
 .PHONY : src/particles/charged_particle.cpp.s
+
+src/particles/charged_particle_implicit.o: src/particles/charged_particle_implicit.cpp.o
+.PHONY : src/particles/charged_particle_implicit.o
+
+# target to build an object file
+src/particles/charged_particle_implicit.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o
+.PHONY : src/particles/charged_particle_implicit.cpp.o
+
+src/particles/charged_particle_implicit.i: src/particles/charged_particle_implicit.cpp.i
+.PHONY : src/particles/charged_particle_implicit.i
+
+# target to preprocess a source file
+src/particles/charged_particle_implicit.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.i
+.PHONY : src/particles/charged_particle_implicit.cpp.i
+
+src/particles/charged_particle_implicit.s: src/particles/charged_particle_implicit.cpp.s
+.PHONY : src/particles/charged_particle_implicit.s
+
+# target to generate assembly for a file
+src/particles/charged_particle_implicit.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.s
+.PHONY : src/particles/charged_particle_implicit.cpp.s
 
 src/particles/target_particle.o: src/particles/target_particle.cpp.o
 .PHONY : src/particles/target_particle.o
@@ -474,9 +522,15 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/non_linear_solvers/AA_solver.o"
+	@echo "... src/non_linear_solvers/AA_solver.i"
+	@echo "... src/non_linear_solvers/AA_solver.s"
 	@echo "... src/particles/charged_particle.o"
 	@echo "... src/particles/charged_particle.i"
 	@echo "... src/particles/charged_particle.s"
+	@echo "... src/particles/charged_particle_implicit.o"
+	@echo "... src/particles/charged_particle_implicit.i"
+	@echo "... src/particles/charged_particle_implicit.s"
 	@echo "... src/particles/target_particle.o"
 	@echo "... src/particles/target_particle.i"
 	@echo "... src/particles/target_particle.s"

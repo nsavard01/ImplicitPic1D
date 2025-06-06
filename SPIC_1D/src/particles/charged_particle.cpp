@@ -886,6 +886,7 @@ void charged_particle::ES_push_EC_non_uniform(const int thread_id, double del_t,
 }
 
 
+
 // void Particle::load_density(bool reset_bool){
 //     if (reset_bool) {
 //         #pragma omp parallel for

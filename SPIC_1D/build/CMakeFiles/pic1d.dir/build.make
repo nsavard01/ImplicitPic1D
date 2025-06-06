@@ -181,10 +181,24 @@ CMakeFiles/pic1d.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/pic1d.dir/src/main.cpp.s"
 	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/main.cpp -o CMakeFiles/pic1d.dir/src/main.cpp.s
 
+CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o: CMakeFiles/pic1d.dir/flags.make
+CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/AA_solver.cpp
+CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o: CMakeFiles/pic1d.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o"
+	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o -MF CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o.d -o CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o -c /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/AA_solver.cpp
+
+CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.i"
+	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/AA_solver.cpp > CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.i
+
+CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.s"
+	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/AA_solver.cpp -o CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.s
+
 CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o: CMakeFiles/pic1d.dir/flags.make
 CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle.cpp
 CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o: CMakeFiles/pic1d.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o"
 	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o -MF CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o.d -o CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o -c /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle.cpp
 
 CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.i: cmake_force
@@ -195,10 +209,24 @@ CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.s"
 	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle.cpp -o CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.s
 
+CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o: CMakeFiles/pic1d.dir/flags.make
+CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle_implicit.cpp
+CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o: CMakeFiles/pic1d.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o"
+	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o -MF CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o.d -o CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o -c /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle_implicit.cpp
+
+CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.i"
+	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle_implicit.cpp > CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.i
+
+CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.s"
+	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle_implicit.cpp -o CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.s
+
 CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o: CMakeFiles/pic1d.dir/flags.make
 CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/target_particle.cpp
 CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o: CMakeFiles/pic1d.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o"
 	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o -MF CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o.d -o CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o -c /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/target_particle.cpp
 
 CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.i: cmake_force
@@ -212,7 +240,7 @@ CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.s: cmake_force
 CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o: CMakeFiles/pic1d.dir/flags.make
 CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/rand_gen/pcg_rng.cpp
 CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o: CMakeFiles/pic1d.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o"
 	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o -MF CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o.d -o CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o -c /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/rand_gen/pcg_rng.cpp
 
 CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.i: cmake_force
@@ -226,7 +254,7 @@ CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.s: cmake_force
 CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o: CMakeFiles/pic1d.dir/flags.make
 CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/simulation/simulation.cpp
 CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o: CMakeFiles/pic1d.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o"
 	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o -MF CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o.d -o CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o -c /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/simulation/simulation.cpp
 
 CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.i: cmake_force
@@ -240,7 +268,7 @@ CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.s: cmake_force
 CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o: CMakeFiles/pic1d.dir/flags.make
 CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/solvers/poisson_solver_1D_tridiag.cpp
 CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o: CMakeFiles/pic1d.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o"
 	/opt/intel/oneapi/mpi/2021.14/bin/mpiicpx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o -MF CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o.d -o CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o -c /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/solvers/poisson_solver_1D_tridiag.cpp
 
 CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.i: cmake_force
@@ -261,7 +289,9 @@ pic1d_OBJECTS = \
 "CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.o" \
 "CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.o" \
 "CMakeFiles/pic1d.dir/src/main.cpp.o" \
+"CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o" \
 "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o" \
+"CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o" \
 "CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o" \
 "CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o" \
 "CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o" \
@@ -278,14 +308,16 @@ pic1d: CMakeFiles/pic1d.dir/src/domain/domain.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/globals/mpi_vars.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/main.cpp.o
+pic1d: CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o
+pic1d: CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/rand_gen/pcg_rng.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/simulation/simulation.cpp.o
 pic1d: CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o
 pic1d: CMakeFiles/pic1d.dir/build.make
 pic1d: CMakeFiles/pic1d.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking CXX executable pic1d"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Linking CXX executable pic1d"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/pic1d.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

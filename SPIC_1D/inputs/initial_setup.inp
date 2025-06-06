@@ -4,7 +4,7 @@
 9.43952802359882e-05 ! total simulation time 9.43952802359882e-05
 7.374631268436579e-6 ! total averaging time
 21 ! number of diagnostic times
-test_expEC_nonU ! save file name
+test_expEC_nonU_curv ! save file name
 ../../../Test/ ! Save directory relative path
 no ! Restart(yes/no) and save directory to take from
 END

@@ -6,7 +6,7 @@
 #include <sstream>
 #include "globals/mpi_vars.hpp"
 #include "simulation/simulation.hpp"
-
+#include <mkl.h>
 
 
 int main(int argc, char** argv) {
