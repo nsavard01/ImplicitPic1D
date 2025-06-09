@@ -10,6 +10,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/ES_solvers/ES_solver.cpp" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/ES_solvers/ES_solver_EC.cpp" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_EC.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_EC.cpp.o.d"
+  "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/ES_solvers/ES_solver_INGP.cpp" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_INGP.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_INGP.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/ES_solvers/ES_solver_MC.cpp" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/collisions/null_collider.cpp" "CMakeFiles/pic1d.dir/src/collisions/null_collider.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/collisions/null_collider.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/domain/domain.cpp" "CMakeFiles/pic1d.dir/src/domain/domain.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/domain/domain.cpp.o.d"
@@ -17,6 +18,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/globals/write_functions.cpp" "CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/globals/write_functions.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/main.cpp" "CMakeFiles/pic1d.dir/src/main.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/main.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/AA_solver.cpp" "CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o.d"
+  "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/non_linear_solvers.cpp" "CMakeFiles/pic1d.dir/src/non_linear_solvers/non_linear_solvers.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/non_linear_solvers/non_linear_solvers.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle.cpp" "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/particles/charged_particle.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/charged_particle_implicit.cpp" "CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o.d"
   "/home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/particles/target_particle.cpp" "CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o" "gcc" "CMakeFiles/pic1d.dir/src/particles/target_particle.cpp.o.d"

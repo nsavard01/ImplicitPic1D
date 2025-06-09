@@ -1,6 +1,5 @@
-CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o: \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/AA_solver.cpp \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/non_linear_solvers/AA_solver.hpp \
+CMakeFiles/pic1d.dir/src/non_linear_solvers/non_linear_solvers.cpp.o: \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/non_linear_solvers/non_linear_solvers.cpp \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/non_linear_solvers/non_linear_solver.hpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/vector \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_algobase.h \
@@ -155,66 +154,10 @@ CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_heap.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_tempbuf.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/uniform_int_dist.h \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/util/math_util.hpp \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cmath \
-  /usr/include/math.h /usr/include/bits/math-vector.h \
-  /usr/include/bits/libm-simd-decl-stubs.h \
-  /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
-  /usr/include/bits/fp-fast.h \
-  /usr/include/bits/mathcalls-helper-functions.h \
-  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
-  /usr/include/bits/iscanonical.h /usr/include/bits/mathinline.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/specfun.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/gamma.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/special_function_util.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/bessel_function.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/beta_function.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/ell_integral.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/exp_integral.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/hypergeometric.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/legendre_function.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/modified_bessel_func.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_hermite.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_laguerre.tcc \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/riemann_zeta.tcc \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_version.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_types.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_blas.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_blas_64.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_trans.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_trans_names.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_cblas.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_cblas_64.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_spblas.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_lapack.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_lapacke.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_pardiso.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_dss.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_sparse_handle.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_rci.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_service.h \
-  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/stdlib.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml_defines.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml_types.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml_functions.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_defines.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_functions.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_types.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_functions_64.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_df.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_df_defines.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_df_functions.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_df_types.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_dfti.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_trig_transforms.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_poisson.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_solvers_ee.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_direct_call.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_compact.h \
-  /opt/intel/oneapi/mkl/2025.0/include/mkl_sparse_qr.h \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/mpi_vars.hpp \
+  /opt/intel/oneapi/mpi/2021.14/include/mpi.h \
+  /opt/intel/oneapi/mpi/2021.14/include/mpio.h \
+  /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/iostream \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ostream \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/ios \
@@ -237,8 +180,10 @@ CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/ostream.tcc \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/istream \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/istream.tcc \
-  /opt/intel/oneapi/compiler/2025.0/bin/compiler/../../opt/compiler/include/omp.h \
-  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/mpi_vars.hpp \
-  /opt/intel/oneapi/mpi/2021.14/include/mpi.h \
-  /opt/intel/oneapi/mpi/2021.14/include/mpio.h \
-  /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/fstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/codecvt.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/basic_file.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/x86_64-redhat-linux/bits/c++io.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/fstream.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/sstream \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/sstream.tcc

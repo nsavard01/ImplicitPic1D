@@ -1,4 +1,5 @@
-#include "non_linear_solver/AA_solver.hpp"
+#include "non_linear_solvers/AA_solver.hpp"
+#include "globals/mpi_vars.hpp"
 
 
 
@@ -9,38 +10,27 @@ AA_solver::AA_solver(double beta, double eps_r, double eps_a, int max_iterations
     this->max_iterations = max_iterations;
     this->m_anderson = m_anderson;
     this->number_unknowns = number_unknowns;
+    this->norm_residual.resize(this->m_anderson+1, 0.0);
+    this->min_matrix.resize(this->number_unknowns * this->m_anderson);
+    this->residual_k.resize(this->m_anderson + 1);
+    this->x_k.resize(this->m_anderson + 1);
+    for (int i = 0; i < this->m_anderson + 1; i++) {
+        this->residual_k[i].resize(this->number_unknowns, 0.0);
+        this->x_k[i].resize(this->number_unknowns, 0.0);
+    }
 }
 
-// std::vector<double> solveNormalEquationMKL(const std::vector<double>& A, const std::vector<double>& b, int m, int n) {
-//     if (A.size() != size_t(m * n) || b.size() != size_t(m)) {
-//         throw std::invalid_argument("Matrix/vector size mismatch.");
-//     }
-
-//     // Compute Aᵗ * A (size n×n)
-//     std::vector<double> AtA(n * n, 0.0);
-//     cblas_dsyrk(CblasColMajor, CblasUpper, CblasTrans, 
-//                 n, m, 
-//                 1.0, A.data(), m,
-//                 0.0, AtA.data(), n);
-
-//     // Compute Aᵗ * b (size n)
-//     std::vector<double> Atb(n, 0.0);
-//     cblas_dgemv(CblasColMajor, CblasTrans,
-//                 m, n,
-//                 1.0, A.data(), m,
-//                 b.data(), 1,
-//                 0.0, Atb.data(), 1);
-
-//     // Solve (Aᵗ A) x = Aᵗ b using LAPACK's dposv (since AtA is symmetric positive-definite)
-//     lapack_int info = LAPACKE_dposv(LAPACK_COL_MAJOR, 'U', n, 1,
-//                                     AtA.data(), n,
-//                                     Atb.data(), n);
-
-//     if (info != 0) {
-//         throw std::runtime_error("LAPACKE_dposv failed with error code " + std::to_string(info));
-//     }
-
-//     // Atb now contains the solution vector x
-//     return Atb;
-// }
+void AA_solver::print_out() const {
+    if (mpi_vars::mpi_rank == 0) {
+        std::cout << "AA_solver: " << std::endl;
+        std::cout << "-------------------------- " << std::endl;
+        std::cout << "Beta: " << this->beta << std::endl;
+        std::cout << "Epsilon_r: " << this->eps_r << std::endl;
+        std::cout << "Epsilon_a: " << this->eps_a << std::endl;
+        std::cout << "Max iterations: " << this->max_iterations << std::endl;
+        std::cout << "M Anderson: " << this->m_anderson << std::endl;
+        std::cout << "Number of unknowns: " << this->number_unknowns << std::endl;
+        std::cout << "-------------------------- " << std::endl;
+    }
+}
 

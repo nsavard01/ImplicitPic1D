@@ -32,7 +32,6 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
     int xi_boundary;
     const double t_tol = del_t * 1e-10;
     const double q_over_m = this->q_over_m;
-    std::fill(work_space.begin(), work_space.end(), 0.0);
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
 
         xi_i = xi_local[part_indx];
@@ -155,7 +154,6 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
     const double t_tol = del_t * 1e-10;
     const double q_over_m = this->q_over_m;
     size_t space_delete = 0;
-    number_sub_steps = 0;
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
 
         xi_i = xi_local[part_indx];
@@ -308,7 +306,6 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
     const double t_tol = del_t * 1e-10;
     double dx;
     const double q_over_m = this->q_over_m;
-    std::fill(work_space.begin(), work_space.end(), 0.0);
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
 
         xi_i = xi_local[part_indx];
@@ -434,7 +431,6 @@ void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_
     double dx;
     const double q_over_m = this->q_over_m;
     size_t space_delete = 0;
-    number_sub_steps = 0;
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
 
         xi_i = xi_local[part_indx];

@@ -8,6 +8,7 @@
 #include "domain/non_uniform_domain.hpp"
 #include "ES_solvers/ES_solver_EC.hpp"
 #include "ES_solvers/ES_solver_MC.hpp"
+#include "ES_solvers/ES_solver_INGP.hpp"
 #include "globals/mpi_vars.hpp"
 #include "globals/constants.hpp"
 #include <iostream>
@@ -39,6 +40,7 @@ void ES_solver::set_phi(double left_voltage, double right_voltage, double RF_fre
     } 
     this->phi[0] = this->left_voltage; // Set left boundary voltage in phi vector
     this->phi[this->phi.size()-1] = this->right_voltage; // Set right boundary voltage in phi vector
+    
 }
 
 void ES_solver::initialize_diagnostic_files(const std::string& filename) {
@@ -307,11 +309,15 @@ std::unique_ptr<ES_solver> read_voltage_inputs(const std::string& filename, int 
         es_solver = std::make_unique<ES_solver_MC>(world);
     } else if (scheme_type == 1) {
         es_solver = std::make_unique<ES_solver_EC>(world);
+    } else if (scheme_type == 2) {
+        es_solver = std::make_unique<ES_solver_INGP>(world);
     } else {
         throw std::invalid_argument("Invalid scheme type for ES solver.");
     }
+    
     es_solver->set_phi(left_voltage, right_voltage, RF_frequency, world.left_boundary_condition, world.right_boundary_condition);
     es_solver->print_out();
+    
     return es_solver;
 
 }

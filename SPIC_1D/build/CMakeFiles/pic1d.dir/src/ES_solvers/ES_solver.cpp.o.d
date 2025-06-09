@@ -210,6 +210,60 @@ CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver.cpp.o: \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cstddef \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver_EC.hpp \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver_MC.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/ES_solvers/ES_solver_INGP.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/non_linear_solvers/AA_solver.hpp \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/non_linear_solvers/non_linear_solver.hpp \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/functional \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/std_function.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/unordered_map \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/hashtable.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/hashtable_policy.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/node_handle.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/optional \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/enable_special_members.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/unordered_map.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_algo.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/algorithmfwd.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/stl_heap.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/uniform_int_dist.h \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/util/math_util.hpp \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_version.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_types.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_blas.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_blas_64.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_trans.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_trans_names.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_cblas.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_cblas_64.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_spblas.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_lapack.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_lapacke.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_pardiso.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_dss.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_sparse_handle.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_rci.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_service.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml_defines.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml_types.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vml_functions.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_defines.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_functions.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_types.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_vsl_functions_64.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_df.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_df_defines.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_df_functions.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_df_types.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_dfti.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_trig_transforms.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_poisson.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_solvers_ee.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_direct_call.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_compact.h \
+  /opt/intel/oneapi/mkl/2025.0/include/mkl_sparse_qr.h \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/constants.hpp \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/fstream \
   /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/codecvt.h \

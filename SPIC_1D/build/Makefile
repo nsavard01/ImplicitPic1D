@@ -177,6 +177,30 @@ src/ES_solvers/ES_solver_EC.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_EC.cpp.s
 .PHONY : src/ES_solvers/ES_solver_EC.cpp.s
 
+src/ES_solvers/ES_solver_INGP.o: src/ES_solvers/ES_solver_INGP.cpp.o
+.PHONY : src/ES_solvers/ES_solver_INGP.o
+
+# target to build an object file
+src/ES_solvers/ES_solver_INGP.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_INGP.cpp.o
+.PHONY : src/ES_solvers/ES_solver_INGP.cpp.o
+
+src/ES_solvers/ES_solver_INGP.i: src/ES_solvers/ES_solver_INGP.cpp.i
+.PHONY : src/ES_solvers/ES_solver_INGP.i
+
+# target to preprocess a source file
+src/ES_solvers/ES_solver_INGP.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_INGP.cpp.i
+.PHONY : src/ES_solvers/ES_solver_INGP.cpp.i
+
+src/ES_solvers/ES_solver_INGP.s: src/ES_solvers/ES_solver_INGP.cpp.s
+.PHONY : src/ES_solvers/ES_solver_INGP.s
+
+# target to generate assembly for a file
+src/ES_solvers/ES_solver_INGP.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_INGP.cpp.s
+.PHONY : src/ES_solvers/ES_solver_INGP.cpp.s
+
 src/ES_solvers/ES_solver_MC.o: src/ES_solvers/ES_solver_MC.cpp.o
 .PHONY : src/ES_solvers/ES_solver_MC.o
 
@@ -345,6 +369,30 @@ src/non_linear_solvers/AA_solver.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/non_linear_solvers/AA_solver.cpp.s
 .PHONY : src/non_linear_solvers/AA_solver.cpp.s
 
+src/non_linear_solvers/non_linear_solvers.o: src/non_linear_solvers/non_linear_solvers.cpp.o
+.PHONY : src/non_linear_solvers/non_linear_solvers.o
+
+# target to build an object file
+src/non_linear_solvers/non_linear_solvers.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/non_linear_solvers/non_linear_solvers.cpp.o
+.PHONY : src/non_linear_solvers/non_linear_solvers.cpp.o
+
+src/non_linear_solvers/non_linear_solvers.i: src/non_linear_solvers/non_linear_solvers.cpp.i
+.PHONY : src/non_linear_solvers/non_linear_solvers.i
+
+# target to preprocess a source file
+src/non_linear_solvers/non_linear_solvers.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/non_linear_solvers/non_linear_solvers.cpp.i
+.PHONY : src/non_linear_solvers/non_linear_solvers.cpp.i
+
+src/non_linear_solvers/non_linear_solvers.s: src/non_linear_solvers/non_linear_solvers.cpp.s
+.PHONY : src/non_linear_solvers/non_linear_solvers.s
+
+# target to generate assembly for a file
+src/non_linear_solvers/non_linear_solvers.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pic1d.dir/build.make CMakeFiles/pic1d.dir/src/non_linear_solvers/non_linear_solvers.cpp.s
+.PHONY : src/non_linear_solvers/non_linear_solvers.cpp.s
+
 src/particles/charged_particle.o: src/particles/charged_particle.cpp.o
 .PHONY : src/particles/charged_particle.o
 
@@ -504,6 +552,9 @@ help:
 	@echo "... src/ES_solvers/ES_solver_EC.o"
 	@echo "... src/ES_solvers/ES_solver_EC.i"
 	@echo "... src/ES_solvers/ES_solver_EC.s"
+	@echo "... src/ES_solvers/ES_solver_INGP.o"
+	@echo "... src/ES_solvers/ES_solver_INGP.i"
+	@echo "... src/ES_solvers/ES_solver_INGP.s"
 	@echo "... src/ES_solvers/ES_solver_MC.o"
 	@echo "... src/ES_solvers/ES_solver_MC.i"
 	@echo "... src/ES_solvers/ES_solver_MC.s"
@@ -525,6 +576,9 @@ help:
 	@echo "... src/non_linear_solvers/AA_solver.o"
 	@echo "... src/non_linear_solvers/AA_solver.i"
 	@echo "... src/non_linear_solvers/AA_solver.s"
+	@echo "... src/non_linear_solvers/non_linear_solvers.o"
+	@echo "... src/non_linear_solvers/non_linear_solvers.i"
+	@echo "... src/non_linear_solvers/non_linear_solvers.s"
 	@echo "... src/particles/charged_particle.o"
 	@echo "... src/particles/charged_particle.i"
 	@echo "... src/particles/charged_particle.s"
