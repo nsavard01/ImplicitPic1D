@@ -43,11 +43,11 @@ public:
         const double dx, const int left_boundary, const int right_boundary, int number_cells);
     void ES_push_deposit_INGP_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, 
         std::vector<double>& work_space, const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells);
-    void ES_push_INGP_uniform(const int thread_id, double del_t, const std::vector<double>& E_field,
+    void ES_push_INGP_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, std::vector<double>& work_space,
         int& number_sub_steps, const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells);
     void ES_push_deposit_INGP_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, 
         std::vector<double>& work_space, const std::vector<double>& dx_dxi, const int left_boundary, const int right_boundary, const int number_cells);
-    void ES_push_INGP_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, 
+    void ES_push_INGP_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, std::vector<double>& work_space,
         int& number_sub_steps, const std::vector<double>& dx_dxi, const int left_boundary, const int right_boundary, const int number_cells);
     void ES_push_EC_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, 
         const std::vector<double>& dx_dxi, const std::vector<double>& grid, const int left_boundary, const int right_boundary, const int number_cells);    

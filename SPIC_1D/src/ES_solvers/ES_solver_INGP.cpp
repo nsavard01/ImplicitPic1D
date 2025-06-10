@@ -10,6 +10,7 @@
 ES_solver_INGP::ES_solver_INGP(const domain& world) {
     this->phi.resize(world.number_nodes, 0.0);
     this->phi_past.resize(world.number_nodes, 0.0);
+    this->rho_past.resize(world.number_nodes, 0.0);
     this->rho.resize(world.number_nodes, 0.0);
     this->J.resize(world.number_cells, 0.0);
     this->E_field.resize(world.number_cells, 0.0);
@@ -145,6 +146,7 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
         this->phi_past = this->phi; // Copy current potential to future potential
         this->particle_timer = 0.0;
         this->potential_timer = 0.0;
+        this->rho_past = this->rho; // Copy current charge density to future charge density
         PE_initial = this->total_field_energy; // Store initial potential energy
         KE_initial = 0.0; // Initialize initial kinetic energy
         for (const auto& particle : particle_list) {
@@ -173,20 +175,46 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
     int number_cells = world.number_cells; // Number of cells in the domain
     int domain_type = world.domain_type;
     std::vector<int> number_sub_steps(num_particles, 0); // Initialize number of sub-steps for each particle
+    std::vector<double>& local_work_space = this->work_space[thread_id]; // Get work space for this thread
+    std::vector<double>& part_work_space = charged_particle::xi_sorted[thread_id]; // Get work space for this particle
+    std::fill(local_work_space.begin(), local_work_space.end(), 0.0); // Reset work space for this thread
     // Final push of particles
     if (domain_type == 0) {
         double inv_dx = 1.0 / world.min_dx; // Cell size
         for (int i = 0; i < num_particles; ++i) {
             charged_particle& particle = particle_list[i];
-            particle.ES_push_INGP_uniform(thread_id, del_t, this->E_field, number_sub_steps[i], 
+            std::fill(part_work_space.begin(), part_work_space.begin() + world.number_cells, 0.0); // Reset work space for this particle
+            particle.ES_push_INGP_uniform(thread_id, del_t, this->E_field, part_work_space, number_sub_steps[i], 
                 inv_dx, left_boundary, right_boundary, number_cells); // Push particles to the grid
+            for (int i = 0; i < world.number_cells; i++) {
+                local_work_space[i] += part_work_space[i] * particle.q_times_wp;
+            }
         }
     } else {
         for (int i = 0; i < num_particles; ++i) {
             charged_particle& particle = particle_list[i];
-            particle.ES_push_INGP_non_uniform(thread_id, del_t, this->E_field, number_sub_steps[i], 
+            std::fill(part_work_space.begin(), part_work_space.begin() + world.number_cells, 0.0); // Reset work space for this particle
+            particle.ES_push_INGP_non_uniform(thread_id, del_t, this->E_field, part_work_space, number_sub_steps[i], 
                 world.dx_dxi, left_boundary, right_boundary, number_cells); // Push particles to the grid
+            for (int i = 0; i < world.number_cells; i++) {
+                local_work_space[i] += part_work_space[i] * particle.q_times_wp;
+            }
         }
+    }
+    #pragma omp barrier
+    #pragma omp for
+    for (int i = 0; i < world.number_cells; i++) {
+        double sum = 0.0;
+        for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+            sum += this->work_space[i_thread][i];
+        }
+        this->J[i] = sum; // Set charge density for each cell
+    }
+    #pragma omp barrier
+    #pragma omp master
+    {
+        MPI_Allreduce(MPI_IN_PLACE, this->J.data(), world.number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
+
     }
     #pragma omp barrier
     this->deposit_charge_density(particle_list, thread_id);
@@ -202,6 +230,17 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
         for (int part_num = 0; part_num < particle_list.size(); part_num++){
             particle_list[part_num].gather_mpi(); // Gather particle diagnostics
         }
+        double E_boundary = 0.0;
+        double dx;
+        E_boundary = this->J[0];
+        if (world.domain_type == 0) {
+            dx = world.min_dx; // Cell size for uniform domain
+        } else if (world.domain_type == 1) {
+            dx = world.dx_dxi[0]; // Cell size for non-uniform domain
+        }
+        E_boundary = E_boundary + constants::epsilon_0 * ((this->phi[0] - this->phi[1]) - (this->phi_past[0] - this->phi_past[1])) / dx; // Calculate boundary electric field
+        E_boundary = E_boundary * (this->phi[0] + this->phi_past[0] - this->phi[world.number_cells] - this->phi_past[world.number_cells]) * 0.5 ; // Convert to electric field
+        PE_final = PE_final - E_boundary;
         KE_final = 0.0; // Initialize final kinetic energy
         for (const auto& particle : particle_list) {
             double sum = 0.0;
@@ -230,10 +269,44 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
             source_term[i] = -this->rho[i] /constants::epsilon_0; // Set right-hand side of the Poisson equation
         }
         double error = this->poisson_solver->norm_error(this->phi, source_term); // Solve the Poisson equation
+        double charge_error = 0.0;
+        double del_rho = this->rho[0] - this->rho_past[0]; // Calculate change in charge density
+        double res = 0.0;
+        int num = 0;
+        switch (world.left_boundary_condition) {
+            case 1:
+            case 4:
+                break;
+            case 2:
+                res = (1.0 + 2.0 * this->J[0] / del_rho);
+                charge_error += res*res; // Calculate charge error
+                num++;
+                break;
+            case 3:
+                del_rho += (this->rho[world.number_cells] - this->rho_past[world.number_cells]); // Adjust del_rho for periodic boundary condition
+                res = (1.0 + (this->J[0] - this->J[world.number_cells-1]) / del_rho);
+                charge_error += res*res; // Calculate charge error
+                num++;
+                break;
+        }
+        del_rho = this->rho[world.number_cells] - this->rho_past[world.number_cells];
+        if (world.right_boundary_condition == 2) {
+            res = (1.0 - 2.0 * this->J[world.number_cells-1] / del_rho);
+            charge_error += res*res; // Calculate charge error
+            num++;
+        }
+        num += (world.number_cells - 1); // Add number of cells to the error count
+        for (int i = 1; i < world.number_cells; ++i) {
+            del_rho = this->rho[i] - this->rho_past[i];
+            res = (1.0 + (this->J[i] - this->J[i-1]) / del_rho);
+            charge_error += res * res; // Calculate charge error
+        }
+        charge_error = std::sqrt(charge_error / num); // Calculate average charge error
         if (mpi_vars::mpi_rank == 0) {
             std::cout << "Final KE = " << KE_final << ", Final PE = " << PE_final << std::endl;
             std::cout << "ES_solver_INGP: Final total Energy: " << KE_final + PE_final << std::endl;
             std::cout << "Difference in total energy: " << ((KE_final + PE_final) - (KE_initial + PE_initial))/(KE_initial + PE_initial) << std::endl;
+            std::cout << "Charge error: " << charge_error << std::endl;
             std::cout << "ES_solver_INGP: Norm error in Poisson solver: " << error << std::endl;
         }
         MPI_Barrier(MPI_COMM_WORLD); // Ensure all processes have completed the push operation
