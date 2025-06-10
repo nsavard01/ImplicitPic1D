@@ -140,7 +140,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
     }
 }
 
-void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, std::vector<double>& work_space, int& number_sub_steps, 
+void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, int& number_sub_steps, 
     const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells) {
    
     const size_t last_idx = this->number_particles[thread_id][0];
@@ -217,7 +217,6 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
                 }
 
             }
-            work_space[xi_cell] += (xi_f - xi_i);
 
             if (future_boundary_bool) {
                 v_sign = (v_x_f > 0) - (v_x_f < 0);
@@ -429,7 +428,7 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
 }
 
 
-void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, std::vector<double>& work_space,
+void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field,
     int& number_sub_steps, const std::vector<double>& dx_dxi, const int left_boundary, const int right_boundary, const int number_cells) {
    
     const size_t last_idx = this->number_particles[thread_id][0];
@@ -508,7 +507,6 @@ void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_
                 }
 
             }
-            work_space[xi_cell] += (xi_f - xi_i);
             if (future_boundary_bool) {
                 v_sign = (v_x_f > 0) - (v_x_f < 0);
                 xi_cell = xi_cell + v_sign;
