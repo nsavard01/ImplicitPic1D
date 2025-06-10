@@ -24,7 +24,7 @@ ES_solver_INGP::ES_solver_INGP(const domain& world) {
     read_non_linear_solver_inputs("../inputs/implicit_solver.inp", int_params, double_params); // Read non-linear solver inputs
     MPI_Bcast(double_params.data(), 3, MPI_DOUBLE, 0, MPI_COMM_WORLD); // Broadcast double parameters
     MPI_Bcast(int_params.data(), 3, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast integer parameters
-    this->implicit_solver = std::make_unique<AA_solver>(double_params[0], double_params[1], double_params[3], int_params[2], int_params[1], world.number_nodes);
+    this->implicit_solver = std::make_unique<AA_solver>(double_params[0], double_params[1], double_params[2], int_params[2], int_params[1], world.number_nodes);
     this->implicit_solver->print_out(); // Print implicit solver parameters
 }
 
@@ -139,15 +139,28 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
             this->potential_timer += (end_time - start_time);
         }
     };
+    double KE_initial = 0.0, PE_initial=0.0, KE_final=0.0, PE_final=0.0;
     #pragma omp master
     {
         this->phi_past = this->phi; // Copy current potential to future potential
         this->particle_timer = 0.0;
         this->potential_timer = 0.0;
+        PE_initial = this->total_field_energy; // Store initial potential energy
+        KE_initial = 0.0; // Initialize initial kinetic energy
+        for (const auto& particle : particle_list) {
+            double sum = 0.0;
+            for (int i = 0; i < particle.number_velocity_coordinates; ++i) {
+                sum += particle.total_sum_v_square[i]; // Accumulate velocity
+            }
+            KE_initial += sum * 0.5 * particle.weight * particle.mass; // Calculate initial kinetic energy
+        }
         if (mpi_vars::mpi_rank == 0) {
             std::cout << "ES_solver_INGP: Integrating time step at time " << current_time << " with del_t = " << del_t << std::endl;
+            std::cout << "Initial KE = " << KE_initial << ", Initial PE = " << PE_initial << std::endl;
+            std::cout << "Initial total Energy: " << KE_initial + PE_initial << std::endl;
         }
     }
+    #pragma omp barrier
     this->implicit_solver->solve(this->phi, integral_function); // Solve the non-linear system
     #pragma omp master
     {
@@ -175,7 +188,58 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
                 world.dx_dxi, left_boundary, right_boundary, number_cells); // Push particles to the grid
         }
     }
-    MPI_Abort(MPI_COMM_WORLD, 1); // Ensure all processes have completed the push operation
+    #pragma omp barrier
+    this->deposit_charge_density(particle_list, thread_id);
+    #pragma omp barrier
+    for (int part_num = 0; part_num < particle_list.size(); part_num++){
+        particle_list[part_num].get_particle_diagnostics(thread_id, world.number_cells); // Gather particle diagnostics
+    }
+    #pragma omp barrier
+    #pragma omp master
+    {
+        this->solve_field_energy(world);
+        PE_final = this->total_field_energy; // Store final potential energy
+        for (int part_num = 0; part_num < particle_list.size(); part_num++){
+            particle_list[part_num].gather_mpi(); // Gather particle diagnostics
+        }
+        KE_final = 0.0; // Initialize final kinetic energy
+        for (const auto& particle : particle_list) {
+            double sum = 0.0;
+            for (int i = 0; i < particle.number_velocity_coordinates; ++i) {
+                sum += particle.total_sum_v_square[i]; // Accumulate velocity
+            }
+            if (mpi_vars::mpi_rank == 0) {
+                std::cout << "Number of " << particle.name << " is " << particle.total_number_particles << std::endl; // Write particle diagnostics
+            }
+            KE_final += 0.5 * particle.weight * particle.mass * (sum + particle.accum_wall_energy_loss[0] + particle.accum_wall_energy_loss[1]); // Calculate final kinetic energy
+        }
+        std::vector<double> source_term(world.number_nodes, 0.0);
+        if (world.left_boundary_condition == 2) {
+            source_term[0] = -this->rho[0] /constants::epsilon_0; // Change boundary phi
+        } else if (world.left_boundary_condition == 4) {
+            source_term[0] = this->phi[0]; // Change boundary phi
+        } 
+    
+        if (world.right_boundary_condition == 2) {
+            source_term[world.number_cells] = -this->rho[world.number_cells] / constants::epsilon_0; // Change boundary phi
+        } else if (world.right_boundary_condition == 4) {
+            source_term[world.number_nodes] = this->phi[world.number_cells]; // Change boundary phi
+        } 
+    
+        for (int i = 1; i < world.number_cells; ++i) {
+            source_term[i] = -this->rho[i] /constants::epsilon_0; // Set right-hand side of the Poisson equation
+        }
+        double error = this->poisson_solver->norm_error(this->phi, source_term); // Solve the Poisson equation
+        if (mpi_vars::mpi_rank == 0) {
+            std::cout << "Final KE = " << KE_final << ", Final PE = " << PE_final << std::endl;
+            std::cout << "ES_solver_INGP: Final total Energy: " << KE_final + PE_final << std::endl;
+            std::cout << "Difference in total energy: " << ((KE_final + PE_final) - (KE_initial + PE_initial))/(KE_initial + PE_initial) << std::endl;
+            std::cout << "ES_solver_INGP: Norm error in Poisson solver: " << error << std::endl;
+        }
+        MPI_Barrier(MPI_COMM_WORLD); // Ensure all processes have completed the push operation
+        MPI_Abort(MPI_COMM_WORLD, 1); // Ensure all processes have completed the push operation
+    }
+    
     
     
 

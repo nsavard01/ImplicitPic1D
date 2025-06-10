@@ -2,6 +2,6 @@
 10 : number of past iterations to store
 50 : maximum amount of function evaluations
 0.5 : relaxation parameter
-1e-6 : relative convergence criteria
-1e-7 : absolute convergence criteria
+0.0 : relative convergence criteria
+1e-8 : absolute convergence criteria
 ENDFILE

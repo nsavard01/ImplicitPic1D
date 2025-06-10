@@ -27,7 +27,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
     double E_field_local; // E_x in SI units (physical space)
     double del_tau, time_passed, accel, d_interp;
     int xi_cell;
-    bool in_cell_bool, equal_v_sign_bool, future_boundary_bool;
+    bool in_cell_bool, equal_v_sign_bool, future_boundary_bool, del_part;
     int v_sign;
     int xi_boundary;
     const double t_tol = del_t * 1e-10;
@@ -40,7 +40,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
         xi_cell = int(xi_i + v_sign*1e-12); // in case lands on exact boundary, has happened before...
         del_tau = del_t;
         time_passed = 0.0;
-
+        del_part = false;
         while (del_tau > t_tol) {
             E_field_local = E_field[xi_cell];
             accel = q_over_m * E_field_local;
@@ -91,6 +91,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
                         case 1:
                         case 4:
                             xi_cell = 0;
+                            del_part = true;
                             break;
                         case 2:
                             xi_cell = 0;
@@ -107,6 +108,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
                         case 1:
                         case 4:
                             xi_cell = number_cells-1;
+                            del_part = true;
                             break;
                         case 2:
                             xi_cell = number_cells-1;
@@ -119,6 +121,10 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
                             break;
                     }
     
+                }
+                if (del_part) {
+                    // particle is lost, no need to continue
+                    break;
                 }
             }
             time_passed += del_tau;
@@ -259,6 +265,10 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
                     }
     
                 }
+                if (del_part) {
+                    // particle is lost, no need to continue
+                    break;
+                }
             }
             time_passed += del_tau;
             del_tau = del_t - time_passed;
@@ -288,6 +298,8 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
         }
         
     }
+    this->number_particles[thread_id][0] = (last_idx - space_delete);
+    this->number_collidable_particles[thread_id][0] = (last_idx - space_delete);
 }
 
 void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, double del_t, const std::vector<double>& E_field, std::vector<double>& work_space, 
@@ -300,7 +312,7 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
     double E_field_local; // E_x in SI units (physical space)
     double del_tau, time_passed, accel, d_interp;
     int xi_cell;
-    bool in_cell_bool, equal_v_sign_bool, future_boundary_bool;
+    bool in_cell_bool, equal_v_sign_bool, future_boundary_bool, del_part;
     int v_sign;
     int xi_boundary;
     const double t_tol = del_t * 1e-10;
@@ -314,7 +326,7 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
         xi_cell = int(xi_i + v_sign*1e-12); // in case lands on exact boundary, has happened before...
         del_tau = del_t;
         time_passed = 0.0;
-
+        del_part = false;
         while (del_tau > t_tol) {
             E_field_local = E_field[xi_cell];
             dx = dx_dxi[xi_cell];
@@ -366,6 +378,7 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
                         case 1:
                         case 4:
                             xi_cell = 0;
+                            del_part = true;
                             break;
                         case 2:
                             xi_cell = 0;
@@ -382,6 +395,7 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
                         case 1:
                         case 4:
                             xi_cell = number_cells-1;
+                            del_part = true;
                             break;
                         case 2:
                             xi_cell = number_cells-1;
@@ -394,6 +408,10 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
                             break;
                     }
     
+                }
+                if (del_part) {
+                    // particle is lost, no need to continue
+                    break;
                 }
             }
             time_passed += del_tau;
@@ -537,6 +555,10 @@ void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_
                     }
     
                 }
+                if (del_part) {
+                    // particle is lost, no need to continue
+                    break;
+                }
             }
             time_passed += del_tau;
             del_tau = del_t - time_passed;
@@ -565,4 +587,6 @@ void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_
         }
         
     }
+    this->number_particles[thread_id][0] = (last_idx - space_delete);
+    this->number_collidable_particles[thread_id][0] = (last_idx - space_delete);
 }

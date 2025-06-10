@@ -13,5 +13,6 @@ public:
     virtual ~poisson_solver_1D() = default;
 
     virtual void solve(std::vector<double>& solution, std::vector<double>& source_term) = 0; // pure virtual function to solve the system
+    virtual double norm_error(const std::vector<double>& solution, const std::vector<double>& source_term) const = 0; // pure virtual function to solve the system
 };
 

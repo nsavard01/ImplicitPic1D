@@ -181,4 +181,25 @@ CMakeFiles/pic1d.dir/src/solvers/poisson_solver_1D_tridiag.cpp.o: \
   /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/mpi_vars.hpp \
   /opt/intel/oneapi/mpi/2021.14/include/mpi.h \
   /opt/intel/oneapi/mpi/2021.14/include/mpio.h \
-  /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h
+  /opt/intel/oneapi/mpi/2021.14/include/mpicxx.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/cmath \
+  /usr/include/math.h /usr/include/bits/math-vector.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
+  /usr/include/bits/flt-eval-method.h /usr/include/bits/fp-logb.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/iscanonical.h /usr/include/bits/mathinline.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/bits/specfun.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/gamma.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/special_function_util.h \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/bessel_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/beta_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/ell_integral.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/exp_integral.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/hypergeometric.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/legendre_function.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/modified_bessel_func.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_hermite.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/poly_laguerre.tcc \
+  /usr/lib/gcc/x86_64-redhat-linux/8/../../../../include/c++/8/tr1/riemann_zeta.tcc

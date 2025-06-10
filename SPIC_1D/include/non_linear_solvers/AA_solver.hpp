@@ -36,7 +36,10 @@ public:
             }
         
         
-            this->norm_residual[0] = std::sqrt(this->norm_residual[0]);    
+            this->norm_residual[0] = std::sqrt(this->norm_residual[0]);   
+            if (mpi_vars::mpi_rank == 0) {
+                std::cout << "Initial norm "  << this->norm_residual[0] << std::endl;
+            } 
         }
         #pragma omp barrier
         double eps_tol = this->eps_r * this->norm_residual[0] + this->eps_a * std::sqrt(double(this->number_unknowns));
@@ -53,9 +56,6 @@ public:
             #pragma omp barrier
             #pragma omp master
             {   
-                if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "Iteration: " << iter << ", Residual Norm: " << this->norm_residual[index] << std::endl;
-                }
                 this->norm_residual[index] = 0.0;
                 for (int i = 0; i < this->number_unknowns; i++){
                     double diff = x_result[i] - this->x_k[index][i];
@@ -63,6 +63,10 @@ public:
                     this->norm_residual[index] += diff * diff; // accumulate norm
                 }
                 this->norm_residual[index] = std::sqrt(this->norm_residual[index]);
+                if (mpi_vars::mpi_rank == 0) {
+                    std::cout << "Norm is "  << this->norm_residual[index] << " with tolerance " << eps_tol << std::endl;
+                    std::cout << "index is " << index << " iter is " << iter << std::endl;
+                } 
             } 
             #pragma omp barrier
             
@@ -72,7 +76,7 @@ public:
             #pragma omp master
             {
                 for (int j = 0; j < m_k; j++) {
-                    int past_indx = (index - m_k + j) % (this->m_anderson + 1);
+                    int past_indx = (iter - m_k + j) % (this->m_anderson + 1);
                     size_t start_indx = j * this->number_unknowns; // flattened index start
                     for (int i = 0; i < this->number_unknowns; i++) {
                         double diff = this->residual_k[index][i] - this->residual_k[past_indx][i];
@@ -85,7 +89,7 @@ public:
                 std::vector<double> alpha = solveNormalEquationMKL(min_matrix, residual_k[index], this->number_unknowns, m_k);
                 
                 int next_idx = (index+1) % (this->m_anderson + 1);
-                int past_indx = (index - m_k) % (this->m_anderson + 1);
+                int past_indx = (iter - m_k) % (this->m_anderson + 1);
                 double alpha_last = alpha[0];
                 // initially set next x_k to first component
                 for (int i = 0; i < this->number_unknowns; i++) {
@@ -94,7 +98,7 @@ public:
                 for (int j = 1; j < m_k; j++) {
                     // Sum alphas
                     alpha_last += alpha[j];
-                    past_indx = (index - m_k + j) % (this->m_anderson + 1);
+                    past_indx = (iter - m_k + j) % (this->m_anderson + 1);
                     for (int i = 0; i < this->number_unknowns; i++) {
                         this->x_k[next_idx][i] += alpha[j] * (this->beta * residual_k[past_indx][i] + x_k[past_indx][i]);
                     }   
@@ -109,8 +113,11 @@ public:
 
         }
         #pragma omp master
-        {
+        {   
             this->number_iterations = iter + 1;
+            if (mpi_vars::mpi_rank == 0) {
+                std::cout << "number iterations "  << this->number_iterations << std::endl;
+            }
         }
 
     }

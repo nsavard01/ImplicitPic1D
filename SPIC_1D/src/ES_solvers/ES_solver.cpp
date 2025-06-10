@@ -81,6 +81,7 @@ void ES_solver::initialize_diagnostic_files(const std::string& filename) {
 
 void ES_solver::solve_field_energy(const domain& world) {
     double sum = 0.0;
+    double sum_other = 0.0;
     // rho in computational space, so already have rho * delta_x, don't need take into consideration different delta_x non-uniform
     if (world.left_boundary_condition == 2) {
         sum += this->phi[0] * this->rho[0]; // only half rho considered and only getting energy in half cell
@@ -91,7 +92,21 @@ void ES_solver::solve_field_energy(const domain& world) {
     for (int i = 1; i < world.number_cells; i++) {
         sum += this->phi[i] * this->rho[i];
     }
-    this->total_field_energy = 0.5 * sum; // J/m^2
+    if (world.domain_type == 0) {
+        // uniform domain
+        double dx = world.min_dx; // Cell size for uniform domain
+        for (int i = 0; i < world.number_cells; i++) {
+            sum_other += (this->phi[i] - this->phi[i+1])*(this->phi[i] - this->phi[i+1])  / dx; // multiply by cell size
+        }
+    } else if (world.domain_type == 1) {
+        // non-uniform domain
+        const std::vector<double>& dx = world.dx_dxi; // Cell size for non-uniform domain
+        for (int i = 0; i < world.number_cells; ++i) {
+            sum_other += (this->phi[i] - this->phi[i+1])*(this->phi[i] - this->phi[i+1])  / dx[i]; // multiply by cell size
+        }
+    }
+    sum_other = 0.5 * constants::epsilon_0 * sum_other;
+    this->total_field_energy = sum_other; // J/m^2
 }
 
 void ES_solver::write_diagnostics(const std::string& dir_name, int diag_number) {
