@@ -75,6 +75,85 @@ void ES_solver_INGP::print_out() {
     }
 }
 
+inline void smooth_charge_density(std::vector<double>& rho, const domain& world) {
+    // Smooth charge density using binomial smoothing
+    std::vector<double> rho_copy = rho; // Copy charge density for smoothing
+    int left_boundary = world.left_boundary_condition; // Get left boundary condition
+    int right_boundary = world.right_boundary_condition; // Get right boundary condition
+    double rho_edge;
+    // binomial smoothing
+    if (left_boundary == 1 || left_boundary == 4) {
+        // rho is 0 at edge
+        rho_edge = 0.0;
+        rho[0] = 0.0;
+    } else if (left_boundary == 2){
+        rho_edge = 2.0 * rho_copy[0];
+        // rho_copy[0] is half volume so multiply by 2
+        rho[0] = 0.125 * (2.0 * rho_edge + 2.0 * rho_copy[1]); // stencil assumes half rho at edge
+    } else {
+        rho_edge = rho_copy[0] + rho_copy[world.number_cells]; // rho_copy[0] is half volume so add full volume at edge
+        rho[0] = 0.25 * (rho_copy[world.number_cells-1] + 2.0 * rho_edge + rho_copy[1]);
+        rho[world.number_cells] = rho[0];
+    }
+    rho[1] = 0.25 * (rho_edge + 2.0 * rho_copy[1] + rho_copy[2]); // Smooth first cell
+    for (int i = 2; i < world.number_cells - 1; i++) {
+        rho[i] = 0.25 * (rho_copy[i-1] + 2.0 * rho_copy[i] + rho_copy[i+1]); // Smooth interior cells
+    }
+    if (right_boundary == 1 || right_boundary == 4) {
+        // rho is 0 at edge
+        rho_edge = 0.0;
+        rho[world.number_cells] = 0.0;
+    } else if (right_boundary == 2){
+        rho_edge = 2.0 * rho_copy[world.number_cells];
+        // rho_copy[0] is half volume so multiply by 2
+        rho[world.number_cells] = 0.125 * (2.0 * rho_edge + 2.0 * rho_copy[world.number_cells-1]); // stencil assumes half rho at edge
+    } // already taken care of with left_boundary == 3
+    rho[world.number_cells-1] = 0.25 * (rho_edge + 2.0 * rho_copy[world.number_cells-1] + rho_copy[world.number_cells-2]); // Smooth last cell
+        
+}
+
+void ES_solver_INGP::deposit_charge_density(const domain& world, std::vector<charged_particle>& particle_list, int thread_id) {
+    // Loop over all particles and deposit charge density
+    
+    int total_thread_count = omp_get_max_threads();
+    int total_rho_size = world.number_nodes; // Total number of nodes in the domain
+    int num_particles = particle_list.size();
+    std::vector<double>& part_work_space = charged_particle::xi_sorted[thread_id];
+    // local work_space to accumulate over each particle
+    std::vector<double>& local_work_space = this->work_space[thread_id];
+    std::fill(local_work_space.begin(), local_work_space.end(), 0.0);
+    for (int i = 0; i < num_particles; ++i) {
+        const charged_particle& particle = particle_list[i];
+        // Set work space to 0
+        std::fill(part_work_space.begin(), part_work_space.begin() + total_rho_size, 0.0);
+        particle.deposit_particles_linear(thread_id, part_work_space); // Deposit charge density for each particle
+        double q_time_wp = particle.q_times_wp; // Get charge density for each particle
+        for (int j = 0; j < total_rho_size; ++j) {
+            local_work_space[j] += part_work_space[j] * q_time_wp; // Accumulate charge density from all particles
+        }
+    }
+    // Accumulate charge density from all threads
+    #pragma omp barrier
+    #pragma omp for
+    for (int i = 0; i < total_rho_size; i++) {
+        double sum = 0.0;
+        for (int i_thread = 0; i_thread < total_thread_count; i_thread++) {
+            sum += this->work_space[i_thread][i];
+        }
+        this->rho[i] = sum; // Set charge density for each cell
+    }
+    #pragma omp barrier
+    #pragma omp master
+    {
+        MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), total_rho_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
+        if (this->smoothing) {
+            smooth_charge_density(this->rho, world); // Smooth charge density if enabled 
+        }
+    }
+    #pragma omp barrier
+
+}
+
 inline void smooth_field(std::vector<double>& E_field, const domain& world) {
     // Smooth electric field using binomial smoothing
     std::vector<double> E_field_copy = E_field; // Copy electric field for smoothing
@@ -190,6 +269,9 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
         #pragma omp master
         {
             MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), world.number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
+            if (this->smoothing) {
+                smooth_charge_density(this->rho, world); // Smooth charge density if enabled 
+            }
         }
         #pragma omp barrier
         #pragma omp master
@@ -279,13 +361,13 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
         std::vector<double> source_term(world.number_nodes, 0.0);
         if (world.left_boundary_condition == 2) {
             source_term[0] = -this->rho[0] /constants::epsilon_0; // Change boundary phi
-        } else if (world.left_boundary_condition == 4) {
+        } else {
             source_term[0] = this->phi[0]; // Change boundary phi
         } 
     
         if (world.right_boundary_condition == 2) {
             source_term[world.number_cells] = -this->rho[world.number_cells] / constants::epsilon_0; // Change boundary phi
-        } else if (world.right_boundary_condition == 4) {
+        } else {
             source_term[world.number_nodes] = this->phi[world.number_cells]; // Change boundary phi
         } 
     

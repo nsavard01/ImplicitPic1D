@@ -126,16 +126,19 @@ double poisson_solver_1D_tridiag::norm_error(const std::vector<double>& solution
         res = (this->diagonal[0] * solution[0] + this->upper[0] * solution[1])/ source_term[0] - 1.0; 
         error += res * res;
     }
+   
     for (int i = 1; i < this->number_unknowns-1; i++) {
         if (source_term[i] != 0.0) {
             res = (this->lower[i-1] * solution[i-1] + this->diagonal[i] * solution[i] + this->upper[i] * solution[i+1]) / source_term[i] - 1.0;
             error += res * res;
         }
     }
+    
     if (source_term[this->number_unknowns-1] != 0.0) {
         res = (this->lower[this->number_unknowns-2] * solution[this->number_unknowns-2] + this->diagonal[this->number_unknowns-1] * solution[this->number_unknowns-1]) / source_term[this->number_unknowns-1] - 1.0;
         error += res * res;
     }
+    
     
     return std::sqrt(error / static_cast<double>(this->number_unknowns));   
 }
