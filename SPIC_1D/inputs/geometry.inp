@@ -4,4 +4,5 @@
 1 4 : Left and right side boundary condition (1 dirichlet, 2 Neumann-reflective-symmetric, 3 periodic, 4 = RF-Dirichlet)
 0 450 : Voltage for left and right side boundary, used for dirichlet and periodic conditions. For RF-Dirichlet, voltage is half amplitude
 13.56e6 : Osciallating voltage frequency (Hz)
+0 : smoothing (0 = off)
 ENDFILE

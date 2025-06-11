@@ -12,6 +12,7 @@ class ES_solver_INGP : public ES_solver {
 public:
     std::vector<double> phi_past, J; // future potential for implicit solver
     std::unique_ptr<non_linear_solver> implicit_solver; // pointer to the implicit non-linear solver
+    bool smoothing;
     ES_solver_INGP(const domain& world);
     void print_out() override;
     void make_EField(const domain& world) override;

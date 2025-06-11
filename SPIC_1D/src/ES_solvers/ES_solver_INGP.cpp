@@ -6,6 +6,9 @@
 #include "solvers/poisson_solver_1D_tridiag.hpp"
 #include "globals/mpi_vars.hpp"
 #include "globals/constants.hpp"
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 ES_solver_INGP::ES_solver_INGP(const domain& world) {
     this->phi.resize(world.number_nodes, 0.0);
@@ -26,6 +29,31 @@ ES_solver_INGP::ES_solver_INGP(const domain& world) {
     MPI_Bcast(int_params.data(), 3, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast integer parameters
     this->implicit_solver = std::make_unique<AA_solver>(double_params[0], double_params[1], double_params[2], int_params[2], int_params[1], world.number_nodes);
     this->implicit_solver->print_out(); // Print implicit solver parameters
+    int flag;
+    if (mpi_vars::mpi_rank == 0) {
+        std::string line;
+        std::ifstream file("../inputs/geometry.inp");
+        if (!file) {
+            std::cerr << "Error: Unable to open file " << "../inputs/geometry.inp" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        
+        
+        std::getline(file, line);
+        std::getline(file, line);
+        std::getline(file, line);
+        std::getline(file, line);
+        std::getline(file, line);
+        std::getline(file, line);
+        std::getline(file, line);
+        std::istringstream iss(line);
+        iss.str(line);
+        iss >> flag;
+        iss.clear();
+        file.close();
+    }
+    MPI_Bcast(&flag, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast smoothing flag
+    this->smoothing = (flag == 1); // Set smoothing flag based on input
 }
 
 void ES_solver_INGP::print_out() {
@@ -42,7 +70,35 @@ void ES_solver_INGP::print_out() {
         } else {
             std::cout << "No RF set." << std::endl;
         }
+        std::cout << "Smoothing: " << (this->smoothing ? "Enabled" : "Disabled") << std::endl;
         std::cout << "-------------------------- " << std::endl;
+    }
+}
+
+inline void smooth_field(std::vector<double>& E_field, const domain& world) {
+    // Smooth electric field using binomial smoothing
+    std::vector<double> E_field_copy = E_field; // Copy electric field for smoothing
+    int left_boundary = world.left_boundary_condition; // Get left boundary condition
+    int right_boundary = world.right_boundary_condition; // Get right boundary condition
+    // binomial smoothing
+    if (left_boundary == 1 || left_boundary == 4) {
+        // E_field is 0 at edge
+        E_field[0] = 0.25 * (3.0 * E_field_copy[0] + E_field_copy[1]);
+    } else if (left_boundary == 2){
+        E_field[0] = 0.25 * (E_field_copy[0] + E_field_copy[1]);
+    } else {
+        E_field[0] = 0.25 * (2.0 * E_field_copy[0] + E_field_copy[1] + E_field_copy[world.number_cells-1]); // Smooth first cell
+    }
+    for (int i = 1; i < world.number_cells - 1; i++) {
+        E_field[i] = 0.25 * (E_field_copy[i-1] + 2.0 * E_field_copy[i] + E_field_copy[i+1]);
+    }
+    if (right_boundary == 1 || right_boundary == 4) {
+        // E_field is 0 at edge
+        E_field[world.number_cells-1] = 0.25 * (3.0 * E_field_copy[world.number_cells-1] + E_field_copy[world.number_cells-2]);
+    } else if (right_boundary == 2){
+        E_field[world.number_cells-1] = 0.25 * (E_field_copy[world.number_cells-1] + E_field_copy[world.number_cells-2]);
+    } else {
+        E_field[world.number_cells-1] = 0.25 * (2.0 * E_field_copy[world.number_cells-1] + E_field_copy[0] + E_field_copy[world.number_cells-2]); // Smooth first cell
     }
 }
 
@@ -50,16 +106,22 @@ void ES_solver_INGP::print_out() {
 void ES_solver_INGP::make_EField(const domain& world) {
     // Calculate the electric field from the potential
     int number_cells = world.number_cells; // Number of cells in the domain
+    for (int i = 0; i < number_cells; ++i) {
+        this->E_field[i] = 0.5 * (this->phi[i] + this->phi_past[i] - this->phi[i+1] - this->phi_past[i+1]); // Electric field calculation
+    }
+    if (this->smoothing) {
+        smooth_field(this->E_field, world); // Smooth electric field if smoothing is enabled
+    }
     if (world.domain_type == 0) {
         double inv_dx = 1.0/world.min_dx; // Cell size for uniform domain
         inv_dx = 1.0/world.min_dx; // Cell size for uniform domain
         for (int i = 0; i < number_cells; ++i) {
-            this->E_field[i] = 0.5 * (this->phi[i] + this->phi_past[i] - this->phi[i+1] - this->phi_past[i+1]) * inv_dx; // Electric field calculation
+            this->E_field[i] = this->E_field[i] * inv_dx; // Electric field calculation
         }
     } else if (world.domain_type == 1) {
         const std::vector<double>& dx = world.dx_dxi; // Cell size for non-uniform domain
         for (int i = 0; i < number_cells; ++i) {
-            this->E_field[i] = 0.5 * (this->phi[i] + this->phi_past[i] - this->phi[i+1] - this->phi_past[i+1])/ dx[i]; // Electric field calculation
+            this->E_field[i] = this->E_field[i]/ dx[i]; // Electric field calculation
         }
     }
 
@@ -113,6 +175,7 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
             this->make_EField(world);
             part_timer_start = MPI_Wtime();
         }
+        #pragma omp barrier
         this->push_particles(thread_id, del_t, particle_list, world);
         #pragma omp barrier
         #pragma omp for
