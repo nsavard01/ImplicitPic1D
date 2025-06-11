@@ -38,7 +38,7 @@ public:
 
     virtual void print_out() = 0;
     virtual void write_particle_densities(const std::string file_path, const std::string filename, std::vector<charged_particle>& particle_list, const domain& world) const; // since density determinined by potential solver type
-    virtual void deposit_charge_density(std::vector<charged_particle>& particle_list, int thread_id);
+    virtual void deposit_charge_density(const domain& world, std::vector<charged_particle>& particle_list, int thread_id);
     virtual void deposit_density(std::vector<charged_particle>& particle_list, int thread_id);
     virtual void solve_potential(double current_time, const domain& world);
     virtual void solve_field_energy(const domain& world);

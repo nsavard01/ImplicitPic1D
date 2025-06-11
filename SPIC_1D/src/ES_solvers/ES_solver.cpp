@@ -128,11 +128,11 @@ void ES_solver::write_diagnostics(const std::string& dir_name, int diag_number) 
 
 
 
-void ES_solver::deposit_charge_density(std::vector<charged_particle>& particle_list, int thread_id) {
+void ES_solver::deposit_charge_density(const domain& world, std::vector<charged_particle>& particle_list, int thread_id) {
     // Loop over all particles and deposit charge density
     
     int total_thread_count = omp_get_max_threads();
-    int total_rho_size = this->rho.size();
+    int total_rho_size = world.number_nodes;
     int num_particles = particle_list.size();
     std::vector<double>& part_work_space = charged_particle::xi_sorted[thread_id];
     // local work_space to accumulate over each particle

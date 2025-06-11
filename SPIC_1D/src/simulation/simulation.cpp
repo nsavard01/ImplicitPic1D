@@ -361,7 +361,7 @@ void simulation::setup() {
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
-        this->field_solver->deposit_charge_density(this->charged_particle_list, thread_id);
+        this->field_solver->deposit_charge_density(*this->world, this->charged_particle_list, thread_id);
         #pragma omp barrier
         #pragma omp master
         {

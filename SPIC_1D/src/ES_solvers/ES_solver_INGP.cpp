@@ -252,7 +252,7 @@ void ES_solver_INGP::integrate_time_step(const int thread_id, double del_t, doub
         }
     }
     #pragma omp barrier
-    this->deposit_charge_density(particle_list, thread_id);
+    this->deposit_charge_density(world, particle_list, thread_id);
     #pragma omp barrier
     for (int part_num = 0; part_num < particle_list.size(); part_num++){
         particle_list[part_num].get_particle_diagnostics(thread_id, world.number_cells); // Gather particle diagnostics

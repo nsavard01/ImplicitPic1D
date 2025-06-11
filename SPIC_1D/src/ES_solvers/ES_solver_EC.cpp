@@ -62,7 +62,7 @@ void ES_solver_EC::integrate_time_step(const int thread_id, double del_t, double
         this->particle_timer = MPI_Wtime();
     }
     this->push_particles(thread_id, del_t, particle_list, world);
-    this->deposit_charge_density(particle_list, thread_id);
+    this->deposit_charge_density(world, particle_list, thread_id);
     #pragma omp barrier
     #pragma omp master
     {
