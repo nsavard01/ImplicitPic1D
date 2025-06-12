@@ -286,10 +286,7 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
             size_t new_idx = part_indx-space_delete;
             xi_local[new_idx] = xi_f;
             v_x_local[new_idx] = v_x_f;
-            if (!std::isfinite(v_x_f)) {
-                std::cout << "error" << std::endl;
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
+            
             if (use_vy) {
                 this->v_y[thread_id][new_idx] = v_y;
             }

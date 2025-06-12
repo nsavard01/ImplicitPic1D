@@ -8,37 +8,33 @@
 #include "globals/mpi_vars.hpp"
 #include <iostream>
 
-inline std::vector<double> solveNormalEquationMKL(const std::vector<double>& A, const std::vector<double>& b, int m, int n) {
+inline std::vector<double> solveLeastSquaresQR_MKL(const std::vector<double>& A_input,
+    const std::vector<double>& b_input,
+    int m, int n) {
+    // Copy A and b to work arrays since LAPACK routines modify them in-place
+    std::vector<double> A = A_input;          // Size m × n
+    std::vector<double> b = b_input;          // Size m
     // if (A.size() != size_t(m * n) || b.size() != size_t(m)) {
-    //     throw std::invalid_argument("Matrix/vector size mismatch.");
+    // throw std::invalid_argument("Matrix/vector size mismatch.");
     // }
 
-    // Compute Aᵗ * A (size n×n)
-    std::vector<double> AtA(n * n, 0.0);
-    cblas_dsyrk(CblasColMajor, CblasUpper, CblasTrans, 
-                n, m, 
-                1.0, A.data(), m,
-                0.0, AtA.data(), n);
+    // LAPACKE_dgels expects leading dimension >= max(1, m)
+    lapack_int lda = m;
+    lapack_int ldb = std::max(m, n);  // b will be padded to length ldb
 
-    // Compute Aᵗ * b (size n)
-    std::vector<double> Atb(n, 0.0);
-    cblas_dgemv(CblasColMajor, CblasTrans,
-                m, n,
-                1.0, A.data(), m,
-                b.data(), 1,
-                0.0, Atb.data(), 1);
+    // Resize b to match ldb
+    b.resize(ldb, 0.0);
 
-    // Solve (Aᵗ A) x = Aᵗ b using LAPACK's dposv (since AtA is symmetric positive-definite)
-    lapack_int info = LAPACKE_dposv(LAPACK_COL_MAJOR, 'U', n, 1,
-                                    AtA.data(), n,
-                                    Atb.data(), n);
+    lapack_int info = LAPACKE_dgels(LAPACK_COL_MAJOR, 'N', m, n, 1,
+    A.data(), lda,
+    b.data(), ldb);
 
     if (info != 0) {
-        throw std::runtime_error("LAPACKE_dposv failed with error code " + std::to_string(info));
+    throw std::runtime_error("LAPACKE_dgels failed with error code " + std::to_string(info));
     }
 
-    // Atb now contains the solution vector x
-    return Atb;
+    // Solution x is in the first n entries of b
+    return std::vector<double>(b.begin(), b.begin() + n);
 }
 
 inline std::vector<double> solveNormalEquationManual(
@@ -132,10 +128,6 @@ inline std::vector<double> solveNormalEquationGauss(
             for (int k = 0; k < m; ++k) {
                 sum += A[k + i * m] * A[k + j * m];
             }
-            if (!std::isfinite(sum)) {
-                std::cout << "error" << std::endl;
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
             AtA[i + j * n] = sum;
             AtA[j + i * n] = sum;  // symmetric
         }
@@ -144,36 +136,23 @@ inline std::vector<double> solveNormalEquationGauss(
         for (int k = 0; k < m; ++k) {
             sum_b += A[k + i * m] * b[k];
         }
-        if (!std::isfinite(sum_b)) {
-            std::cout << "error" << std::endl;
-            MPI_Abort(MPI_COMM_WORLD, 1);
-        }
+        
         Atb[i] = sum_b;
     }
     // Step 2: Gaussian elimination on AtA and Atb
     for (int k = 0; k < n - 1; ++k) {
         double pivot = AtA[k + k * n];
-        if (!std::isfinite(pivot)) {
-            std::cout << "error" << std::endl;
-            MPI_Abort(MPI_COMM_WORLD, 1);
-        }
+        
         if (pivot == 0.0) {
             throw std::runtime_error("Zero pivot encountered in Gaussian elimination.");
         }
 
         for (int i = k + 1; i < n; ++i) {
             double factor = AtA[i + k * n] / pivot;
-            if (!std::isfinite(factor)) {
-                std::cout << "error" << std::endl;
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
+            
             AtA[i + k * n] = factor;  // store L
 
             for (int j = k + 1; j < n; ++j) {
-                if (!std::isfinite(factor * AtA[k + j * n])) {
-                    std::cout << "error" << std::endl;
-                    MPI_Abort(MPI_COMM_WORLD, 1);
-                }
                 AtA[i + j * n] -= factor * AtA[k + j * n];
             }
         }
@@ -182,20 +161,12 @@ inline std::vector<double> solveNormalEquationGauss(
     // Step 3: Forward substitution (solve L * y = Atb)
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < i; ++j) {
-            if (!std::isfinite(AtA[i + j * n] * Atb[j])) {
-                std::cout << "error" << std::endl;
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
             Atb[i] -= AtA[i + j * n] * Atb[j];
         }
     }
     // Step 4: Backward substitution (solve U * x = y)
     for (int i = n - 1; i >= 0; --i) {
         for (int j = i + 1; j < n; ++j) {
-            if (!std::isfinite(AtA[i + j * n] * Atb[j])) {
-                std::cout << "error" << std::endl;
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
             Atb[i] -= AtA[i + j * n] * Atb[j];
         }
 

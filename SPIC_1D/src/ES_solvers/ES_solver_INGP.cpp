@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include "globals/write_functions.hpp"
 
 ES_solver_INGP::ES_solver_INGP(const domain& world) {
@@ -55,6 +56,62 @@ ES_solver_INGP::ES_solver_INGP(const domain& world) {
     }
     MPI_Bcast(&flag, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast smoothing flag
     this->smoothing = (flag == 1); // Set smoothing flag based on input
+}
+
+void ES_solver_INGP::initialize_diagnostic_files(const std::string& filename) {
+    // Open file
+    if (mpi_vars::mpi_rank == 0) {
+        std::ofstream file(filename + "/phi/parameters.dat");
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+        file << "RF_rad_frequency, RF_half_amplitude, left_voltage, right_voltage \n";
+
+        file << std::scientific << std::setprecision(8);
+        file << this->RF_rad_frequency << "\t"
+        << this->RF_half_amplitude << "\t"
+        << this->left_voltage << "\t"
+        << this->right_voltage <<
+        "\n";
+
+        file.close();
+
+        file.open(filename + "/field_diagnostics.dat");
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+        file << "field energy (J/m^2),  gauss error \n";
+
+        file.close();
+        
+        this->implicit_solver->initialize_diagnostic_files(filename);
+    }
+}
+
+void ES_solver_INGP::write_diagnostics(const std::string& dir_name, int diag_number) {
+    if (mpi_vars::mpi_rank == 0) {
+        write_vector_to_binary_file(this->phi, this->phi.size(), dir_name + "/phi/potential_" + std::to_string(diag_number) + ".dat", 0);
+        std::ofstream file(dir_name + "/field_diagnostics.dat", std::ios::app);
+        if (!file) {
+            std::cerr << "Error opening file for domain \n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header (optional)
+
+        file << std::scientific << std::setprecision(8);
+        file << this->total_field_energy << "\t"
+        << this->gauss_error << "\n"; // Write field energy and Gauss error
+
+        file.close();
+        this->implicit_solver->write_diagnostics(dir_name); // Write implicit solver diagnostics
+    }
 }
 
 void ES_solver_INGP::print_out() {

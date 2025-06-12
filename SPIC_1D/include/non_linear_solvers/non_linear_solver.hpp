@@ -11,8 +11,12 @@ public:
     double eps_r, eps_a;
     int max_iterations;
     int number_iterations, number_unknowns;
+    size_t accum_iterations_count;
+    double solver_time, accum_residual_norm;
     virtual ~non_linear_solver() = default;
 
+    virtual void initialize_diagnostic_files(const std::string& filename) const; // initialize diagnostic files
+    virtual void write_diagnostics(const std::string& filename) const; // initialize diagnostic files
     virtual void solve(std::vector<double>& x_result, // x_result first with initial guess, then pass actual result
         const std::function<void(std::vector<double>&)>& fixed_point_function) = 0; 
 

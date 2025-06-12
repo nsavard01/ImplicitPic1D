@@ -13,12 +13,15 @@ public:
     int m_anderson;
     std::vector<double> norm_residual, min_matrix;
     std::vector<std::vector<double>> residual_k, x_k;
+    void initialize_diagnostic_files(const std::string& filename) const override; // initialize diagnostic files
     AA_solver(double beta, double eps_r, double eps_a, int max_iterations, int m_anderson, int number_unknowns);
     void print_out() const override;
     void solve(std::vector<double>& x_result, // x_result first with initial guess, then pass actual result
         const std::function<void(std::vector<double>&)>& fixed_point_function) override { //Fixed point function returns next value x_k F(x_k, x_k+1), always uses x_result
+        double start_time;
         #pragma omp master
-        {
+        {   
+            start_time = MPI_Wtime();
             this->x_k[0] = x_result;
         }
         #pragma omp barrier
@@ -92,7 +95,7 @@ public:
                 //     std::cout << "Before alpha " << std::endl;
                 // }
                 // MPI_Barrier(MPI_COMM_WORLD); // ensure all threads have finished before solving
-                std::vector<double> alpha = solveNormalEquationGauss(min_matrix, residual_k[index], this->number_unknowns, m_k);
+                std::vector<double> alpha = solveLeastSquaresQR_MKL(min_matrix, residual_k[index], this->number_unknowns, m_k);
                 // if (mpi_vars::mpi_rank == 0) {
                 //     std::cout << "Went through alpha " << std::endl;
                 // }
@@ -123,7 +126,11 @@ public:
         }
         #pragma omp master
         {   
+            double end_time = MPI_Wtime();
+            this->solver_time += end_time - start_time;
             this->number_iterations = iter + 1;
+            this->accum_residual_norm += this->norm_residual[index];
+            this->accum_iterations_count += this->number_iterations;
         }
 
     }

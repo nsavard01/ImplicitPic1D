@@ -14,6 +14,8 @@ public:
     std::unique_ptr<non_linear_solver> implicit_solver; // pointer to the implicit non-linear solver
     bool smoothing;
     ES_solver_INGP(const domain& world);
+    void initialize_diagnostic_files(const std::string& filename) override;
+    void write_diagnostics(const std::string& dir_name, int diag_number) override;
     void print_out() override;
     void make_EField(const domain& world) override;
     void write_particle_densities(const std::string file_path, const std::string filename, std::vector<charged_particle>& particle_list, const domain& world) const override;

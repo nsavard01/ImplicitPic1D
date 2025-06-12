@@ -32,8 +32,8 @@ public:
     std::vector<double>& get_rho() {
         return this->rho;
     };
-    void initialize_diagnostic_files(const std::string& filename);
-    void write_diagnostics(const std::string& dir_name, int diag_number);
+    virtual void initialize_diagnostic_files(const std::string& filename);
+    virtual void write_diagnostics(const std::string& dir_name, int diag_number);
 
     void set_phi(double left_voltage, double right_voltage, double RF_frequency, int left_boundary, int right_boundary);
 
