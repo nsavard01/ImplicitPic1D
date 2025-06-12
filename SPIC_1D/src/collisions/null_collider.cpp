@@ -597,6 +597,70 @@ void null_collider::gather_mpi() {
     
 }
 
+void null_collider::order_collisions() {
+    // Reorder collisions based on most collisions to avoid extra looping through collisions
+    // do it every diagnostic step
+    if (this->number_targets > 0) {
+        std::vector<int> indices_target(this->number_targets);
+        std::vector<size_t> total_target_number_collisions(this->number_targets, 0);
+        for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+            std::vector<std::vector<int>> product_indices_copy = this->product_indices[t_idx];
+            std::vector<int> collision_type_per_target_copy = this->collision_type_per_target[t_idx];
+            std::vector<int> collision_id_copy = this->collision_id[t_idx];
+            std::vector<double> energy_threshold_copy = this->energy_threshold[t_idx];
+            std::vector<std::vector<double>> sigma_array_copy = this->sigma_array[t_idx];
+
+            indices_target[t_idx] = t_idx;
+            std::vector<int> indices_collisions(this->number_collisions_per_target[t_idx]);
+            for (int coll_idx=0; coll_idx< this->number_collisions_per_target[t_idx];coll_idx++){
+                indices_collisions[coll_idx] = coll_idx;
+                total_target_number_collisions[t_idx] += this->total_amount_collisions[t_idx][coll_idx];     
+            }  
+             // sort indicies based on frequency
+             std::vector<size_t>& temp_array = this->total_amount_collisions[t_idx];
+             std::sort(indices_collisions.begin(), indices_collisions.end(), [&temp_array](int i, int j) {
+                return temp_array[i] > temp_array[j];});
+
+            // sort collisions within target
+            for (int coll_idx=0; coll_idx< this->number_collisions_per_target[t_idx];coll_idx++){
+                int idx = indices_collisions[coll_idx];
+                this->collision_id[t_idx][coll_idx] = collision_id_copy[idx];
+                this->collision_type_per_target[t_idx][coll_idx] = collision_type_per_target_copy[idx];
+                this->energy_threshold[t_idx][coll_idx] = energy_threshold_copy[idx];
+                this->product_indices[t_idx][coll_idx] = product_indices_copy[idx];
+                this->sigma_array[t_idx][coll_idx] = sigma_array_copy[idx];
+            }   
+        }
+
+        std::vector<double> reduced_mass_copy = this->reduced_mass;
+        std::vector<double> reduced_mass_ionization_copy = this->reduced_mass_ionization;
+        std::vector<int> target_idx_copy = this->target_idx;
+        std::vector<int> number_collisions_per_target_copy = this->number_collisions_per_target;
+        std::vector<std::vector<std::vector<int>>> product_indices_copy = this->product_indices;
+        std::vector<std::vector<int>> collision_type_per_target_copy = this->collision_type_per_target;
+        std::vector<std::vector<int>> collision_id_copy = this->collision_id;
+        std::vector<std::vector<double>> energy_threshold_copy = this->energy_threshold;
+        std::vector<std::vector<std::vector<double>>> sigma_array_copy = this->sigma_array;
+
+        std::sort(indices_target.begin(), indices_target.end(), [&total_target_number_collisions](int i, int j) {
+            return total_target_number_collisions[i] > total_target_number_collisions[j];});
+
+        for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+            int idx = indices_target[t_idx];
+            this->number_collisions_per_target[t_idx] = number_collisions_per_target_copy[idx];
+            this->target_idx[t_idx] = target_idx_copy[idx];
+            this->reduced_mass[t_idx] = reduced_mass_copy[idx];
+            this->reduced_mass_ionization[t_idx] = reduced_mass_ionization_copy[idx];
+            this->collision_id[t_idx] = collision_id_copy[idx];
+            this->collision_type_per_target[t_idx] = collision_type_per_target_copy[idx];
+            this->energy_threshold[t_idx] = energy_threshold_copy[idx];
+            this->product_indices[t_idx] = product_indices_copy[idx];
+            this->sigma_array[t_idx] = sigma_array_copy[idx]; 
+        }
+
+    }
+}
+
 void null_collider::reset_diagnostics(int thread_id) {
     if (this->number_targets > 0) {
         #pragma omp master 

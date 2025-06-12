@@ -450,6 +450,19 @@ void simulation::diagnostics(int thread_id) {
             for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
                 std::cout << "Particle " << this->charged_particle_list[part_num].name << ", total #: " << this->charged_particle_list[part_num].total_number_particles << " , n_ave: " 
                 << this->charged_particle_list[part_num].average_density << " (1/m^3) , T_ave: " << this->charged_particle_list[part_num].average_temperature << " (eV) " << std::endl;
+                if (this->null_collider_list[part_num].number_targets > 0) {
+                    std::cout << "Null collisions for particle " << this->charged_particle_list[part_num].name << ": " << std::endl;
+                    for (int t_idx = 0; t_idx < this->null_collider_list[part_num].number_targets; t_idx++) {
+                        int idx = this->null_collider_list[part_num].target_idx[t_idx];
+                        double freq = 0.0;
+                        for (int coll_idx = 0; coll_idx < this->null_collider_list[part_num].number_collisions_per_target[t_idx]; coll_idx++) {
+                            freq += double(this->null_collider_list[part_num].total_amount_collisions[t_idx][coll_idx]);
+                        }
+                        freq = freq / double(this->null_collider_list[part_num].total_amount_collidable_particles) / this->del_t;
+                        std::cout << "Target particle: " << this->target_particle_list[idx].name << ", collision frequency (Hz): " 
+                        << freq << std::endl;
+                    }
+                }
             }
             std::cout << "Total momentum (kg / m/s) is x: " << total_momentum[0] << " y: " << total_momentum[1] << " z: " << total_momentum[2] << std::endl;
             std::cout << "Total Energy (J/m^2) is : " << total_Energy << std::endl;
@@ -464,6 +477,7 @@ void simulation::diagnostics(int thread_id) {
 void simulation::reset_diagnostics(int thread_id) {
     for (int i = 0; i<this->charged_particle_list.size(); i++){
         this->charged_particle_list[i].reset_diagnostics(thread_id);
+        this->null_collider_list[i].order_collisions();
         this->null_collider_list[i].reset_diagnostics(thread_id);
     }
     #pragma omp master
