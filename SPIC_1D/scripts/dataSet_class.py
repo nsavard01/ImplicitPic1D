@@ -81,6 +81,8 @@ class dataSet:
             self.RF_half_amplitude = data[1]
             self.left_voltage = data[2]
             self.right_voltage = data[3]
+            if (self.scheme == 'I-NGP' or self.scheme == 'I-CIC'):
+                self.smoothing = (data[4] == 1)
         temp_path = self.path + 'simulation_timing_data.dat'
         if (os.path.isfile(temp_path)):
             data = pd.read_csv(temp_path, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
@@ -98,9 +100,9 @@ class dataSet:
         if (os.path.isfile(temp_path)):
             data = pd.read_csv(temp_path, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
             size = data.size
-            if (size == 1):
+            if (size == 2):
                 self.field_data = pd.read_csv(temp_path, skiprows=1,
-                                               names=['E_tot'], sep='\s+')
+                                               names=['E_tot', 'Gauss Error'], sep='\s+')
 
         self.particles = {}
         temp_path = self.path + 'charged_particles'
@@ -169,6 +171,17 @@ class dataSet:
             data = pd.read_csv(part_diag, skiprows=1,
                                names=['n', 'T'], sep='\s+')
             self.targets[name]['diag'] = data
+
+        temp_file = self.path + 'non_linear_solver_properties.dat'
+        if (os.path.isfile(temp_file)):
+            data = pd.read_csv(temp_file, skiprows=1, nrows=1, sep='\s+', header=None).values[0]
+            self.non_linear_type = data[0]
+            self.non_linear_eps_a = data[1]
+            self.non_linear_eps_r = data[2]
+            self.non_linear_max_iter = data[3]
+            self.non_linear_params = data[5::]
+            self.non_linear_diag = pd.read_csv(self.path + 'non_linear_solver_diagnostics.dat', skiprows=1,
+                               names=['time', 'res_norm', 'iterations'], sep='\s+')
 
     def get_grid(self):
         return np.fromfile(self.path + '/domain/grid.dat', dtype = 'float')

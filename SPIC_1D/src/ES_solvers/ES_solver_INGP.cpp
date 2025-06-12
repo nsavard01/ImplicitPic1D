@@ -68,13 +68,14 @@ void ES_solver_INGP::initialize_diagnostic_files(const std::string& filename) {
         }
 
         // Write header (optional)
-        file << "RF_rad_frequency, RF_half_amplitude, left_voltage, right_voltage \n";
+        file << "RF_rad_frequency, RF_half_amplitude, left_voltage, right_voltage smoothing \n";
 
         file << std::scientific << std::setprecision(8);
         file << this->RF_rad_frequency << "\t"
         << this->RF_half_amplitude << "\t"
         << this->left_voltage << "\t"
-        << this->right_voltage <<
+        << this->right_voltage << "\t"
+        << (this->smoothing ? 1 : 0) << // Write smoothing flag
         "\n";
 
         file.close();
