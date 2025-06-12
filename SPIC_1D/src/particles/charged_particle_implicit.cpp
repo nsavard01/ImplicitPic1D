@@ -7,13 +7,14 @@
 #include <omp.h>
 #include <fstream>
 #include <sstream>
-#include <math.h>
+#include <cmath>
 #include <mpi.h>
 #include <numeric>
 #include <algorithm>
 #include <iomanip>
 #include <dirent.h>
 #include "rand_gen/maxwell_generator.hpp"
+
 
 
 
@@ -36,6 +37,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
 
         xi_i = xi_local[part_indx];
         v_x_i = v_x_local[part_indx];
+        
         v_sign = (v_x_i > 0) - (v_x_i < 0);
         xi_cell = int(xi_i + v_sign*1e-12); // in case lands on exact boundary, has happened before...
         del_tau = del_t;
@@ -46,9 +48,9 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
             accel = q_over_m * E_field_local;
             v_x_f = v_x_i + accel * del_tau;
             xi_f = xi_i + 0.5 * (v_x_i + v_x_f) * del_tau * inv_dx;
-            
+        
             // check if particle outside cell or flipped direction
-            in_cell_bool = (int(xi_f) == xi_cell);
+            in_cell_bool = (int(xi_f+1) == xi_cell+1);
             equal_v_sign_bool = ((v_x_i > 0) == (v_x_f > 0));
             future_boundary_bool = (!in_cell_bool) || (!equal_v_sign_bool);
 
@@ -82,7 +84,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
                 }
 
             }
-
+            
             if (future_boundary_bool) {
                 v_sign = (v_x_f > 0) - (v_x_f < 0);
                 xi_cell = xi_cell + v_sign;
@@ -127,6 +129,7 @@ void charged_particle::ES_push_deposit_INGP_uniform(const int thread_id, double 
                     break;
                 }
             }
+            
             time_passed += del_tau;
             del_tau = del_t - time_passed;
             xi_i = xi_f;
@@ -164,6 +167,7 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
 
         xi_i = xi_local[part_indx];
         v_x_i = v_x_local[part_indx];
+        
         v_sign = (v_x_i > 0) - (v_x_i < 0);
         xi_cell = int(xi_i + v_sign*1e-12); // in case lands on exact boundary, has happened before...
         del_tau = del_t;
@@ -183,7 +187,7 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
             xi_f = xi_i + 0.5 * (v_x_i + v_x_f) * del_tau * inv_dx;
             
             // check if particle outside cell or flipped direction
-            in_cell_bool = (int(xi_f) == xi_cell);
+            in_cell_bool = (int(xi_f+1) == xi_cell+1);
             equal_v_sign_bool = ((v_x_i > 0) == (v_x_f > 0));
             future_boundary_bool = (!in_cell_bool) || (!equal_v_sign_bool);
 
@@ -270,6 +274,7 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
                     break;
                 }
             }
+            
             time_passed += del_tau;
             del_tau = del_t - time_passed;
             xi_i = xi_f;
@@ -281,6 +286,10 @@ void charged_particle::ES_push_INGP_uniform(const int thread_id, double del_t, c
             size_t new_idx = part_indx-space_delete;
             xi_local[new_idx] = xi_f;
             v_x_local[new_idx] = v_x_f;
+            if (!std::isfinite(v_x_f)) {
+                std::cout << "error" << std::endl;
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
             if (use_vy) {
                 this->v_y[thread_id][new_idx] = v_y;
             }
@@ -335,7 +344,7 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
             xi_f = xi_i + 0.5 * (v_x_i + v_x_f) * del_tau / dx;
             
             // check if particle outside cell or flipped direction
-            in_cell_bool = (int(xi_f) == xi_cell);
+            in_cell_bool = (int(xi_f+1) == xi_cell+1);
             equal_v_sign_bool = ((v_x_i > 0) == (v_x_f > 0));
             future_boundary_bool = (!in_cell_bool) || (!equal_v_sign_bool);
 
@@ -414,6 +423,7 @@ void charged_particle::ES_push_deposit_INGP_non_uniform(const int thread_id, dou
                     break;
                 }
             }
+            
             time_passed += del_tau;
             del_tau = del_t - time_passed;
             xi_i = xi_f;
@@ -473,7 +483,7 @@ void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_
             xi_f = xi_i + 0.5 * (v_x_i + v_x_f) * del_tau / dx;
             
             // check if particle outside cell or flipped direction
-            in_cell_bool = (int(xi_f) == xi_cell);
+            in_cell_bool = (int(xi_f+1) == xi_cell+1);
             equal_v_sign_bool = ((v_x_i > 0) == (v_x_f > 0));
             future_boundary_bool = (!in_cell_bool) || (!equal_v_sign_bool);
 
@@ -559,6 +569,7 @@ void charged_particle::ES_push_INGP_non_uniform(const int thread_id, double del_
                     break;
                 }
             }
+            
             time_passed += del_tau;
             del_tau = del_t - time_passed;
             xi_i = xi_f;

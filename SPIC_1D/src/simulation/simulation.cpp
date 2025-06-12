@@ -398,7 +398,7 @@ void simulation::diagnostics(int thread_id) {
     {
         double total_momentum[3];
         total_momentum[0] = total_momentum[1] = total_momentum[2] = 0.0;
-        this->field_solver->solve_field_energy(*this->world);
+        this->field_solver->get_diagnostics(*this->world, this->charged_particle_list);
         this->field_solver->write_diagnostics(this->save_file_folder, this->current_diag_step);
         double total_Energy = this->field_solver->total_field_energy;
         for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
@@ -504,6 +504,12 @@ void simulation::run() {
                 this->current_time += this->del_t;
                 this->current_step++;
                 this->diag_step_diff++;
+                // if (mpi_vars::mpi_rank == 0) {
+                //     if (this->current_step > 10) {
+                //         MPI_Abort(MPI_COMM_WORLD, 1);
+                //     }
+                //     std::cout << "Current time (s): " << this->current_time << ", Current step: " << this->current_step << std::endl;
+                // }
             }
             #pragma omp barrier
             if (this->current_time >= this->next_diag_time) {

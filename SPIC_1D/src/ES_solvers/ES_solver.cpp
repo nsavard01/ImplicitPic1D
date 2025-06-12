@@ -71,7 +71,7 @@ void ES_solver::initialize_diagnostic_files(const std::string& filename) {
         }
 
         // Write header (optional)
-        file << "field energy (J/m^2) \n";
+        file << "field energy (J/m^2),  gauss error \n";
 
         file.close();
         
@@ -108,6 +108,34 @@ void ES_solver::solve_field_energy(const domain& world) {
     this->total_field_energy = 0.5 * constants::epsilon_0 * sum;; // J/m^2
 }
 
+void ES_solver::get_diagnostics(const domain& world, std::vector<charged_particle>& particle_list) {
+    this->solve_field_energy(world); // Calculate total field energy
+    std::fill(this->rho.begin(), this->rho.end(), 0.0); // Reset charge density
+    for (int part_num = 0; part_num < particle_list.size(); part_num++){
+        for (int i = 0; i < world.number_nodes; i++) {
+            this->rho[i] += particle_list[part_num].density[i] * particle_list[part_num].q_times_wp; // Accumulate charge density from all particles
+        }
+    }
+    MPI_Allreduce(MPI_IN_PLACE, this->rho.data(), world.number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
+    std::vector<double> source_term(world.number_nodes, 0.0);
+    if (world.left_boundary_condition == 2) {
+        source_term[0] = -this->rho[0] /constants::epsilon_0; // Change boundary phi
+    } else {
+        source_term[0] = this->phi[0]; // Change boundary phi
+    } 
+
+    if (world.right_boundary_condition == 2) {
+        source_term[world.number_cells] = -this->rho[world.number_cells] / constants::epsilon_0; // Change boundary phi
+    } else {
+        source_term[world.number_cells] = this->phi[world.number_cells]; // Change boundary phi
+    } 
+
+    for (int i = 1; i < world.number_cells; ++i) {
+        source_term[i] = -this->rho[i] /constants::epsilon_0; // Set right-hand side of the Poisson equation
+    }
+    this->gauss_error = this->poisson_solver->norm_error(this->phi, source_term); // Solve the Poisson equation
+}
+
 void ES_solver::write_diagnostics(const std::string& dir_name, int diag_number) {
     if (mpi_vars::mpi_rank == 0) {
         write_vector_to_binary_file(this->phi, this->phi.size(), dir_name + "/phi/potential_" + std::to_string(diag_number) + ".dat", 0);
@@ -120,7 +148,8 @@ void ES_solver::write_diagnostics(const std::string& dir_name, int diag_number) 
         // Write header (optional)
 
         file << std::scientific << std::setprecision(8);
-        file << this->total_field_energy << "\n";
+        file << this->total_field_energy << "\t"
+        << this->gauss_error << "\n"; // Write field energy and Gauss error
 
         file.close();
     }

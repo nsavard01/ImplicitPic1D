@@ -35,11 +35,10 @@ public:
                 this->norm_residual[0] += diff * diff; // accumulate norm
             }
         
-        
+            // if (mpi_vars::mpi_rank == 0) {
+            //     std::cout << "Initial residual norm: " << this->norm_residual[0] << std::endl;
+            // }
             this->norm_residual[0] = std::sqrt(this->norm_residual[0]);   
-            if (mpi_vars::mpi_rank == 0) {
-                std::cout << "Initial norm "  << this->norm_residual[0] << std::endl;
-            } 
         }
         #pragma omp barrier
         double eps_tol = this->eps_r * this->norm_residual[0] + this->eps_a * std::sqrt(double(this->number_unknowns));
@@ -60,13 +59,13 @@ public:
                 for (int i = 0; i < this->number_unknowns; i++){
                     double diff = x_result[i] - this->x_k[index][i];
                     this->residual_k[index][i] = diff;
+                    if (!std::isfinite(diff)) {
+                        std::cout << "error" << std::endl;
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
                     this->norm_residual[index] += diff * diff; // accumulate norm
                 }
                 this->norm_residual[index] = std::sqrt(this->norm_residual[index]);
-                if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "Norm is "  << this->norm_residual[index] << " with tolerance " << eps_tol << std::endl;
-                    std::cout << "index is " << index << " iter is " << iter << std::endl;
-                } 
             } 
             #pragma omp barrier
             
@@ -75,18 +74,32 @@ public:
             }
             #pragma omp master
             {
+                // if (mpi_vars::mpi_rank == 0) {
+                //     std::cout << "Iter is "<< iter << " with norm residual " << this->norm_residual[index] << std::endl;
+                //     std::cout << "Index is "<< index << std::endl;
+                // }
                 for (int j = 0; j < m_k; j++) {
                     int past_indx = (iter - m_k + j) % (this->m_anderson + 1);
                     size_t start_indx = j * this->number_unknowns; // flattened index start
                     for (int i = 0; i < this->number_unknowns; i++) {
                         double diff = this->residual_k[index][i] - this->residual_k[past_indx][i];
+                        // if (!std::isfinite(diff)) {
+                        //     std::cout << "error" << std::endl;
+                        //     MPI_Abort(MPI_COMM_WORLD, 1);
+                        // }
                         this->min_matrix[start_indx+i] = diff;
                     }      
                 }
 
-                // solve minimization problem
-                
-                std::vector<double> alpha = solveNormalEquationMKL(min_matrix, residual_k[index], this->number_unknowns, m_k);
+                // // solve minimization problem
+                // if (mpi_vars::mpi_rank == 0) {
+                //     std::cout << "Before alpha " << std::endl;
+                // }
+                // MPI_Barrier(MPI_COMM_WORLD); // ensure all threads have finished before solving
+                std::vector<double> alpha = solveNormalEquationGauss(min_matrix, residual_k[index], this->number_unknowns, m_k);
+                // if (mpi_vars::mpi_rank == 0) {
+                //     std::cout << "Went through alpha " << std::endl;
+                // }
                 
                 int next_idx = (index+1) % (this->m_anderson + 1);
                 int past_indx = (iter - m_k) % (this->m_anderson + 1);
@@ -106,18 +119,19 @@ public:
                 alpha_last = 1.0 - alpha_last; // close coefficients so add to 1
                 for (int i = 0; i < this->number_unknowns; i++) {
                     this->x_k[next_idx][i] += alpha_last * (this->beta * residual_k[index][i] + x_k[index][i]); // add current component
+                    if (!std::isfinite(this->x_k[next_idx][i])) {
+                        std::cout << "error" << std::endl;
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
                     x_result[i] = this->x_k[next_idx][i];
                 }
             }
-            
+            #pragma omp barrier
 
         }
         #pragma omp master
         {   
             this->number_iterations = iter + 1;
-            if (mpi_vars::mpi_rank == 0) {
-                std::cout << "number iterations "  << this->number_iterations << std::endl;
-            }
         }
 
     }

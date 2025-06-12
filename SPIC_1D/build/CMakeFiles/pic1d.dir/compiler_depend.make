@@ -875,7 +875,8 @@ CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_INGP.cpp.o: /home/nsavard/Implicit
   /usr/include/c++/8/x86_64-redhat-linux/bits/c++io.h \
   /usr/include/c++/8/bits/fstream.tcc \
   /usr/include/c++/8/sstream \
-  /usr/include/c++/8/bits/sstream.tcc
+  /usr/include/c++/8/bits/sstream.tcc \
+  /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/include/globals/write_functions.hpp
 
 CMakeFiles/pic1d.dir/src/ES_solvers/ES_solver_MC.cpp.o: /home/nsavard/ImplicitPic1D/ImplicitPic1D/SPIC_1D/src/ES_solvers/ES_solver_MC.cpp \
   /usr/include/c++/8/vector \
@@ -3442,8 +3443,6 @@ CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o: /home/nsavar
   /usr/include/c++/8/bits/fstream.tcc \
   /usr/include/c++/8/sstream \
   /usr/include/c++/8/bits/sstream.tcc \
-  /opt/intel/oneapi/compiler/2025.0/opt/compiler/include/math.h \
-  /usr/include/c++/8/math.h \
   /usr/include/c++/8/cmath \
   /usr/include/math.h \
   /usr/include/bits/math-vector.h \
@@ -3469,8 +3468,6 @@ CMakeFiles/pic1d.dir/src/particles/charged_particle_implicit.cpp.o: /home/nsavar
   /usr/include/c++/8/tr1/poly_hermite.tcc \
   /usr/include/c++/8/tr1/poly_laguerre.tcc \
   /usr/include/c++/8/tr1/riemann_zeta.tcc \
-  /opt/intel/oneapi/compiler/2025.0/opt/compiler/include/math_common_define.h \
-  /opt/intel/oneapi/compiler/2025.0/opt/compiler/include/math_common_undefine.h \
   /usr/include/c++/8/numeric \
   /usr/include/c++/8/bits/stl_numeric.h \
   /usr/include/c++/8/algorithm \

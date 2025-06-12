@@ -14,6 +14,7 @@ class ES_solver {
 
 public:
     std::vector<double> phi, rho, E_field; // diagonal and upper matrix elements
+    double gauss_error = 0.0;
     double RF_half_amplitude, RF_rad_frequency, left_voltage, right_voltage; // RF amplitude and frequency
     std::unique_ptr<poisson_solver_1D> poisson_solver; // pointer to the Poisson solver
     std::vector<std::vector<double>> work_space;
@@ -45,6 +46,7 @@ public:
     virtual void make_EField(const domain& world);
     // general integration through time step which solves for fields after time step given initial fields
     // general enough that it can include non-linear processes as well (implicit)
+    virtual void get_diagnostics(const domain& world, std::vector<charged_particle>& particle_list);
     virtual void integrate_time_step(const int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) = 0; 
     virtual void push_particles(const int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) = 0;
 

@@ -16,6 +16,8 @@ public:
     ES_solver_INGP(const domain& world);
     void print_out() override;
     void make_EField(const domain& world) override;
+    void write_particle_densities(const std::string file_path, const std::string filename, std::vector<charged_particle>& particle_list, const domain& world) const override;
+    virtual void get_diagnostics(const domain& world, std::vector<charged_particle>& particle_list) override; 
     void deposit_charge_density(const domain& world, std::vector<charged_particle>& particle_list, int thread_id) override;
     void push_particles(int thread_id, double del_t, std::vector<charged_particle>& particle_list, const domain& world) override;
     void integrate_time_step(int thread_id, double del_t, double current_time, const domain& world, std::vector<charged_particle>& particle_list) override;
