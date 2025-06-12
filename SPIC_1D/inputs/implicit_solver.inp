@@ -3,5 +3,5 @@
 50 : maximum amount of function evaluations
 0.5 : relaxation parameter
 0.0 : relative convergence criteria
-1e-8 : absolute convergence criteria
+1e-6 : absolute convergence criteria
 ENDFILE

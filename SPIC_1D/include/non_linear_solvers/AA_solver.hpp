@@ -59,10 +59,6 @@ public:
                 for (int i = 0; i < this->number_unknowns; i++){
                     double diff = x_result[i] - this->x_k[index][i];
                     this->residual_k[index][i] = diff;
-                    if (!std::isfinite(diff)) {
-                        std::cout << "error" << std::endl;
-                        MPI_Abort(MPI_COMM_WORLD, 1);
-                    }
                     this->norm_residual[index] += diff * diff; // accumulate norm
                 }
                 this->norm_residual[index] = std::sqrt(this->norm_residual[index]);
@@ -119,10 +115,6 @@ public:
                 alpha_last = 1.0 - alpha_last; // close coefficients so add to 1
                 for (int i = 0; i < this->number_unknowns; i++) {
                     this->x_k[next_idx][i] += alpha_last * (this->beta * residual_k[index][i] + x_k[index][i]); // add current component
-                    if (!std::isfinite(this->x_k[next_idx][i])) {
-                        std::cout << "error" << std::endl;
-                        MPI_Abort(MPI_COMM_WORLD, 1);
-                    }
                     x_result[i] = this->x_k[next_idx][i];
                 }
             }
