@@ -6,6 +6,7 @@ tmp*
 *.pdf
 *.png
 *.fuse_hidden*
+*.pyc
 !PIC1D/CollisionData/*.dat
 *.dbg
-./SPIC_1D/build/
+SPIC_1D/build/
