@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
     simulation simulator;
     simulator.setup();
     simulator.run();
+    simulator.averaging();
     MPI_Finalize();
     return 0;
 }

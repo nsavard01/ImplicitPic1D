@@ -29,7 +29,7 @@ public:
     static std::vector<std::vector<size_t>> sorted_number_particles_per_cell, cell_indices; //, particle_cell;
     charged_particle(double mass_in, double charge_in, size_t number_in, size_t final_in, std::string name_in, int number_nodes);
     // void get_diagnostics();
-    void get_particle_diagnostics(int thread_id, int number_cells);
+    void get_particle_diagnostics(const int thread_id, const int number_cells, const int density_interp_order);
     void sort_particle(int thread_id, int number_cells);
     void gather_mpi();
     void print_out() const;
@@ -59,6 +59,7 @@ public:
     // void write_cell_temperature(const std::string& dir_name, int diag_num) const;
     void initialize_diagnostic_files(const std::string& dir_name) const; 
     void write_diagnostics(const std::string& dir_name, int diag_number) const; 
+    void write_diagnostics_average(const std::string& dir_name) const; 
     void reset_diagnostics(int thread_id);
     // void diag_write(const std::string& dir_name, const double& time_diff, const double& current_time, bool average_bool = false) const;
     // void load_density(bool reset_bool);

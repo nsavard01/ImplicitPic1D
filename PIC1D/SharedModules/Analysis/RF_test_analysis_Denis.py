@@ -50,7 +50,7 @@ Exp_RFBenchmark_case1_halfTime_doubleCells_doubleParticles = dataSetExplicit('Y:
 NGP_RF_Benchmark_case1_10xParticles = dataSet('Y:/ImplicitPic1D/ImplicitData/NGP_RF_Benchmark_case1_10xParticles/')
 CIC_RF_Benchmark_case1_10xParticles = dataSet('Y:/ImplicitPic1D/ImplicitData/CIC_RF_Benchmark_case1_10xParticles/')
 
-
+exit()
 Exp_RFBenchmark_Denis = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis/')
 Exp_RFBenchmark_Denis_doubleTime = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_doubleTime/')
 Exp_RFBenchmark_Denis_doubleTime_halfPart = dataSetExplicit('Y:/ImplicitPic1D/ExplicitData/Exp_RFBenchmark_Denis_doubleTime_halfPart/')

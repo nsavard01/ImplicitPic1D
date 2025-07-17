@@ -2,6 +2,7 @@
 #include "globals/plasma_functions.hpp"
 #include <chrono>
 #include <iomanip>
+#include "globals/write_functions.hpp"
 
 
 
@@ -163,7 +164,8 @@ void simulation::initialize_diagnostic_files() {
             << this->scheme_type << "\t"
             << this->simulation_time << "\t"
             << this->del_t << "\t"
-            << this->number_diagnostics
+            << this->number_diagnostics << "\t"
+            << this->averaging_time
             <<"\n";
 
         file.close();
@@ -277,7 +279,7 @@ void simulation::setup() {
         this->null_collider_list[i].print_out(this->charged_particle_list, this->target_particle_list);
     }
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", this->scheme_type, *this->world);
-    double plasma_freq = get_plasma_frequency(this->charged_particle_list[0].average_temperature, this->charged_particle_list[0].average_density);
+    double plasma_freq = get_plasma_frequency(this->charged_particle_list[0].average_density);
     // Time step
     if (del_t_fraction / plasma_freq < del_t_temp) {
         this->del_t = del_t_fraction / plasma_freq;
@@ -389,10 +391,10 @@ void simulation::diagnostics(int thread_id) {
     
     
     for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
-        this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells);
+        this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells, 1);
     }
-    #pragma omp barrier
-    this->field_solver->deposit_density(this->charged_particle_list, thread_id);
+    // #pragma omp barrier
+    // this->field_solver->deposit_density(this->charged_particle_list, thread_id);
     #pragma omp barrier
     #pragma omp master
     {
@@ -506,14 +508,17 @@ void simulation::run() {
             {
                 this->particle_time += this->field_solver->particle_timer;
                 this->field_time += this->field_solver->potential_timer;
+                
                 timer_1 = MPI_Wtime();  
             }
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
                 this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);
             }
+            #pragma omp barrier
             #pragma omp master
             {   
                 timer_2 = MPI_Wtime();
+               
                 this->null_collision_time += (timer_2 - timer_1);
                 this->current_time += this->del_t;
                 this->current_step++;
@@ -529,6 +534,7 @@ void simulation::run() {
             if (this->current_time >= this->next_diag_time) {
                 #pragma omp master
                 {
+                    
                     this->elapsed_time = MPI_Wtime() - start_time_total;
                 }
                 this->diagnostics(thread_id);
@@ -542,5 +548,125 @@ void simulation::run() {
     if (mpi_vars::mpi_rank == 0) {
         std::cout << "Simulation took " << end_time_total - start_time_total << " seconds" << std::endl;
     }
+
+}
+
+void simulation::averaging() {
+
+    if (this->averaging_time > 0) {
+        if (mpi_vars::mpi_rank == 0) {
+            std::cout << "" << std::endl;
+            std::cout << "Averaging diagnostics over time: " << this->averaging_time << " seconds" << std::endl;
+            std::cout << "----------------------------------- " << std::endl;
+            std::cout << "" << std::endl;
+
+
+        }
+
+        
+        double end_simulation_time = this->current_time + this->averaging_time;
+        int number_charged_particles = this->charged_particle_list.size();
+        double start_sim_time = this->current_time;
+        this->current_step = 0;
+        double res = 1.0;
+        if (this->field_solver->RF_rad_frequency > 0.0) {
+            double RF_period = 2.0 * M_PI / this->field_solver->RF_rad_frequency;
+            this->diag_time_division = 10.0 * RF_period; // 10 RF periods
+        } else {
+            if (this->charged_particle_list.size() > 0 && this->charged_particle_list[0].mass == constants::electron_mass) {
+                double n_e = this->charged_particle_list[0].average_density/this->world->length_domain;
+                double plasma_freq = get_plasma_frequency(n_e);
+                this->diag_time_division = 100.0 / plasma_freq; // 100 plasma periods
+            } else {
+                this->diag_time_division = 1.0e-6; // Default value
+            }
+        }
+        this->next_diag_time = this->current_time + this->diag_time_division;
+        std::vector<double> average_phi = this->field_solver->phi;
+        std::vector<double> average_phi_check = this->field_solver->phi;
+        double start_time = MPI_Wtime();
+        
+        #pragma omp parallel
+        {
+            int thread_id = omp_get_thread_num();
+            for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+                this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells, 1);
+            }
+            #pragma omp barrier
+            while (this->current_time < end_simulation_time && res > 1e-4) {
+                this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
+                #pragma omp barrier
+                #pragma omp for
+                for (int i = 0; i < this->world->number_nodes; i++) {
+                    average_phi[i] += this->field_solver->phi[i];
+                }
+                #pragma omp barrier
+                for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
+                    this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells, 1);
+                }
+                #pragma omp barrier
+                for (int part_num = 0; part_num < number_charged_particles; part_num++){
+                    this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);
+                }
+                #pragma omp barrier
+                #pragma omp master
+                {   
+                    this->current_time += this->del_t;
+                    this->current_step++;
+                }
+                #pragma omp barrier
+                if (this->current_time >= this->next_diag_time) {
+                    // average phi and check if can break loop early
+                    #pragma omp master
+                    {
+                        res = 0.0;
+                        double curr_average;
+                        double integ_average = 0.0;
+                        double diff;
+                        for (int i = 0; i < this->world->number_nodes; i++) {
+                            // compute current running average
+                            curr_average = average_phi[i] / double(this->current_step + 1);
+                            // compute difference with previous average
+                            integ_average += curr_average;
+                            diff = average_phi_check[i] - curr_average;
+                            // compute difference percentage squared
+                            res += diff*diff;
+                            // update average_phi_check
+                            average_phi_check[i] = curr_average;
+                        }
+                        res = std::sqrt(res / double(this->world->number_nodes));
+                        res = res/integ_average;
+                        this->next_diag_time = this->current_time + this->diag_time_division;
+                    }
+                }
+                #pragma omp barrier
+            }
+        }
+        double end_time = MPI_Wtime();
+        for (int part_num = 0; part_num < number_charged_particles; part_num++){
+            this->charged_particle_list[part_num].gather_mpi();
+        }
+        if (mpi_vars::mpi_rank == 0) {
+            write_vector_to_binary_file(average_phi_check, this->world->number_nodes, this->save_file_folder + "/phi/potential_average.dat", 0);
+            for (int part_num = 0; part_num < number_charged_particles; part_num++){
+                this->charged_particle_list[part_num].write_diagnostics_average(this->save_file_folder);
+                for (int i = 0; i < this->world->number_nodes; i++) {
+                    this->charged_particle_list[part_num].density[i] /= double(this->current_step + 1);
+                }
+            }
+            this->field_solver->write_particle_densities(this->save_file_folder, "density_average.dat", this->charged_particle_list, *this->world);
+            std::cout << "Averaging finished and took " << end_time - start_time <<  " seconds" << std::endl;
+            std::cout << "Ended over simulation time of " << this->current_time - start_sim_time << std::endl;
+            std::cout << "Final res is: " << res << std::endl;
+        }
+        
+
+    } else {
+        std::cout << "" << std::endl;
+        std::cout << "No averaging!" << std::endl;
+        std::cout << "----------------------------------- " << std::endl;
+        std::cout << "" << std::endl;
+    }
+    
 
 }

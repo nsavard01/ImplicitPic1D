@@ -45,6 +45,7 @@ public:
     void diagnostics(int thread_id);
     void reset_diagnostics(int thread_id);
     void run();
+    void averaging();
 };
 
 // Function to remove a directory and its contents

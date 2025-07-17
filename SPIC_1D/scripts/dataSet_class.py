@@ -45,6 +45,7 @@ class dataSet:
             self.final_sim_time = data[3]
             self.del_t = data[4]
             self.num_diag = int(data[5])
+            self.ave_time = data[6]
         temp_path = self.path + '/domain/parameters.dat'
         if (os.path.isfile(temp_path)):
             data = pd.read_csv(temp_path, skiprows=1, nrows=1, sep='\s+', header=None).values[0, :]
@@ -200,13 +201,27 @@ class dataSet:
     def get_phi(self, diag_number):
         return np.fromfile(self.path + '/phi/potential_' + str(diag_number) +  '.dat', dtype = 'float')
 
+    def get_ave_phi(self):
+        if (self.ave_time > 0):
+            return np.fromfile(self.path + '/phi/potential_average.dat', dtype = 'float')
+
     def get_density(self, name, diag_number):
         temp_path = self.path + 'charged_particles/' + name + '/density/density_' + str(diag_number) + '.dat'
         return np.fromfile(temp_path, dtype = 'float')
 
+    def get_ave_density(self, name):
+        if (self.ave_time > 0):
+            temp_path = self.path + 'charged_particles/' + name + '/density/density_average.dat'
+            return np.fromfile(temp_path, dtype = 'float')
+
     def get_temp(self, name, diag_number):
         temp_path = self.path + 'charged_particles/' + name + '/temperature/cell_temp_' + str(diag_number) + '.dat'
         return np.fromfile(temp_path, dtype = 'float')
+
+    def get_ave_temp(self, name):
+        if (self.ave_time > 0):
+            temp_path = self.path + 'charged_particles/' + name + '/temperature/cell_temp_average.dat'
+            return np.fromfile(temp_path, dtype = 'float')
 
 
 

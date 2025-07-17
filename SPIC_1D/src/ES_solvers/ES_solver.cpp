@@ -217,7 +217,7 @@ void ES_solver::deposit_density(std::vector<charged_particle>& particle_list, in
             for (int i_thread = 0; i_thread < total_thread_count; i_thread++) {
                 sum += this->work_space[i_thread][i];
             }
-            particle.density[i] = sum; // Set charge density for each cell
+            particle.density[i] += sum; // Set charge density for each cell
         }
         #pragma omp barrier
     }
@@ -242,7 +242,6 @@ void ES_solver::write_particle_densities(const std::string file_path, const std:
             density[0] = 2.0 * density[0];
             density[number_cells] = density[number_cells] * 2.0;
         }
-        MPI_Allreduce(MPI_IN_PLACE, density.data(), number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         if (world.domain_type == 0) {
             // uniform
             double del_x = world.min_dx;
