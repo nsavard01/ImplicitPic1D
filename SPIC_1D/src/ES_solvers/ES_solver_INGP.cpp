@@ -351,7 +351,7 @@ void ES_solver_INGP::write_particle_densities(const std::string file_path, const
             density[0] = 2.0 * density[0];
             density[number_cells] = density[number_cells] * 2.0;
         }
-        MPI_Allreduce(MPI_IN_PLACE, density.data(), number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        // MPI_Allreduce(MPI_IN_PLACE, density.data(), number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         if (this->smoothing) {
             std::vector<double> density_copy = density; // Copy density for smoothing
             if (world.left_boundary_condition == 3) {

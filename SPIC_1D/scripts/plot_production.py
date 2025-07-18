@@ -41,6 +41,29 @@ def plot_ave_phi(dataSet, label = '', marker = 'o', linestyle = '--'):
     plt.xlim([grid.min(), grid.max()])
     plt.show()
 
+
+def plot_ave_temp(dataSet, name = "", label = "", marker = 'o', linestyle = '--'):
+    if name == "":
+        colors = ['b', 'r', 'g', 'k', 'c', 'm', 'y']
+        for i,name in enumerate(dataSet.particles.keys()):
+            n = dataSet.get_ave_temp(name)
+            grid = dataSet.get_half_grid()
+            plt.plot(grid, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 3,color = colors[i], label = r'$n_{' + name +  '}$')
+        plt.xlabel('Distance (m)')
+        plt.ylabel(name + ' temperature (eV)')
+        plt.xlim([0, dataSet.domain_length])
+        plt.legend(loc = 'best')
+    else:
+        if name not in dataSet.particles.keys():
+            raise Warning("For average density, particle", name, "does not exist in the dataSet!")
+        else:
+            n = dataSet.get_ave_temp(name)
+            grid = dataSet.get_half_grid()
+            plt.plot(grid, n,  linestyle = linestyle, marker = marker, markersize = 4, label = label)
+            plt.xlabel('Distance (m)')
+            plt.ylabel(name + ' temperature (eV)')
+            plt.xlim([0, dataSet.domain_length])
+
 # def maxwellEDVF(x, T):
 #     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)
 #
