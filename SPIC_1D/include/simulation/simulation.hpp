@@ -13,6 +13,7 @@
 #include "ES_solvers/ES_solver_MC.hpp"
 #include "ES_solvers/ES_solver_EC.hpp"
 #include "collisions/null_collider.hpp"
+#include "charged_particle_operators/charged_particle_operator.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <mpi.h>
@@ -39,6 +40,7 @@ public:
     std::vector<target_particle> target_particle_list;
     std::vector<null_collider> null_collider_list;
     std::unique_ptr<ES_solver> field_solver;
+    std::vector<std::unique_ptr<charged_particle_operator>> particle_operator_list;
     simulation();
     void setup();
     void initialize_diagnostic_files();

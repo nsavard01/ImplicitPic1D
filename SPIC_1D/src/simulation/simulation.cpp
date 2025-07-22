@@ -278,6 +278,11 @@ void simulation::setup() {
         this->null_collider_list[i].set_null_frequency(this->charged_particle_list, this->target_particle_list);
         this->null_collider_list[i].print_out(this->charged_particle_list, this->target_particle_list);
     }
+    this->particle_operator_list = read_particle_operators("../inputs/particle_operations/", this->charged_particle_list, *this->world);
+    for (int i = 0; i < particle_operator_list.size(); i++){
+        particle_operator_list[i]->print_out();
+    }
+    MPI_Abort(MPI_COMM_WORLD, 1);
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", this->scheme_type, *this->world);
     double plasma_freq = get_plasma_frequency(this->charged_particle_list[0].average_density);
     // Time step

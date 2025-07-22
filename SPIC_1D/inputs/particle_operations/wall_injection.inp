@@ -1,0 +1,8 @@
+-------------------------------------
+e : particle_name
+0 : wall node to release from
+0.03 : current density (A/m^2)
+187554.0 : x component of velocity (m/s)
+-----------------------------------
+
+END
