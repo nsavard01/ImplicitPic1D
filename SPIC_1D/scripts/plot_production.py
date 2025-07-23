@@ -64,6 +64,76 @@ def plot_ave_temp(dataSet, name = "", label = "", marker = 'o', linestyle = '--'
             plt.ylabel(name + ' temperature (eV)')
             plt.xlim([0, dataSet.domain_length])
 
+
+
+
+
+
+# ----------------------- time dependent -----------------------------------
+
+def update_plot(i, ax, x, y_set, x_label, y_label, legend_label):
+
+    ax.clear()
+    for i in nameList:
+        n = dataSet.getDensity(name, i)
+        ax.plot(dataSet.grid, n, 'o-', label = name)
+    ax.set_xlabel('Distance (m)')
+    ax.set_ylabel('Particle Density (1/m^3)')
+    ax.set_xlim([dataSet.x_min, dataSet.x_max])
+    plt.legend(loc = 'lower center')
+
+def animation(dataSet, type, nameList = [],boolMakeAnimation = False, savePath = "temp_fig.gif", pauseTime = 0.05):
+    if not nameList:
+        nameList = list(dataSet.particles.keys())
+    x_grid = dataSet.get_grid()
+    x_half_grid = dataSet.get_half_grid()
+    x_max = x_grid[-1]
+    x_min = x_grid[0]
+    # if boolMakeAnimation:
+    #     numframes = dataSet.numDiag
+    #     fig, ax = plt.subplots()
+    #     for name in nameList:
+    #         n = dataSet.getDensity(name, 0)
+    #         ax.plot(dataSet.grid, n, 'o-', label = name)
+    #
+    #     ax.set_xlabel('Distance (m)')
+    #     ax.set_ylabel(r'Density (m$^{-3}$)')
+    #     ax.set_xlim([dataSet.x_min, dataSet.x_max])
+    #     #ax.set_ylim([-20, 40])
+    #     ani = animation.FuncAnimation(fig, update_plot_Density, frames=range(numframes), interval = 100,fargs=(dataSet, ax, nameList))
+    #
+    #     ani.save(savePath)
+    #     plt.show()
+
+
+
+    plt.figure(figsize = (5,4), dpi = 80)
+    for u in range(dataSet.num_diag):
+
+        plt.cla()
+        if (type == 'phi'):
+            y = dataSet.get_phi(u)
+            plt.plot(x_grid, y, 'o-')
+            plt.xlabel('Distance (m)')
+            plt.ylabel(r'Voltage (V)')
+        elif (type == 'density'):
+            for name in nameList:
+                y = dataSet.get_density(name,u)
+                plt.plot(x_grid, y, 'o-', label = name)
+                plt.xlabel('Distance (m)')
+                plt.ylabel(r'Density (1/m^3)')
+                plt.legend(loc = 'lower center')
+        else:
+            for name in nameList:
+                y = dataSet.get_temp(name,u)
+                plt.plot(x_half_grid, y, 'o-', label = name)
+                plt.xlabel('Distance (m)')
+                plt.ylabel(r'Temperature (eV)')
+                plt.legend(loc = 'lower center')
+
+        plt.xlim([x_min, x_max])
+        plt.pause(pauseTime)
+
 # def maxwellEDVF(x, T):
 #     return np.sqrt(m_e/2/np.pi / e/ T) * np.exp(- m_e * x**2 / 2 / e/ T)
 #
@@ -370,50 +440,7 @@ def plot_ave_temp(dataSet, name = "", label = "", marker = 'o', linestyle = '--'
 #                 plt.ylim(ylim)
 #             plt.pause(pauseTime)
 #
-# def update_plot_Density(i, dataSet, ax, nameList):
-#
-#     ax.clear()
-#     for name in nameList:
-#         n = dataSet.getDensity(name, i)
-#         ax.plot(dataSet.grid, n, 'o-', label = name)
-#     ax.set_xlabel('Distance (m)')
-#     ax.set_ylabel('Particle Density (1/m^3)')
-#     ax.set_xlim([dataSet.x_min, dataSet.x_max])
-#     plt.legend(loc = 'lower center')
-#
-# def densityAnimation(dataSet, nameList,boolMakeAnimation = False, savePath = "Figures/BoundPlasmaDensity.gif", pauseTime = 0.05):
-#
-#     if boolMakeAnimation:
-#         numframes = dataSet.numDiag
-#         fig, ax = plt.subplots()
-#         for name in nameList:
-#             n = dataSet.getDensity(name, 0)
-#             ax.plot(dataSet.grid, n, 'o-', label = name)
-#
-#         ax.set_xlabel('Distance (m)')
-#         ax.set_ylabel(r'Density (m$^{-3}$)')
-#         ax.set_xlim([dataSet.x_min, dataSet.x_max])
-#         #ax.set_ylim([-20, 40])
-#         ani = animation.FuncAnimation(fig, update_plot_Density, frames=range(numframes), interval = 100,fargs=(dataSet, ax, nameList))
-#
-#         ani.save(savePath)
-#         plt.show()
-#
-#
-#     else:
-#         plt.figure(figsize = (5,4), dpi = 80)
-#         for y in range(dataSet.numDiag):
-#
-#             plt.cla()
-#
-#             for name in nameList:
-#                 n = dataSet.getDensity(name, y)
-#                 plt.plot(dataSet.grid, n, 'o-', label = name)
-#             plt.xlabel('Distance (m)')
-#             plt.ylabel(r'Density (m$^{-3}$)')
-#             plt.xlim([dataSet.x_min, dataSet.x_max])
-#             plt.legend(loc='lower center')
-#             plt.pause(pauseTime)
+
 #
 # def aveQuantity_vs_parameter(quantity, list_data, parameter_list, label_list, name = 'e'):
 #     size_param = len(parameter_list)
