@@ -368,8 +368,8 @@ void charged_particle::get_particle_diagnostics(const int thread_id, const int n
     size_t local_indx;
     double xi_temp = 0.0, v_x_temp = 0.0, v_y_temp = 0.0, v_z_temp = 0.0;
     double v_sqr;
-    std::vector<double>& xi_local = this->xi[thread_id];
-    std::vector<double>& v_x_local = this->v_x[thread_id];
+    const std::vector<double>& xi_local = this->xi[thread_id];
+    const std::vector<double>& v_x_local = this->v_x[thread_id];
     std::vector<size_t>& number_part_cell_local = charged_particle::sorted_number_particles_per_cell[thread_id];
     std::vector<double> local_density(number_cells+1, 0.0);
     std::vector<double> local_v_sqr(number_cells, 0.0);
@@ -635,18 +635,16 @@ void charged_particle::gather_mpi(){
     MPI_Allreduce(MPI_IN_PLACE, this->temperature.data(), this->temperature.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->density.data(), this->density.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
     MPI_Allreduce(MPI_IN_PLACE, this->number_particles_per_cell.data(), this->number_particles_per_cell.size(), mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
-    if (mpi_vars::mpi_rank == 0) {
-        this->average_temperature = 0.0;
-        size_t total_number_particles_local = 0;
-        for (size_t i = 0; i < this->temperature.size(); i++) {
-            this->average_temperature += this->temperature[i];
-            total_number_particles_local += this->number_particles_per_cell[i];
-            this->temperature[i] = this->temperature[i] * this->mass /static_cast<double>(this->number_particles_per_cell[i])/ double(this->number_velocity_coordinates) / constants::elementary_charge; // convert to temperature     
-        }
-        this->average_temperature = this->average_temperature * this->mass / static_cast<double>(total_number_particles_local) / constants::elementary_charge / double(this->number_velocity_coordinates);
-        this->average_density = static_cast<double>(total_number_particles_local);
-        this->average_density *= this->weight; // convert to density
+    this->average_temperature = 0.0;
+    size_t total_number_particles_local = 0;
+    for (size_t i = 0; i < this->temperature.size(); i++) {
+        this->average_temperature += this->temperature[i];
+        total_number_particles_local += this->number_particles_per_cell[i];
+        this->temperature[i] = this->temperature[i] * this->mass /static_cast<double>(this->number_particles_per_cell[i])/ double(this->number_velocity_coordinates) / constants::elementary_charge; // convert to temperature     
     }
+    this->average_temperature = this->average_temperature * this->mass / static_cast<double>(total_number_particles_local) / constants::elementary_charge / double(this->number_velocity_coordinates);
+    this->average_density = static_cast<double>(total_number_particles_local);
+    this->average_density *= this->weight; // convert to density
     
 }
 

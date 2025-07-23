@@ -9,7 +9,6 @@
 
 std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(const std::string& directory_path, const std::vector<charged_particle>& particle_list, const domain& world) {
     std::vector<std::unique_ptr<charged_particle_operator>> output;
-    bool wall_injection_bool = false;
     if (mpi_vars::mpi_rank == 0) {
         std::cout << " "<< std::endl;
         std::cout << "Reading charged particle operations "<< std::endl;
@@ -29,9 +28,9 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                 if (entry->d_type == DT_REG) {  // regular file
                     std::string filename = directory_path + entry->d_name;
                     if (!filename.compare(directory_path + "wall_injection.inp")) {
-                        wall_injection_bool = true;
-                        std::vector<double> current_density, v_x_array;
-                        std::vector<int> direction, wall_node_location, particle_indx;
+                        std::vector<double> current_density, v_therm, particle_location;
+                        std::vector<int> particle_indx;
+                        std::vector<std::vector<double>> v_3D;
                         std::string filename = directory_path + entry->d_name;
                         std::string line;
                         std::ifstream file(filename);
@@ -43,6 +42,7 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                         std::istringstream iss(line);
                         while (line.find("END") == std::string::npos) {
                             if (line.find("----") != std::string::npos) {
+                                std::vector<double> v_local;
                                 iss.clear();
                                 std::getline(file, line);
                                 iss.str(line);
@@ -56,7 +56,7 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                                     }
                                 }
                                 if (indx < 0) {
-                                    std::cout << "particle " << name << " does not exist! " << std::endl;
+                                    std::cout << "particle " << name << " does not exist with index " << indx << std::endl;
                                     MPI_Abort(MPI_COMM_WORLD, 1);
                                 }
                                 particle_indx.push_back(indx);
@@ -66,7 +66,8 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                                 int node;
                                 iss >> node;
                                 if (node != 0 && node != world.number_nodes) {
-                                    std::cout << "WARNING: Node for particle injection not on boundary!" << std::endl;
+                                    std::cout << "ERROR: Node for particle injection not on boundary!" << std::endl;
+                                    MPI_Abort(MPI_COMM_WORLD, 1);
                                 } else if (node == 0) {
                                     if ((world.left_boundary_condition != 1) && (world.left_boundary_condition != 4)){
                                         std::cout << "WARNING: Leftmost node for particle injection not on metallic boundary!" << std::endl;
@@ -76,7 +77,6 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                                         std::cout << "WARNING: Rightmost node for particle injection not on metallic boundary!" << std::endl;
                                     }
                                 }
-                                wall_node_location.push_back(node);
                                 iss.clear();
                                 std::getline(file, line);
                                 iss.str(line);
@@ -89,7 +89,48 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                                 iss.str(line);
                                 double v_x;
                                 iss >> v_x;
-                                v_x_array.push_back(v_x);
+                                if (v_x > 0 && node == world.number_nodes) {
+                                    std::cout << "ERROR: V_x > 0 put at rightmost node for particle injection!" << std::endl;
+                                    MPI_Abort(MPI_COMM_WORLD, 1);
+                                } else if (v_x < 0 && node == 0) {
+                                    std::cout << "ERROR: V_x < 0 put at leftmost node for particle injection!" << std::endl;
+                                    MPI_Abort(MPI_COMM_WORLD, 1);
+                                }
+                                // if v_x == 0, then make tiny number so direction is known
+                                if (v_x == 0.0 && node == world.number_nodes){
+                                    v_x = - constants::machine_eps;
+                                } else if (v_x == 0.0 && node == 0){
+                                    v_x = constants::machine_eps;
+                                }
+                                v_local.push_back(v_x);
+                                // To avoid issues with other particle operations near boundary, put slightly within domain
+                                double new_position;
+                                if (v_x > 0) {
+                                    new_position = std::nextafter(double(node), node+1);
+                                } else {
+                                    new_position = std::nextafter(double(node), node-1);
+                                }
+                                particle_location.push_back(new_position);
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double v_y;
+                                iss >> v_y;
+                                v_local.push_back(v_y);
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double v_z;
+                                iss >> v_z;
+                                v_local.push_back(v_z);
+                                v_3D.push_back(v_local);
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double temperature;
+                                iss >> temperature;
+                                double v_therm_local = std::sqrt(temperature * std::abs(particle_list[indx].q_over_m));
+                                v_therm.push_back(v_therm_local);
                                 iss.clear();
                                 std::getline(file, line);
                             }
@@ -97,7 +138,7 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                             std::getline(file, line);
                         }
                         file.close();
-                        output.push_back(std::make_unique<charged_particle_wall_injector>(particle_indx, current_density, v_x_array, wall_node_location));
+                        output.push_back(std::make_unique<charged_particle_wall_injector>(particle_indx, current_density, v_3D, v_therm, particle_location));
                     }
                 }
             }   

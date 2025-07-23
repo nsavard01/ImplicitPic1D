@@ -282,7 +282,6 @@ void simulation::setup() {
     for (int i = 0; i < particle_operator_list.size(); i++){
         particle_operator_list[i]->print_out();
     }
-    MPI_Abort(MPI_COMM_WORLD, 1);
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", this->scheme_type, *this->world);
     double plasma_freq = get_plasma_frequency(this->charged_particle_list[0].average_density);
     // Time step
@@ -507,6 +506,35 @@ void simulation::run() {
         int thread_id = omp_get_thread_num();
         
         while (this->current_time < this->simulation_time) {
+            #pragma omp barrier
+            // Make sure at same time step
+            #pragma omp master
+            {
+                size_t local_step = this->current_step;
+                std::vector<size_t> steps(mpi_vars::mpi_size);
+
+                // Gather current_step from all ranks
+                MPI_Allgather(&local_step, 1, mpi_vars::mpi_size_t_type, steps.data(), 1, mpi_vars::mpi_size_t_type, MPI_COMM_WORLD);
+
+                // Check consistency
+                bool mismatch = false;
+                for (int i = 1; i < mpi_vars::mpi_size; ++i) {
+                    if (steps[i] != steps[0]) {
+                        mismatch = true;
+                        break;
+                    }
+                }
+
+                if (mismatch && mpi_vars::mpi_rank == 0) {
+                    std::cerr << "MPI step mismatch detected!" << std::endl;
+                    for (int i = 0; i < mpi_vars::mpi_size; ++i) {
+                        std::cerr << "Rank " << i << " has current_step = " << steps[i] << std::endl;
+                    }
+                    // Optional: abort
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+            }
+            #pragma omp barrier
             this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
             #pragma omp barrier
             #pragma omp master
@@ -516,6 +544,10 @@ void simulation::run() {
                 
                 timer_1 = MPI_Wtime();  
             }
+            for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
+                this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
+            }
+            #pragma omp barrier
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
                 this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);
             }
@@ -562,10 +594,6 @@ void simulation::averaging() {
         if (mpi_vars::mpi_rank == 0) {
             std::cout << "" << std::endl;
             std::cout << "Averaging diagnostics over time: " << this->averaging_time << " seconds" << std::endl;
-            std::cout << "----------------------------------- " << std::endl;
-            std::cout << "" << std::endl;
-
-
         }
 
         
@@ -577,16 +605,35 @@ void simulation::averaging() {
         if (this->field_solver->RF_rad_frequency > 0.0) {
             double RF_period = 2.0 * M_PI / this->field_solver->RF_rad_frequency;
             this->diag_time_division = RF_period; // 1 RF periods
+            if (mpi_vars::mpi_rank == 0) {
+                std::cout << "Time division for checking convergence is 1 RF period of : " << this->diag_time_division << " s" << std::endl;
+            }
         } else {
             if (this->charged_particle_list.size() > 0 && this->charged_particle_list[0].mass == constants::electron_mass) {
                 double n_e = this->charged_particle_list[0].average_density/this->world->length_domain;
                 double plasma_freq = get_plasma_frequency(n_e);
-                this->diag_time_division = 50.0 / plasma_freq; // 50 plasma periods
+                this->diag_time_division = 100.0 / plasma_freq; // 50 plasma periods
+                if (mpi_vars::mpi_rank == 0) {
+                    std::cout << "Time division for checking convergence is 100 / omega_pe: " << this->diag_time_division << " s" << std::endl;
+                }
             } else {
                 this->diag_time_division = 100.0 * this->del_t; // Default value 100 * del_t
+                if (mpi_vars::mpi_rank == 0) {
+                    std::cout << "Time division for checking convergence is default 100 * del_t: " << this->diag_time_division << " s" << std::endl;
+                }
             }
         }
+        
+        MPI_Barrier(MPI_COMM_WORLD);
+        
         this->next_diag_time = this->current_time + this->diag_time_division;
+        if (mpi_vars::mpi_rank == 0) {
+            std::cout << "Maximum simulation time is: " << end_simulation_time << std::endl;
+            std::cout << "Next diag time: " << this->next_diag_time << std::endl;
+            std::cout << "----------------------------------- " << std::endl;
+            std::cout << "" << std::endl;
+
+        }
         std::vector<double> average_phi = this->field_solver->phi;
         std::vector<double> average_phi_check = this->field_solver->phi;
 
@@ -601,11 +648,44 @@ void simulation::averaging() {
             }
             #pragma omp barrier
             while (this->current_time < end_simulation_time && res > 1e-6) {
+                #pragma omp barrier
+                // Make sure at same time step
+                #pragma omp master
+                {
+                    double local_time = this->current_time;
+                    std::vector<double> times(mpi_vars::mpi_size);
+
+                    // Gather current_step from all ranks
+                    MPI_Allgather(&local_time, 1, MPI_DOUBLE, times.data(), 1, MPI_DOUBLE, MPI_COMM_WORLD);
+
+                    // Check consistency
+                    bool mismatch = false;
+                    for (int i = 1; i < mpi_vars::mpi_size; ++i) {
+                        if (times[i] != times[0]) {
+                            mismatch = true;
+                            break;
+                        }
+                    }
+
+                    if (mismatch && mpi_vars::mpi_rank == 0) {
+                        std::cerr << "MPI step mismatch detected!" << std::endl;
+                        for (int i = 0; i < mpi_vars::mpi_size; ++i) {
+                            std::cerr << "Rank " << i << " has current_step = " << times[i] << std::endl;
+                        }
+                        // Optional: abort
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
+                }
+                #pragma omp barrier
                 this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
                 #pragma omp barrier
                 #pragma omp for
                 for (int i = 0; i < this->world->number_nodes; i++) {
                     average_phi[i] += this->field_solver->phi[i];
+                }
+                #pragma omp barrier
+                for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
+                    this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
                 }
                 #pragma omp barrier
                 for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
@@ -623,7 +703,6 @@ void simulation::averaging() {
                 }
                 #pragma omp barrier
                 if (this->current_time >= this->next_diag_time) {
-                    // average phi and check if can break loop early
                     #pragma omp master
                     {
                         res = 0.0;
@@ -656,14 +735,12 @@ void simulation::averaging() {
         }
         if (mpi_vars::mpi_rank == 0) {
             write_vector_to_binary_file(average_phi_check, this->world->number_nodes, this->save_file_folder + "/phi/potential_average.dat", 0);
-            std::cout << "out here" << std::endl;
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
                 this->charged_particle_list[part_num].write_diagnostics_average(this->save_file_folder);
                 for (int i = 0; i < this->world->number_nodes; i++) {
                     this->charged_particle_list[part_num].density[i] /= double(this->current_step + 1);
                 }
             }
-            std::cout << "out here again" << std::endl;
             this->field_solver->write_particle_densities(this->save_file_folder, "density_average.dat", this->charged_particle_list, *this->world);
             std::cout << "Averaging finished and took " << end_time - start_time <<  " seconds" << std::endl;
             std::cout << "Ended over simulation time of " << this->current_time - start_sim_time << std::endl;

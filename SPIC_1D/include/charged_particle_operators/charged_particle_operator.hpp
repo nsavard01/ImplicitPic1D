@@ -6,6 +6,8 @@
 #include "globals/mpi_vars.hpp"
 #include "particles/charged_particle.hpp"
 #include <cmath>
+#include "globals/constants.hpp"
+#include <omp.h>
 
 class charged_particle_operator {
 
