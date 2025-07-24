@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iomanip>
 #include "globals/write_functions.hpp"
+#include "util/math_util.hpp"
 
 
 
@@ -226,7 +227,7 @@ void simulation::setup() {
         iss.clear();
         std::getline(file, line);
         iss.str(line);
-        iss >> this->averaging_time;
+        iss >> this->averaging_time >> this->res_acceptance_phi >> this->res_acceptance_density;
         iss.clear();
         std::getline(file, line);
         iss.str(line);
@@ -263,6 +264,8 @@ void simulation::setup() {
     MPI_Bcast(&del_t_temp, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&del_t_fraction, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&this->simulation_time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&this->res_acceptance_phi, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&this->res_acceptance_density, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&this->averaging_time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&this->number_diagnostics, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&this->restarted_simulation, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
@@ -312,6 +315,8 @@ void simulation::setup() {
         std::cout << "Fraction of inverse plasma frequency: " << this->inv_plasma_freq_fraction << std::endl;
         std::cout << "Simulation time (s): " << this->simulation_time << std::endl;
         std::cout << "Averaging time (s): " << this->averaging_time << std::endl;
+        std::cout << "Acceptance average residual in voltage: " << this->res_acceptance_phi << std::endl;
+        std::cout << "Acceptance average residual in density: " << this->res_acceptance_density << std::endl;
         std::cout << "Number diagnostics: " << this->number_diagnostics << std::endl;
         std::cout << "------------------------------" << std::endl;
         std::cout << " " << std::endl;
@@ -601,7 +606,6 @@ void simulation::averaging() {
         int number_charged_particles = this->charged_particle_list.size();
         double start_sim_time = this->current_time;
         this->current_step = 0;
-        double res = 1.0;
         if (this->field_solver->RF_rad_frequency > 0.0) {
             double RF_period = 2.0 * M_PI / this->field_solver->RF_rad_frequency;
             this->diag_time_division = RF_period; // 1 RF periods
@@ -628,14 +632,18 @@ void simulation::averaging() {
         
         this->next_diag_time = this->current_time + this->diag_time_division;
         if (mpi_vars::mpi_rank == 0) {
-            std::cout << "Maximum simulation time is: " << end_simulation_time << std::endl;
-            std::cout << "Next diag time: " << this->next_diag_time << std::endl;
             std::cout << "----------------------------------- " << std::endl;
             std::cout << "" << std::endl;
 
         }
+
+        // initialize residual checks
+        double res_phi = 1.0;
+        double res_density = 1.0;
         std::vector<double> average_phi = this->field_solver->phi;
         std::vector<double> average_phi_check = this->field_solver->phi;
+        std::vector<double> average_density = this->charged_particle_list[0].density;
+        std::vector<double> average_density_check = this->charged_particle_list[0].density;
 
         // Initialize vectors for distribution functions
         double start_time = MPI_Wtime();
@@ -643,11 +651,18 @@ void simulation::averaging() {
         #pragma omp parallel
         {
             int thread_id = omp_get_thread_num();
+            // Get current particle diagnostics
             for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
                 this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells, 1);
             }
             #pragma omp barrier
-            while (this->current_time < end_simulation_time && res > 1e-6) {
+            // initialize initial average density
+            #pragma omp master
+            {
+                MPI_Allreduce(MPI_IN_PLACE, average_density_check.data(), this->world->number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); // Synchronize charge density across all processes
+            }
+            #pragma omp barrier
+            while (this->current_time < end_simulation_time && (res_phi > this->res_acceptance_phi || res_density > this->res_acceptance_density)) {
                 #pragma omp barrier
                 // Make sure at same time step
                 #pragma omp master
@@ -684,12 +699,12 @@ void simulation::averaging() {
                     average_phi[i] += this->field_solver->phi[i];
                 }
                 #pragma omp barrier
-                for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
-                    this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
-                }
-                #pragma omp barrier
                 for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
                     this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells, 1);
+                }
+                #pragma omp barrier
+                for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
+                    this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
                 }
                 #pragma omp barrier
                 for (int part_num = 0; part_num < number_charged_particles; part_num++){
@@ -704,24 +719,37 @@ void simulation::averaging() {
                 #pragma omp barrier
                 if (this->current_time >= this->next_diag_time) {
                     #pragma omp master
-                    {
-                        res = 0.0;
-                        double curr_average;
-                        double integ_average = 0.0;
-                        double diff;
+                    {   
+                        // reduce density average
+                        MPI_Allreduce(this->charged_particle_list[0].density.data(), average_density.data(), this->world->number_nodes, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        // first calculate for phi
+                        res_phi = 0.0;
+                        res_density = 0.0;
+                        double curr_average_phi;
+                        double diff_phi;
+                        double curr_average_density;
+                        double diff_density;
                         for (int i = 0; i < this->world->number_nodes; i++) {
                             // compute current running average
-                            curr_average = average_phi[i] / double(this->current_step + 1);
+                            curr_average_phi = average_phi[i] / double(this->current_step + 1);
+                            curr_average_density = average_density[i] / double(this->current_step + 1);
                             // compute difference with previous average
-                            integ_average += curr_average;
-                            diff = average_phi_check[i] - curr_average;
+                            diff_phi = average_phi_check[i] - curr_average_phi;
+                            diff_density = average_density_check[i] - curr_average_density;
                             // compute difference percentage squared
-                            res += diff*diff;
+                            res_phi += diff_phi*diff_phi;
+                            res_density += diff_density*diff_density;
                             // update average_phi_check
-                            average_phi_check[i] = curr_average;
+                            average_phi_check[i] = curr_average_phi;
+                            average_density_check[i] = curr_average_density;
                         }
-                        res = std::sqrt(res / double(this->world->number_nodes));
-                        res = res/integ_average;
+                        // get average of summed phi, density
+                        double integ_average_phi = integrate(this->world->grid_nodes, average_phi_check)/this->world->length_domain;
+                        double integ_average_density = integrate(this->world->grid_nodes, average_density_check)/this->world->length_domain;
+                        res_phi = std::sqrt(res_phi / double(this->world->number_nodes));
+                        res_phi = res_phi/integ_average_phi;
+                        res_density = std::sqrt(res_density / double(this->world->number_nodes));
+                        res_density = res_density/integ_average_density;
                         this->next_diag_time = this->current_time + this->diag_time_division;
                     }
                 }
@@ -744,7 +772,7 @@ void simulation::averaging() {
             this->field_solver->write_particle_densities(this->save_file_folder, "density_average.dat", this->charged_particle_list, *this->world);
             std::cout << "Averaging finished and took " << end_time - start_time <<  " seconds" << std::endl;
             std::cout << "Ended over simulation time of " << this->current_time - start_sim_time << std::endl;
-            std::cout << "Final res is: " << res << std::endl;
+            std::cout << "Final residual in voltage is: " << res_phi << " and final residual in density is: " << res_density << std::endl;
         }
         
 

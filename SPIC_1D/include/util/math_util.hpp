@@ -8,6 +8,32 @@
 #include "globals/mpi_vars.hpp"
 #include <iostream>
 
+template <typename XContainer, typename YContainer>
+inline double integrate(const XContainer& x, const YContainer& y) {
+    size_t Nx = x.size();
+    size_t Ny = y.size();
+
+    if (Ny == Nx) {
+        // Trapezoidal rule
+        double result = 0.0;
+        for (size_t i = 0; i < Nx - 1; ++i) {
+            double dx = x[i+1] - x[i];
+            result += 0.5 * (y[i] + y[i+1]) * dx;
+        }
+        return result;
+    } else if (Ny == Nx - 1) {
+        // Left Riemann sum
+        double result = 0.0;
+        for (size_t i = 0; i < Ny; ++i) {
+            double dx = x[i+1] - x[i];
+            result += y[i] * dx;
+        }
+        return result;
+    } else {
+        throw std::invalid_argument("integrate(): y.size() must be equal to x.size() or x.size() - 1.");
+    }
+}
+
 inline std::vector<double> solveLeastSquaresQR_MKL(const std::vector<double>& A_input,
     const std::vector<double>& b_input,
     int m, int n) {
