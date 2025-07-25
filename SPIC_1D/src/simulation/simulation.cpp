@@ -593,6 +593,8 @@ void simulation::run() {
 
 }
 
+
+
 void simulation::averaging() {
 
     if (this->averaging_time > 0) {
@@ -616,9 +618,9 @@ void simulation::averaging() {
             if (this->charged_particle_list.size() > 0 && this->charged_particle_list[0].mass == constants::electron_mass) {
                 double n_e = this->charged_particle_list[0].average_density/this->world->length_domain;
                 double plasma_freq = get_plasma_frequency(n_e);
-                this->diag_time_division = 100.0 / plasma_freq; // 50 plasma periods
+                this->diag_time_division = 50.0 / plasma_freq; // 50 plasma periods
                 if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "Time division for checking convergence is 100 / omega_pe: " << this->diag_time_division << " s" << std::endl;
+                    std::cout << "Time division for checking convergence is 50 / omega_pe: " << this->diag_time_division << " s" << std::endl;
                 }
             } else {
                 this->diag_time_division = 100.0 * this->del_t; // Default value 100 * del_t
@@ -645,9 +647,47 @@ void simulation::averaging() {
         std::vector<double> average_density = this->charged_particle_list[0].density;
         std::vector<double> average_density_check = this->charged_particle_list[0].density;
 
+        // generate data for binning
+        int EDF_num = 201;
+        double EDF_eps = 0.01;
+        double EDF_eps_max = 1.0 - EDF_eps;
+        double del_EDF_xi = (1.0 - 2.0 * EDF_eps) / double(EDF_num-1); // logical grid spacing
+        double inv_del_EDF_xi = 1.0 / del_EDF_xi;
+        std::vector<std::vector<double>> particle_energy_bins(this->charged_particle_list.size());
+        std::vector<std::vector<double>> particle_energy_counts(this->charged_particle_list.size());
+        std::vector<double> particle_v_sqr_max(this->charged_particle_list.size());
+        std::vector<double> particle_v_sqr_min(this->charged_particle_list.size());
+        std::vector<double> particle_v_sqr_mean(this->charged_particle_list.size());
+        std::vector<double> particle_beta(this->charged_particle_list.size());
+        for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
+            charged_particle& part = this->charged_particle_list[part_num];
+            particle_v_sqr_min[part_num] = part.v_sqr_min;
+            particle_v_sqr_max[part_num] = part.v_sqr_max;
+            particle_v_sqr_mean[part_num] = part.average_temperature * 3.0 * constants::elementary_charge / part.mass;
+            particle_energy_bins[part_num].resize(EDF_num);
+            double beta_high = std::log((1.0 - EDF_eps)/EDF_eps) / std::log(particle_v_sqr_max[part_num]/ particle_v_sqr_mean[part_num]);
+            double beta_low = std::log((1.0 - EDF_eps)/EDF_eps) / std::log(particle_v_sqr_mean[part_num]/ particle_v_sqr_min[part_num]);
+            particle_beta[part_num] = 0.5 * (beta_high + beta_low);
+            if (mpi_vars::mpi_rank == 0) {
+                std::cout << "Generating bins for particle " << part.name << std::endl;
+                std::cout << "Min: " << particle_v_sqr_min[part_num] * 0.5 * part.mass / constants::elementary_charge;
+                std::cout << "Max: " << particle_v_sqr_max[part_num] * 0.5 * part.mass / constants::elementary_charge;
+                std::cout << "Mean: " << particle_v_sqr_mean[part_num] * 0.5 * part.mass / constants::elementary_charge;
+            }
+            particle_energy_counts[part_num].resize(EDF_num, 0.0);
+            double E_point, edf_xi_point;
+            double inv_beta = 1.0/particle_beta[part_num];
+            for (int point = 0; point < EDF_num; point++) {
+                edf_xi_point = point * del_EDF_xi + EDF_eps;
+                E_point = particle_v_sqr_mean[part_num] * std::pow(edf_xi_point / (1.0-edf_xi_point), inv_beta);
+                particle_energy_bins[part_num][point] = E_point;
+            }
+        }
+
+
         // Initialize vectors for distribution functions
         double start_time = MPI_Wtime();
-        
+        double end_time;
         #pragma omp parallel
         {
             int thread_id = omp_get_thread_num();
@@ -754,25 +794,135 @@ void simulation::averaging() {
                     }
                 }
                 #pragma omp barrier
+                
             }
             #pragma omp barrier
+            #pragma omp master
+            {
+                end_time = MPI_Wtime();
+                if (mpi_vars::mpi_rank == 0) {
+                    std::cout << "Averaging finished and took " << end_time - start_time <<  " seconds" << std::endl;
+                    std::cout << "Continuing to EDF averaging..." << std::endl;
+                }
+                start_time = MPI_Wtime();
+            }
+            #pragma omp barrier
+            std::vector<std::vector<double>> local_hist(this->charged_particle_list.size());
+            for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
+                local_hist[part_num].resize(EDF_num, 0.0);
+            }
+            while (this->current_time < this->next_diag_time) {
+                #pragma omp barrier
+                // Make sure at same time step
+                #pragma omp master
+                {
+                    double local_time = this->current_time;
+                    std::vector<double> times(mpi_vars::mpi_size);
+
+                    // Gather current_step from all ranks
+                    MPI_Allgather(&local_time, 1, MPI_DOUBLE, times.data(), 1, MPI_DOUBLE, MPI_COMM_WORLD);
+
+                    // Check consistency
+                    bool mismatch = false;
+                    for (int i = 1; i < mpi_vars::mpi_size; ++i) {
+                        if (times[i] != times[0]) {
+                            mismatch = true;
+                            break;
+                        }
+                    }
+
+                    if (mismatch && mpi_vars::mpi_rank == 0) {
+                        std::cerr << "MPI step mismatch detected!" << std::endl;
+                        for (int i = 0; i < mpi_vars::mpi_size; ++i) {
+                            std::cerr << "Rank " << i << " has current_step = " << times[i] << std::endl;
+                        }
+                        // Optional: abort
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
+                }
+                #pragma omp barrier
+                this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
+                #pragma omp barrier
+                for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
+                    this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
+                }
+                #pragma omp barrier
+                for (int part_num = 0; part_num < number_charged_particles; part_num++){
+                    this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);
+                }
+                #pragma omp barrier
+                #pragma omp master
+                {   
+                    this->current_time += this->del_t;
+                }
+                #pragma omp barrier
+                // Get EDF statistics
+                
+                for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
+                    charged_particle& particle = this->charged_particle_list[part_num];
+                    double mean_val = particle_v_sqr_mean[part_num];
+                    double beta = particle_beta[part_num];
+                    size_t last_idx = particle.number_particles[thread_id][0];
+                    std::vector<double>& v_x_local = particle.v_x[thread_id];
+                    std::vector<double>& v_y_local = particle.v_y[thread_id];
+                    std::vector<double>& v_z_local = particle.v_z[thread_id];
+                    std::vector<double>& part_hist = local_hist[part_num];
+                    double v_sqr, v_x, v_y, v_z, conv_val;
+                    int bin_num;
+                    for (size_t part_idx = 0; part_idx < last_idx; part_idx++) {
+                        v_x = v_x_local[part_idx];
+                        v_y = v_y_local[part_idx];
+                        v_z = v_z_local[part_idx];
+                        v_sqr = v_x*v_x + v_y*v_y + v_z*v_z;
+                        conv_val = 1.0 / (1 + std::pow(v_sqr/mean_val, -beta));
+                        if (conv_val >= EDF_eps && conv_val <= EDF_eps_max) {
+                            conv_val = (conv_val - EDF_eps) *  inv_del_EDF_xi;
+                            bin_num = int(conv_val);   
+                            conv_val = conv_val - bin_num;
+                            part_hist[bin_num] += (1.0 - conv_val);
+                            part_hist[bin_num+1] += conv_val;
+                        }
+                    }
+                }
+            }
+            #pragma omp barrier
+            // collect histogram values
+            #pragma omp critical
+            {
+                for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
+                    for (int point = 0; point < EDF_num; point++) {
+                        particle_energy_counts[part_num][point] += local_hist[part_num][point];
+                    }
+                }
+            }
         }
-        double end_time = MPI_Wtime();
+        end_time = MPI_Wtime();
         for (int part_num = 0; part_num < number_charged_particles; part_num++){
             this->charged_particle_list[part_num].gather_mpi();
+            MPI_Allreduce(MPI_IN_PLACE, particle_energy_counts[part_num].data(), EDF_num, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            // correct counts for mappin, so dN/dxi => dN/dE
+            for (int point = 0; point < EDF_num; point++) {
+                double local_v_sqr = particle_energy_bins[part_num][point];
+                double ratio = local_v_sqr/particle_v_sqr_mean[part_num];
+                double beta = particle_beta[part_num];
+                particle_energy_counts[part_num][point] *= inv_del_EDF_xi * beta * std::pow(ratio, beta) / local_v_sqr / (std::pow(ratio,beta) + 1.0) / (std::pow(ratio,beta) + 1.0);
+                particle_energy_bins[part_num][point] *= 0.5 * this->charged_particle_list[part_num].mass / constants::elementary_charge;
+            }
         }
         if (mpi_vars::mpi_rank == 0) {
+            std::cout << "EDF averaging took " << end_time - start_time <<  " seconds" << std::endl;
+            std::cout << "Ended over simulation time of " << this->current_time - start_sim_time << std::endl;
+            std::cout << "Final residual in voltage is: " << res_phi << " and final residual in density is: " << res_density << std::endl;
             write_vector_to_binary_file(average_phi_check, this->world->number_nodes, this->save_file_folder + "/phi/potential_average.dat", 0);
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
                 this->charged_particle_list[part_num].write_diagnostics_average(this->save_file_folder);
+                write_vector_to_binary_file(particle_energy_counts[part_num], EDF_num, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_counts.dat", 0);
+                write_vector_to_binary_file(particle_energy_bins[part_num], EDF_num, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_bins.dat", 0);
                 for (int i = 0; i < this->world->number_nodes; i++) {
                     this->charged_particle_list[part_num].density[i] /= double(this->current_step + 1);
                 }
             }
             this->field_solver->write_particle_densities(this->save_file_folder, "density_average.dat", this->charged_particle_list, *this->world);
-            std::cout << "Averaging finished and took " << end_time - start_time <<  " seconds" << std::endl;
-            std::cout << "Ended over simulation time of " << this->current_time - start_sim_time << std::endl;
-            std::cout << "Final residual in voltage is: " << res_phi << " and final residual in density is: " << res_density << std::endl;
         }
         
 

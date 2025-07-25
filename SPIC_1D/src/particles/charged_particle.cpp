@@ -238,6 +238,8 @@ void charged_particle::initialize_rand_maxwellian(double T_ave, double v_drift) 
     MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v_square, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     double total_sum_v_square_temp = this->total_sum_v_square[0] + this->total_sum_v_square[1] + this->total_sum_v_square[2];
+    this->v_sqr_max = 5.0 * (total_sum_v_square_temp) / double(this->total_number_particles); // Assume max about 5x the mean
+    this->v_sqr_min = 3.0 * 0.025 / this->mass; // assume minimum at room temperature of 0.025 eV
     this->average_temperature = this->mass * total_sum_v_square_temp / static_cast<double>(this->total_number_particles) / constants::elementary_charge / double(this->number_velocity_coordinates);
 }
 
@@ -357,6 +359,11 @@ void charged_particle::get_particle_diagnostics(const int thread_id, const int n
     
     // interpolation based on order given
     // for T_e do bin within cell
+    #pragma omp master
+    {
+        this->v_sqr_min = 1e10;
+        this->v_sqr_max = 0.0;
+    }
     double sum_v_sq[3];
     double sum_v[3];
     sum_v[0] = 0.0; sum_v[1] = 0.0; sum_v[2] = 0.0;
@@ -374,7 +381,8 @@ void charged_particle::get_particle_diagnostics(const int thread_id, const int n
     std::vector<double> local_density(number_cells+1, 0.0);
     std::vector<double> local_v_sqr(number_cells, 0.0);
     std::fill(number_part_cell_local.begin(), number_part_cell_local.end(), 0);
-
+    double v_sqr_min_local = 1e10;
+    double v_sqr_max_local = 0.0;
     for (size_t part_num = 0; part_num < last_idx; part_num++){
         xi_temp = xi_local[part_num];
         v_x_temp = v_x_local[part_num];
@@ -397,6 +405,8 @@ void charged_particle::get_particle_diagnostics(const int thread_id, const int n
         sum_v[2] += v_z_temp;
         sum_v_sq[0] += v_x_temp * v_x_temp;
         v_sqr = v_x_temp * v_x_temp + v_y_temp * v_y_temp + v_z_temp * v_z_temp;
+        v_sqr_min_local = std::min(v_sqr_min_local, v_sqr);
+        v_sqr_max_local = std::max(v_sqr_max_local, v_sqr);
         local_v_sqr[local_indx] += v_sqr; // add paticle energy to cell
         number_part_cell_local[local_indx]++;
     }
@@ -407,6 +417,8 @@ void charged_particle::get_particle_diagnostics(const int thread_id, const int n
     // collect all into net diagnostics
     #pragma omp critical
     {
+        this->v_sqr_min = std::min(this->v_sqr_min, v_sqr_min_local);
+        this->v_sqr_max = std::max(this->v_sqr_max, v_sqr_max_local);
         for (int i = 0; i < number_cells; i++) {
             this->temperature[i] += local_v_sqr[i];
         }
@@ -628,6 +640,8 @@ void charged_particle::gather_mpi(){
     MPI_Allreduce(MPI_IN_PLACE, &this->total_number_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_sum_v_square, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &this->v_sqr_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &this->v_sqr_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_energy_loss, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[0].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[1].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);

@@ -223,6 +223,12 @@ class dataSet:
             temp_path = self.path + 'charged_particles/' + name + '/temperature/cell_temp_average.dat'
             return np.fromfile(temp_path, dtype = 'float')
 
+    def get_ave_EDF(self, name):
+        if (self.ave_time > 0):
+            temp_path = self.path + 'charged_particles/' + name + '/'
+            E_bins = np.fromfile(temp_path + 'EDF_average_bins.dat', dtype = 'float')
+            E_counts = np.fromfile(temp_path + 'EDF_average_counts.dat', dtype = 'float')
+            return E_bins, E_counts
 
 
     
