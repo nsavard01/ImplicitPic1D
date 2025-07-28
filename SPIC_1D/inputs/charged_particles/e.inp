@@ -1,9 +1,9 @@
 e : name
 -1 : charge
 0.00054858 : mass in dalton
-5000 : number particles per thread
-1e17 : average total density (m^-3)
-3.0 : average temperature (eV)
+2048 : number particles per thread
+2.56e14 : average total density (m^-3)
+2.59 : average temperature (eV)
 2 : initial factor array lengths
 0 : EEDF type (0 = maxwellian)
 0.0 : drift velocity in x

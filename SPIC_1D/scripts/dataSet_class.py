@@ -228,7 +228,8 @@ class dataSet:
             temp_path = self.path + 'charged_particles/' + name + '/'
             E_bins = np.fromfile(temp_path + 'EDF_average_bins.dat', dtype = 'float')
             E_counts = np.fromfile(temp_path + 'EDF_average_counts.dat', dtype = 'float')
-            return E_bins, E_counts
+            E_sizes = np.fromfile(temp_path + 'EDF_average_bin_sizes.dat', dtype = 'float')
+            return E_bins, E_counts, E_sizes
 
 
     

@@ -648,39 +648,35 @@ void simulation::averaging() {
         std::vector<double> average_density_check = this->charged_particle_list[0].density;
 
         // generate data for binning
-        int EDF_num = 201;
-        double EDF_eps = 0.01;
-        double EDF_eps_max = 1.0 - EDF_eps;
-        double del_EDF_xi = (1.0 - 2.0 * EDF_eps) / double(EDF_num-1); // logical grid spacing
-        double inv_del_EDF_xi = 1.0 / del_EDF_xi;
+        int EDF_num_bins = 200;
+        std::vector<std::vector<double>> particle_energy_bin_sizes(this->charged_particle_list.size());
         std::vector<std::vector<double>> particle_energy_bins(this->charged_particle_list.size());
         std::vector<std::vector<double>> particle_energy_counts(this->charged_particle_list.size());
         std::vector<double> particle_v_sqr_max(this->charged_particle_list.size());
         std::vector<double> particle_v_sqr_min(this->charged_particle_list.size());
-        std::vector<double> particle_v_sqr_mean(this->charged_particle_list.size());
         std::vector<double> particle_beta(this->charged_particle_list.size());
         for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
             charged_particle& part = this->charged_particle_list[part_num];
             particle_v_sqr_min[part_num] = part.v_sqr_min;
             particle_v_sqr_max[part_num] = part.v_sqr_max;
-            particle_v_sqr_mean[part_num] = part.average_temperature * 3.0 * constants::elementary_charge / part.mass;
-            particle_energy_bins[part_num].resize(EDF_num);
-            double beta_high = std::log((1.0 - EDF_eps)/EDF_eps) / std::log(particle_v_sqr_max[part_num]/ particle_v_sqr_mean[part_num]);
-            double beta_low = std::log((1.0 - EDF_eps)/EDF_eps) / std::log(particle_v_sqr_mean[part_num]/ particle_v_sqr_min[part_num]);
-            particle_beta[part_num] = 0.5 * (beta_high + beta_low);
+            particle_energy_bin_sizes[part_num].resize(EDF_num_bins);
+            particle_energy_bins[part_num].resize(EDF_num_bins);
+            particle_beta[part_num] = std::log(part.v_sqr_max/part.v_sqr_min)/double(EDF_num_bins);
             if (mpi_vars::mpi_rank == 0) {
                 std::cout << "Generating bins for particle " << part.name << std::endl;
-                std::cout << "Min: " << particle_v_sqr_min[part_num] * 0.5 * part.mass / constants::elementary_charge;
-                std::cout << "Max: " << particle_v_sqr_max[part_num] * 0.5 * part.mass / constants::elementary_charge;
-                std::cout << "Mean: " << particle_v_sqr_mean[part_num] * 0.5 * part.mass / constants::elementary_charge;
+                std::cout << "Min: " << particle_v_sqr_min[part_num] * 0.5 * part.mass / constants::elementary_charge << std::endl;
+                std::cout << "Max: " << particle_v_sqr_max[part_num] * 0.5 * part.mass / constants::elementary_charge << std::endl;
             }
-            particle_energy_counts[part_num].resize(EDF_num, 0.0);
-            double E_point, edf_xi_point;
-            double inv_beta = 1.0/particle_beta[part_num];
-            for (int point = 0; point < EDF_num; point++) {
-                edf_xi_point = point * del_EDF_xi + EDF_eps;
-                E_point = particle_v_sqr_mean[part_num] * std::pow(edf_xi_point / (1.0-edf_xi_point), inv_beta);
-                particle_energy_bins[part_num][point] = E_point;
+            particle_energy_counts[part_num].resize(EDF_num_bins, 0.0);
+            double E_left, E_right;
+            int right_edge;
+            double beta = particle_beta[part_num];
+            for (int left_edge = 0; left_edge < EDF_num_bins; left_edge++) {
+                right_edge = left_edge+1;
+                E_left =  part.v_sqr_min * std::exp(left_edge * beta);
+                E_right = part.v_sqr_min * std::exp(right_edge * beta);
+                particle_energy_bin_sizes[part_num][left_edge] = E_right - E_left; // bin sizes
+                particle_energy_bins[part_num][left_edge] = 0.5 * (E_right + E_left); // bin center
             }
         }
 
@@ -807,9 +803,9 @@ void simulation::averaging() {
                 start_time = MPI_Wtime();
             }
             #pragma omp barrier
-            std::vector<std::vector<double>> local_hist(this->charged_particle_list.size());
+            std::vector<std::vector<size_t>> local_hist(this->charged_particle_list.size());
             for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
-                local_hist[part_num].resize(EDF_num, 0.0);
+                local_hist[part_num].resize(EDF_num_bins, 0);
             }
             while (this->current_time < this->next_diag_time) {
                 #pragma omp barrier
@@ -860,27 +856,28 @@ void simulation::averaging() {
                 
                 for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
                     charged_particle& particle = this->charged_particle_list[part_num];
-                    double mean_val = particle_v_sqr_mean[part_num];
-                    double beta = particle_beta[part_num];
+                    double inv_beta = 1.0/particle_beta[part_num];
+                    double v_sqr_min = particle_v_sqr_min[part_num];
+                    double v_sqr_max = particle_v_sqr_max[part_num];
+                    double inv_v_sqr_min = 1.0 / v_sqr_min;
                     size_t last_idx = particle.number_particles[thread_id][0];
                     std::vector<double>& v_x_local = particle.v_x[thread_id];
                     std::vector<double>& v_y_local = particle.v_y[thread_id];
                     std::vector<double>& v_z_local = particle.v_z[thread_id];
-                    std::vector<double>& part_hist = local_hist[part_num];
+                    std::vector<size_t>& part_hist = local_hist[part_num];
                     double v_sqr, v_x, v_y, v_z, conv_val;
                     int bin_num;
+                    double v_therm = std::sqrt(10.0 * constants::elementary_charge / particle.mass);
                     for (size_t part_idx = 0; part_idx < last_idx; part_idx++) {
                         v_x = v_x_local[part_idx];
                         v_y = v_y_local[part_idx];
                         v_z = v_z_local[part_idx];
                         v_sqr = v_x*v_x + v_y*v_y + v_z*v_z;
-                        conv_val = 1.0 / (1 + std::pow(v_sqr/mean_val, -beta));
-                        if (conv_val >= EDF_eps && conv_val <= EDF_eps_max) {
-                            conv_val = (conv_val - EDF_eps) *  inv_del_EDF_xi;
+                        if (v_sqr > v_sqr_min && v_sqr < v_sqr_max) {
+                            // bin velocity
+                            conv_val = std::log(v_sqr * inv_v_sqr_min) * inv_beta;
                             bin_num = int(conv_val);   
-                            conv_val = conv_val - bin_num;
-                            part_hist[bin_num] += (1.0 - conv_val);
-                            part_hist[bin_num+1] += conv_val;
+                            part_hist[bin_num] += 1;
                         }
                     }
                 }
@@ -890,7 +887,7 @@ void simulation::averaging() {
             #pragma omp critical
             {
                 for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
-                    for (int point = 0; point < EDF_num; point++) {
+                    for (int point = 0; point < EDF_num_bins; point++) {
                         particle_energy_counts[part_num][point] += local_hist[part_num][point];
                     }
                 }
@@ -899,14 +896,12 @@ void simulation::averaging() {
         end_time = MPI_Wtime();
         for (int part_num = 0; part_num < number_charged_particles; part_num++){
             this->charged_particle_list[part_num].gather_mpi();
-            MPI_Allreduce(MPI_IN_PLACE, particle_energy_counts[part_num].data(), EDF_num, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, particle_energy_counts[part_num].data(), EDF_num_bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             // correct counts for mappin, so dN/dxi => dN/dE
-            for (int point = 0; point < EDF_num; point++) {
-                double local_v_sqr = particle_energy_bins[part_num][point];
-                double ratio = local_v_sqr/particle_v_sqr_mean[part_num];
-                double beta = particle_beta[part_num];
-                particle_energy_counts[part_num][point] *= inv_del_EDF_xi * beta * std::pow(ratio, beta) / local_v_sqr / (std::pow(ratio,beta) + 1.0) / (std::pow(ratio,beta) + 1.0);
+            for (int point = 0; point < EDF_num_bins; point++) {
+                particle_energy_counts[part_num][point] = particle_energy_counts[part_num][point] / particle_energy_bin_sizes[part_num][point];
                 particle_energy_bins[part_num][point] *= 0.5 * this->charged_particle_list[part_num].mass / constants::elementary_charge;
+                particle_energy_bin_sizes[part_num][point] *= 0.5 * this->charged_particle_list[part_num].mass / constants::elementary_charge;
             }
         }
         if (mpi_vars::mpi_rank == 0) {
@@ -916,8 +911,9 @@ void simulation::averaging() {
             write_vector_to_binary_file(average_phi_check, this->world->number_nodes, this->save_file_folder + "/phi/potential_average.dat", 0);
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
                 this->charged_particle_list[part_num].write_diagnostics_average(this->save_file_folder);
-                write_vector_to_binary_file(particle_energy_counts[part_num], EDF_num, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_counts.dat", 0);
-                write_vector_to_binary_file(particle_energy_bins[part_num], EDF_num, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_bins.dat", 0);
+                write_vector_to_binary_file(particle_energy_counts[part_num], EDF_num_bins, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_counts.dat", 0);
+                write_vector_to_binary_file(particle_energy_bins[part_num], EDF_num_bins, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_bins.dat", 0);
+                write_vector_to_binary_file(particle_energy_bin_sizes[part_num], EDF_num_bins, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_bin_sizes.dat", 0);
                 for (int i = 0; i < this->world->number_nodes; i++) {
                     this->charged_particle_list[part_num].density[i] /= double(this->current_step + 1);
                 }
