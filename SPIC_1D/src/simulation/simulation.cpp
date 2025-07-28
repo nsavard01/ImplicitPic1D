@@ -682,6 +682,9 @@ void simulation::averaging() {
 
 
         // Initialize vectors for distribution functions
+        double total_averaging_time = 0;
+        double averaging_sim_time = 0;
+        double total_EDF_averaging_time = 0;
         double start_time = MPI_Wtime();
         double end_time;
         #pragma omp parallel
@@ -796,8 +799,10 @@ void simulation::averaging() {
             #pragma omp master
             {
                 end_time = MPI_Wtime();
+                total_averaging_time = end_time - start_time;
+                averaging_sim_time = this->current_time - start_sim_time;
                 if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "Averaging finished and took " << end_time - start_time <<  " seconds" << std::endl;
+                    std::cout << "Averaging finished and took " << total_averaging_time <<  " seconds" << std::endl;
                     std::cout << "Continuing to EDF averaging..." << std::endl;
                 }
                 start_time = MPI_Wtime();
@@ -893,6 +898,7 @@ void simulation::averaging() {
             }
         }
         end_time = MPI_Wtime();
+        total_EDF_averaging_time = end_time - start_time;
         for (int part_num = 0; part_num < number_charged_particles; part_num++){
             this->charged_particle_list[part_num].gather_mpi();
             MPI_Allreduce(MPI_IN_PLACE, particle_energy_counts[part_num].data(), EDF_num_bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -905,7 +911,7 @@ void simulation::averaging() {
             }
         }
         if (mpi_vars::mpi_rank == 0) {
-            std::cout << "EDF averaging took " << end_time - start_time <<  " seconds" << std::endl;
+            std::cout << "EDF averaging took " << total_EDF_averaging_time <<  " seconds" << std::endl;
             std::cout << "Ended over simulation time of " << this->current_time - start_sim_time << std::endl;
             std::cout << "Final residual in voltage is: " << res_phi << " and final residual in density is: " << res_density << std::endl;
             write_vector_to_binary_file(average_phi_check, this->world->number_nodes, this->save_file_folder + "/phi/potential_average.dat", 0);
@@ -920,6 +926,22 @@ void simulation::averaging() {
                 }
             }
             this->field_solver->write_particle_densities(this->save_file_folder, "density_average.dat", this->charged_particle_list, *this->world);
+
+            // write global averaging data
+            std::ofstream file(this->save_file_folder + "/global_averaging_diag.dat");
+
+            // Write header (optional)
+            file << "Averaging real time (s), averaging sim time (s), EDF real time (s), diagnostic division sim time (s), final sim time (s), res voltage, res density \n";
+            file << std::scientific << std::setprecision(8);
+            file << total_averaging_time << "\t"
+            << averaging_sim_time << "\t"
+            << total_EDF_averaging_time << "\t"
+            << this->diag_time_division << "\t"
+            << this->current_time << "\t"
+            << res_phi << "\t"
+            << res_density << "\n";
+            file.close();
+            std::cout << "Simulation all done!" << std::endl;
         }
         
 
