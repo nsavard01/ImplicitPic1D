@@ -867,7 +867,6 @@ void simulation::averaging() {
                     std::vector<size_t>& part_hist = local_hist[part_num];
                     double v_sqr, v_x, v_y, v_z, conv_val;
                     int bin_num;
-                    double v_therm = std::sqrt(10.0 * constants::elementary_charge / particle.mass);
                     for (size_t part_idx = 0; part_idx < last_idx; part_idx++) {
                         v_x = v_x_local[part_idx];
                         v_y = v_y_local[part_idx];
@@ -897,6 +896,7 @@ void simulation::averaging() {
         for (int part_num = 0; part_num < number_charged_particles; part_num++){
             this->charged_particle_list[part_num].gather_mpi();
             MPI_Allreduce(MPI_IN_PLACE, particle_energy_counts[part_num].data(), EDF_num_bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            this->null_collider_list[part_num].gather_mpi();
             // correct counts for mappin, so dN/dxi => dN/dE
             for (int point = 0; point < EDF_num_bins; point++) {
                 particle_energy_counts[part_num][point] = particle_energy_counts[part_num][point] / particle_energy_bin_sizes[part_num][point];
@@ -911,6 +911,7 @@ void simulation::averaging() {
             write_vector_to_binary_file(average_phi_check, this->world->number_nodes, this->save_file_folder + "/phi/potential_average.dat", 0);
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
                 this->charged_particle_list[part_num].write_diagnostics_average(this->save_file_folder);
+                this->null_collider_list[part_num].write_diagnostics_average(this->save_file_folder, this->charged_particle_list, this->target_particle_list);
                 write_vector_to_binary_file(particle_energy_counts[part_num], EDF_num_bins, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_counts.dat", 0);
                 write_vector_to_binary_file(particle_energy_bins[part_num], EDF_num_bins, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_bins.dat", 0);
                 write_vector_to_binary_file(particle_energy_bin_sizes[part_num], EDF_num_bins, this->save_file_folder + "/charged_particles/" + this->charged_particle_list[part_num].name + "/EDF_average_bin_sizes.dat", 0);
