@@ -118,25 +118,42 @@ class dataSet:
             self.particles[name]['w'] = data[3]
             self.particles[name]['n_x'] = data[4]
             self.particles[name]['n_v'] = data[5]
+            self.particles[name]['diag'] = {}
             part_num = part_path + 'number_diagnostics.dat'
             data = pd.read_csv(part_num, skiprows=1,
                                                names=['N_p', 'left', 'right'], sep='\s+')
-            self.particles[name]['numbers'] = data
+            self.particles[name]['diag']['numbers'] = data
             part_P = part_path + 'momentum_diagnostics.dat'
             data = pd.read_csv(part_P, skiprows=1,
                                names=['v_x', 'v_y', 'v_z', 'left_v_x', 'left_v_y', 'left_v_z', 'right_v_x', 'right_v_y', 'right_v_z'], sep='\s+')
-            self.particles[name]['momentum'] = data
+            self.particles[name]['diag']['momentum'] = data
             part_E = part_path + 'energy_diagnostics.dat'
             data = pd.read_csv(part_E, skiprows=1,
                                names=['v_sq_x', 'v_sq_y', 'v_sq_z', 'v_sq_tot', 'left_v_sq', 'right_v_sq'], sep='\s+')
-            self.particles[name]['energy'] = data
+            self.particles[name]['diag']['energy'] = data
+            if (self.ave_time > 0):
+                self.particles[name]['diag']['ave'] = {}
+                part_num = part_path + 'number_diagnostics_average.dat'
+                data = pd.read_csv(part_num, skiprows=1,
+                                   names=['N_p', 'left', 'right'], sep='\s+')
+                self.particles[name]['diag']['ave']['numbers'] = data
+                part_P = part_path + 'momentum_diagnostics_average.dat'
+                data = pd.read_csv(part_P, skiprows=1,
+                                   names=['v_x', 'v_y', 'v_z', 'left_v_x', 'left_v_y', 'left_v_z', 'right_v_x',
+                                          'right_v_y', 'right_v_z'], sep='\s+')
+                self.particles[name]['diag']['ave']['momentum'] = data
+                part_E = part_path + 'energy_diagnostics_average.dat'
+                data = pd.read_csv(part_E, skiprows=1,
+                                   names=['v_sq_x', 'v_sq_y', 'v_sq_z', 'v_sq_tot', 'left_v_sq', 'right_v_sq'],
+                                   sep='\s+')
+                self.particles[name]['diag']['ave']['energy'] = data
             if (os.path.isdir(part_path + 'null_collision')):
-                self.particles[name]['null'] = {}
+                self.particles[name]['diag']['null'] = {}
                 t_path = part_path + 'null_collision'
                 for target in os.listdir(t_path):
-                    self.particles[name]['null'][target] = []
+                    self.particles[name]['diag']['null'][target] = []
                     dir_name = t_path + '/' + target
-                    num_coll = int(sum(1 for f in os.listdir(dir_name) if os.path.isfile(os.path.join(dir_name, f)))/2)
+                    num_coll = int(sum(1 for f in os.listdir(dir_name) if f.startswith("collision_properties_") and os.path.isfile(os.path.join(dir_name, f))))
                     for i in range(num_coll):
                         temp_dict = {}
                         file_prop = dir_name + '/collision_properties_' + str(i) + '.dat'
@@ -157,7 +174,15 @@ class dataSet:
                         data = pd.read_csv(file_diag,skiprows=1,
                                names=['num_coll', 'num_tot', 'E_loss', 'E_i'], sep='\s+')
                         temp_dict['diag'] = data
-                        self.particles[name]['null'][target].append(temp_dict)
+                        if (self.ave_time > 0):
+                            file_diag = dir_name + '/collision_diagnostics_average_' + str(i) + '.dat'
+                            data = pd.read_csv(file_diag, skiprows=1,
+                                               names=['num_coll', 'num_tot', 'E_loss', 'E_i'], sep='\s+')
+                            temp_dict['ave'] = data
+                        self.particles[name]['diag']['null'][target].append(temp_dict)
+
+
+
 
         self.targets = {}
         temp_path = self.path + 'target_particles'
@@ -183,6 +208,11 @@ class dataSet:
             self.non_linear_params = data[5::]
             self.non_linear_diag = pd.read_csv(self.path + 'non_linear_solver_diagnostics.dat', skiprows=1,
                                names=['time', 'res_norm', 'iterations'], sep='\s+')
+
+        temp_file = self.path + 'global_averaging_diag.dat'
+        if (os.path.isfile(temp_file)):
+            self.averaging_diag = pd.read_csv(temp_file, skiprows=1,
+                                               names=['Ave time', 'sim time', 'EDF time', 'diag time', 'final time', 'res V', 'res n'], sep='\s+')
 
     def get_grid(self):
         return np.fromfile(self.path + '/domain/grid.dat', dtype = 'float')

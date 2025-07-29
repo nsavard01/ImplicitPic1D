@@ -10,11 +10,112 @@ charged_particle_wall_injector::charged_particle_wall_injector(std::vector<int>&
     this->v_therm = v_therm; 
     this->v_3D = v_3D;
     int total_thread_count = omp_get_max_threads() * mpi_vars::mpi_size;
+    this->accumulated_number_particles.resize(this->particle_indx.size());
     this->particle_location = particle_location;
     for (int i = 0; i < this->current_density.size(); i++) {
         // Divide current density by number of threads, so have equal amount of particle introduced in each thread
         this->current_density[i] = this->current_density[i]/double(total_thread_count);
+        this->accumulated_number_particles[i].resize(omp_get_max_threads());
+        for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+            this->accumulated_number_particles[i][i_thread].resize(1, 0);
+        }
     }
+}
+
+void charged_particle_wall_injector::setup_diagnostics(const std::string& dir_name, const std::vector<charged_particle>& particle_list) {
+    if (mpi_vars::mpi_rank == 0) {
+        std::vector<int> amount_injections(particle_list.size(), 0);
+
+        for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
+            int part_indx = this->particle_indx[inj_indx];
+            const charged_particle& particle = particle_list[part_indx];
+            int number_injection = amount_injections[part_indx];
+            std::ofstream file(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_properties_" + std::to_string(number_injection) + ".dat");
+            double total_current_density = this->current_density[inj_indx] * omp_get_max_threads() * mpi_vars::mpi_size;
+            double Temp = this->v_therm[inj_indx] * this->v_therm[inj_indx] / std::abs(particle.q_over_m);
+            // Write header (optional)
+            file << "Current density (A/m^2), thermal temperature (eV), v_x (m/s), v_y (m/s), v_z (m/s), wall node \n";
+            file << std::scientific << std::setprecision(8);
+            file << total_current_density << "\t"
+                << Temp << "\t"
+                << this->v_3D[inj_indx][0] << "\t"
+                << this->v_3D[inj_indx][1] << "\t"
+                << this->v_3D[inj_indx][2]<< "\t"
+                << std::round(this->particle_location[inj_indx]) << "\n";
+
+
+            file.close();
+
+            file.open(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_diagnostics_" + std::to_string(number_injection) + ".dat");
+            file << "Number particles released \n";
+
+            file.close();
+            amount_injections[part_indx]++;
+        }
+    }
+}
+
+void charged_particle_wall_injector::write_average_diagnostics(const std::string& dir_name, const std::vector<charged_particle>& particle_list) {
+    
+    std::vector<size_t> total_amount_injected(this->particle_indx.size(),0);
+    for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
+        for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+            total_amount_injected[inj_indx] += this->accumulated_number_particles[inj_indx][i_thread][0];
+        }
+    }
+    MPI_Allreduce(MPI_IN_PLACE, total_amount_injected.data(), this->particle_indx.size(), mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    
+    if (mpi_vars::mpi_rank == 0) {
+        std::vector<int> amount_injections(particle_list.size(), 0);
+
+        for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
+            int part_indx = this->particle_indx[inj_indx];
+            const charged_particle& particle = particle_list[part_indx];
+            int number_injection = amount_injections[part_indx];
+            std::ofstream file(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_diagnostics_average_" + std::to_string(number_injection) + ".dat");
+            file << "Number particles released \n";
+            file << total_amount_injected[inj_indx] << "\n";
+
+
+            file.close();
+        }
+    }
+}
+
+void charged_particle_wall_injector::write_diagnostics(const std::string& dir_name, const std::vector<charged_particle>& particle_list) {
+    
+    std::vector<size_t> total_amount_injected(this->particle_indx.size(),0);
+    for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
+        for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+            total_amount_injected[inj_indx] += this->accumulated_number_particles[inj_indx][i_thread][0];
+        }
+    }
+    MPI_Allreduce(MPI_IN_PLACE, total_amount_injected.data(), this->particle_indx.size(), mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
+    
+    if (mpi_vars::mpi_rank == 0) {
+        std::vector<int> amount_injections(particle_list.size(), 0);
+
+        for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
+            int part_indx = this->particle_indx[inj_indx];
+            const charged_particle& particle = particle_list[part_indx];
+            int number_injection = amount_injections[part_indx];
+            std::ofstream file(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_diagnostics_" + std::to_string(number_injection) + ".dat", std::ios::app);
+            file << std::scientific << std::setprecision(8);
+            file << total_amount_injected[inj_indx] << "\n";
+
+
+            file.close();
+        }
+    }
+}
+
+void charged_particle_wall_injector::reset_diagnostics() {
+    for (int i = 0; i < this->current_density.size(); i++) {
+        for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+            this->accumulated_number_particles[i][i_thread][0] = 0;
+        }
+    }
+    
 }
 
 void charged_particle_wall_injector::print_out() {
@@ -70,6 +171,7 @@ void charged_particle_wall_injector::run(const int thread_id, const double curre
             number_particles++;
         }
         part.number_particles[thread_id][0] = number_particles;
+        this->accumulated_number_particles[i][thread_id][0] += number_selected;
         
     }
     

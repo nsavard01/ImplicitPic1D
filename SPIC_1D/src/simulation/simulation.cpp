@@ -93,6 +93,10 @@ void simulation::initialize_diagnostic_files() {
                     std::cerr << "Save directory not successfully created!" << std::endl;
                     MPI_Abort(MPI_COMM_WORLD, 1);
                 }
+                if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/operations")) {
+                    std::cerr << "Save directory not successfully created!" << std::endl;
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
                 if (this->null_collider_list[i].number_targets > 0) {
                     if (!createDirectory(folder_name + "/charged_particles/" + this->charged_particle_list[i].name + "/null_collision")) {
                         std::cerr << "Save directory not successfully created!" << std::endl;
@@ -195,6 +199,9 @@ void simulation::initialize_diagnostic_files() {
             this->charged_particle_list[part_num].initialize_diagnostic_files(folder_name);
             this->null_collider_list[part_num].initialize_diagnostic_files(folder_name, this->charged_particle_list, this->target_particle_list);
         }
+        for (int i = 0; i < this->particle_operator_list.size(); i++){
+            particle_operator_list[i]->setup_diagnostics(folder_name, this->charged_particle_list);
+        }
 
         std::cout << "Done" << std::endl;
 
@@ -283,7 +290,7 @@ void simulation::setup() {
     }
     this->particle_operator_list = read_particle_operators("../inputs/particle_operations/", this->charged_particle_list, *this->world);
     for (int i = 0; i < particle_operator_list.size(); i++){
-        particle_operator_list[i]->print_out();
+        this->particle_operator_list[i]->print_out();
     }
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", this->scheme_type, *this->world);
     double plasma_freq = get_plasma_frequency(this->charged_particle_list[0].average_density);
@@ -426,6 +433,9 @@ void simulation::diagnostics(int thread_id) {
             this->null_collider_list[part_num].gather_mpi();
             this->null_collider_list[part_num].write_diagnostics(this->save_file_folder, this->charged_particle_list, this->target_particle_list);
         }
+        for (int op = 0; op < this->particle_operator_list.size(); op++) {
+            this->particle_operator_list[op]->write_diagnostics(this->save_file_folder, this->charged_particle_list);
+        }
         this->field_solver->write_particle_densities(this->save_file_folder, "density_" + std::to_string(this->current_diag_step) + ".dat", this->charged_particle_list, *this->world);
         for (int t_idx = 0; t_idx < this->target_particle_list.size(); t_idx++) {
             this->target_particle_list[t_idx].write_diagnostics(this->save_file_folder, this->current_diag_step);
@@ -490,6 +500,9 @@ void simulation::reset_diagnostics(int thread_id) {
         this->charged_particle_list[i].reset_diagnostics(thread_id);
         this->null_collider_list[i].order_collisions();
         this->null_collider_list[i].reset_diagnostics(thread_id);
+    }
+    for (int op = 0; op<this->particle_operator_list.size(); op++){
+        this->particle_operator_list[op]->reset_diagnostics();
     }
     #pragma omp master
     {   
@@ -909,6 +922,9 @@ void simulation::averaging() {
                 particle_energy_bins[part_num][point] *= 0.5 * this->charged_particle_list[part_num].mass / constants::elementary_charge;
                 particle_energy_bin_sizes[part_num][point] *= 0.5 * this->charged_particle_list[part_num].mass / constants::elementary_charge;
             }
+        }
+        for (int op = 0; op < this->particle_operator_list.size(); op++) {
+            this->particle_operator_list[op]->write_average_diagnostics(this->save_file_folder, this->charged_particle_list);
         }
         if (mpi_vars::mpi_rank == 0) {
             std::cout << "EDF averaging took " << total_EDF_averaging_time <<  " seconds" << std::endl;

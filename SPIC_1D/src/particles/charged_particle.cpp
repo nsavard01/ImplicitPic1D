@@ -512,6 +512,7 @@ void charged_particle::write_diagnostics_average(const std::string& dir_name) co
             std::cerr << "Error opening file for momentum particle \n";
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
+        file << "sum_v_x, sum_v_y, sum_v_z, left_sum_v_x, left_sum_v_y, left_sum_v_z, right_sum_v_x, right_sum_v_y, right_sum_v_z \n";
         file << std::scientific << std::setprecision(8);
         file << this->total_sum_v[0] << "\t"
             << this->total_sum_v[1]  << "\t"
@@ -531,7 +532,7 @@ void charged_particle::write_diagnostics_average(const std::string& dir_name) co
             std::cerr << "Error opening file for energy particle \n";
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
-
+        file << "sum_v_sq_x, sum_v_sq_y, sum_v_sq_z, sum_v_sq, right_sum_v_sq, left_sum_v_sq \n";
         file << std::scientific << std::setprecision(8);
         double sum_v_sq = this->total_sum_v_square[0] + this->total_sum_v_square[1] + this->total_sum_v_square[2]; 
         file << this->total_sum_v_square[0] << "\t"
@@ -549,7 +550,7 @@ void charged_particle::write_diagnostics_average(const std::string& dir_name) co
             std::cerr << "Error opening file for number particle \n";
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
-
+        file << "N_p, left_lost, right_lost \n";
         file << this->total_number_particles << "\t"
             << this->accum_wall_loss[0] << "\t"
             << this->accum_wall_loss[1]
@@ -645,7 +646,7 @@ void charged_particle::gather_mpi(){
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_energy_loss, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[0].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_momentum_loss[1].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_loss, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_loss, 2, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->temperature.data(), this->temperature.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->density.data(), this->density.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
     MPI_Allreduce(MPI_IN_PLACE, this->number_particles_per_cell.data(), this->number_particles_per_cell.size(), mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
