@@ -197,7 +197,6 @@ void charged_particle_wall_injector::run(const int thread_id, const double curre
             }
             number_particles++;
         }
-        part.number_particles[thread_id][0] = number_particles;
         
         this->accumulated_number_particles[i][thread_id][0] += number_selected;
         

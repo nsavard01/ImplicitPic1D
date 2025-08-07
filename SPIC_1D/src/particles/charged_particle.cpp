@@ -680,6 +680,7 @@ void charged_particle::deposit_particles_linear(const int thread_id, std::vector
     } 
 }
 
+
 void charged_particle::ES_push_MC(const int thread_id, double del_t, const std::vector<double>& E_field, const double inv_dx, const int left_boundary, const int right_boundary, const int number_cells) {
    
     size_t last_idx = this->number_particles[thread_id][0];
@@ -694,6 +695,7 @@ void charged_particle::ES_push_MC(const int thread_id, double del_t, const std::
     bool use_z = (this->number_space_coordinates > 2);
     int xi_cell;
     bool del_part;
+    
     for (size_t part_indx= 0; part_indx < last_idx; part_indx++){
         xi = xi_local[part_indx];
         xi_cell = int(xi);
@@ -767,6 +769,91 @@ void charged_particle::ES_push_MC(const int thread_id, double del_t, const std::
             }
         } else {
             space_delete++;
+        }
+    }
+
+    // now for injected particles with different del_t
+    for (int inj_indx = 0; inj_indx < this->number_unique_injections; inj_indx++) {
+        size_t start_indx = last_idx;
+        const size_t number_inject_local = this->number_particles_injected[thread_id][inj_indx];
+        const std::vector<double>& del_t_array = this->time_step_injected[thread_id][inj_indx];
+        last_idx = start_indx + number_inject_local;
+        double del_t_local;
+        for (size_t part_indx = start_indx; part_indx < last_idx; part_indx++){
+            xi = xi_local[part_indx];
+            del_t_local = del_t_array[part_indx-start_indx];
+            xi_cell = int(xi);
+            d_p = xi - xi_cell;
+            E_field_local = E_field[xi_cell] * (1.0 - d_p) + E_field[xi_cell+1] * d_p;
+            v_x = v_x_local[part_indx];
+            v_x += this->q_over_m * E_field_local * del_t_local;
+            xi += v_x * del_t_local * inv_dx;
+            del_part = false;
+            if (use_vy) {
+                v_y = this->v_y[thread_id][part_indx];
+            }
+            if (use_vz){
+                v_z = this->v_z[thread_id][part_indx];
+            }
+            if (xi <= 0) {
+                switch (left_boundary){
+                    case 1:
+                    case 4:
+                        this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
+                        this->wall_loss[thread_id][0]++;
+                        this->momentum_loss[thread_id][0][0] += v_x;
+                        this->momentum_loss[thread_id][0][1] += v_y;
+                        this->momentum_loss[thread_id][0][2] += v_z;
+                        del_part = true;
+                        break;
+                    case 2:
+                        xi = - xi;
+                        v_x = - v_x;
+                        break;
+                    case 3:
+                        xi = number_cells + xi;
+                        break;
+                }
+            } else if (xi >= number_cells) {
+                switch (right_boundary){
+                    case 1:
+                    case 4:
+                        this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
+                        this->wall_loss[thread_id][1]++;
+                        this->momentum_loss[thread_id][1][0] += v_x;
+                        this->momentum_loss[thread_id][1][1] += v_y;
+                        this->momentum_loss[thread_id][1][2] += v_z;
+                        del_part = true;
+                        break;
+                    case 2:
+                        xi = 2.0 * number_cells - xi;
+                        v_x = - v_x;
+                        break;
+                    case 3:
+                        xi = xi - number_cells;
+                        break;
+                }
+
+            }
+            if (!del_part) {
+                size_t new_idx = part_indx-space_delete;
+                xi_local[new_idx] = xi;
+                v_x_local[new_idx] = v_x;
+                if (use_vy) {
+                    this->v_y[thread_id][new_idx] = v_y;
+                }
+                if (use_vz){
+                    this->v_z[thread_id][new_idx] = v_z;
+                }
+                if (use_y) {
+                    this->y[thread_id][new_idx] = this->y[thread_id][part_indx];
+                }
+                if (use_z) {
+                    this->z[thread_id][new_idx] = this->z[thread_id][part_indx];
+                }
+            } else {
+                space_delete++;
+            }
         }
     }
     this->number_particles[thread_id][0] = (last_idx - space_delete);
@@ -859,6 +946,88 @@ void charged_particle::ES_push_EC_uniform(const int thread_id, double del_t, con
             }
         } else {
             space_delete++;
+        }
+    }
+    for (int inj_indx = 0; inj_indx < this->number_unique_injections; inj_indx++) {
+        size_t start_indx = last_idx;
+        const size_t number_inject_local = this->number_particles_injected[thread_id][inj_indx];
+        const std::vector<double>& del_t_array = this->time_step_injected[thread_id][inj_indx];
+        last_idx = start_indx + number_inject_local;
+        double del_t_local;
+        for (size_t part_indx = start_indx; part_indx < last_idx; part_indx++){
+            xi = xi_local[part_indx];
+            del_t_local = del_t_array[part_indx-start_indx];
+            xi_cell = int(xi);
+            E_field_local = E_field[xi_cell];
+            v_x = v_x_local[part_indx];
+            v_x += this->q_over_m * E_field_local * del_t_local;
+            xi += v_x * del_t_local * inv_dx;
+            del_part = false;
+            if (use_vy) {
+                v_y = this->v_y[thread_id][part_indx];
+            }
+            if (use_vz){
+                v_z = this->v_z[thread_id][part_indx];
+            }
+            if (xi <= 0) {
+                switch (left_boundary){
+                    case 1:
+                    case 4:
+                        this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
+                        this->wall_loss[thread_id][0]++;
+                        this->momentum_loss[thread_id][0][0] += v_x;
+                        this->momentum_loss[thread_id][0][1] += v_y;
+                        this->momentum_loss[thread_id][0][2] += v_z;
+                        del_part = true;
+                        break;
+                    case 2:
+                        xi = - xi;
+                        v_x = - v_x;
+                        break;
+                    case 3:
+                        xi = number_cells + xi;
+                        break;
+                }
+            } else if (xi >= number_cells) {
+                switch (right_boundary){
+                    case 1:
+                    case 4:
+                        this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
+                        this->wall_loss[thread_id][1]++;
+                        this->momentum_loss[thread_id][1][0] += v_x;
+                        this->momentum_loss[thread_id][1][1] += v_y;
+                        this->momentum_loss[thread_id][1][2] += v_z;
+                        del_part = true;
+                        break;
+                    case 2:
+                        xi = 2.0 * number_cells - xi;
+                        v_x = - v_x;
+                        break;
+                    case 3:
+                        xi = xi - number_cells;
+                        break;
+                }
+
+            }
+            if (!del_part) {
+                size_t new_idx = part_indx-space_delete;
+                xi_local[new_idx] = xi;
+                v_x_local[new_idx] = v_x;
+                if (use_vy) {
+                    this->v_y[thread_id][new_idx] = v_y;
+                }
+                if (use_vz){
+                    this->v_z[thread_id][new_idx] = v_z;
+                }
+                if (use_y) {
+                    this->y[thread_id][new_idx] = this->y[thread_id][part_indx];
+                }
+                if (use_z) {
+                    this->z[thread_id][new_idx] = this->z[thread_id][part_indx];
+                }
+            } else {
+                space_delete++;
+            }
         }
     }
     this->number_particles[thread_id][0] = (last_idx - space_delete);
@@ -963,6 +1132,96 @@ void charged_particle::ES_push_EC_non_uniform(const int thread_id, double del_t,
             }
         } else {
             space_delete++;
+        }
+    }
+    for (int inj_indx = 0; inj_indx < this->number_unique_injections; inj_indx++) {
+        size_t start_indx = last_idx;
+        const size_t number_inject_local = this->number_particles_injected[thread_id][inj_indx];
+        const std::vector<double>& del_t_array = this->time_step_injected[thread_id][inj_indx];
+        last_idx = start_indx + number_inject_local;
+        double del_t_local;
+        for (size_t part_indx = start_indx; part_indx < last_idx; part_indx++){
+            xi = xi_local[part_indx];
+            del_t_local = del_t_array[part_indx-start_indx];
+            xi_cell = int(xi);
+            E_field_local = E_field[xi_cell];
+            v_x = v_x_local[part_indx];
+            v_x += this->q_over_m * E_field_local * del_t_local;
+            dx = dx_dxi[xi_cell];
+            x_left = grid[xi_cell];
+            x_i = x_left + dx * (xi - xi_cell);
+            x_f = x_i +  v_x * del_t_local;
+            del_part = false;
+            if (use_vy) {
+                v_y = this->v_y[thread_id][part_indx];
+            }
+            if (use_vz){
+                v_z = this->v_z[thread_id][part_indx];
+            }
+            if (x_f <= x_left_boundary) {
+                switch (left_boundary){
+                    case 1:
+                    case 4:
+                        this->energy_loss[thread_id][0] += v_x*v_x + v_y*v_y + v_z*v_z;
+                        this->wall_loss[thread_id][0]++;
+                        this->momentum_loss[thread_id][0][0] += v_x;
+                        this->momentum_loss[thread_id][0][1] += v_y;
+                        this->momentum_loss[thread_id][0][2] += v_z;
+                        del_part = true;
+                        break;
+                    case 2:
+                        x_f = -x_f;
+                        v_x = - v_x;
+                        break;
+                    case 3:
+                        x_f = x_right_boundary + x_f;
+                        break;
+                }
+            } else if (x_f >= x_right_boundary) {
+                switch (right_boundary){
+                    case 1:
+                    case 4:
+                        this->energy_loss[thread_id][1] += v_x*v_x + v_y*v_y + v_z*v_z;
+                        this->wall_loss[thread_id][1]++;
+                        this->momentum_loss[thread_id][1][0] += v_x;
+                        this->momentum_loss[thread_id][1][1] += v_y;
+                        this->momentum_loss[thread_id][1][2] += v_z;
+                        del_part = true;
+                        break;
+                    case 2:
+                        x_f = 2.0 * x_right_boundary - x_f;
+                        v_x = - v_x;
+                        break;
+                    case 3:
+                        x_f = x_f - x_right_boundary;
+                        break;
+                }
+
+            }
+            if (!del_part) {
+                size_t new_idx = part_indx-space_delete;
+                double diff = x_f - x_i;
+                int direction = (diff > 0) - (diff < 0);
+                while (x_f < grid[xi_cell] || x_f >= grid[xi_cell+1]){
+                    xi_cell += direction;
+                }
+                xi_local[new_idx] = xi_cell + (x_f - grid[xi_cell])/dx_dxi[xi_cell];
+                v_x_local[new_idx] = v_x;
+                if (use_vy) {
+                    this->v_y[thread_id][new_idx] = v_y;
+                }
+                if (use_vz){
+                    this->v_z[thread_id][new_idx] = v_z;
+                }
+                if (use_y) {
+                    this->y[thread_id][new_idx] = this->y[thread_id][part_indx];
+                }
+                if (use_z) {
+                    this->z[thread_id][new_idx] = this->z[thread_id][part_indx];
+                }
+            } else {
+                space_delete++;
+            }
         }
     }
     this->number_particles[thread_id][0] = (last_idx - space_delete);
