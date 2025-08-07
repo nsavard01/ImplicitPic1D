@@ -3,7 +3,7 @@
 #include "rand_gen/maxwell_generator.hpp"
 
 
-charged_particle_wall_injector::charged_particle_wall_injector(std::vector<int>& particle_indx, std::vector<double>& current_density, std::vector<std::vector<double>>& v_3D, 
+charged_particle_wall_injector::charged_particle_wall_injector(std::vector<charged_particle>& particle_list, std::vector<int>& particle_indx, std::vector<double>& current_density, std::vector<std::vector<double>>& v_3D, 
     std::vector<double>& v_therm, std::vector<double>& particle_location) {
     this->particle_indx = particle_indx;
     this->current_density = current_density;
@@ -20,38 +20,57 @@ charged_particle_wall_injector::charged_particle_wall_injector(std::vector<int>&
             this->accumulated_number_particles[i][i_thread].resize(1, 0);
         }
     }
+
+    for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
+        int part_indx = this->particle_indx[inj_indx];
+        charged_particle& particle = particle_list[part_indx];
+        if (particle.number_particles_injected.empty()) {
+            particle.number_particles_injected.resize(omp_get_max_threads());
+            particle.time_step_injected.resize(omp_get_max_threads());
+            particle.number_unique_injections = 0;
+            for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+                particle.time_step_injected[i_thread].push_back({});
+            }
+        }
+        for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+            particle.number_particles_injected[i_thread].push_back(0);
+            particle.time_step_injected[i_thread][particle.number_unique_injections].resize(100, 0.0); // set initial number guess twice the expected amount , in case ever del_t increase
+        }
+        particle.number_unique_injections++;
+    }
+
 }
 
-void charged_particle_wall_injector::setup_diagnostics(const std::string& dir_name, const std::vector<charged_particle>& particle_list) {
-    if (mpi_vars::mpi_rank == 0) {
-        std::vector<int> amount_injections(particle_list.size(), 0);
+void charged_particle_wall_injector::setup_diagnostics(const std::string& dir_name, std::vector<charged_particle>& particle_list) {
+    
+    std::vector<int> amount_injections(particle_list.size(), 0);
 
-        for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
-            int part_indx = this->particle_indx[inj_indx];
-            const charged_particle& particle = particle_list[part_indx];
-            int number_injection = amount_injections[part_indx];
-            std::ofstream file(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_properties_" + std::to_string(number_injection) + ".dat");
-            double total_current_density = this->current_density[inj_indx] * omp_get_max_threads() * mpi_vars::mpi_size;
-            double Temp = this->v_therm[inj_indx] * this->v_therm[inj_indx] / std::abs(particle.q_over_m);
-            // Write header (optional)
-            file << "Current density (A/m^2), thermal temperature (eV), v_x (m/s), v_y (m/s), v_z (m/s), wall node \n";
-            file << std::scientific << std::setprecision(8);
-            file << total_current_density << "\t"
-                << Temp << "\t"
-                << this->v_3D[inj_indx][0] << "\t"
-                << this->v_3D[inj_indx][1] << "\t"
-                << this->v_3D[inj_indx][2]<< "\t"
-                << std::round(this->particle_location[inj_indx]) << "\n";
+    for (int inj_indx = 0; inj_indx < this->particle_indx.size(); inj_indx++) {
+        int part_indx = this->particle_indx[inj_indx];
+        charged_particle& particle = particle_list[part_indx];
+        int number_injection = amount_injections[part_indx];
+        std::ofstream file(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_properties_" + std::to_string(number_injection) + ".dat");
+        double total_current_density = this->current_density[inj_indx] * omp_get_max_threads() * mpi_vars::mpi_size;
+        double Temp = this->v_therm[inj_indx] * this->v_therm[inj_indx] / std::abs(particle.q_over_m);
+        // Write header (optional)
+        file << "Current density (A/m^2), thermal temperature (eV), v_x (m/s), v_y (m/s), v_z (m/s), wall node \n";
+        file << std::scientific << std::setprecision(8);
+        file << total_current_density << "\t"
+            << Temp << "\t"
+            << this->v_3D[inj_indx][0] << "\t"
+            << this->v_3D[inj_indx][1] << "\t"
+            << this->v_3D[inj_indx][2]<< "\t"
+            << std::round(this->particle_location[inj_indx]) << "\n";
 
 
-            file.close();
+        file.close();
 
-            file.open(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_diagnostics_" + std::to_string(number_injection) + ".dat");
-            file << "Number particles released \n";
+        file.open(dir_name + "/charged_particles/" + particle.name + "/operations/wall_injection_diagnostics_" + std::to_string(number_injection) + ".dat");
+        file << "Number particles released \n";
 
-            file.close();
-            amount_injections[part_indx]++;
-        }
+        file.close();
+
+        amount_injections[part_indx]++;
     }
 }
 
@@ -138,6 +157,7 @@ void charged_particle_wall_injector::print_out() {
 
 
 void charged_particle_wall_injector::run(const int thread_id, const double current_time, const double del_t, std::vector<charged_particle>& particle_list, const domain& world) {
+    std::vector<int> amount_injections(particle_list.size(), 0);
     for (int i = 0; i < this->particle_indx.size(); i++){
         int part_indx = this->particle_indx[i];
         charged_particle& part = particle_list[part_indx];
@@ -151,6 +171,12 @@ void charged_particle_wall_injector::run(const int thread_id, const double curre
         if (pcg32_random_r() < (number_particles_inject - number_selected)) {
             number_selected++;
         }
+        int inject_indx = amount_injections[part_indx];
+        amount_injections[part_indx]++;
+        part.number_particles_injected[thread_id][inject_indx] = number_selected;
+        if (part.time_step_injected[thread_id][inject_indx].size() < number_selected) {
+            part.time_step_injected[thread_id][inject_indx].resize(number_selected + 1, 0);
+        }
         size_t number_particles = part.number_particles[thread_id][0];
         // references to particle arrays
         std::vector<double>& xi_local = part.xi[thread_id];
@@ -162,6 +188,7 @@ void charged_particle_wall_injector::run(const int thread_id, const double curre
             maxwellian_3D_flux(v_x_temp, v_y_temp, v_z_temp, v_therm_local, v_x_drift);
             xi_local[number_particles] = particle_position;
             v_x_local[number_particles] = v_x_temp;
+            part.time_step_injected[thread_id][inject_indx][part_indx] = pcg32_random_r() * del_t;
             if (use_vy) {
                 part.v_y[thread_id][number_particles] = v_y_temp + v_y_drift;
             }
@@ -171,6 +198,7 @@ void charged_particle_wall_injector::run(const int thread_id, const double curre
             number_particles++;
         }
         part.number_particles[thread_id][0] = number_particles;
+        
         this->accumulated_number_particles[i][thread_id][0] += number_selected;
         
     }

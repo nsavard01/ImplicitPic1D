@@ -50,6 +50,7 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
         charged_particle::cell_indices.resize(number_threads);
         // charged_particle::particle_cell.resize(number_threads);
     }
+    this->number_unique_injections = 0;
     for (int i = 0; i < number_threads; i++){
         this->number_particles[i].resize(1, number_in);
         this->number_collidable_particles[i].resize(1,number_in);

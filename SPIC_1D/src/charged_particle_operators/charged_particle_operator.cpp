@@ -7,7 +7,7 @@
 #include <sstream>
 
 
-std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(const std::string& directory_path, const std::vector<charged_particle>& particle_list, const domain& world) {
+std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(const std::string& directory_path, std::vector<charged_particle>& particle_list, const domain& world) {
     std::vector<std::unique_ptr<charged_particle_operator>> output;
     if (mpi_vars::mpi_rank == 0) {
         std::cout << " "<< std::endl;
@@ -138,7 +138,7 @@ std::vector<std::unique_ptr<charged_particle_operator>> read_particle_operators(
                             std::getline(file, line);
                         }
                         file.close();
-                        output.push_back(std::make_unique<charged_particle_wall_injector>(particle_indx, current_density, v_3D, v_therm, particle_location));
+                        output.push_back(std::make_unique<charged_particle_wall_injector>(particle_list, particle_indx, current_density, v_3D, v_therm, particle_location));
                     }
                 }
             }   
