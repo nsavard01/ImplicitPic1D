@@ -4,7 +4,7 @@
 6e-5 ! total simulation time 9.43952802359882e-05
 8e-6 1e-5 1e-5 ! total averaging time, acceptance relative residual in domain in voltage and density of first particle
 21 ! number of diagnostic times
-test_NGP_release_high_density_200PPC_120ps_256cells ! save file name
+test_NGP_release_high_density_200PPC_120ps_256ells_sinusoid_0p1mm_smooth_other ! save file name
 ../../../Test/ ! Save directory relative path
 no ! Restart(yes/no) and save directory to take from
 END
