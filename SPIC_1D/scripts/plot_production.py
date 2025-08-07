@@ -65,7 +65,27 @@ def plot_ave_temp(dataSet, name = "", label = "", marker = 'o', linestyle = '--'
             plt.xlim([0, dataSet.domain_length])
 
 
-
+def plot_ave_EDF(dataSet, name = "", label = "", marker = 'o', linestyle = '--'):
+    if name == "":
+        colors = ['b', 'r', 'g', 'k', 'c', 'm', 'y']
+        for i,name in enumerate(dataSet.particles.keys()):
+            E_bins, E_counts, E_sizes = dataSet.get_ave_EDF(name)
+            norm = np.sum(E_counts * E_sizes)
+            E_hist = E_counts / norm
+            plt.plot(E_bins, E_hist,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 3,color = colors[i], label = name)
+        plt.xlabel('Energy (eV)')
+        plt.ylabel(name + r' EDF (eV$^{-1}$)')
+        plt.legend(loc = 'best')
+    else:
+        if name not in dataSet.particles.keys():
+            raise Warning("For average density, particle", name, "does not exist in the dataSet!")
+        else:
+            E_bins, E_counts, E_sizes = dataSet.get_ave_EDF(name)
+            norm = np.sum(E_counts * E_sizes)
+            E_hist = E_counts / norm
+            plt.plot(E_bins, E_hist, linewidth=2, linestyle=linestyle, marker=marker, markersize=3)
+            plt.xlabel('Energy (eV)')
+            plt.ylabel(name + r' EDF (eV$^{-1}$)')
 
 
 

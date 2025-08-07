@@ -553,6 +553,10 @@ void simulation::run() {
                 }
             }
             #pragma omp barrier
+            for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
+                this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
+            }
+            #pragma omp barrier
             this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
             #pragma omp barrier
             #pragma omp master
@@ -561,9 +565,6 @@ void simulation::run() {
                 this->field_time += this->field_solver->potential_timer;
                 
                 timer_1 = MPI_Wtime();  
-            }
-            for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
-                this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
             }
             #pragma omp barrier
             for (int part_num = 0; part_num < number_charged_particles; part_num++){
@@ -744,6 +745,10 @@ void simulation::averaging() {
                     }
                 }
                 #pragma omp barrier
+                for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
+                    this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
+                }
+                #pragma omp barrier
                 this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
                 #pragma omp barrier
                 #pragma omp for
@@ -753,10 +758,6 @@ void simulation::averaging() {
                 #pragma omp barrier
                 for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++){
                     this->charged_particle_list[part_num].get_particle_diagnostics(thread_id, this->world->number_cells, 1);
-                }
-                #pragma omp barrier
-                for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
-                    this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
                 }
                 #pragma omp barrier
                 for (int part_num = 0; part_num < number_charged_particles; part_num++){
@@ -855,11 +856,11 @@ void simulation::averaging() {
                     }
                 }
                 #pragma omp barrier
-                this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
-                #pragma omp barrier
                 for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
                     this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
                 }
+                #pragma omp barrier
+                this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
                 #pragma omp barrier
                 for (int part_num = 0; part_num < number_charged_particles; part_num++){
                     this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);

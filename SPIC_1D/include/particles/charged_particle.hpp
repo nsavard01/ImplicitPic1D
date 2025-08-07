@@ -25,6 +25,12 @@ public:
     std::vector<std::vector<std::vector<double>>> momentum_loss;
     std::vector<std::vector<size_t>> number_particles, number_collidable_particles, wall_loss, final_idx;
     std::vector<double> density, temperature;
+
+    // vectors for partial time integrations in pusher, used for particle injection randomized over time
+    std::vector<std::vector<size_t>> number_particles_injected; // dimension (thread_id, number unique injections)
+    int number_unique_injections; // number injection types where particles might have similar time step
+    std::vector<std::vector<std::vector<double>>> time_step_injected; //dimension (thread_id, number unique injection, number unique time steps)
+
     // Static variables for sorting, will be used per particle
     static std::vector<std::vector<double>> xi_sorted, y_sorted, z_sorted, v_x_sorted, v_y_sorted, v_z_sorted;
     static std::vector<std::vector<size_t>> sorted_number_particles_per_cell, cell_indices; //, particle_cell;
