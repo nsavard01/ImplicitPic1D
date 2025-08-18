@@ -1,8 +1,8 @@
 He+ : name
 1 : charge
 4.002602 : mass in dalton, if ion make total amu mass of neutral
-1600 : number particles per thread
-1e17 : average total density (m^-3)
+125000 : number particles per thread
+7e16 : average total density (m^-3)
 0.025 : average temperature (eV)
 2 : initial factor array lengths
 0 : EEDF type (0 = maxwellian)

@@ -7,6 +7,11 @@ tmp*
 *.png
 *.fuse_hidden*
 *.pyc
+*.out
+*.bin
+*.dat
+*Zone.Identifier
+SSCPIC_1D/build/
 !PIC1D/CollisionData/*.dat
 *.dbg
 SPIC_1D/build/

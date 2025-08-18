@@ -1,0 +1,5 @@
+e : name
+-1 : charge
+0.00054858 : mass in dalton
+4000 : max number per thread
+ENDFILE
