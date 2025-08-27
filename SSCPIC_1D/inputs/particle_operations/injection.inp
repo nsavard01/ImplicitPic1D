@@ -6,7 +6,7 @@ e : particle_name
 0.0 : y component of velocity (m/s)
 0.0 : z component of velocity (m/s)
 0.1 : Flux temperature (eV)
-100 : Number of particles to release
+10 : Number of particles to release per thread
 -----------------------------------
 
 END

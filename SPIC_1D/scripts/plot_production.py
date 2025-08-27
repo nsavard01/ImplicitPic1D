@@ -15,7 +15,7 @@ def plot_ave_density(dataSet, name = "", label = "", marker = 'o', linestyle = '
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.get_ave_density(name)
             grid = dataSet.get_grid()
-            plt.plot(grid, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 3,color = colors[i], label = r'$n_{' + name +  '}$')
+            plt.plot(grid, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
         plt.xlabel('Distance (m)')
         plt.ylabel('Particle Density (1/m^3)')
         plt.xlim([grid.min(), grid.max()])
@@ -26,7 +26,7 @@ def plot_ave_density(dataSet, name = "", label = "", marker = 'o', linestyle = '
         else:
             n = dataSet.get_ave_density(name)
             grid = dataSet.get_grid()
-            plt.plot(grid, n,  linestyle = linestyle, marker = marker, markersize = 4, label = label)
+            plt.plot(grid, n,  linestyle = linestyle, marker = marker, markersize = 2, label = label)
             plt.xlabel('Distance (m)')
             plt.ylabel(name + ' Density (1/m^3)')
             plt.xlim([grid.min(), grid.max()])
@@ -35,11 +35,10 @@ def plot_ave_phi(dataSet, label = '', marker = 'o', linestyle = '--'):
 
     phi = dataSet.get_ave_phi()
     grid = dataSet.get_grid()
-    plt.plot(grid, phi, marker = marker, linestyle = linestyle, markersize = 3, label = label)
+    plt.plot(grid, phi, marker = marker, linestyle = linestyle, markersize = 2, label = label)
     plt.xlabel('Distance (m)')
     plt.ylabel('Potential (V)')
     plt.xlim([grid.min(), grid.max()])
-    plt.show()
 
 
 def plot_ave_temp(dataSet, name = "", label = "", marker = 'o', linestyle = '--'):
@@ -48,7 +47,7 @@ def plot_ave_temp(dataSet, name = "", label = "", marker = 'o', linestyle = '--'
         for i,name in enumerate(dataSet.particles.keys()):
             n = dataSet.get_ave_temp(name)
             grid = dataSet.get_half_grid()
-            plt.plot(grid, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 3,color = colors[i], label = r'$n_{' + name +  '}$')
+            plt.plot(grid, n,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = r'$n_{' + name +  '}$')
         plt.xlabel('Distance (m)')
         plt.ylabel(name + ' temperature (eV)')
         plt.xlim([0, dataSet.domain_length])
@@ -59,7 +58,7 @@ def plot_ave_temp(dataSet, name = "", label = "", marker = 'o', linestyle = '--'
         else:
             n = dataSet.get_ave_temp(name)
             grid = dataSet.get_half_grid()
-            plt.plot(grid, n,  linestyle = linestyle, marker = marker, markersize = 4, label = label)
+            plt.plot(grid, n,  linestyle = linestyle, marker = marker, markersize = 2, label = label)
             plt.xlabel('Distance (m)')
             plt.ylabel(name + ' temperature (eV)')
             plt.xlim([0, dataSet.domain_length])
@@ -72,7 +71,7 @@ def plot_ave_EDF(dataSet, name = "", label = "", marker = 'o', linestyle = '--')
             E_bins, E_counts, E_sizes = dataSet.get_ave_EDF(name)
             norm = np.sum(E_counts * E_sizes)
             E_hist = E_counts / norm
-            plt.plot(E_bins, E_hist,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 3,color = colors[i], label = name)
+            plt.plot(E_bins, E_hist,  linewidth = 2, linestyle = linestyle, marker = marker, markersize = 2,color = colors[i], label = name)
         plt.xlabel('Energy (eV)')
         plt.ylabel(name + r' EDF (eV$^{-1}$)')
         plt.legend(loc = 'best')
@@ -83,7 +82,7 @@ def plot_ave_EDF(dataSet, name = "", label = "", marker = 'o', linestyle = '--')
             E_bins, E_counts, E_sizes = dataSet.get_ave_EDF(name)
             norm = np.sum(E_counts * E_sizes)
             E_hist = E_counts / norm
-            plt.plot(E_bins, E_hist, linewidth=2, linestyle=linestyle, marker=marker, markersize=3)
+            plt.plot(E_bins, E_hist, linewidth=2, linestyle=linestyle, marker=marker, markersize=2)
             plt.xlabel('Energy (eV)')
             plt.ylabel(name + r' EDF (eV$^{-1}$)')
 

@@ -19,8 +19,10 @@
 charged_particle::charged_particle(double mass_in, double charge_in, size_t number_in, std::string name_in, int number_nodes){
     this->mass = mass_in;
     this->charge = charge_in;
+    this->name = name_in;
     this->q_over_m = charge_in/mass_in;
     this->final_idx.resize(omp_get_max_threads(), number_in);
+    this->number_particles.resize(omp_get_max_threads(), 0);
     this->density_grid.resize(omp_get_max_threads());
     this->v_sqr_grid.resize(omp_get_max_threads());
     this->particle_components.resize(omp_get_max_threads());
@@ -41,10 +43,133 @@ void charged_particle::print_out() const {
         std::cout << "Charge (C): " << this->charge << std::endl;
         std::cout << "q/m: " << this->q_over_m << std::endl;
         std::cout << "Maximum number of particles per thread: " << this->final_idx[0] << std::endl;
+        std::cout << "number initial particles per thread: " << this->number_particles[0] << std::endl;
+        std::cout << "last particle freq_rel: " << this->particle_components[0][this->number_particles[0]-1][0] << " # particles / m^2 / s" << std::endl;
         std::cout << " " << std::endl;
     }
 }
 
+void charged_particle::read_initial_state(const std::string& dir_name, const domain& world) {
+    int total_thread_count = omp_get_max_threads() * mpi_vars::mpi_size;
+    for (int rank_num = 0; rank_num < mpi_vars::mpi_size; rank_num++){
+        if (mpi_vars::mpi_rank == rank_num) {
+            
+                std::string filename = dir_name + this->name + ".inp";
+                std::string line;
+                std::ifstream file(filename);
+                if (!file) {
+                    std::cerr << "Error: Unable to open file " << filename << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                while (std::getline(file, line)) {
+                        if (line.find("----") != std::string::npos) {
+                            std::getline(file, line);
+                            std::istringstream iss(line);
+                            std::string inj_name;
+                            iss >> inj_name;
+                            std::cout << inj_name << std::endl;
+                            std::getline(file, line);
+                            if (inj_name == "Wall" || inj_name == "wall"){
+                                // wall injection
+                                std::getline(file, line);
+                                iss.str(line);
+                                int node;
+                                iss >> node;
+                                if (node != 0 && node != world.number_nodes) {
+                                    std::cout << "ERROR: Node for particle injection not on boundary!" << std::endl;
+                                    MPI_Abort(MPI_COMM_WORLD, 1);
+                                } else if (node == 0) {
+                                    if ((world.left_boundary_condition != 1) && (world.left_boundary_condition != 4)){
+                                        std::cout << "WARNING: Leftmost node for particle injection not on metallic boundary!" << std::endl;
+                                    }
+                                } else if (node == world.number_nodes) {
+                                    if ((world.right_boundary_condition != 1) && (world.right_boundary_condition != 4)){
+                                        std::cout << "WARNING: Rightmost node for particle injection not on metallic boundary!" << std::endl;
+                                    }
+                                }
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double J;
+                                iss >> J;
+                                J = std::abs(J)/double(total_thread_count);
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double v_x;
+                                iss >> v_x;
+                                if (v_x > 0 && node == world.number_nodes) {
+                                    std::cout << "ERROR: V_x > 0 put at rightmost node for particle injection!" << std::endl;
+                                    MPI_Abort(MPI_COMM_WORLD, 1);
+                                } else if (v_x < 0 && node == 0) {
+                                    std::cout << "ERROR: V_x < 0 put at leftmost node for particle injection!" << std::endl;
+                                    MPI_Abort(MPI_COMM_WORLD, 1);
+                                }
+                                // if v_x == 0, then make tiny number so direction is known
+                                if (v_x == 0.0 && node == world.number_nodes){
+                                    v_x = - constants::machine_eps;
+                                } else if (v_x == 0.0 && node == 0){
+                                    v_x = constants::machine_eps;
+                                }
+                                // To avoid issues with other particle operations near boundary, put slightly within domain
+                                double new_position;
+                                if (v_x > 0) {
+                                    new_position = std::nextafter(double(node), node+1);
+                                } else {
+                                    new_position = std::nextafter(double(node), node-1);
+                                }
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double v_y;
+                                iss >> v_y;
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double v_z;
+                                iss >> v_z;
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                double temperature;
+                                iss >> temperature;
+                                double v_therm_local = std::sqrt(temperature * std::abs(this->q_over_m));
+                                iss.clear();
+                                std::getline(file, line);
+                                iss.str(line);
+                                size_t amount_released;
+                                iss >> amount_released;
+                                iss.clear();
+                                std::getline(file, line);
+
+
+                                // Add to particle list
+                                double part_flux = J / std::abs(this->charge) / double(amount_released);
+                                for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+                                    this->number_particles[i_thread] = amount_released;
+                                    double v_x_temp, v_y_temp, v_z_temp;
+                                    for (size_t part_idx = 0; part_idx < amount_released; part_idx++) {
+                                        std::vector<double>& part_component = this->particle_components[i_thread][part_idx];
+                                        part_component[0] = part_flux;
+                                        part_component[1] = new_position;
+                                        maxwellian_3D_flux(v_x_temp, v_y_temp, v_z_temp, v_therm_local, v_x);
+                                        part_component[4] = v_x_temp;
+                                        part_component[5] = v_y_temp + v_y;
+                                        part_component[6] = v_z_temp + v_z;
+
+                                    }
+                                }
+                            } else {
+                                break;
+                            }
+                            iss.clear();
+                        }  
+                }
+                file.close();
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+}
 
 
 
@@ -280,6 +405,7 @@ std::vector<charged_particle> read_charged_particle_inputs(const std::string& di
         double charge = charge_in[i];
         size_t number_in = num_part_thread[i];
         charged_particle temp_particle(mass, charge, number_in, name, world.number_nodes);
+        temp_particle.read_initial_state(directory_path, world);
         particle_list.push_back(temp_particle);
     }
 

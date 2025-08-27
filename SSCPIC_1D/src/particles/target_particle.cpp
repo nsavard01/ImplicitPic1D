@@ -17,10 +17,10 @@ target_particle::target_particle(double mass_in, double temp_in, double density_
     this->mass = mass_in;
     this->average_density = density_in;
     this->average_temperature = temp_in;
-    this->cell_density.resize(number_cells+1, density_in);
-    this->cell_temperature.resize(number_cells+1, temp_in);
+    this->cell_density.resize(number_cells, density_in);
+    this->cell_temperature.resize(number_cells, temp_in);
     this->v_drift = v_drift_in;
-    this->cell_v_therm.resize(number_cells+1, std::sqrt(this->average_temperature * constants::k_boltz / this->mass));
+    this->cell_v_therm.resize(number_cells, std::sqrt(this->average_temperature * constants::k_boltz / this->mass));
     
 }
 
