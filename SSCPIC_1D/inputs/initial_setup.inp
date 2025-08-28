@@ -1,5 +1,5 @@
 16 ! number of processors per mpi thread
-6e-12 ! initial minimum time step
+1e-6 ! initial maximum time step
 2e-4 ! max total integration time
 1e-5 1e-5 ! acceptance relative residual in domain in voltage and density of first particle
 20 ! maximum number of iterations

@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     // std::vector<charged_particle> charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *world); 
     simulation simulator;
     simulator.setup();
-    // simulator.run();
+    simulator.run();
     MPI_Finalize();
     return 0;
 }

@@ -314,8 +314,6 @@ void simulation::setup() {
         std::cout << " " << std::endl;
     }
 
-    
-
 }
 
 void simulation::diagnostics(int thread_id) {
@@ -433,96 +431,31 @@ void simulation::reset_diagnostics(int thread_id) {
 
 void simulation::run() {
 
-    // double start_time_total = MPI_Wtime();
-    // double timer_1, timer_2;
-    // int number_charged_particles = this->charged_particle_list.size();
-
-    // #pragma omp parallel
-    // {
-    //     int thread_id = omp_get_thread_num();
-        
-    //     while (this->current_time < this->simulation_time) {
-    //         #pragma omp barrier
-    //         // Make sure at same time step
-    //         #pragma omp master
-    //         {
-    //             size_t local_step = this->current_step;
-    //             std::vector<size_t> steps(mpi_vars::mpi_size);
-
-    //             // Gather current_step from all ranks
-    //             MPI_Allgather(&local_step, 1, mpi_vars::mpi_size_t_type, steps.data(), 1, mpi_vars::mpi_size_t_type, MPI_COMM_WORLD);
-
-    //             // Check consistency
-    //             bool mismatch = false;
-    //             for (int i = 1; i < mpi_vars::mpi_size; ++i) {
-    //                 if (steps[i] != steps[0]) {
-    //                     mismatch = true;
-    //                     break;
-    //                 }
-    //             }
-
-    //             if (mismatch && mpi_vars::mpi_rank == 0) {
-    //                 std::cerr << "MPI step mismatch detected!" << std::endl;
-    //                 for (int i = 0; i < mpi_vars::mpi_size; ++i) {
-    //                     std::cerr << "Rank " << i << " has current_step = " << steps[i] << std::endl;
-    //                 }
-    //                 // Optional: abort
-    //                 MPI_Abort(MPI_COMM_WORLD, 1);
-    //             }
-    //         }
-    //         #pragma omp barrier
-    //         for (int part_op= 0; part_op < this->particle_operator_list.size(); part_op++){
-    //             this->particle_operator_list[part_op]->run(thread_id, this->current_time, del_t, this->charged_particle_list, *this->world);
-    //         }
-    //         #pragma omp barrier
-    //         this->field_solver->integrate_time_step(thread_id, this->del_t, this->current_time, *this->world, this->charged_particle_list);
-    //         #pragma omp barrier
-    //         #pragma omp master
-    //         {
-    //             this->particle_time += this->field_solver->particle_timer;
-    //             this->field_time += this->field_solver->potential_timer;
-                
-    //             timer_1 = MPI_Wtime();  
-    //         }
-    //         #pragma omp barrier
-    //         for (int part_num = 0; part_num < number_charged_particles; part_num++){
-    //             this->null_collider_list[part_num].generate_null_collisions(thread_id, this->charged_particle_list, this->target_particle_list, this->del_t);
-    //         }
-    //         #pragma omp barrier
-    //         #pragma omp master
-    //         {   
-    //             timer_2 = MPI_Wtime();
-               
-    //             this->null_collision_time += (timer_2 - timer_1);
-    //             this->current_time += this->del_t;
-    //             this->current_step++;
-    //             this->diag_step_diff++;
-    //             // if (mpi_vars::mpi_rank == 0) {
-    //             //     if (this->current_step > 10) {
-    //             //         MPI_Abort(MPI_COMM_WORLD, 1);
-    //             //     }
-    //             //     std::cout << "Current time (s): " << this->current_time << ", Current step: " << this->current_step << std::endl;
-    //             // }
-    //         }
-    //         #pragma omp barrier
-    //         if (this->current_time >= this->next_diag_time) {
-    //             #pragma omp master
-    //             {
-                    
-    //                 this->elapsed_time = MPI_Wtime() - start_time_total;
-    //             }
-    //             this->diagnostics(thread_id);
-    //             #pragma omp barrier
-    //             this->reset_diagnostics(thread_id);
-    //         }
-    //         #pragma omp barrier
-    //     }
-    // }
-    // double end_time_total = MPI_Wtime();
-    // if (mpi_vars::mpi_rank == 0) {
-    //     std::cout << "Simulation took " << end_time_total - start_time_total << " seconds" << std::endl;
-    // }
-
+    int number_charged_particles = this->charged_particle_list.size();
+    this->field_solver->deposit_charge_density(*this->world, this->target_particle_list);
+    this->field_solver->solve_potential(*this->world);
+    this->field_solver->make_EField(*this->world);
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        for (int part_num = 0; part_num < number_charged_particles; part_num++) {
+            charged_particle& particle_local = this->charged_particle_list[part_num];
+            particle_local.reset_diagnostics(thread_id);
+            if (this->world->domain_type == 1) {
+                particle_local.push_particle_trajectories_non_uniform(thread_id, this->target_particle_list, 
+                    static_cast<non_uniform_domain&>(*this->world), this->field_solver->E_field, this->charged_particle_list);
+            }
+            #pragma omp barrier
+            #pragma omp master
+            {
+                particle_local.gather_mpi();
+            }
+        }
+    }
+    for (int part_num = 0; part_num < number_charged_particles; part_num++) {
+        charged_particle& particle_local = this->charged_particle_list[part_num];
+        particle_local.load_to_target(this->target_particle_list, *this->world);
+    }
 }
 
 

@@ -47,55 +47,60 @@ void ES_solver::print_out() {
     }
 }
 
+void ES_solver::deposit_charge_density(const domain& world, std::vector<target_particle>& particle_list) {
+    // Loop over all particles and deposit charge density
+    int num_particles = particle_list.size();
+    std::fill(this->rho.begin(), this->rho.end(), 0.0);
+    for (int part_num=0; part_num < num_particles; part_num++) {
+        std::vector<double>& density = particle_list[part_num].density;
+        double q = particle_list[part_num].charge;
+        if (q != 0) {
+            for (int i = 0; i < world.number_nodes; i++) {
+                this->rho[i] += density[i] * q; // Set charge density for each cell
+            }
+        }
+    }
+}
 
-// void ES_solver::solve_potential(double current_time, const domain& world) {
-//     // generate the right-hand side of the Poisson equation
-//     double inv_epsilon_0 = 1.0 / constants::epsilon_0; // Inverse of permittivity
-//     int left_boundary = world.left_boundary_condition; // Get left boundary condition
-//     int right_boundary = world.right_boundary_condition; // Get right boundary condition
-//     int number_unknowns = this->poisson_solver->number_unknowns; // Number of unknowns in the system
-//     if (left_boundary == 2) {
-//         this->phi[0] = -this->rho[0] * inv_epsilon_0; // Change boundary phi
-//     } else if (left_boundary == 4) {
-//         this->phi[0] = this->RF_half_amplitude * std::sin(this->RF_rad_frequency * current_time); // Change boundary phi
-//     } 
+void ES_solver::solve_potential(const domain& world) {
+    // generate the right-hand side of the Poisson equation
+    double inv_epsilon_0 = 1.0 / constants::epsilon_0; // Inverse of permittivity
+    int left_boundary = world.left_boundary_condition; // Get left boundary condition
+    int right_boundary = world.right_boundary_condition; // Get right boundary condition
+    int number_unknowns = this->poisson_solver->number_unknowns; // Number of unknowns in the system
+    if (left_boundary == 2) {
+        this->phi[0] = -this->rho[0] * inv_epsilon_0; // Change boundary phi
+    } 
 
-//     if (right_boundary == 2) {
-//         this->phi[number_unknowns-1] = -this->rho[number_unknowns-1] * inv_epsilon_0; // Change boundary phi
-//     } else if (right_boundary == 4) {
-//         this->phi[number_unknowns-1] = this->RF_half_amplitude * std::sin(this->RF_rad_frequency * current_time); // Change boundary phi
-//     } 
+    if (right_boundary == 2) {
+        this->phi[number_unknowns-1] = -this->rho[number_unknowns-1] * inv_epsilon_0; // Change boundary phi
+    }
 
-//     for (int i = 1; i < number_unknowns-1; ++i) {
-//         this->phi[i] = -this->rho[i] * inv_epsilon_0; // Set right-hand side of the Poisson equation
-//     }
+    for (int i = 1; i < number_unknowns-1; ++i) {
+        this->phi[i] = -this->rho[i] * inv_epsilon_0; // Set right-hand side of the Poisson equation
+    }
 
-//     this->poisson_solver->solve(this->phi, this->phi); // replace phi with solution
+    this->poisson_solver->solve(this->phi, this->phi); // replace phi with solution
     
-// }
+}
 
-// void ES_solver::make_EField(const domain& world) {
-//     // Calculate the electric field from the potential
-//     int number_nodes = world.number_nodes; // Number of cells in the domain
-//     int number_cells = world.number_cells;
-//     double inv_dx = 1.0/world.min_dx; // Cell size
-//     int left_boundary = world.left_boundary_condition; // Get left boundary condition
-//     int right_boundary = world.right_boundary_condition; // Get right boundary condition
-//     for (int i = 1; i < number_nodes-1; ++i) {
-//         this->E_field[i] = 0.5 * (this->phi[i-1] - this->phi[i+1]) * inv_dx; // Electric field calculation
-//     }
-//     if (left_boundary == 1 || left_boundary == 4) {
-//         // First order at boundary consistent with rho = 0
-//         this->E_field[0] = (this->phi[0] - this->phi[1])*inv_dx; // Electric field at left boundary
-//     } else if (left_boundary == 3){
-//         this->E_field[0] = 0.5 * (this->phi[number_cells-1] - this->phi[1]) * inv_dx; 
-//         this->E_field[number_cells] = this->E_field[0]; 
-//     }
-//     if (right_boundary == 1 || right_boundary == 4) {
-//         this->E_field[number_cells] = (this->phi[number_cells-1] - this->phi[number_cells]) * inv_dx; 
-//     } 
+void ES_solver::make_EField(const domain& world) {
+    // Calculate the electric field from the potential
+    int number_cells = world.number_cells; // Number of cells in the domain
+    if (world.domain_type == 0) {
+        double inv_dx = 1.0/world.min_dx; // Cell size for uniform domain
+        inv_dx = 1.0/world.min_dx; // Cell size for uniform domain
+        for (int i = 0; i < number_cells; ++i) {
+            this->E_field[i] = (this->phi[i] - this->phi[i+1]) * inv_dx; // Electric field calculation
+        }
+    } else if (world.domain_type == 1) {
+        const std::vector<double>& dx = world.dx_dxi; // Cell size for non-uniform domain
+        for (int i = 0; i < number_cells; ++i) {
+            this->E_field[i] = (this->phi[i] - this->phi[i+1])/ dx[i]; // Electric field calculation
+        }
+    }
      
-// }
+}
 
 
 

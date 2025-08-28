@@ -7,11 +7,11 @@
 
 class target_particle {
 public:
-    double mass, average_density, average_temperature, accum_energy_change, diffusion_coeff, v_drift;
-    std::vector<double> cell_density, cell_temperature, cell_v_therm;
+    double charge, mass, average_density, average_temperature, accum_energy_change, diffusion_coeff, v_drift;
+    std::vector<double> density, temperature, v_therm;
     std::string name;
     // Accessor for 3D indexing
-    target_particle(double mass_in, double temp_in, double density_in, double v_drift_in, size_t number_cells, std::string name_in);
+    target_particle(double charge_in, double mass_in, double temp_in, double density_in, double v_drift_in, size_t number_cells, std::string name_in);
     void print_out() const;
     void initialize_diagnostic_files(const std::string& dir_name) const;
     void write_diagnostics(const std::string& dir_name, int diag_number) const;

@@ -13,7 +13,7 @@ Wall
 0.0 : y component of velocity (m/s)
 0.0 : z component of velocity (m/s)
 0.1 : Flux temperature (eV)
-10 : Number of particles to release per thread
+100 : Number of particles to release per thread
 -----------------------------------
 
 ENDFILE

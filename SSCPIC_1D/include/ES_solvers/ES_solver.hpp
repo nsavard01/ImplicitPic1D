@@ -7,6 +7,7 @@
 #include "domain/uniform_domain.hpp"
 #include "domain/non_uniform_domain.hpp"
 #include "globals/mpi_vars.hpp"
+#include "particles/target_particle.hpp"
 #include <cmath>
 
 class ES_solver {
@@ -35,11 +36,11 @@ public:
 
     void print_out();
     // void write_particle_densities(const std::string file_path, const std::string filename, std::vector<charged_particle>& particle_list, const domain& world) const; // since density determinined by potential solver type
-    // void deposit_charge_density(const domain& world, std::vector<charged_particle>& particle_list, int thread_id);
+    void deposit_charge_density(const domain& world, std::vector<target_particle>& particle_list);
     // void deposit_density(std::vector<charged_particle>& particle_list, int thread_id);
-    // void solve_potential(double current_time, const domain& world);
+    void solve_potential(const domain& world);
     // void solve_field_energy(const domain& world);
-    // void make_EField(const domain& world);
+    void make_EField(const domain& world);
     // // general integration through time step which solves for fields after time step given initial fields
     // // general enough that it can include non-linear processes as well (implicit)
     // void get_diagnostics(const domain& world, std::vector<charged_particle>& particle_list);

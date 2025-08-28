@@ -1,4 +1,5 @@
 e : name
+-1 : charge
 0.00054858 : mass in dalton
 1e16 : average total density (m^-3)
 10000 : average maxwellian temperature (K)

@@ -11,16 +11,17 @@
 #include <numeric>
 #include <algorithm>
 
-target_particle::target_particle(double mass_in, double temp_in, double density_in, double v_drift_in, size_t number_cells, std::string name_in)
+target_particle::target_particle(double charge_in, double mass_in, double temp_in, double density_in, double v_drift_in, size_t number_cells, std::string name_in)
     {
     this->name = name_in;
+    this->charge = charge_in;
     this->mass = mass_in;
     this->average_density = density_in;
     this->average_temperature = temp_in;
-    this->cell_density.resize(number_cells, density_in);
-    this->cell_temperature.resize(number_cells, temp_in);
+    this->density.resize(number_cells+1, density_in);
+    this->temperature.resize(number_cells+1, constants::k_boltz * 3.0 / this->mass);
     this->v_drift = v_drift_in;
-    this->cell_v_therm.resize(number_cells, std::sqrt(this->average_temperature * constants::k_boltz / this->mass));
+    this->v_therm.resize(number_cells+1, std::sqrt(this->average_temperature * constants::k_boltz / this->mass));
     
 }
 
@@ -28,6 +29,7 @@ target_particle::target_particle(double mass_in, double temp_in, double density_
 void target_particle::print_out() const {
     if (mpi_vars::mpi_rank == 0) {
         std::cout << "Target particle name: " << this->name << std::endl;
+        std::cout << "Charge (C): " << this->charge << std::endl;
         std::cout << "Mass (kg): " << this->mass << std::endl;
         std::cout << "Average density (m^-3): " << this->average_density << std::endl;
         std::cout << "Average temperature (K): " << this->average_temperature << std::endl;
@@ -82,7 +84,7 @@ void target_particle::write_diagnostics(const std::string& dir_name, int diag_nu
 
 std::vector<target_particle> read_target_particle_inputs(const std::string& directory_path, const domain& world){
     std::vector<target_particle> target_particle_list;
-    std::vector<double> mass_in, n_ave, temp_in, v_drift;
+    std::vector<double> mass_in, n_ave, temp_in, v_drift, charge_in;
     std::vector<std::string> particle_names;
     std::vector<int> index_order;
     int count_number_particles = 0;
@@ -116,6 +118,13 @@ std::vector<target_particle> read_target_particle_inputs(const std::string& dire
                     std::string name;
                     iss >> name;
                     particle_names.push_back(name);
+                    iss.clear();
+                    std::getline(file, line);
+                    iss.str(line);
+                    double q;
+                    iss >> q;
+                    q = q * constants::elementary_charge;
+                    charge_in.push_back(q);
                     iss.clear();
                     std::getline(file, line);
                     iss.str(line);
@@ -166,7 +175,7 @@ std::vector<target_particle> read_target_particle_inputs(const std::string& dire
     //Create the particles in the sorted order 
     for (int num_part = 0; num_part < count_number_particles; num_part++){
         int i = index_order[num_part];
-        target_particle temp_particle(mass_in[i], temp_in[i], n_ave[i], v_drift[i], world.number_cells, particle_names[i]);
+        target_particle temp_particle(charge_in[i], mass_in[i], temp_in[i], n_ave[i], v_drift[i], world.number_cells, particle_names[i]);
         target_particle_list.push_back(temp_particle);
     }
     
