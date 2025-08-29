@@ -13,7 +13,7 @@ public:
     std::vector<std::vector<double>> energy_threshold, total_incident_energy, total_energy_loss; // diagnostics for each collision type
     std::vector<std::vector<std::vector<double>>> total_incident_energy_thread, total_energy_loss_thread; // diagnostics for each collision type
     std::vector<double> energy_array, reduced_mass, reduced_mass_ionization;
-    double null_frequency;
+    std::vector<double> min_time_step; // inverse of nu_max
     std::vector<std::vector<std::vector<int>>> product_indices;
     std::vector<std::vector<int>> collision_type_per_target, collision_id; // product indices for each array
     std::vector<int> target_idx, number_collisions_per_target; // collision type identifier

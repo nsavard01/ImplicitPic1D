@@ -9,7 +9,7 @@
 #include "rand_gen/pcg_rng.hpp"
 #include "particles/charged_particle.hpp"
 #include "particles/target_particle.hpp"
-// #include "solvers/poisson_solver_1D_tridiag.hpp"
+#include "charged_particle_operators/charged_particle_pusher.hpp"
 #include "ES_solvers/ES_solver.hpp"
 // #include "ES_solvers/ES_solver_EC.hpp"
 // #include "collisions/null_collider.hpp"
@@ -41,6 +41,7 @@ public:
     std::vector<target_particle> target_particle_list;
     // std::vector<null_collider> null_collider_list;
     std::unique_ptr<ES_solver> field_solver;
+    charged_particle_pusher trajectory_solver;
     // std::vector<std::unique_ptr<charged_particle_operator>> particle_operator_list;
     simulation();
     void setup();

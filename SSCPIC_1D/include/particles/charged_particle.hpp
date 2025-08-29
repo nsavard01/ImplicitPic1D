@@ -20,20 +20,21 @@ public:
     double total_sum_v[3];
     double accum_wall_energy_loss[2], accum_wall_freq_rel[2];
     size_t accum_wall_loss[2];
+    bool null_collision_bool;
     std::vector<size_t> final_idx, number_particles;
     std::vector<std::vector<std::vector<double>>> particle_components; // release_frequency_weight, xi, y, z, v_x, v_y, v_z ; in 1D weight is # particles/m^2/s
     std::vector<std::vector<double>> energy_loss, wall_freq_rel;
     std::vector<std::vector<size_t>> wall_loss;
-    std::vector<std::vector<double>> density_grid, v_sqr_grid;
-    std::vector<double> total_density_grid, total_v_sqr_grid;
+    std::vector<std::vector<double>> density_grid;
+    std::vector<std::vector<std::vector<double>>> v_sqr_grid, v_drift_grid;
+    std::vector<double> total_density_grid;
+    std::vector<std::vector<double>> total_v_sqr_grid, total_v_drift_grid;
 
     
     charged_particle(double mass_in, double charge_in, size_t number_in, std::string name_in, int number_nodes);
     void gather_mpi();
     void print_out() const;
     void load_to_target(std::vector<target_particle>& target_particle_list, const domain& world);
-    void push_particle_trajectories_non_uniform(const int thread_id, const std::vector<target_particle>& target_particle_list, const non_uniform_domain& world, const std::vector<double>& E_field, std::vector<charged_particle>& particle_list);
-    void push_particle_trajectories_uniform(const int thread_id, const std::vector<target_particle>& target_particle_list, const uniform_domain& world, const std::vector<double>& E_field, std::vector<charged_particle>& particle_list);
     void read_initial_state(const std::string& dir_name, const domain& world);
     void initialize_diagnostic_files(const std::string& dir_name) const; 
     void write_diagnostics(const std::string& dir_name, int diag_number) const; 

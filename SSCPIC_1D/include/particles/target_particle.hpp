@@ -7,8 +7,9 @@
 
 class target_particle {
 public:
-    double charge, mass, average_density, average_temperature, accum_energy_change, diffusion_coeff, v_drift;
-    std::vector<double> density, temperature, v_therm;
+    double charge, mass, average_density, average_temperature, accum_energy_change, diffusion_coeff;
+    std::vector<double> density;
+    std::vector<std::vector<double>> v_therm, v_drift;
     std::string name;
     // Accessor for 3D indexing
     target_particle(double charge_in, double mass_in, double temp_in, double density_in, double v_drift_in, size_t number_cells, std::string name_in);

@@ -25,13 +25,19 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
     this->number_particles.resize(omp_get_max_threads(), 0);
     this->density_grid.resize(omp_get_max_threads());
     this->v_sqr_grid.resize(omp_get_max_threads());
+    this->v_drift_grid.resize(omp_get_max_threads());
     this->wall_loss.resize(omp_get_max_threads());
     this->energy_loss.resize(omp_get_max_threads());
     this->wall_freq_rel.resize(omp_get_max_threads());
     this->particle_components.resize(omp_get_max_threads());
     for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++){
         this->density_grid[i_thread].resize(number_nodes, 0.0);
-        this->v_sqr_grid[i_thread].resize(number_nodes, 0.0);
+        this->v_sqr_grid[i_thread].resize(number_nodes);
+        this->v_drift_grid[i_thread].resize(number_nodes);
+        for (int node = 0; node < number_nodes; node++) {
+            this->v_sqr_grid[i_thread][node].resize(3, 0.0);
+            this->v_drift_grid[i_thread][node].resize(3, 0.0);
+        }
         this->particle_components[i_thread].resize(number_in);
         this->wall_loss[i_thread].resize(2, 0);
         this->energy_loss[i_thread].resize(2,0.0);
@@ -40,8 +46,14 @@ charged_particle::charged_particle(double mass_in, double charge_in, size_t numb
             this->particle_components[i_thread][part_idx].resize(7, 0);
         }
     }
+    this->total_v_drift_grid.resize(number_nodes);
     this->total_density_grid.resize(number_nodes, 0.0);
-    this->total_v_sqr_grid.resize(number_nodes, 0.0);
+    this->total_v_sqr_grid.resize(number_nodes);
+    for (int node = 0; node < number_nodes; node++) {
+        this->total_v_sqr_grid[node].resize(3, 0.0);
+        this->total_v_drift_grid[node].resize(3, 0.0);
+    }
+    this->null_collision_bool = false;
 }
 
 void charged_particle::print_out() const {
@@ -246,7 +258,10 @@ void charged_particle::reset_diagnostics(int thread_id) {
     const int grid_size = this->density_grid[thread_id].size();
     for (int i = 0; i < grid_size; i++) {
         this->density_grid[thread_id][i] = 0.0;
-        this->v_sqr_grid[thread_id][i] = 0.0;
+        for (int j = 0; j < 3; j++) {
+            this->v_sqr_grid[thread_id][i][j] = 0.0;
+            this->v_drift_grid[thread_id][i][j] = 0.0;
+        }
     }
 }
 
@@ -259,7 +274,10 @@ void charged_particle::gather_mpi(){
     this->accum_wall_energy_loss[0] = this->accum_wall_energy_loss[1] = 0;
     this->accum_wall_freq_rel[0] = this->accum_wall_freq_rel[1] = 0;
     std::fill(this->total_density_grid.begin(), this->total_density_grid.end(), 0.0);
-    std::fill(this->total_v_sqr_grid.begin(), this->total_v_sqr_grid.end(), 0.0);
+    for (int node = 0; node < size_grid; node++) {
+        std::fill(this->total_v_sqr_grid[node].begin(), this->total_v_sqr_grid[node].end(), 0.0);
+        std::fill(this->total_v_drift_grid[node].begin(), this->total_v_drift_grid[node].end(), 0.0);
+    }
     for (int i = 0; i < omp_get_max_threads(); i++){
         this->total_number_particles += this->number_particles[i];
         this->accum_wall_loss[0] += this->wall_loss[i][0];
@@ -270,7 +288,10 @@ void charged_particle::gather_mpi(){
         this->accum_wall_freq_rel[1] += this->wall_freq_rel[i][1];
         for (int j = 0; j < size_grid; j++) {
             this->total_density_grid[j] += this->density_grid[i][j];
-            this->total_v_sqr_grid[j] += this->v_sqr_grid[i][j];
+            for (int u = 0; u < 3; u++) {
+                this->total_v_sqr_grid[j][u] += this->v_sqr_grid[i][j][u];
+                this->total_v_drift_grid[j][u] += this->v_drift_grid[i][j][u];
+            }
         }
     }
     MPI_Allreduce(MPI_IN_PLACE, &this->total_number_particles, 1, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
@@ -278,9 +299,16 @@ void charged_particle::gather_mpi(){
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_loss, 2, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->accum_wall_freq_rel, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_density_grid.data(), size_grid, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, this->total_v_sqr_grid.data(), size_grid, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    for (int node = 0; node < size_grid; node++) {
+        MPI_Allreduce(MPI_IN_PLACE, this->total_v_sqr_grid[node].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, this->total_v_drift_grid[node].data(), 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    
     for (int j = 0; j < size_grid; j++) {
-        this->total_v_sqr_grid[j] /= this->total_density_grid[j];
+        for (int u = 0; u < 3; u++) {
+            this->total_v_sqr_grid[j][u] /= this->total_density_grid[j];
+            this->total_v_drift_grid[j][u] /= this->total_density_grid[j];
+        }
     }
     
 }
@@ -294,7 +322,8 @@ void charged_particle::load_to_target(std::vector<target_particle>& target_parti
             // replace properties with last iteration from charged particle
             int size_grid = this->total_density_grid.size();
             std::vector<double>& target_density = local_target.density;
-            std::vector<double>& target_v_therm = local_target.v_therm;
+            std::vector<std::vector<double>>& target_v_therm = local_target.v_therm;
+            std::vector<std::vector<double>>& target_v_drift = local_target.v_drift;
             if (world.domain_type == 0) {
 
             } else {
@@ -303,19 +332,28 @@ void charged_particle::load_to_target(std::vector<target_particle>& target_parti
                 dx = 0.5 * dx_dxi[0];
                 target_density[0] = this->total_density_grid[0] / dx;
                 if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "i: " << 0 << " J: " << target_density[0] * std::sqrt(this->total_v_sqr_grid[0]) * this->charge << std::endl;
+                    std::cout << "i: " << 0 << " J: " << this->total_v_drift_grid[0][0] * target_density[0] * this->charge << std::endl;
                 }
                 for (int j = 1; j< size_grid-1; j++) {
                     dx = 0.5 * (dx_dxi[j-1] + dx_dxi[j]);
                     target_density[j] = this->total_density_grid[j] / dx;
                     if (mpi_vars::mpi_rank == 0) {
-                        std::cout << "j: " << j << " J: " << target_density[j] * std::sqrt(this->total_v_sqr_grid[j]) * this->charge<< std::endl;
+                        std::cout << "j: " << j << " J: " << this->total_v_drift_grid[j][0] * target_density[j] * this->charge << std::endl;
                     }
                 }
                 dx = 0.5 * dx_dxi[size_grid-2];
                 target_density[size_grid-1] = this->total_density_grid[size_grid-1] / dx;
                 if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "j: " << size_grid-1 << " J: " << target_density[size_grid-1] * std::sqrt(this->total_v_sqr_grid[size_grid-1])* this->charge << std::endl;
+                    std::cout << "j: " << size_grid-1 << " J: " << this->total_v_drift_grid[size_grid-1][0] * target_density[size_grid-1] * this->charge << std::endl;
+                }
+            }
+            // v_therm based on v_max^2 =  <v^2> - <v>^2 (maxwellian is variance)
+            // then v_therm = sqrt(v_max^2/3) 
+            for (int node = 0; node < size_grid; node++) {
+                for (int u = 0; u < 3; u++){
+                    double v_temp = this->total_v_drift_grid[node][u];
+                    target_v_therm[node][u] = std::sqrt((this->total_v_sqr_grid[node][u] - v_temp * v_temp) / 3.0);
+                    target_v_drift[node][u] = v_temp;
                 }
             }
         }
@@ -429,157 +467,6 @@ std::vector<charged_particle> read_charged_particle_inputs(const std::string& di
 }
 
 
-void charged_particle::push_particle_trajectories_non_uniform(const int thread_id, const std::vector<target_particle>& target_particle_list, const non_uniform_domain& world, const std::vector<double>& E_field, std::vector<charged_particle>& particle_list){
-    size_t last_particle_idx = this->number_particles[thread_id];
-    std::vector<std::vector<double>>& thread_particle_components = this->particle_components[thread_id];
-    const double q_over_m = this->q_over_m;
-    const int number_cells = world.number_cells;
-    const int left_boundary = world.left_boundary_condition;
-    const int right_boundary = world.right_boundary_condition;
-    const std::vector<double>& dx_dxi = world.dx_dxi;
-    double simp_coeff_end = 1.0 / 6.0;
-    double simp_coeff_center = 2.0 / 3.0;
-    double del_t_restrict = 1.0;
-    std::vector<double>& thread_density = this->density_grid[thread_id];
-    std::vector<double>& thread_v_sqr = this->v_sqr_grid[thread_id];
-    for (size_t part_idx = 0; part_idx < last_particle_idx; part_idx++){
-        double freq_rel = thread_particle_components[part_idx][0];
-        double xi_i = thread_particle_components[part_idx][1];
-        double v_x_i = thread_particle_components[part_idx][4];
-        double v_y = thread_particle_components[part_idx][5];
-        double v_z = thread_particle_components[part_idx][6];
-        double v_x_f, xi_f, xi_half, v_x_half;
-        int xi_boundary;
-        int cell_num = int(xi_i);
-        double E_field_local = E_field[cell_num];
-        double dx = dx_dxi[cell_num];
-        double accel = q_over_m * E_field_local;
-        double v_i_sqr = v_x_i*v_x_i;
-        double v_f_sqr;
-        double del_tau;
-        double del_tau_boundary;
-        double time_passed = 0;
-        double interp_xi, interp_num, interp_v_sqr;
-        int v_sign = (v_x_i > 0) - (v_x_i < 0);
-        bool boundary_bool;
-        bool wall_bool = false;
-        while (! wall_bool) {
-            // get time to wall
-            xi_boundary = cell_num + (v_sign + 1)/2;
-            xi_f = double(xi_boundary);
-            v_f_sqr = 2.0 * accel * (xi_f - xi_i) * dx + v_i_sqr;
-            if (v_f_sqr > 0) {
-                // minimum del_tau to boundary in direction of propogation
-                v_x_f = v_sign * std::sqrt(v_f_sqr);
-                if (std::abs(v_x_f - v_x_i) > std::abs(v_x_f + v_x_i)) {
-                    del_tau_boundary = (v_x_f - v_x_i)/accel;
-                } else {
-                    del_tau_boundary = 2.0 * (xi_f - xi_i)/ (v_x_f + v_x_i) * dx;
-                }
-            } else {
-                // minimum del_tau oppposite boundary
-                xi_boundary = 2*cell_num + 1 - xi_boundary;
-                xi_f = double(xi_boundary);
-                v_f_sqr = 2.0 * accel * (xi_f - xi_i) * dx + v_i_sqr;
-                v_x_f = - v_sign * std::sqrt(v_f_sqr);
-                del_tau_boundary = (v_x_f - v_x_i) / accel;
-            }
-            boundary_bool = (del_tau_boundary < del_t_restrict);
-            if (boundary_bool) {
-                del_tau = del_tau_boundary;
-            } else {
-                del_tau = del_t_restrict;
-            }
 
-            // get properties at half time in trajectory
-            v_x_half = v_x_i + 0.5 * accel * del_tau;
-            xi_half = xi_i + 0.25 * (v_x_i + v_x_half) * del_tau / dx;
-
-            // interpolate half way point to densities and v_sqr
-            interp_num = freq_rel * del_tau;
-            interp_xi = xi_half - cell_num;
-            interp_v_sqr = interp_num * (simp_coeff_end * (v_i_sqr + v_f_sqr) + simp_coeff_center * v_x_half * v_x_half);
-            thread_density[cell_num] += interp_num * (1.0 - interp_xi);
-            thread_density[cell_num+1] += interp_num * interp_xi;
-            
-            thread_v_sqr[cell_num] += interp_v_sqr * (1.0 - interp_xi);
-            thread_v_sqr[cell_num+1] += interp_v_sqr * (interp_xi);
-
-            // reset for next trajectory
-            v_sign = (v_x_f > 0) - (v_x_f < 0);
-            if (boundary_bool) {
-                cell_num = cell_num + v_sign;
-                if (xi_boundary == 0) {
-                    switch (left_boundary){
-                        case 1:
-                        case 4:
-                            cell_num = 0;
-                            wall_bool = true;
-                            this->energy_loss[thread_id][0] += v_x_f*v_x_f + v_y*v_y + v_z*v_z;
-                            this->wall_loss[thread_id][0]++;
-                            this->wall_freq_rel[thread_id][0] += freq_rel;
-                            break;
-                        case 2:
-                            cell_num = 0;
-                            v_x_f = - v_x_f;
-                            v_sign = -v_sign;
-                            break;
-                        case 3:
-                            xi_f = double(number_cells);
-                            cell_num = number_cells-1;
-                            break;
-                    }
-                } else if (xi_boundary == number_cells) {
-                    switch (right_boundary){
-                        case 1:
-                        case 4:
-                            cell_num = number_cells-1;
-                            wall_bool = true;
-                            this->energy_loss[thread_id][1] += v_x_f*v_x_f + v_y*v_y + v_z*v_z;
-                            this->wall_loss[thread_id][1]++;
-                            this->wall_freq_rel[thread_id][1] += freq_rel;
-                            break;
-                        case 2:
-                            cell_num = number_cells-1;
-                            v_x_f = -v_x_f;
-                            v_sign = -v_sign;
-                            break;
-                        case 3:
-                            xi_f = 0.0;
-                            cell_num = 0;
-                            break;
-                    }        
-                }
-                E_field_local = E_field[cell_num];
-                dx = dx_dxi[cell_num];
-                accel = q_over_m * E_field_local;
-            }
-            v_x_i = v_x_f;
-            xi_i = xi_f;
-            time_passed += del_tau;
-            v_i_sqr = v_x_i*v_x_i;
-        }
-    }
-}
-
-void charged_particle::push_particle_trajectories_uniform(const int thread_id, const std::vector<target_particle>& target_particle_list, const uniform_domain& world, const std::vector<double>& E_field, std::vector<charged_particle>& particle_list){
-    size_t last_particle_idx = this->number_particles[thread_id];
-    std::vector<std::vector<double>>& thread_particle_components = this->particle_components[thread_id];
-    const double q_over_m = this->q_over_m;
-    const double charge = this->charge;
-    for (size_t part_idx = 0; part_idx < last_particle_idx; part_idx++){
-        double freq_rel = thread_particle_components[part_idx][0];
-        double xi = thread_particle_components[part_idx][1];
-        double v_x = thread_particle_components[part_idx][4];
-        double v_y = thread_particle_components[part_idx][5];
-        double v_z = thread_particle_components[part_idx][6];
-        int cell_num = int(xi);
-        double E_field_local = E_field[cell_num];
-
-        bool wall_bool = false;
-        while (! wall_bool) {
-        }
-    }
-}
 
 

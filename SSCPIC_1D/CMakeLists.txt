@@ -18,6 +18,7 @@ include_directories(include)
 
 # Gather all source files
 file(GLOB_RECURSE SRC_FILES src/main.cpp
+    src/charged_particle_operators/*.cpp
     src/globals/*.cpp
     src/rand_gen/*.cpp
     src/domain/*.cpp
