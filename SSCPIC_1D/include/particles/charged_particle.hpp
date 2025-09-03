@@ -14,6 +14,7 @@ class charged_particle {
 public:
     std::string name;
     size_t total_number_particles;
+    int target_particle_idx = -1;
     double mass, charge, q_over_m, q_times_wp, average_density, average_temperature, del_t_max;
     double v_sqr_min, v_sqr_max; // for bin diagnostics
     double total_sum_v_square[3];
@@ -43,6 +44,7 @@ public:
 };
 
 std::vector<charged_particle> read_charged_particle_inputs(const std::string& filename, const domain& world);
+void find_corresponding_targets(std::vector<charged_particle>& charged_particle_list, std::vector<target_particle>& target_particle_list);
 
 
 

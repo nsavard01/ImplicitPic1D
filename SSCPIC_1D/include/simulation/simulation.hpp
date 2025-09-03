@@ -12,7 +12,7 @@
 #include "charged_particle_operators/charged_particle_pusher.hpp"
 #include "ES_solvers/ES_solver.hpp"
 // #include "ES_solvers/ES_solver_EC.hpp"
-// #include "collisions/null_collider.hpp"
+#include "collisions/null_collider.hpp"
 // #include "charged_particle_operators/charged_particle_operator.hpp"
 #include <stdio.h>
 #include <iostream>
@@ -42,6 +42,7 @@ public:
     // std::vector<null_collider> null_collider_list;
     std::unique_ptr<ES_solver> field_solver;
     charged_particle_pusher trajectory_solver;
+    std::vector<null_collider> null_collider_list;
     // std::vector<std::unique_ptr<charged_particle_operator>> particle_operator_list;
     simulation();
     void setup();

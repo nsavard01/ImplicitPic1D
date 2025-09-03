@@ -40,6 +40,15 @@ void target_particle::print_out() const {
     }
 }
 
+double target_particle::get_ave_v_sqr_cell(int cell) const {
+    double res = 0;
+    for (int i = 0; i < 3; i++) {
+        res += 0.5 * (this->v_therm[cell][i] * this->v_therm[cell][i] + 
+            this->v_therm[cell+1][i] * this->v_therm[cell+1][i]);
+    }
+    return res;
+}
+
 void target_particle::initialize_diagnostic_files(const std::string& dir_name) const {
     if (mpi_vars::mpi_rank == 0) {
         std::ofstream file(dir_name + "/target_particles/" + this->name + "/particle_properties.dat");

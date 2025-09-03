@@ -25,7 +25,8 @@ file(GLOB_RECURSE SRC_FILES src/main.cpp
     src/particles/*.cpp
     src/simulation/*.cpp
     src/ES_solvers/*.cpp
-    src/solvers/*.cpp)
+    src/solvers/*.cpp
+    src/collisions/*.cpp)
 
 # Create the executable
 add_executable(sc_pic1d ${SRC_FILES})

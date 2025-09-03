@@ -1,5 +1,4 @@
 #include "simulation/simulation.hpp"
-#include "globals/plasma_functions.hpp"
 #include <chrono>
 #include <iomanip>
 #include "globals/write_functions.hpp"
@@ -263,8 +262,13 @@ void simulation::setup() {
     // Generate objects serially except when needed
     this->world = create_domain_from_file("../inputs/geometry.inp");
     this->world->print_out();
-    this->charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *this->world); 
     this->target_particle_list = read_target_particle_inputs("../inputs/target_particles/", *this->world);
+    this->charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *this->world); 
+    find_corresponding_targets(this->charged_particle_list, this->target_particle_list);
+    this->null_collider_list = read_null_collision_inputs("../inputs/collisions/binary/", this->charged_particle_list, this->target_particle_list);
+    for (int coll = 0; coll < this->null_collider_list.size(); coll++) {
+        this->null_collider_list[coll].print_out(this->charged_particle_list, this->target_particle_list);
+    }
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", *this->world);
     this->del_t = del_t_temp;
     if (this->del_t > this->simulation_time || this->simulation_time <= 0) {

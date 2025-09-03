@@ -315,46 +315,43 @@ void charged_particle::gather_mpi(){
 
 void charged_particle::load_to_target(std::vector<target_particle>& target_particle_list, const domain& world) {
     // Load particle properties to target if exist
-    int size_list = target_particle_list.size();
-    for (int part_num = 0; part_num < size_list; part_num++){
-        target_particle& local_target = target_particle_list[part_num];
-        if (this->name == local_target.name) {
-            // replace properties with last iteration from charged particle
-            int size_grid = this->total_density_grid.size();
-            std::vector<double>& target_density = local_target.density;
-            std::vector<std::vector<double>>& target_v_therm = local_target.v_therm;
-            std::vector<std::vector<double>>& target_v_drift = local_target.v_drift;
-            if (world.domain_type == 0) {
+    target_particle& local_target = target_particle_list[this->target_particle_idx];
+    if (this->name == local_target.name) {
+        // replace properties with last iteration from charged particle
+        int size_grid = this->total_density_grid.size();
+        std::vector<double>& target_density = local_target.density;
+        std::vector<std::vector<double>>& target_v_therm = local_target.v_therm;
+        std::vector<std::vector<double>>& target_v_drift = local_target.v_drift;
+        if (world.domain_type == 0) {
 
-            } else {
-                const std::vector<double>& dx_dxi = world.dx_dxi;
-                double dx;
-                dx = 0.5 * dx_dxi[0];
-                target_density[0] = this->total_density_grid[0] / dx;
-                if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "i: " << 0 << " J: " << this->total_v_drift_grid[0][0] * target_density[0] * this->charge << std::endl;
-                }
-                for (int j = 1; j< size_grid-1; j++) {
-                    dx = 0.5 * (dx_dxi[j-1] + dx_dxi[j]);
-                    target_density[j] = this->total_density_grid[j] / dx;
-                    if (mpi_vars::mpi_rank == 0) {
-                        std::cout << "j: " << j << " J: " << this->total_v_drift_grid[j][0] * target_density[j] * this->charge << std::endl;
-                    }
-                }
-                dx = 0.5 * dx_dxi[size_grid-2];
-                target_density[size_grid-1] = this->total_density_grid[size_grid-1] / dx;
-                if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "j: " << size_grid-1 << " J: " << this->total_v_drift_grid[size_grid-1][0] * target_density[size_grid-1] * this->charge << std::endl;
-                }
+        } else {
+            const std::vector<double>& dx_dxi = world.dx_dxi;
+            double dx;
+            dx = 0.5 * dx_dxi[0];
+            target_density[0] = this->total_density_grid[0] / dx;
+            // if (mpi_vars::mpi_rank == 0) {
+            //     std::cout << "i: " << 0 << " J: " << this->total_v_drift_grid[0][0] * target_density[0] * this->charge << std::endl;
+            // }
+            for (int j = 1; j< size_grid-1; j++) {
+                dx = 0.5 * (dx_dxi[j-1] + dx_dxi[j]);
+                target_density[j] = this->total_density_grid[j] / dx;
+                // if (mpi_vars::mpi_rank == 0) {
+                //     std::cout << "j: " << j << " J: " << this->total_v_drift_grid[j][0] * target_density[j] * this->charge << std::endl;
+                // }
             }
-            // v_therm based on v_max^2 =  <v^2> - <v>^2 (maxwellian is variance)
-            // then v_therm = sqrt(v_max^2/3) 
-            for (int node = 0; node < size_grid; node++) {
-                for (int u = 0; u < 3; u++){
-                    double v_temp = this->total_v_drift_grid[node][u];
-                    target_v_therm[node][u] = std::sqrt((this->total_v_sqr_grid[node][u] - v_temp * v_temp) / 3.0);
-                    target_v_drift[node][u] = v_temp;
-                }
+            dx = 0.5 * dx_dxi[size_grid-2];
+            target_density[size_grid-1] = this->total_density_grid[size_grid-1] / dx;
+            // if (mpi_vars::mpi_rank == 0) {
+            //     std::cout << "j: " << size_grid-1 << " J: " << this->total_v_drift_grid[size_grid-1][0] * target_density[size_grid-1] * this->charge << std::endl;
+            // }
+        }
+        // v_therm based on v_max^2 =  <v^2> - <v>^2 (maxwellian is variance)
+        // then v_therm = sqrt(v_max^2/3) 
+        for (int node = 0; node < size_grid; node++) {
+            for (int u = 0; u < 3; u++){
+                double v_temp = this->total_v_drift_grid[node][u];
+                target_v_therm[node][u] = std::sqrt((this->total_v_sqr_grid[node][u] - v_temp * v_temp) / 3.0);
+                target_v_drift[node][u] = v_temp;
             }
         }
     }
@@ -467,6 +464,24 @@ std::vector<charged_particle> read_charged_particle_inputs(const std::string& di
 }
 
 
-
+void find_corresponding_targets(std::vector<charged_particle>& charged_particle_list, std::vector<target_particle>& target_particle_list) {
+    for (int c_idx = 0; c_idx < charged_particle_list.size(); c_idx++) {
+        bool found = false;
+        for (int t_idx = 0; t_idx < target_particle_list.size(); t_idx++) {
+            if (target_particle_list[t_idx].name == charged_particle_list[c_idx].name) {
+                found = true;
+                target_particle_list[t_idx].charged_particle_idx = c_idx;
+                charged_particle_list[c_idx].target_particle_idx = t_idx;
+            }
+        }
+        if (mpi_vars::mpi_rank == 0) {
+            if (!found) {
+                std::cout << "Charged particle " << charged_particle_list[c_idx].name << " doesn't have a corresponding target for deposition!" << std::endl;
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+        }
+    }
+    
+}
 
 
