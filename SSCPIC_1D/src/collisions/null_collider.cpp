@@ -39,6 +39,7 @@ null_collider::null_collider(int primary_idx, int number_targets, int number_cel
     this->reduced_mass_ionization = reduced_mass_ionization;
     this->total_amount_collidable_particles = 0;
     if (number_targets > 0) {
+        this->max_time_step.resize(this->number_cells, 0.0);
         this->total_incident_energy.resize(this->number_cells);
         this->total_energy_loss.resize(this->number_cells);
         this->total_amount_collisions.resize(this->number_cells);
@@ -86,40 +87,52 @@ null_collider::null_collider(int primary_idx, int number_targets, int number_cel
  
 }
 
-// void null_collider::set_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) {
-//     if (this->number_targets > 0) {
-//         double primary_mass = particle_list[this->primary_idx].mass;
-//         std::vector<double> target_density(this->number_targets);
-//         std::vector<double> red_mass(this->number_targets);
-//         for (int i = 0; i < this->number_targets; i++){
-//             target_density[i] = target_particle_list[this->target_idx[i]].average_density;
-//             double target_mass = target_particle_list[this->target_idx[i]].mass;
-//             red_mass[i] = (primary_mass * target_mass)/(primary_mass + target_mass);
-//         }
-//         this->null_frequency = 0.0;
-//         double v_r;
-//         int size_array = this->energy_array.size();
-//         for (int i = 0; i < size_array; i++) {
-//             double freq_sum = 0.0;
-//             double E = this->energy_array[i];
-//             for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
-//                 v_r = std::sqrt(2.0 * E * constants::elementary_charge/red_mass[t_idx]);
-//                 for (int coll_idx = 0; coll_idx < this->number_collisions_per_target[t_idx]; coll_idx++){
-//                     freq_sum += this->sigma_array[t_idx][coll_idx][i] * target_density[t_idx] * v_r;
-//                 }
-//             }
-            
-//             this->null_frequency = std::max(this->null_frequency, freq_sum);
-//         }
+void null_collider::set_initial_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) {
+    // For initial null frequency, add up estimated nu_max for each cell
+    if (this->number_targets > 0) {
+        int number_cells = this->number_cells;
+        std::vector<double> red_mass(this->number_targets);
+        double primary_mass = particle_list[this->primary_idx].mass;
+        for (int i = 0; i < this->number_targets; i++){
+            double target_mass = target_particle_list[this->target_idx[i]].mass;
+            red_mass[i] = (primary_mass * target_mass)/(primary_mass + target_mass);
+        }
+        int primary_target_idx = particle_list[this->primary_idx].target_particle_idx;
+        int size_array = this->energy_array.size();
+        for (int node = 0; node < number_cells; node++) {
+            double null_frequency = 0.0;
+            for (int i = 0; i < size_array; i++) {
+                double E = this->energy_array[i];
+                double v_r;
+                double freq_sum = 0;
+                for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+                    v_r = std::sqrt(2.0 * E * constants::elementary_charge/red_mass[t_idx]);
+                    double density = std::max(target_particle_list[this->target_idx[t_idx]].density[node],  target_particle_list[this->target_idx[t_idx]].density[node+1]);
+                    for (int coll_idx = 0; coll_idx < this->number_collisions_per_target[t_idx]; coll_idx++){
+                        int coll_type = this->collision_type_per_target[t_idx][coll_idx];
+                        if (coll_type != 5) {
+                            freq_sum += this->sigma_array[t_idx][coll_idx][i] * density * v_r;
+                        } else {
 
-//     }
-// }
+                            double v_r_other = std::sqrt(target_particle_list[this->target_idx[t_idx]].get_ave_v_sqr_cell(node) +
+                                target_particle_list[primary_target_idx].get_ave_v_sqr_cell(node));
+                            freq_sum += this->sigma_array[t_idx][coll_idx][node] * density / v_r_other / v_r_other / v_r_other; // for coulomb collision
+                        } 
+                    }
+                }
+                null_frequency = std::max(null_frequency, freq_sum);
+            }
+            this->max_time_step[node] = 1.0/null_frequency;
+        }
+    }
+}
 
 void null_collider::print_out(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) const {
     if (mpi_vars::mpi_rank == 0 && this->number_targets > 0) {
         std::cout << "------------------------------ " << std::endl;
         std::cout << "Primary particle is " << particle_list[this->primary_idx].name << std::endl;
         std::cout << "Amount of targets is " << this->number_targets << std::endl;
+        std::cout << "Max cell time steps is " << *std::max_element(this->max_time_step.begin(), this->max_time_step.end()) << std::endl;
         std::cout << "----- " << std::endl;
         std::cout << std::endl;
         for (int l=0; l<this->number_targets;l++){

@@ -267,6 +267,7 @@ void simulation::setup() {
     find_corresponding_targets(this->charged_particle_list, this->target_particle_list);
     this->null_collider_list = read_null_collision_inputs("../inputs/collisions/binary/", this->charged_particle_list, this->target_particle_list);
     for (int coll = 0; coll < this->null_collider_list.size(); coll++) {
+        this->null_collider_list[coll].set_initial_null_frequency(this->charged_particle_list, this->target_particle_list);
         this->null_collider_list[coll].print_out(this->charged_particle_list, this->target_particle_list);
     }
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", *this->world);
@@ -317,6 +318,7 @@ void simulation::setup() {
         std::cout << "------------------------------" << std::endl;
         std::cout << " " << std::endl;
     }
+    this->trajectory_solver.set_diagnostic_vectors(this->charged_particle_list);
 
 }
 
@@ -445,10 +447,11 @@ void simulation::run() {
         if (this->world->domain_type == 0) {
 
         } else {
-            this->trajectory_solver.push_particle_trajectories_non_uniform(thread_id, this->charged_particle_list, 
+            this->trajectory_solver.push_particle_trajectories_non_uniform(thread_id, this->charged_particle_list, this->null_collider_list,
                 this->target_particle_list, static_cast<non_uniform_domain&>(*this->world), this->field_solver->E_field);
         }
     }
+    this->trajectory_solver.gather_mpi();
     for (int part_num = 0; part_num < number_charged_particles; part_num++) {
         charged_particle& particle_local = this->charged_particle_list[part_num];
         particle_local.gather_mpi();

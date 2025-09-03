@@ -28,7 +28,7 @@ public:
     const std::vector<double> &energy_array, const std::vector<std::vector<double>> &energy_threshold,
     const std::vector<std::vector<int>> &collision_type_per_target, const std::vector<std::vector<std::vector<int>>> &product_indices, 
     const std::vector<double>& reduced_mass, const std::vector<double>& reduced_mass_ionization);
-    // void set_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list);
+    void set_initial_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list);
     void print_out(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) const;
     // // void generate_null_collisions(const int thread_id, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list, const double time_step);
     // void order_collisions();
