@@ -30,7 +30,7 @@ public:
     const std::vector<double>& reduced_mass, const std::vector<double>& reduced_mass_ionization);
     void set_initial_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list);
     void print_out(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) const;
-    // // void generate_null_collisions(const int thread_id, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list, const double time_step);
+    void generate_null_collision(const int thread_id, const int cell, std::vector<double>& particle_components, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list);
     // void order_collisions();
     // inline void double_product_isotropic(const double &primary_mass, const double &target_mass, const double &del_E, 
     //     double (&incident_velocity)[3], double (&target_velocity)[3]);
