@@ -451,12 +451,13 @@ void simulation::run() {
                 this->target_particle_list, static_cast<non_uniform_domain&>(*this->world), this->field_solver->E_field);
         }
     }
-    this->trajectory_solver.gather_mpi();
     for (int part_num = 0; part_num < number_charged_particles; part_num++) {
         charged_particle& particle_local = this->charged_particle_list[part_num];
         particle_local.gather_mpi();
         particle_local.load_to_target(this->target_particle_list, *this->world);
     }
+    this->trajectory_solver.gather_mpi();
+    this->trajectory_solver.print_out(this->charged_particle_list);
 }
 
 

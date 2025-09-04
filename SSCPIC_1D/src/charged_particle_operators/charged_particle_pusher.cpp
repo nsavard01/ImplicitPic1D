@@ -1,9 +1,11 @@
 
 #include "charged_particle_operators/charged_particle_pusher.hpp"
+#include "rand_gen/pcg_rng.hpp"
 #include <iomanip>
 #include <dirent.h>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 charged_particle_pusher::charged_particle_pusher() {
     
@@ -28,7 +30,7 @@ void charged_particle_pusher::set_diagnostic_vectors(const std::vector<charged_p
 }
 
 void charged_particle_pusher::gather_mpi() {
-    int number_charged_particles = this->total_integration_time.size();
+    const int number_charged_particles = this->total_integration_time.size();
     std::fill(this->total_integration_time.begin(), this->total_integration_time.end(), 0);
     std::fill(this->total_number_cell_crossings.begin(), this->total_number_cell_crossings.end(), 0);
     std::fill(this->total_number_time_steps.begin(), this->total_number_time_steps.end(), 0);
@@ -39,15 +41,27 @@ void charged_particle_pusher::gather_mpi() {
             this->total_number_time_steps[part_num] += this->number_time_steps[i_thread][part_num];
         }
     }
+    double local_min_time = *std::min_element(this->thread_time.begin(), this->thread_time.end());
+    double local_max_time = *std::max_element(this->thread_time.begin(), this->thread_time.end());
     MPI_Allreduce(MPI_IN_PLACE, this->total_integration_time.data(), number_charged_particles, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_number_cell_crossings.data(), number_charged_particles, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(MPI_IN_PLACE, this->total_number_time_steps.data(), number_charged_particles, mpi_vars::mpi_size_t_type, MPI_SUM, MPI_COMM_WORLD);
-    if (mpi_vars::mpi_rank == 0) {
-        for (int part_num = 0; part_num < number_charged_particles; part_num ++) {
-            std::cout << "part num " << part_num << std::endl;
-            std::cout << "integration time " << this->total_integration_time[part_num] << std::endl;
-            std::cout << "number cell crossings " << this->total_number_cell_crossings[part_num] << std::endl;
-            std::cout << "number time steps " << this->total_number_time_steps[part_num] << std::endl;
+    MPI_Allreduce(&local_min_time, &this->min_cpu_time, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_max_time, &this->max_cpu_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+}
+
+void charged_particle_pusher::print_out(const std::vector<charged_particle>& particle_list) const {
+    if (mpi_vars::mpi_rank ==0 ) {
+        const int number_charged_particles = particle_list.size();
+        std::cout << "Maximum cpu time: " << this->max_cpu_time << " seconds" << std::endl;
+        std::cout << "Mminimum cpu time: " << this->min_cpu_time << " seconds" << std::endl;
+        for (int part_num = 0; part_num < number_charged_particles; part_num++) {
+            std::cout << std::endl;
+            std::cout << "Particle #: " << particle_list[part_num].name << std::endl;
+            size_t particle_number = particle_list[part_num].total_number_particles;
+            std::cout << "Total integration time per particle: " << this->total_integration_time[part_num]/double(particle_number) << std::endl;
+            std::cout << "Total number cell crossings per particle: " << double(this->total_number_cell_crossings[part_num])/double(particle_number) << std::endl;
+            std::cout << "Total number time steps per particle: " << double(this->total_number_time_steps[part_num])/double(particle_number) << std::endl;
         }
     }
 }
@@ -93,17 +107,18 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
             double v_f_sqr;
             double del_tau;
             double del_tau_boundary;
-            double del_tau_collision = 1.0;
+            double del_tau_collision = 1.0; // maximum allowable time
+            double del_tau_collision_cell;
+            if (particle_collider_bool) {
+                del_tau_collision_cell = max_time_step[cell_num];
+            }
             double interp_xi, interp_num, interp_v_sqr, interp_v_x;
             int v_sign = (v_x_i > 0) - (v_x_i < 0);
             bool boundary_bool;
             bool wall_bool = false;
             while (! wall_bool) {
-                // get time to wall
+                // get time to wall based on starting condition
                 num_time_steps += 1;
-                if (particle_collider_bool) {
-                    del_tau_collision = max_time_step[cell_num];
-                }
                 xi_boundary = cell_num + (v_sign + 1)/2;
                 xi_f = double(xi_boundary);
                 v_f_sqr = 2.0 * accel * (xi_f - xi_i) * dx + v_i_sqr;
@@ -123,6 +138,12 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
                     v_x_f = - v_sign * std::sqrt(v_f_sqr);
                     del_tau_boundary = (v_x_f - v_x_i) / accel;
                 }
+
+                
+                if (particle_collider_bool) {
+                    del_tau_collision = - std::log(pcg32_random_r()) * del_tau_collision_cell;
+                }
+                // If goes to boundary take del_tau boundary
                 boundary_bool = (del_tau_boundary < del_tau_collision);
                 if (boundary_bool) {
                     del_tau = del_tau_boundary;
@@ -133,6 +154,7 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
                 // get properties at half time in trajectory
                 v_x_half = 0.5 * (v_x_i + v_x_f);
                 // xi_half = xi_i + 0.25 * (v_x_i + v_x_half) * del_tau / dx;
+                
 
                 // interpolate half way point to densities and v_sqr
                 interp_num = freq_rel * del_tau;
@@ -171,6 +193,9 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
                 if (boundary_bool) {
                     num_cell_crossings += 1;
                     cell_num = cell_num + v_sign;
+                    if (particle_collider_bool) {
+                        del_tau_collision_cell  = max_time_step[cell_num];
+                    }
                     if (xi_boundary == 0) {
                         switch (left_boundary){
                             case 1:

@@ -133,6 +133,7 @@ void null_collider::print_out(const std::vector<charged_particle>& particle_list
         std::cout << "Primary particle is " << particle_list[this->primary_idx].name << std::endl;
         std::cout << "Amount of targets is " << this->number_targets << std::endl;
         std::cout << "Max cell time steps is " << *std::max_element(this->max_time_step.begin(), this->max_time_step.end()) << std::endl;
+        std::cout << "Min cell time steps is " << *std::min_element(this->max_time_step.begin(), this->max_time_step.end()) << std::endl;
         std::cout << "----- " << std::endl;
         std::cout << std::endl;
         for (int l=0; l<this->number_targets;l++){
