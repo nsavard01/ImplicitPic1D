@@ -20,10 +20,10 @@ target_particle::target_particle(double charge_in, double mass_in, double temp_i
     this->average_temperature = temp_in;
     this->density.resize(number_cells+1, density_in);
     this->v_drift.resize(number_cells+1);
-    this->v_therm.resize(number_cells+1);
+    this->v_therm_sqr.resize(number_cells+1);
     for (int node = 0; node < number_cells+1; node++) {
         this->v_drift[node].resize(3, 0.0);
-        this->v_therm[node].resize(3, std::sqrt(this->average_temperature * constants::k_boltz / this->mass));
+        this->v_therm_sqr[node].resize(3, this->average_temperature * constants::k_boltz / this->mass);
     }
     
 }
@@ -43,8 +43,8 @@ void target_particle::print_out() const {
 double target_particle::get_ave_v_sqr_cell(int cell) const {
     double res = 0;
     for (int i = 0; i < 3; i++) {
-        res += 0.5 * (this->v_therm[cell][i] * this->v_therm[cell][i] + 
-            this->v_therm[cell+1][i] * this->v_therm[cell+1][i]);
+        res += 0.5 * (this->v_therm_sqr[cell][i] + 
+            this->v_therm_sqr[cell+1][i]);
     }
     return res;
 }

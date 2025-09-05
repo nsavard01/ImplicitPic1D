@@ -268,6 +268,7 @@ void simulation::setup() {
     this->null_collider_list = read_null_collision_inputs("../inputs/collisions/binary/", this->charged_particle_list, this->target_particle_list);
     for (int coll = 0; coll < this->null_collider_list.size(); coll++) {
         this->null_collider_list[coll].set_initial_null_frequency(this->charged_particle_list, this->target_particle_list);
+        this->null_collider_list[coll].reference_targets(this->target_particle_list);
         this->null_collider_list[coll].print_out(this->charged_particle_list, this->target_particle_list);
     }
     this->field_solver = read_voltage_inputs("../inputs/geometry.inp", *this->world);
