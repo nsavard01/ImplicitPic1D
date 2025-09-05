@@ -259,7 +259,7 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
                     } else {
                         // if doesn't reach boundary then test collision
                         if (particle_collider_bool) {
-                            particle_collider.generate_null_collision(thread_id, cell_num, particle_component, particle_list, target_particle_list);
+                            particle_collider.generate_null_collision(thread_id, del_tau, cell_num, particle_component, particle_list, target_particle_list);
                         }
                     }
                     v_x_i = v_x_f;

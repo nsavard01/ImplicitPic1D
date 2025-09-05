@@ -329,21 +329,21 @@ void charged_particle::load_to_target(std::vector<target_particle>& target_parti
             double dx;
             dx = 0.5 * dx_dxi[0];
             target_density[0] = this->total_density_grid[0] / dx;
-            if (mpi_vars::mpi_rank == 0) {
-                std::cout << "i: " << 0 << " J: " << target_density[0] << std::endl;
-            }
+            // if (mpi_vars::mpi_rank == 0) {
+            //     std::cout << "i: " << 0 << " J: " << target_density[0] << std::endl;
+            // }
             for (int j = 1; j< size_grid-1; j++) {
                 dx = 0.5 * (dx_dxi[j-1] + dx_dxi[j]);
                 target_density[j] = this->total_density_grid[j] / dx;
-                if (mpi_vars::mpi_rank == 0) {
-                    std::cout << "j: " << j << " J: " << target_density[j] << std::endl;
-                }
+                // if (mpi_vars::mpi_rank == 0) {
+                //     std::cout << "j: " << j << " J: " << target_density[j] << std::endl;
+                // }
             }
             dx = 0.5 * dx_dxi[size_grid-2];
             target_density[size_grid-1] = this->total_density_grid[size_grid-1] / dx;
-            if (mpi_vars::mpi_rank == 0) {
-                std::cout << "j: " << size_grid-1 << " J: " << target_density[size_grid-1] << std::endl;
-            }
+            // if (mpi_vars::mpi_rank == 0) {
+            //     std::cout << "j: " << size_grid-1 << " J: " << target_density[size_grid-1] << std::endl;
+            // }
         }
         // v_therm based on v_max^2 =  <v^2> - <v>^2 (maxwellian is variance)
         // then v_therm = sqrt(v_max^2/3) 

@@ -89,6 +89,23 @@ null_collider::null_collider(int primary_idx, int number_targets, int number_cel
  
 }
 
+void null_collider::reset_diagnostics() {
+    int max_threads = omp_get_max_threads();
+    for (int i_thread = 0; i_thread < max_threads; i_thread++) {
+        for (int cell = 0; cell < this->number_cells; cell ++) {
+            for (int i = 0; i < this->number_targets; i++) {
+                int num_collisions = this->number_collisions_per_target[i];
+                for (int coll_idx = 0; coll_idx < num_collisions; coll_idx++) {
+                    this->total_incident_energy_thread[i_thread][cell][i][coll_idx] = 0;
+                    this->total_amount_collisions_thread[i_thread][cell][i][coll_idx] = 0;
+                    this->total_energy_loss_thread[i_thread][cell][i][coll_idx] = 0;
+                }
+            }
+        }
+    }
+
+}
+
 void null_collider::set_initial_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) {
     // For initial null frequency, add up estimated nu_max for each cell
     if (this->number_targets > 0) {
@@ -358,7 +375,30 @@ void null_collider::reference_targets(const std::vector<target_particle>& target
 
 }
 
-void null_collider::generate_null_collision(const int thread_id, const int cell, std::vector<double>& particle_components, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list){
+void null_collider::gather_mpi() {
+    if (this->number_targets > 0) {
+        for (int cell = 0; cell < this->number_cells; cell++) {
+            for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+                std::fill(this->total_incident_energy[cell][t_idx].begin(), this->total_incident_energy[cell][t_idx].begin(), 0.0);
+                std::fill(this->total_amount_collisions[cell][t_idx].begin(), this->total_amount_collisions[cell][t_idx].begin(), 0.0);
+            }
+        }
+        for (int i_thread = 0; i_thread < omp_get_max_threads(); i_thread++) {
+            for (int cell = 0; cell < this->number_cells; cell++) {
+                for (int t_idx = 0; t_idx < this->number_targets; t_idx++) {
+                    for (int coll_idx = 0; coll_idx < this->number_collisions_per_target[t_idx]; coll_idx++) {
+                        this->total_incident_energy[cell][t_idx][coll_idx] += this->total_incident_energy_thread[i_thread][cell][t_idx][coll_idx];
+                        this->total_amount_collisions[cell][t_idx][coll_idx] += this->total_amount_collisions_thread[i_thread][cell][t_idx][coll_idx];
+                    }
+                    MPI_Allreduce(MPI_IN_PLACE, this->total_incident_energy[cell][t_idx].data(), this->number_collisions_per_target[t_idx], MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    MPI_Allreduce(MPI_IN_PLACE, this->total_amount_collisions[cell][t_idx].data(), this->number_collisions_per_target[t_idx], MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                }
+            }
+        }
+    }
+}
+
+void null_collider::generate_null_collision(const int thread_id, const double collision_time, const int cell, std::vector<double>& particle_components, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list){
     
     if (this->number_targets > 0) {
         
@@ -385,7 +425,7 @@ void null_collider::generate_null_collision(const int thread_id, const int cell,
 
         double& freq_rel = particle_components[0];
         double& xi = particle_components[1];
-        double incident_velocity[3], target_velocity[3], velocity_CM[3], v_therm_sqr[3], v_drift[3], rand_gauss[3];
+        double incident_velocity[3], target_velocity[3], velocity_CM[3], rand_gauss[3];
         incident_velocity[0] = particle_components[4];
         incident_velocity[1] = particle_components[5];
         incident_velocity[2] = particle_components[6];      
@@ -412,11 +452,29 @@ void null_collider::generate_null_collision(const int thread_id, const int cell,
             double target_density_local = target_density_left + target_density_right;
             double red_mass = reduced_mass_local[t_idx];
             double target_mass_local = target_mass_ref[t_idx];
-            for (int u = 0; u < 3; u++) {
-                v_therm_sqr[u] = this->target_v_therm_sqr[t_idx].get()[cell][u] * target_density_left + this->target_v_therm_sqr[t_idx].get()[cell+1][u] * target_density_right / (target_density_local);
-                v_drift[u] = this->target_v_drift[t_idx].get()[cell][u] * interp_left + this->target_v_drift[t_idx].get()[cell+1][u] * interp_right;
+
+            // First x direction
+            double v_therm_sqr_temp = (this->target_v_therm_sqr[t_idx].get()[cell][0] * target_density_left + this->target_v_therm_sqr[t_idx].get()[cell+1][0] * target_density_right) / (target_density_local);
+            double v_drift_temp = this->target_v_drift[t_idx].get()[cell][0] * interp_left + this->target_v_drift[t_idx].get()[cell+1][0] * interp_right;
+            target_velocity[0] = v_drift_temp + std::sqrt(v_therm_sqr_temp * coeff_gauss_1) * rand_gauss[0];
+
+            // y direction
+            v_therm_sqr_temp = (this->target_v_therm_sqr[t_idx].get()[cell][1] * target_density_left + this->target_v_therm_sqr[t_idx].get()[cell+1][1] * target_density_right) / (target_density_local);
+            v_drift_temp = this->target_v_drift[t_idx].get()[cell][1] * interp_left + this->target_v_drift[t_idx].get()[cell+1][1] * interp_right;
+            target_velocity[1] = v_drift_temp + std::sqrt(v_therm_sqr_temp * coeff_gauss_1) * rand_gauss[1];
+
+            // z direction
+            v_therm_sqr_temp = (this->target_v_therm_sqr[t_idx].get()[cell][2] * target_density_left + this->target_v_therm_sqr[t_idx].get()[cell+1][2] * target_density_right) / (target_density_local);
+            v_drift_temp = this->target_v_drift[t_idx].get()[cell][2] * interp_left + this->target_v_drift[t_idx].get()[cell+1][2] * interp_right;
+            target_velocity[2] = v_drift_temp + std::sqrt(v_therm_sqr_temp * coeff_gauss_2) * rand_gauss[2];
+            
+            double test = (target_velocity[0] * target_velocity[0] + target_velocity[1] * target_velocity[1] + target_velocity[2] * target_velocity[2]) * target_mass_local * 0.5 / constants::elementary_charge;
+
+            const int tot_num_collisions = number_collisions_per_target_local[t_idx];
+            for (int coll_idx=0;coll_idx<tot_num_collisions;coll_idx++){
+                tot_incident_energy[t_idx][coll_idx] += test;
+                total_collisions[t_idx][coll_idx] += 1;
             }
-            // tri_maxwellian_3D(target_velocity, const std::vector<double>& v_therm, const std::vector<double>& v_drift);
             // maxwellian_3D(target_velocity[0], target_velocity[1], target_velocity[2], v_therm[t_idx], 0.0);
             // speed_CM = 0.0;
             // for (int iter=0;iter<3;iter++){
@@ -524,7 +582,6 @@ void null_collider::generate_null_collision(const int thread_id, const int cell,
             // }
             // if (collided) {break;} // if previous target collided, then break target loop
         }
-        
         // size_t particle_indx, end_indx;
         // double particle_location, incident_velocity[3], target_velocity[3], velocity_CM[3], speed_CM, energy_CM, interp_d,
         //     freq_sum, incident_energy, del_E, test_freq;

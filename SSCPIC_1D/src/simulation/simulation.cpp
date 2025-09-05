@@ -442,6 +442,9 @@ void simulation::run() {
     this->field_solver->deposit_charge_density(*this->world, this->target_particle_list);
     this->field_solver->solve_potential(*this->world);
     this->field_solver->make_EField(*this->world);
+    for (int part_num = 0; part_num < number_charged_particles; part_num++) {
+        this->null_collider_list[part_num].reset_diagnostics();
+    }
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
@@ -456,6 +459,7 @@ void simulation::run() {
         charged_particle& particle_local = this->charged_particle_list[part_num];
         particle_local.gather_mpi();
         particle_local.load_to_target(this->target_particle_list, *this->world);
+        this->null_collider_list[part_num].gather_mpi();
     }
     this->trajectory_solver.gather_mpi();
     this->trajectory_solver.print_out(this->charged_particle_list);
