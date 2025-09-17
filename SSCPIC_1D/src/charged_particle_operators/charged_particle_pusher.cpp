@@ -67,10 +67,11 @@ void charged_particle_pusher::print_out(const std::vector<charged_particle>& par
 }
 
 
-void charged_particle_pusher::push_particle_trajectories_non_uniform(const int thread_id, std::vector<charged_particle>& particle_list, std::vector<null_collider>& null_collider_list, const std::vector<target_particle>& target_particle_list, const non_uniform_domain& world, const std::vector<double>& E_field){
+void charged_particle_pusher::push_particle_trajectories(const int thread_id, std::vector<charged_particle>& particle_list, std::vector<null_collider>& null_collider_list, const std::vector<target_particle>& target_particle_list, const domain& world, const std::vector<double>& E_field){
     int number_charged_particles = particle_list.size();
     // make vector of 
     bool push_continue = true;
+    bool non_uniform_cells = (world.domain_type != 0);
     std::vector<double> particle_component(7);
     std::vector<size_t> last_particle_idx_vector(number_charged_particles), prev_last_particle_idx_vector(number_charged_particles);
     std::vector<size_t> start_particle_idx_vector(number_charged_particles, 0);
@@ -83,6 +84,7 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
         this->number_time_steps[thread_id][part_num] = 0;
         particle_list[part_num].reset_diagnostics(thread_id);
     }
+    double dx = world.min_dx;
     double start_time_total = MPI_Wtime();
     while (push_continue) {
         for (int part_num = 0; part_num < number_charged_particles; part_num++) {
@@ -117,7 +119,7 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
                 int xi_boundary;
                 int cell_num = int(xi_i);
                 double E_field_local = E_field[cell_num];
-                double dx = dx_dxi[cell_num];
+                if (non_uniform_cells) {dx = dx_dxi[cell_num];}
                 double accel = q_over_m * E_field_local;
                 double v_i_sqr = v_x_i*v_x_i;
                 double v_f_sqr;
@@ -254,12 +256,13 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
                             }        
                         }
                         E_field_local = E_field[cell_num];
-                        dx = dx_dxi[cell_num];
+                        if (non_uniform_cells) {dx = dx_dxi[cell_num];}
                         accel = q_over_m * E_field_local;
                     } else {
                         // if doesn't reach boundary then test collision
                         if (particle_collider_bool) {
-                            particle_collider.generate_null_collision(thread_id, del_tau, cell_num, particle_component, particle_list, target_particle_list);
+                            particle_collider.generate_null_collision(thread_id, del_tau, cell_num, last_particle_idx_vector,
+                                     particle_component, particle_list, target_particle_list);
                         }
                     }
                     v_x_i = v_x_f;
@@ -287,22 +290,3 @@ void charged_particle_pusher::push_particle_trajectories_non_uniform(const int t
     
 }
 
-void charged_particle_pusher::push_particle_trajectories_uniform(const int thread_id, std::vector<charged_particle>& particle_list, std::vector<null_collider>& null_collider_list, const std::vector<target_particle>& target_particle_list, const uniform_domain& world, const std::vector<double>& E_field){
-    // size_t last_particle_idx = this->number_particles[thread_id];
-    // std::vector<std::vector<double>>& thread_particle_components = this->particle_components[thread_id];
-    // const double q_over_m = this->q_over_m;
-    // const double charge = this->charge;
-    // for (size_t part_idx = 0; part_idx < last_particle_idx; part_idx++){
-    //     double freq_rel = thread_particle_components[part_idx][0];
-    //     double xi = thread_particle_components[part_idx][1];
-    //     double v_x = thread_particle_components[part_idx][4];
-    //     double v_y = thread_particle_components[part_idx][5];
-    //     double v_z = thread_particle_components[part_idx][6];
-    //     int cell_num = int(xi);
-    //     double E_field_local = E_field[cell_num];
-
-    //     bool wall_bool = false;
-    //     while (! wall_bool) {
-    //     }
-    // }
-}

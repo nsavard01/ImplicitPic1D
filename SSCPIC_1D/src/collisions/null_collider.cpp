@@ -398,7 +398,8 @@ void null_collider::gather_mpi() {
     }
 }
 
-void null_collider::generate_null_collision(const int thread_id, const double collision_time, const int cell, std::vector<double>& particle_components, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list){
+void null_collider::generate_null_collision(const int thread_id, const double collision_time, const int cell, std::vector<size_t>& last_particle_idx,
+    std::vector<double>& particle_components, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list){
     
     if (this->number_targets > 0) {
         
@@ -407,7 +408,6 @@ void null_collider::generate_null_collision(const int thread_id, const double co
         const int& number_targets_local = this->number_targets;
         const double& min_energy = this->energy_array[0];
         const double& max_energy = this->energy_array.back();
-        const std::vector<int>& target_idx_local = this->target_idx;
         const std::vector<double>& energy_array_local = this->energy_array;
         const std::vector<std::vector<std::vector<double>>>& sigma_array_local = this->sigma_array;
         const std::vector<std::vector<double>>& energy_threshold_local = this->energy_threshold;
@@ -423,29 +423,33 @@ void null_collider::generate_null_collision(const int thread_id, const double co
         charged_particle& primary_particle = particle_list[primary_idx];
         const double& primary_mass = primary_particle.mass;
 
-        double& freq_rel = particle_components[0];
-        double& xi = particle_components[1];
+        const double& freq_rel = particle_components[0];
+        const double& xi = particle_components[1];
         double incident_velocity[3], target_velocity[3], velocity_CM[3], rand_gauss[3];
         incident_velocity[0] = particle_components[4];
         incident_velocity[1] = particle_components[5];
         incident_velocity[2] = particle_components[6];      
-        double R_1 = pcg32_random_r();
-        double R_2 = pcg32_random_r();
-        double R_3 = pcg32_random_r();
-        double R_4 = pcg32_random_r();
-        double coeff_gauss_1 = -2.0 * std::log(R_1);
-        double coeff_gauss_2 = -2.0 * std::log(R_3);
+        const double R_1 = pcg32_random_r();
+        const double R_2 = pcg32_random_r();
+        const double R_3 = pcg32_random_r();
+        const double R_4 = pcg32_random_r();
+        const double rand_coll = pcg32_random_r();
+        const double coeff_gauss_1 = -2.0 * std::log(R_1);
+        const double coeff_gauss_2 = -2.0 * std::log(R_3);
         rand_gauss[0] = std::cos(2.0 * M_PI * R_2); 
         rand_gauss[1] = std::sin(2.0 * M_PI * R_2);
         rand_gauss[2] = std::cos(2.0 * M_PI * R_4);
-        // v_in[0] = v_drift[0] + v_therm[0] * coeff * std::cos(2.0 * M_PI * R_2); 
-        // v_in[1] = v_drift[1] + v_therm[1] * coeff * std::sin(2.0 * M_PI * R_2);
-        // v_in[2] = v_drift[2] + v_therm[2] * std::sqrt(-2.0 * std::log(R_3)) * std::cos(2.0 * M_PI * R_4);
-
+        int indx_low = 0, indx_high = length_energy_array-1, indx_middle, coll_type;
+        double energy_low, energy_high;
+        energy_low = energy_array_local[indx_low];
+        energy_high = energy_array_local[indx_high];
+        double interp_e, thres_E;
         double interp_right = xi - cell;
         double interp_left = 1.0 - interp_right;
         bool collided = false;
+        const double null_time = this->max_time_step[cell];
         double freq_sum = 0.0;
+        double speed_CM, energy_CM;
         for (int t_idx = 0; t_idx < number_targets_local; t_idx++) {
             double target_density_left = this->target_densities[t_idx].get()[cell] * interp_left;
             double target_density_right = this->target_densities[t_idx].get()[cell+1] * interp_right; 
@@ -468,119 +472,132 @@ void null_collider::generate_null_collision(const int thread_id, const double co
             v_drift_temp = this->target_v_drift[t_idx].get()[cell][2] * interp_left + this->target_v_drift[t_idx].get()[cell+1][2] * interp_right;
             target_velocity[2] = v_drift_temp + std::sqrt(v_therm_sqr_temp * coeff_gauss_2) * rand_gauss[2];
             
-            double test = (target_velocity[0] * target_velocity[0] + target_velocity[1] * target_velocity[1] + target_velocity[2] * target_velocity[2]) * target_mass_local * 0.5 / constants::elementary_charge;
-
+            speed_CM = 0.0;
+            for (int iter=0;iter<3;iter++){
+                velocity_CM[iter] = incident_velocity[iter] - target_velocity[iter];
+                speed_CM += velocity_CM[iter] * velocity_CM[iter];
+            }
             const int tot_num_collisions = number_collisions_per_target_local[t_idx];
             for (int coll_idx=0;coll_idx<tot_num_collisions;coll_idx++){
-                tot_incident_energy[t_idx][coll_idx] += test;
-                total_collisions[t_idx][coll_idx] += 1;
-            }
-            // maxwellian_3D(target_velocity[0], target_velocity[1], target_velocity[2], v_therm[t_idx], 0.0);
-            // speed_CM = 0.0;
-            // for (int iter=0;iter<3;iter++){
-            //     velocity_CM[iter] = incident_velocity[iter] - target_velocity[iter];
-            //     speed_CM += velocity_CM[iter] * velocity_CM[iter];
-            // }
-            // energy_CM = speed_CM * 0.5 * red_mass / constants::elementary_charge; // CM energy in eV
+                coll_type = collision_type_per_target_local[t_idx][coll_idx];
+                thres_E = energy_threshold_local[t_idx][coll_idx];
+                energy_CM = speed_CM * 0.5 * red_mass / constants::elementary_charge; // CM energy in eV
+                if (energy_CM > thres_E) {
+                    speed_CM = std::sqrt(speed_CM); // convert to physical relative speed
+                    if (coll_type < 5) {
 
-            // // Make sure its in range
-            // if (energy_CM <= min_energy){
-            //     // Use minimum sigma
-            //     indx_low = 0;
-            //     interp_d = 0.0;
-            // } else if (energy_CM >= max_energy) {
-            //     // Use maximum sigma
-            //     indx_high = length_energy_array-1;
-            //     interp_d = 1.0;
-            // } else {
-            //     if (energy_CM < energy_low) {
-            //         indx_low = 0;
-            //     } else if (energy_CM > energy_high) {
-            //         indx_high = length_energy_array-1;
-            //     }
-            //     while (indx_low != indx_high-1) {
-            //         indx_middle = (indx_low + indx_high)/2;
-            //         if (energy_array_local[indx_middle] < energy_CM) {
-            //             indx_low = indx_middle;
-            //         } else if (energy_array_local[indx_middle] > energy_CM) {
-            //             indx_high = indx_middle;
-            //         } else {
-            //             indx_low = indx_middle;
-            //             indx_high = indx_low + 1;
-            //         }
-            //     }
-            //     energy_low = energy_array_local[indx_low];
-            //     energy_high = energy_array_local[indx_high];
-            //     interp_d = (energy_CM - energy_low)/(energy_high - energy_low);
-            // }
-            // speed_CM = std::sqrt(speed_CM); // convert to physical relative speed
-            // int tot_num_collisions = number_collisions_per_target_local[t_idx];
-            // for (int coll_idx=0;coll_idx<tot_num_collisions;coll_idx++){
-            //     double thres_E = energy_threshold_local[t_idx][coll_idx];
-            //     if (energy_CM > thres_E) {
-            //         freq_sum += (sigma_array_local[t_idx][coll_idx][indx_low] * (1.0 - interp_d) + sigma_array_local[t_idx][coll_idx][indx_high] * interp_d) * speed_CM * target_density_local;
-            //         collided = test_freq <= freq_sum;
-            //         if (collided) {
-            //             // Collision selected
-            //             total_collisions[t_idx][coll_idx]++;
-            //             incident_energy = incident_velocity[0]*incident_velocity[0] + incident_velocity[1]*incident_velocity[1] + incident_velocity[2]*incident_velocity[2];
-            //             tot_incident_energy[t_idx][coll_idx] += incident_energy;
-            //             del_E = (energy_CM - thres_E) * constants::elementary_charge;
-            //             switch (collision_type_per_target_local[t_idx][coll_idx]) {
-            //                 case 1: {
-            //                     double_product_isotropic(primary_mass, target_mass_local, red_mass, del_E, incident_velocity, target_velocity);
-            //                     break;
-            //                 }
-            //                 case 2: {
-            //                     int secondary_product_idx = product_indices_local[t_idx][coll_idx][1]; // secondary product ion
-            //                     charged_particle& secondary_particle = particle_list[secondary_product_idx];
-            //                     charged_particle& electron_particle = particle_list[0]; // If ionization exists, electron exists at indx 0
-            //                     double secondary_mass = secondary_particle.mass;
-            //                     triple_product_isotropic(primary_mass, secondary_mass, target_mass_local, reduced_mass_ionization_local[t_idx], del_E, 
-            //                         incident_velocity, target_velocity, velocity_CM);
-            //                     // Increase number electron and ion
-            //                     electron_particle.number_particles[thread_id][0]++;
-            //                     secondary_particle.number_particles[thread_id][0]++;
+                        // Make sure its in range
+                        if (energy_CM <= min_energy){
+                            // Use minimum sigma
+                            indx_low = 0;
+                            interp_e = 0.0;
+                        } else if (energy_CM >= max_energy) {
+                            // Use maximum sigma
+                            indx_high = length_energy_array-1;
+                            interp_e = 1.0;
+                        } else {
+                            if (energy_CM < energy_low) {
+                                indx_low = 0;
+                            } else if (energy_CM > energy_high) {
+                                indx_high = length_energy_array-1;
+                            }
+                            while (indx_low != indx_high-1) {
+                                indx_middle = (indx_low + indx_high)/2;
+                                if (energy_array_local[indx_middle] < energy_CM) {
+                                    indx_low = indx_middle;
+                                } else if (energy_array_local[indx_middle] > energy_CM) {
+                                    indx_high = indx_middle;
+                                } else {
+                                    indx_low = indx_middle;
+                                    indx_high = indx_low + 1;
+                                }
+                            }
+                            energy_low = energy_array_local[indx_low];
+                            energy_high = energy_array_local[indx_high];
+                            interp_e = (energy_CM - energy_low)/(energy_high - energy_low);
+                        }
+                        freq_sum += (sigma_array_local[t_idx][coll_idx][indx_low] * (1.0 - interp_e) + sigma_array_local[t_idx][coll_idx][indx_high] * interp_e) * speed_CM * target_density_local;
+                    } else {
+                        // coulomb collision
+                        freq_sum += sigma_array_local[t_idx][coll_idx][cell] * target_density_local / (speed_CM * speed_CM * speed_CM);
+                    }
+                    
+                    collided = rand_coll <= freq_sum * null_time; 
+                    if (collided) {
+                        // Collision selected
+                        total_collisions[t_idx][coll_idx] += freq_rel;
+                        double incident_energy = incident_velocity[0]*incident_velocity[0] + incident_velocity[1]*incident_velocity[1] + incident_velocity[2]*incident_velocity[2];
+                        tot_incident_energy[t_idx][coll_idx] += freq_rel * incident_energy;
+                        double del_E = (energy_CM - thres_E) * constants::elementary_charge;
+                        switch (coll_type) {
+                            case 1: {
+                                double_product_isotropic(primary_mass, target_mass_local, red_mass, del_E, incident_velocity, target_velocity);
+                                break;
+                            }
+                            case 2: {
+                                int secondary_product_idx = product_indices_local[t_idx][coll_idx][1]; // secondary product ion
+                                size_t& last_electron_idx = last_particle_idx[0];
+                                size_t& last_product_idx = last_particle_idx[secondary_product_idx];
+                                
+                                charged_particle& secondary_particle = particle_list[secondary_product_idx];
+                                charged_particle& electron_particle = particle_list[0]; // If ionization exists, electron exists at indx 0
+                                const double secondary_mass = secondary_particle.mass;
+                                triple_product_isotropic(primary_mass, secondary_mass, target_mass_local, reduced_mass_ionization_local[t_idx], del_E, 
+                                    incident_velocity, target_velocity, velocity_CM);
+                                // Increase number electron and ion
+                                last_electron_idx++;
+                                last_product_idx++;
 
-            //                     // electron set into velocity_CM
-            //                     size_t electron_number = electron_particle.number_particles[thread_id][0]-1;
-            //                     electron_particle.xi[thread_id][electron_number] = particle_location;
-            //                     electron_particle.v_x[thread_id][electron_number] = velocity_CM[0];
-            //                     electron_particle.v_y[thread_id][electron_number] = velocity_CM[1];
-            //                     electron_particle.v_z[thread_id][electron_number] = velocity_CM[2];
+                                // electron set into velocity_CM
+                                std::vector<double>& electron_components = electron_particle.particle_components[thread_id][last_electron_idx-1];
+                                electron_components[0] = freq_rel;
+                                electron_components[1] = xi;
+                                electron_components[4] = velocity_CM[0];
+                                electron_components[5] = velocity_CM[1];
+                                electron_components[6] = velocity_CM[2];
                                 
 
-            //                     // ion set into target_velocity
-            //                     size_t secondary_number = secondary_particle.number_particles[thread_id][0]-1;
-            //                     secondary_particle.xi[thread_id][secondary_number] = particle_location;
-            //                     secondary_particle.v_x[thread_id][secondary_number] = target_velocity[0];
-            //                     secondary_particle.v_y[thread_id][secondary_number] = target_velocity[1];
-            //                     secondary_particle.v_z[thread_id][secondary_number] = target_velocity[2];
-            //                     energy_loss[t_idx][coll_idx] += (- constants::electron_mass * (velocity_CM[0]*velocity_CM[0] +
-            //                         velocity_CM[1]*velocity_CM[1] + velocity_CM[2]*velocity_CM[2]) - secondary_mass * (target_velocity[0]*target_velocity[0] + 
-            //                         target_velocity[1]*target_velocity[1] + target_velocity[2]*target_velocity[2])); // add gain of energy in system due to introduction of target velocity
-            //                     break;
-            //                 }
-            //                 case 3: {
-            //                     double_product_isotropic(primary_mass, target_mass_local, red_mass, del_E, incident_velocity, target_velocity);
-            //                     break;
-            //                 }
-            //                 case 4: {
-            //                     incident_velocity[0] = target_velocity[0];
-            //                     incident_velocity[1] = target_velocity[1];
-            //                     incident_velocity[2] = target_velocity[2];
-            //                     break;
-            //                 }
-            //             }
-            //             // Calculate energy loss and break loop
-            //             energy_loss[t_idx][coll_idx] += primary_mass * (incident_energy - incident_velocity[0]*incident_velocity[0] - 
-            //                 incident_velocity[1]*incident_velocity[1] - incident_velocity[2]*incident_velocity[2]);
-            //             break;
+                                // ion set into target_velocity
+                                std::vector<double>& secondary_components = secondary_particle.particle_components[thread_id][last_product_idx-1];
+                                secondary_components[0] = freq_rel;
+                                secondary_components[1] = xi;
+                                secondary_components[4] = target_velocity[0];
+                                secondary_components[5] = target_velocity[1];
+                                secondary_components[6] = target_velocity[2];
 
-            //         }
-            //     }
-            // }
-            // if (collided) {break;} // if previous target collided, then break target loop
+                                energy_loss[t_idx][coll_idx] += freq_rel * (- constants::electron_mass * (velocity_CM[0]*velocity_CM[0] +
+                                    velocity_CM[1]*velocity_CM[1] + velocity_CM[2]*velocity_CM[2]) - secondary_mass * (target_velocity[0]*target_velocity[0] + 
+                                    target_velocity[1]*target_velocity[1] + target_velocity[2]*target_velocity[2])); // add gain of energy in system due to introduction of target velocity
+                                break;
+                            }
+                            case 3: {
+                                double_product_isotropic(primary_mass, target_mass_local, red_mass, del_E, incident_velocity, target_velocity);
+                                break;
+                            }
+                            case 4: {
+                                incident_velocity[0] = target_velocity[0];
+                                incident_velocity[1] = target_velocity[1];
+                                incident_velocity[2] = target_velocity[2];
+                                break;
+                            }
+                            case 5: {
+                                double_product_isotropic(primary_mass, target_mass_local, red_mass, del_E, incident_velocity, target_velocity);
+                            }
+                        }
+                        // Calculate energy loss and break loop
+                        energy_loss[t_idx][coll_idx] += primary_mass * (incident_energy - incident_velocity[0]*incident_velocity[0] - 
+                            incident_velocity[1]*incident_velocity[1] - incident_velocity[2]*incident_velocity[2]);
+                        
+                        // update incident particle velocity
+                        particle_components[4] = incident_velocity[0];
+                        particle_components[5] = incident_velocity[1];
+                        particle_components[6] = incident_velocity[2];  
+                        break; // breaks collision for loop
+
+                    }
+                }
+            }
+            if (collided) {break;} // if previous target collided, then break target loop
         }
         // size_t particle_indx, end_indx;
         // double particle_location, incident_velocity[3], target_velocity[3], velocity_CM[3], speed_CM, energy_CM, interp_d,

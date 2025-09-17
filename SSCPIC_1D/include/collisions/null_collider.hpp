@@ -36,7 +36,8 @@ public:
     void reference_targets(const std::vector<target_particle>& target_particle_list);
     void set_initial_null_frequency(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list);
     void print_out(const std::vector<charged_particle>& particle_list, const std::vector<target_particle>& target_particle_list) const;
-    void generate_null_collision(const int thread_id, const double collision_time, const int cell, std::vector<double>& particle_components, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list);
+    void generate_null_collision(const int thread_id, const double collision_time, const int cell, std::vector<size_t>& last_particle_idx,
+        std::vector<double>& particle_components, std::vector<charged_particle> &particle_list, const std::vector<target_particle> &target_particle_list);
     void gather_mpi();
     void reset_diagnostics();
     // void order_collisions();

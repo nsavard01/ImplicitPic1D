@@ -448,12 +448,8 @@ void simulation::run() {
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
-        if (this->world->domain_type == 0) {
-
-        } else {
-            this->trajectory_solver.push_particle_trajectories_non_uniform(thread_id, this->charged_particle_list, this->null_collider_list,
-                this->target_particle_list, static_cast<non_uniform_domain&>(*this->world), this->field_solver->E_field);
-        }
+        this->trajectory_solver.push_particle_trajectories(thread_id, this->charged_particle_list, this->null_collider_list,
+                this->target_particle_list, *this->world, this->field_solver->E_field);
     }
     for (int part_num = 0; part_num < number_charged_particles; part_num++) {
         charged_particle& particle_local = this->charged_particle_list[part_num];

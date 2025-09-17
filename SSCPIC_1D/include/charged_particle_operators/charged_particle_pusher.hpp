@@ -33,7 +33,6 @@ public:
     void set_diagnostic_vectors(const std::vector<charged_particle>& particle_list);
     void gather_mpi();
     void print_out(const std::vector<charged_particle>& particle_list) const;
-    void push_particle_trajectories_non_uniform(const int thread_id, std::vector<charged_particle>& particle_list, std::vector<null_collider>& null_collider_list, const std::vector<target_particle>& target_particle_list, const non_uniform_domain& world, const std::vector<double>& E_field);
-    void push_particle_trajectories_uniform(const int thread_id, std::vector<charged_particle>& particle_list, std::vector<null_collider>& null_collider_list, const std::vector<target_particle>& target_particle_list, const uniform_domain& world, const std::vector<double>& E_field);
+    void push_particle_trajectories(const int thread_id, std::vector<charged_particle>& particle_list, std::vector<null_collider>& null_collider_list, const std::vector<target_particle>& target_particle_list, const domain& world, const std::vector<double>& E_field);
 };
 
