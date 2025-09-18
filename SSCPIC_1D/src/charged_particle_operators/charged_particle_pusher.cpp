@@ -115,7 +115,7 @@ void charged_particle_pusher::push_particle_trajectories(const int thread_id, st
                 double& v_x_i = particle_component[4];
                 double& v_y = particle_component[5];
                 double& v_z = particle_component[6];
-                double v_x_f, xi_f, v_x_half;
+                double v_x_f, xi_f, v_x_half, xi_half;
                 int xi_boundary;
                 int cell_num = int(xi_i);
                 double E_field_local = E_field[cell_num];
@@ -171,14 +171,14 @@ void charged_particle_pusher::push_particle_trajectories(const int thread_id, st
 
                     // get properties at half time in trajectory
                     v_x_half = 0.5 * (v_x_i + v_x_f);
-                    // xi_half = xi_i + 0.25 * (v_x_i + v_x_half) * del_tau / dx;
-                    
+                    xi_half = xi_i + 0.25 * (v_x_i + v_x_half) * del_tau / dx; //0.5 * (xi_f + xi_i); //;
+                    xi_half = simp_coeff_end * (xi_i + xi_f) + simp_coeff_center * xi_half;
 
                     // interpolate half way point to densities and v_sqr
                     interp_num = freq_rel * del_tau;
-                    interp_xi = 0.5 * (xi_f + xi_i) - cell_num;
+                    interp_xi = xi_half - cell_num;
                     interp_v_sqr = interp_num * (simp_coeff_end * (v_i_sqr + v_f_sqr) + simp_coeff_center * v_x_half * v_x_half);
-                    interp_v_x = interp_num * v_x_half;
+                    interp_v_x = interp_num * (simp_coeff_end * (v_x_i + v_x_f) + simp_coeff_center * v_x_half);
                     thread_density[cell_num] += interp_num * (1.0 - interp_xi);
                     thread_density[cell_num+1] += interp_num * interp_xi;
                     

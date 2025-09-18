@@ -263,7 +263,10 @@ void simulation::setup() {
     this->world = create_domain_from_file("../inputs/geometry.inp");
     this->world->print_out();
     this->target_particle_list = read_target_particle_inputs("../inputs/target_particles/", *this->world);
-    this->charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *this->world); 
+    this->charged_particle_list = read_charged_particle_inputs("../inputs/charged_particles/", *this->world);
+    for (int part_num = 0; part_num < this->charged_particle_list.size(); part_num++) {
+        this->charged_particle_list[part_num].load_from_target(this->target_particle_list, *this->world);
+    } 
     find_corresponding_targets(this->charged_particle_list, this->target_particle_list);
     this->null_collider_list = read_null_collision_inputs("../inputs/collisions/binary/", this->charged_particle_list, this->target_particle_list);
     for (int coll = 0; coll < this->null_collider_list.size(); coll++) {
@@ -439,26 +442,54 @@ void simulation::reset_diagnostics(int thread_id) {
 void simulation::run() {
 
     int number_charged_particles = this->charged_particle_list.size();
-    this->field_solver->deposit_charge_density(*this->world, this->target_particle_list);
+    this->field_solver->deposit_charge_density(*this->world, this->charged_particle_list);
     this->field_solver->solve_potential(*this->world);
-    this->field_solver->make_EField(*this->world);
-    for (int part_num = 0; part_num < number_charged_particles; part_num++) {
-        this->null_collider_list[part_num].reset_diagnostics();
+    std::vector<double> prev_phi = this->field_solver->phi;
+    double error;
+    double start_time = MPI_Wtime();
+    for (int iter = 0; iter<10; iter++) {
+
+        this->field_solver->make_EField(*this->world);
+        for (int part_num = 0; part_num < number_charged_particles; part_num++) {
+            this->null_collider_list[part_num].reset_diagnostics();
+        }
+        #pragma omp parallel
+        {
+            int thread_id = omp_get_thread_num();
+            this->trajectory_solver.push_particle_trajectories(thread_id, this->charged_particle_list, this->null_collider_list,
+                    this->target_particle_list, *this->world, this->field_solver->E_field);
+        }
+        for (int part_num = 0; part_num < number_charged_particles; part_num++) {
+            charged_particle& particle_local = this->charged_particle_list[part_num];
+            particle_local.gather_mpi();
+            particle_local.load_to_target(this->target_particle_list, *this->world);
+            this->null_collider_list[part_num].gather_mpi();
+        }
+        this->trajectory_solver.gather_mpi();
+        this->trajectory_solver.print_out(this->charged_particle_list);
+
+        this->field_solver->deposit_charge_density(*this->world, this->charged_particle_list);
+        this->field_solver->solve_potential(*this->world);
+
+        error = 0.0;
+        for (int node = 0; node < this->world->number_nodes; node++) {
+            double res = (prev_phi[node] - this->field_solver->phi[node]);
+            error += res*res;
+            prev_phi[node] = this->field_solver->phi[node];
+        }
+        error = std::sqrt(error / double(this->world->number_nodes));
+        if (mpi_vars::mpi_rank == 0) {
+            std::cout << "Phi error is: " << error << std::endl;
+        }
     }
-    #pragma omp parallel
-    {
-        int thread_id = omp_get_thread_num();
-        this->trajectory_solver.push_particle_trajectories(thread_id, this->charged_particle_list, this->null_collider_list,
-                this->target_particle_list, *this->world, this->field_solver->E_field);
+    double end_time = MPI_Wtime();
+    if (mpi_vars::mpi_rank == 0) {
+        std::cout << "Took " << end_time - start_time << " seconds" << std::endl;
+        for (int node = 0; node < this->world->number_nodes; node++) {
+            std::cout << "node: " << node << " phi: " << this->field_solver->phi[node] << " e density: " << this->target_particle_list[0].density[node] 
+            << " e J: " << constants::elementary_charge * this->target_particle_list[0].density[node] * this->target_particle_list[0].v_drift[node][0] << std::endl;
+        }
     }
-    for (int part_num = 0; part_num < number_charged_particles; part_num++) {
-        charged_particle& particle_local = this->charged_particle_list[part_num];
-        particle_local.gather_mpi();
-        particle_local.load_to_target(this->target_particle_list, *this->world);
-        this->null_collider_list[part_num].gather_mpi();
-    }
-    this->trajectory_solver.gather_mpi();
-    this->trajectory_solver.print_out(this->charged_particle_list);
 }
 
 

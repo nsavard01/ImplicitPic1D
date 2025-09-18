@@ -47,12 +47,12 @@ void ES_solver::print_out() {
     }
 }
 
-void ES_solver::deposit_charge_density(const domain& world, std::vector<target_particle>& particle_list) {
+void ES_solver::deposit_charge_density(const domain& world, const std::vector<charged_particle>& particle_list) {
     // Loop over all particles and deposit charge density
     int num_particles = particle_list.size();
     std::fill(this->rho.begin(), this->rho.end(), 0.0);
     for (int part_num=0; part_num < num_particles; part_num++) {
-        std::vector<double>& density = particle_list[part_num].density;
+        const std::vector<double>& density = particle_list[part_num].total_density_grid;
         double q = particle_list[part_num].charge;
         if (q != 0) {
             for (int i = 0; i < world.number_nodes; i++) {
@@ -81,7 +81,6 @@ void ES_solver::solve_potential(const domain& world) {
     }
 
     this->poisson_solver->solve(this->phi, this->phi); // replace phi with solution
-    
 }
 
 void ES_solver::make_EField(const domain& world) {

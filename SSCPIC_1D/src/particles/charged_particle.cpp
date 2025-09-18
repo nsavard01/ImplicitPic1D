@@ -313,6 +313,31 @@ void charged_particle::gather_mpi(){
     
 }
 
+void charged_particle::load_from_target(const std::vector<target_particle>& target_particle_list, const domain& world) {
+    // Initial loading of charged particle from target for density calculations in #/m^2
+    for (int t_idx = 0; t_idx < target_particle_list.size(); t_idx++) {
+        const target_particle& local_target = target_particle_list[t_idx];
+        if (this->name == local_target.name) {
+            int size_grid = this->total_density_grid.size();
+            const std::vector<double>& target_density = local_target.density;
+            
+            bool non_uniform_cell = (world.domain_type != 0);
+
+            const std::vector<double>& dx_dxi = world.dx_dxi;
+            double dx = world.min_dx;
+            if (non_uniform_cell) {dx = dx_dxi[0];}
+            this->total_density_grid[0] = 0.5 * target_density[0] * dx;
+            
+            for (int j = 1; j< size_grid-1; j++) {
+                if (non_uniform_cell) {dx = 0.5 * (dx_dxi[j-1] + dx_dxi[j]);}
+                this->total_density_grid[j] = target_density[j] * dx;
+            }
+            if (non_uniform_cell) {dx = dx_dxi[size_grid-2];}
+            this->total_density_grid[size_grid-1] = 0.5 * target_density[size_grid-1] * dx;    
+        }
+    }
+}
+
 void charged_particle::load_to_target(std::vector<target_particle>& target_particle_list, const domain& world) {
     // Load particle properties to target if exist
     target_particle& local_target = target_particle_list[this->target_particle_idx];
@@ -322,29 +347,27 @@ void charged_particle::load_to_target(std::vector<target_particle>& target_parti
         std::vector<double>& target_density = local_target.density;
         std::vector<std::vector<double>>& target_v_therm_sqr = local_target.v_therm_sqr;
         std::vector<std::vector<double>>& target_v_drift = local_target.v_drift;
-        if (world.domain_type == 0) {
+        bool non_uniform_cell = (world.domain_type != 0);
 
-        } else {
-            const std::vector<double>& dx_dxi = world.dx_dxi;
-            double dx;
-            dx = 0.5 * dx_dxi[0];
-            target_density[0] = this->total_density_grid[0] / dx;
+        const std::vector<double>& dx_dxi = world.dx_dxi;
+        double dx = world.min_dx;
+        if (non_uniform_cell) {dx = dx_dxi[0];}
+        target_density[0] = 2.0 * this->total_density_grid[0] / dx;
+        // if (mpi_vars::mpi_rank == 0) {
+        //     std::cout << "i: " << 0 << " J: " << target_density[0] << std::endl;
+        // }
+        for (int j = 1; j< size_grid-1; j++) {
+            if (non_uniform_cell) {dx = 0.5 * (dx_dxi[j-1] + dx_dxi[j]);}
+            target_density[j] = this->total_density_grid[j] / dx;
             // if (mpi_vars::mpi_rank == 0) {
-            //     std::cout << "i: " << 0 << " J: " << target_density[0] << std::endl;
-            // }
-            for (int j = 1; j< size_grid-1; j++) {
-                dx = 0.5 * (dx_dxi[j-1] + dx_dxi[j]);
-                target_density[j] = this->total_density_grid[j] / dx;
-                // if (mpi_vars::mpi_rank == 0) {
-                //     std::cout << "j: " << j << " J: " << target_density[j] << std::endl;
-                // }
-            }
-            dx = 0.5 * dx_dxi[size_grid-2];
-            target_density[size_grid-1] = this->total_density_grid[size_grid-1] / dx;
-            // if (mpi_vars::mpi_rank == 0) {
-            //     std::cout << "j: " << size_grid-1 << " J: " << target_density[size_grid-1] << std::endl;
+            //     std::cout << "j: " << j << " J: " << target_density[j] << std::endl;
             // }
         }
+        if (non_uniform_cell) {dx = dx_dxi[size_grid-2];}
+        target_density[size_grid-1] = 2.0 * this->total_density_grid[size_grid-1] / dx;
+        // if (mpi_vars::mpi_rank == 0) {
+        //     std::cout << "j: " << size_grid-1 << " J: " << target_density[size_grid-1] << std::endl;
+        // }
         // v_therm based on v_max^2 =  <v^2> - <v>^2 (maxwellian is variance)
         // then v_therm = sqrt(v_max^2/3) 
         for (int node = 0; node < size_grid; node++) {

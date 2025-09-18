@@ -36,6 +36,7 @@ public:
     void gather_mpi();
     void print_out() const;
     void load_to_target(std::vector<target_particle>& target_particle_list, const domain& world);
+    void load_from_target(const std::vector<target_particle>& target_particle_list, const domain& world);
     void read_initial_state(const std::string& dir_name, const domain& world);
     void initialize_diagnostic_files(const std::string& dir_name) const; 
     void write_diagnostics(const std::string& dir_name, int diag_number) const; 

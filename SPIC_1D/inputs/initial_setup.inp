@@ -1,10 +1,10 @@
 16 ! number of processors per mpi thread
-1 ! scheme (0 = MC-PIC, 1 = EC-PIC, 2 = I-NGP)
+0 ! scheme (0 = MC-PIC, 1 = EC-PIC, 2 = I-NGP)
 50.0 6e-12 ! time step , first is fraction of initial plasma frequency, second is actual time step in seconds, take minimum 1.8436578171091445e-10
 1e-5 ! total simulation time 9.43952802359882e-05
-1e-6 1e-5 1e-5 ! total averaging time, acceptance relative residual in domain in voltage and density of first particle
+2e-6 1e-5 1e-5 ! total averaging time, acceptance relative residual in domain in voltage and density of first particle
 21 ! number of diagnostic times
-test_EC_no_plasma ! save file name
+test_MC_no_collisions_256cells ! save file name
 ../../../only_elastic/ ! Save directory relative path
 no ! Restart(yes/no) and save directory to take from
 END

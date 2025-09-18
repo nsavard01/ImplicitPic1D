@@ -9,11 +9,11 @@ Wall
 -------------------------------
 0 : wall node to release from
 0.1 : current density (A/m^2)
-0.0 : x component of velocity (m/s)
+100000.0 : x component of velocity (m/s)
 0.0 : y component of velocity (m/s)
 0.0 : z component of velocity (m/s)
-0.1 : Flux temperature (eV)
-100 : Number of particles to release per thread
+0.0 : Flux temperature (eV)
+1000 : Number of particles to release per thread
 -----------------------------------
 
 ENDFILE
